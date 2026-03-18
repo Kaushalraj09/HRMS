@@ -1,0 +1,12 @@
+.dashboard {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: #f5f7fb;
+}
+
+h1 {
+  color: #4c1d95;
+}
