@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css',
+  styleUrls: ['./login.component.css'],
 })
 export class LoginComponent {
   loginForm: FormGroup;
@@ -45,7 +45,7 @@ export class LoginComponent {
 
       this.timeoutRef = setTimeout(() => {
         this.showPopup = false;
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/hr-dashboard']);
       }, 1500);
     } else {
       this.message = 'Invalid email or password ❌';

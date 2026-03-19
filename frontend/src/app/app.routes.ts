@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/pages/login/login.component';
-import { DashboardComponent } from './features/auth/pages/dashboard/dashboard.component';
+import { HrDashboardComponent } from './features/hr-dashboard/hrDashboard.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -8,7 +8,7 @@ export const routes: Routes = [
     path: 'auth',
     children: [{ path: 'login', component: LoginComponent }],
   },
-  { path: 'dashboard', component: DashboardComponent },
+  { path: 'hr-dashboard', component: HrDashboardComponent },
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },
   { path: '**', redirectTo: 'auth/login' },
 ];
