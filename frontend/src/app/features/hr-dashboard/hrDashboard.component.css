@@ -1,0 +1,248 @@
+nav{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  height: 50px;
+}
+.leftnav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+}
+.logo  img{
+  height: 50px;
+  width: 50px;
+  margin-left: 50px;
+
+}
+
+.hrname{
+  color:white;
+  margin-left: 10px;
+
+}
+
+
+
+
+
+
+
+.hamburger {
+  width: 28px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-left: 30px;
+}
+
+.line {
+  height: 2px;
+  background-color: white;
+  border-radius: 2px;
+}
+
+.short {
+  width: 50%;
+}
+
+.mid{
+  width: 75%;
+}
+
+.long {
+  width: 100%;
+}
+
+/* rightnav */
+.rightnav {
+  display: flex;
+  align-items: center;
+  margin-right: 50px;
+}
+
+.globeicon {
+  height: 20px;
+  width: 20px;
+  margin-left: 10px;
+}
+
+/* SEARCH */
+/* GLASS SEARCH BAR */
+.searchbar {
+  position: relative;
+}
+
+.searchbar input {
+  padding: 8px 35px 8px 12px;
+  border-radius: 20px;
+  
+  /* 🔥 Glass effect */
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  /* subtle border */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  /* text */
+  color: white;
+  font-size: 12px;
+  outline: none;
+
+  /* smooth effect */
+  transition: all 0.3s ease;
+}
+
+/* placeholder */
+.searchbar input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* focus effect */
+.searchbar input:focus {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* icon */
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.8;
+}
+
+/* FIXED ICON */
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  stroke: white; /* 🔥 CHANGE THIS */
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
+}
+
+/* GLOBE */
+.globeicon svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  stroke-width: 1.5;
+  fill: none;
+  cursor: pointer;
+}
+
+/* LANGUAGE */
+.language select {
+  background: transparent;
+  border: none;
+  color:white;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+
+/* COUNTS */
+.clientcount span,
+.projectcount span {
+  background: #4fc3f7;
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  margin-left: 10px;
+}
+
+/* PROFILE */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.profilename {
+  color: white;
+  font-size: 13px;
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+}
+/* 🔔 NOTIFICATION */
+.notification {
+  position: relative;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.notification svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  stroke-width: 1.5;
+  fill: none;
+  margin-right: 10px;
+}
+
+.notification .badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background: red;
+  color: white;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+/* 👤 PROFILE AVATAR FIX */
+.avatar {
+  width: 28px;
+  height: 28px;
+  background: #ffffff33;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+
+.dashboard-content{
+  display: flex;
+}
+
+.selectproject{
+  display: flex;
+}
+
+.selectclient{
+  display: flex;
+}
