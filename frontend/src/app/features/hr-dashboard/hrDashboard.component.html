@@ -1,4 +1,4 @@
-<div>
+<div class="Hr_dashboard">
   <nav>
     <!-- left side -->
     <div class="leftnav">
@@ -36,11 +36,13 @@
       </div>
 
       <div class="language">
-        <select>
-          <option>English</option>
-          <option>Hindi</option>
-          <option>Spanish</option>
-        </select>
+        <mat-form-field appearance="outline">
+          <mat-select [(value)]="selectedLang">
+            <mat-option value="en">English</mat-option>
+            <mat-option value="hi">Hindi</mat-option>
+            <mat-option value="es">Spanish</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
 
       <div class="notification">
@@ -64,24 +66,102 @@
   </nav>
 
   <!-- Dashboard content -->
-<div class="dashboard-content">
-  <div class="selectproject">
-    <label for="project">Select Project</label>
-    <select id="project">
-      <option value="">Choose a project... </option>
-      <option value="project1">Project 1</option>
-      <option value="project2">Project 2</option>
-      <option value="project3">Project 3</option>
-    </select>
+  <div class="dashboard-content-A">
+    <div class="dashboard-content">
+      <label for="project">Select Project</label>
+      <select id="project">
+        <option value="">Choose a project...</option>
+        <option value="project1">Project 1</option>
+        <option value="project2">Project 2</option>
+        <option value="project3">Project 3</option>
+      </select>
+    </div>
+    <div class="dashboard-content">
+      <label for="client">Select Client</label>
+      <select id="client">
+        <option value="">Choose a client...</option>
+        <option value="client1">Client 1</option>
+        <option value="client2">Client 2</option>
+        <option value="client3">Client 3</option>
+      </select>
+    </div>
   </div>
-  <div class="selectclient">
-    <label for="client">Select Client</label>
-    <select id="client">
-      <option value="">Choose a client... </option>
-      <option value="client1">Client 1</option>
-      <option value="client2">Client 2</option>
-      <option value="client3">Client 3</option>
-    </select>
+  <!-- count box -->
+  
+  <div class="count-box">
+    <div class="card total_project">
+      <div class="card-content">
+        <div>
+          <p class="title">TOTAL PROJECTS</p>
+          <h2>2</h2>
+        </div>
+        <i class="fas fa-folder"></i>
+      </div>
+    </div>
+    <div class="card total_clients">
+      <div class="card-content">
+        <div>
+          <p class="title">TOTAL CLIENTS</p>
+          <h2>3</h2>
+        </div>
+        <i class="fas fa-building"></i>
+      </div>
+    </div>
+    <div class="card total_emp">
+      <div class="card-content">
+        <div>
+          <p class="title">TOTAL EMPLOYEES</p>
+          <h2>23</h2>
+        </div>
+        <i class="fas fa-users"></i>
+      </div>
+    </div>
+    <div class="card present_emp">
+      <div class="card-content">
+        <div>
+          <p class="title">PRESENT EMPLOYEES</p>
+          <h2>23</h2>
+        </div>
+        <i class="fas fa-user-check"></i>
+      </div>
+    </div>
+    <div class="card absent_emp">
+      <div class="card-content">
+        <div>
+          <p class="title">ABSENT(Approved)</p>
+          <h2>0</h2>
+        </div>
+        <i class="fas fa-user-clock"></i>
+      </div>
+    </div>
+    <div class="card unschegule_abs">
+      <div class="card-content">
+        <div>
+          <p class="title">UNSCHEDULED ABSENTS</p>
+          <h2>0</h2>
+        </div>
+        <i class="fas fa-user-times"></i>
+      </div>
+    </div>
   </div>
+
+<!-- chart data -->
+ <div class="chart_data">
+  <div class="card work_breakdown">
+    <h2>Work Location Breakdown</h2>
+
+  </div>
+  <div class="card gender_breakdown">
+    <h2>Gender Breakdown</h2>
+
+  </div>
+  <div class="card upcoming_events">
+    <h2>Upcoming Events</h2>
+
   </div>
 </div>
+
+
+</div>
+
+

@@ -1,14 +1,17 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './hrDashboard.component.html',
   styleUrls: ['./hrDashboard.component.css'],
 })
 export class HrDashboardComponent {
+  selectedLang = 'en';
   projects = [
     { id: 1, name: 'AivanHR' },
     { id: 2, name: 'AivanERP' },
