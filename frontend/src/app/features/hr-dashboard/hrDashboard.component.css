@@ -1,3 +1,4 @@
+
 nav{
   display: flex;
   justify-content: space-between;
@@ -23,11 +24,6 @@ nav{
   margin-left: 10px;
 
 }
-
-
-
-
-
 
 
 .hamburger {
@@ -70,8 +66,7 @@ nav{
   margin-left: 10px;
 }
 
-/* SEARCH */
-/* GLASS SEARCH BAR */
+
 .searchbar {
   position: relative;
 }
@@ -80,35 +75,35 @@ nav{
   padding: 8px 35px 8px 12px;
   border-radius: 20px;
   
-  /* 🔥 Glass effect */
+  
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 
-  /* subtle border */
+  
   border: 1px solid rgba(255, 255, 255, 0.2);
 
-  /* text */
+
   color: white;
   font-size: 12px;
   outline: none;
 
-  /* smooth effect */
+  
   transition: all 0.3s ease;
 }
 
-/* placeholder */
+
 .searchbar input::placeholder {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* focus effect */
+
 .searchbar input:focus {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* icon */
+
 .search-icon {
   position: absolute;
   right: 10px;
@@ -123,7 +118,7 @@ nav{
   opacity: 0.8;
 }
 
-/* FIXED ICON */
+
 .search-icon {
   position: absolute;
   right: 10px;
@@ -131,13 +126,13 @@ nav{
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  stroke: white; /* 🔥 CHANGE THIS */
+  stroke: white; 
   stroke-width: 2;
   fill: none;
   pointer-events: none;
 }
 
-/* GLOBE */
+
 .globeicon svg {
   width: 18px;
   height: 18px;
@@ -147,20 +142,60 @@ nav{
   cursor: pointer;
 }
 
-/* LANGUAGE */
-.language select {
-  background: transparent;
-  border: none;
-  color:white;
-  font-size: 12px;
-  cursor: pointer;
-  outline: none;
-  font-weight: 700;
-  margin-right: 10px;
+
+.language {
+  display: flex;
+  align-items: center;
+  width: 120px;
+  padding: 10px;
+  height: 100%;
+  position: relative;
+  top:-10px;
+}
+
+::ng-deep .mdc-notched-outline {
+  display: none !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
+::ng-deep .mat-mdc-form-field {
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  height: 36px !important;
+  display: flex;
+  align-items: center;
+  padding: 0 !important;
+
+}
+
+::ng-deep .mat-mdc-select {
+  display: flex;
+  align-items: center;
+  height: 30px;
 }
 
 
-/* COUNTS */
+::ng-deep .mat-mdc-select-value {
+  color: white !important;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+
+::ng-deep .mat-mdc-select-arrow {
+  color: white !important;
+}
+
+
+
 .clientcount span,
 .projectcount span {
   background: #4fc3f7;
@@ -171,7 +206,7 @@ nav{
   margin-left: 10px;
 }
 
-/* PROFILE */
+
 .profile {
   display: flex;
   align-items: center;
@@ -192,7 +227,7 @@ nav{
   stroke-width: 2;
   fill: none;
 }
-/* 🔔 NOTIFICATION */
+
 .notification {
   position: relative;
   cursor: pointer;
@@ -220,7 +255,7 @@ nav{
   margin-right: 10px;
 }
 
-/* 👤 PROFILE AVATAR FIX */
+
 .avatar {
   width: 28px;
   height: 28px;
@@ -234,15 +269,130 @@ nav{
   font-weight: bold;
 }
 
+/* Main dashboard */
+
+.dashboard-content-A{
+  display: flex;
+  gap:20px;
+  padding:15px 20px;
+  background: #f5f6f8;
+}
+
+
 
 .dashboard-content{
-  display: flex;
+flex:1;
+display: flex;
+flex-direction: column;
+text-align: center;
 }
 
-.selectproject{
-  display: flex;
+.dashboard-content label{
+font-size: 14px;
+font-weight: 600;
+color:black;
+margin-bottom: 6px;
 }
 
-.selectclient{
+.dashboard-content select{
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  background-color: #ffffff;
+  outline: none;
+  transition: all 0.2s ease;
+
+}
+
+.dashboard-content select:hover {
+  border-color: #a0a0a0;
+}
+
+.dashboard-content select:focus {
+  border-color: #4c1d95;
+  box-shadow: 0 0 0 2px rgba(76, 29, 149, 0.2);
+}
+
+/* count-boxs */
+
+.count-box{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 20px;
+  background: #f5f6f8; 
+}
+
+.card {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 15px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.card-content {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+
+}
+
+.card h2 {
+  margin: 5px 0 0;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.card i {
+  font-size: 24px;
+  color: #222;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  transition: 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.total_project .title{
+  color: orange;
+}
+
+.total_clients .title{
+  color:rgb(69, 69, 214);
+}
+
+.total_emp .title{
+  color:rgb(5, 153, 5);
+}
+
+.present_emp .title{
+  color:rgb(5, 153, 5);
+}
+
+.absent_emp .title{
+  color: orange;
+}
+
+.unschegule_abs .title{
+  color:#474545;
+}
+
+
+
+.chart_data{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 20px;
+  background: #f5f6f8;
+  height: 300px;
 }
