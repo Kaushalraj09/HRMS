@@ -88,12 +88,12 @@
   </div>
   <!-- count box -->
   
-  <div class="count-box">
+  <div class="count-box"> 
     <div class="card total_project">
       <div class="card-content">
         <div>
           <p class="title">TOTAL PROJECTS</p>
-          <h2>2</h2>
+          <h2>0</h2>
         </div>
         <i class="fas fa-folder"></i>
       </div>
@@ -102,7 +102,7 @@
       <div class="card-content">
         <div>
           <p class="title">TOTAL CLIENTS</p>
-          <h2>3</h2>
+          <h2>0</h2>
         </div>
         <i class="fas fa-building"></i>
       </div>
@@ -111,7 +111,7 @@
       <div class="card-content">
         <div>
           <p class="title">TOTAL EMPLOYEES</p>
-          <h2>23</h2>
+          <h2>0</h2>
         </div>
         <i class="fas fa-users"></i>
       </div>
@@ -120,7 +120,7 @@
       <div class="card-content">
         <div>
           <p class="title">PRESENT EMPLOYEES</p>
-          <h2>23</h2>
+          <h2>0</h2>
         </div>
         <i class="fas fa-user-check"></i>
       </div>
@@ -146,21 +146,64 @@
   </div>
 
 <!-- chart data -->
- <div class="chart_data">
+<div class="chart_data">
   <div class="card work_breakdown">
-    <h2>Work Location Breakdown</h2>
-
+    <div class="card-header">
+     Work Location Breakdown
+    </div>
+    <div class="divider"></div>
+    <div class="chart-workContainers">
+      <canvas baseChart 
+        [data]="pieChartData" 
+        [type]="pieChartType" 
+        [options]="pieChartOptions"
+        [plugins]="pieChartPlugins">
+      </canvas>
+      <div class="center-text">
+        <p>Total</p>
+        <h2>{{ total }}</h2>
+      </div>
+    </div>
   </div>
+
   <div class="card gender_breakdown">
-    <h2>Gender Breakdown</h2>
+    <div class="card-header">
+      Gender Breakdown
+    </div>
+   <div class="divider"></div>
+   <div class="chart-genderContainers">
+      <canvas baseChart 
+        [data]="pieChartData2" 
+        [type]="pieChartType2" 
+        [options]="pieChartOptions2"
+        [plugins]="pieChartPlugins">
+      </canvas>
+      <div class="center-text">
+        <p>Total</p>
+        <h2>{{ gendertotal }}</h2>
+      </div>
+    </div>
 
   </div>
   <div class="card upcoming_events">
-    <h2>Upcoming Events</h2>
-
+    <div class="card-header">
+      Upcoming Events
+    </div>
+    <div class="divider"></div>
+    <div class="event-list">
+      <div class="event-item" *ngFor="let event of events">
+        <div class="event-icon">
+          <i class="fas fa-birthday-cake"></i>
+        </div>
+        <div class="event-info">
+          <p class="event-name">{{ event.name }}</p>
+          <p class="event-note">{{ event.note }}</p>
+          <p class="event-role">{{ event.role }}</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-
 
 </div>
 
