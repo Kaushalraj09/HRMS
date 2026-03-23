@@ -2,11 +2,14 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartType } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, MatFormFieldModule, MatSelectModule],
+  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective],
   templateUrl: './hrDashboard.component.html',
   styleUrls: ['./hrDashboard.component.css'],
 })
@@ -55,4 +58,119 @@ export class HrDashboardComponent {
     { name: 'sachin', note: 'Birthday: Oct 15', role: 'Full Stack' },
     { name: 'Sachin M', note: 'Birthday: Oct 15', role: 'Dev' },
   ];
+
+
+// charts
+
+  workFromHome = 4;
+  workFromOffice = 1;
+
+  total = this.workFromHome + this.workFromOffice;
+
+  pieChartType: 'doughnut' = 'doughnut';
+
+  pieChartData: ChartConfiguration<'doughnut'>['data'] = {
+    labels: ['Work from Home', 'Work from Office'],
+    datasets: [
+      {
+        data: [this.workFromHome, this.workFromOffice],
+        backgroundColor: ['#4e73df', '#1cc88a'],
+        borderWidth: 2
+      }
+    ]
+  };
+   pieChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    cutout: '70%',
+
+    layout: {
+    padding: {
+      top: 40,
+      bottom: 30,
+      left: 40,
+      right: 40
+    }
+  },
+
+    plugins: {
+      legend: {
+        display: false
+      },
+      datalabels: {
+        color: '#000',
+        font: {
+          weight: 'bold',
+          size: 12
+        },
+       formatter: (value: number, context: any) => {
+          const total = context.chart._metasets[0].total;
+          const percentage = ((value / total) * 100).toFixed(0);
+          const label = context.chart.data.labels[context.dataIndex];
+          return `${percentage}%\n${label}`;
+        },
+        anchor: 'end',    
+        align: 'start',
+        offset: 30,
+        clamp: false,
+        clip: false
+      }
+    }
+  };
+
+
+
+  male = 4;
+  female = 12;
+
+  gendertotal = this.male + this.female;
+
+  pieChartType2: 'doughnut' = 'doughnut';
+
+  pieChartData2: ChartConfiguration<'doughnut'>['data'] = {
+    labels: ['Female', 'Male'],
+    datasets: [
+      {
+        data: [this.male, this.female],
+        backgroundColor: ['#da1387', '#8ccdfc'],
+        borderWidth: 2
+      }
+    ]
+  };
+   pieChartOptions2: ChartConfiguration<'doughnut'>['options'] = {
+    cutout: '70%',
+
+    layout: {
+    padding: {
+      top: 40,
+      bottom: 30,
+      left: 40,
+      right: 40
+    }
+  },
+
+    plugins: {
+      legend: {
+        display: false
+      },
+      datalabels: {
+        color: '#000',
+        font: {
+          weight: 'bold',
+          size: 12
+        },
+       formatter: (value: number, context: any) => {
+          const total = context.chart._metasets[0].total;
+          const percentage = ((value / total) * 100).toFixed(0);
+          const label = context.chart.data.labels[context.dataIndex];
+          return `${percentage}%\n${label}`;
+        },
+        anchor: 'end',    
+        align: 'start',
+        offset: 12,
+        clamp: false,
+        clip: false
+      }
+    }
+  };
+
+  pieChartPlugins = [ChartDataLabels];  
 }
