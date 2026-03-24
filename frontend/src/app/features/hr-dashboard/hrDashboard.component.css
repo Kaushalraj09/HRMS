@@ -1,26 +1,27 @@
-
-nav{
+nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   height: 50px;
 }
+
 .leftnav {
   display: flex;
   align-items: center;
   gap: 20px;
 
 }
-.logo  img{
+
+.logo img {
   height: 50px;
   width: 50px;
   margin-left: 50px;
 
 }
 
-.hrname{
-  color:white;
+.hrname {
+  color: white;
   margin-left: 10px;
 
 }
@@ -45,7 +46,7 @@ nav{
   width: 50%;
 }
 
-.mid{
+.mid {
   width: 75%;
 }
 
@@ -74,13 +75,13 @@ nav{
 .searchbar input {
   padding: 8px 35px 8px 12px;
   border-radius: 20px;
-  
-  
+
+
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 
-  
+
   border: 1px solid rgba(255, 255, 255, 0.2);
 
 
@@ -88,7 +89,7 @@ nav{
   font-size: 12px;
   outline: none;
 
-  
+
   transition: all 0.3s ease;
 }
 
@@ -126,7 +127,7 @@ nav{
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  stroke: white; 
+  stroke: white;
   stroke-width: 2;
   fill: none;
   pointer-events: none;
@@ -150,7 +151,7 @@ nav{
   padding: 10px;
   height: 100%;
   position: relative;
-  top:-10px;
+  top: -10px;
 }
 
 ::ng-deep .mdc-notched-outline {
@@ -271,30 +272,30 @@ nav{
 
 /* Main dashboard */
 
-.dashboard-content-A{
+.dashboard-content-A {
   display: flex;
-  gap:20px;
-  padding:15px 20px;
+  gap: 20px;
+  padding: 15px 20px;
   background: #f5f6f8;
 }
 
 
 
-.dashboard-content{
-flex:1;
-display: flex;
-flex-direction: column;
-text-align: center;
+.dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
 }
 
-.dashboard-content label{
-font-size: 14px;
-font-weight: 600;
-color:black;
-margin-bottom: 6px;
+.dashboard-content label {
+  font-size: 14px;
+  font-weight: 600;
+  color: black;
+  margin-bottom: 6px;
 }
 
-.dashboard-content select{
+.dashboard-content select {
   padding: 10px 12px;
   font-size: 14px;
   border: 1px solid #dcdcdc;
@@ -316,19 +317,19 @@ margin-bottom: 6px;
 
 /* count-boxs */
 
-.count-box{
+.count-box {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   padding: 20px;
-  background: #f5f6f8; 
+  background: #f5f6f8;
 }
 
 .card {
   background: #f9fafb;
   border-radius: 8px;
   padding: 15px 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .card-content {
@@ -359,36 +360,36 @@ margin-bottom: 6px;
 .card:hover {
   transform: translateY(-3px);
   transition: 0.2s;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.total_project .title{
+.total_project .title {
   color: orange;
 }
 
-.total_clients .title{
-  color:rgb(69, 69, 214);
+.total_clients .title {
+  color: rgb(69, 69, 214);
 }
 
-.total_emp .title{
-  color:rgb(5, 153, 5);
+.total_emp .title {
+  color: rgb(5, 153, 5);
 }
 
-.present_emp .title{
-  color:rgb(5, 153, 5);
+.present_emp .title {
+  color: rgb(5, 153, 5);
 }
 
-.absent_emp .title{
+.absent_emp .title {
   color: orange;
 }
 
-.unschegule_abs .title{
-  color:#474545;
+.unschegule_abs .title {
+  color: #474545;
 }
 
 
 
-.chart_data{
+.chart_data {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
@@ -396,21 +397,25 @@ margin-bottom: 6px;
   background: #f5f6f8;
 }
 
-.chart-workContainers{
+.chart-workContainers {
   position: relative;
-  width: 100%;
-  height: 280px;   /* control size */
+  width: 400px;
+  height: 400px;
+  margin: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 10px;
+  overflow: visible !important;
 }
+
 .card-header {
   padding: 12px 16px;
   font-weight: 600;
   color: #ff4d4d;
   font-size: 14px;
 }
+
 .divider {
   height: 1px;
   background-color: #e5e5e5;
@@ -432,15 +437,23 @@ margin-bottom: 6px;
   font-weight: bold;
 }
 
-.chart-genderContainers{
+.chart-genderContainers {
   position: relative;
-  width: 100%;
-  height: 280px;
+  width: 400px;
+  height: 400px;
+  margin: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 10px;
+  overflow: visible !important;
 
+}
+
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+  /* ✅ force canvas to fit */
 }
 
 .event-list {
@@ -466,7 +479,8 @@ margin-bottom: 6px;
   width: 24px;
   height: 24px;
   font-size: 14px;
-  color: #3b82f6; /* Blue icon colour */
+  color: #3b82f6;
+  /* Blue icon colour */
 }
 
 .event-info {
@@ -492,6 +506,12 @@ margin-bottom: 6px;
   color: #888;
 }
 
+#cakei {
+  color: rgb(34, 89, 183) !important;
+
+}
+
+
 @media (max-width: 992px) {
   .chart_data {
     grid-template-columns: repeat(2, 1fr);
@@ -507,4 +527,115 @@ margin-bottom: 6px;
   .chart-genderContainers {
     height: 220px;
   }
+}
+
+/* map */
+.map_data {
+  display: grid;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+}
+
+/* absent tate and quick stats */
+
+.abs_and_stats {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+}
+
+.chart_abs_data {
+  height: 250px;   
+  padding: 10px;
+}
+
+.quick_stats {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 10px;
+  align-items: center;
+}
+
+.quick_stats-item {
+  text-align: center;
+}
+
+.quick_stats-total {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.quick_stats-item:nth-child(1) .quick_stats-total {
+  color: #ff4d4d;
+}
+
+.quick_stats-item:nth-child(2) .quick_stats-total {
+  color: #22c55e;
+}
+
+.quick_stats-name {
+  font-size: 13px;
+  color: #777;
+  margin: 0;
+}
+
+/* sheets */
+
+.time_sheet {
+  display: grid;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+  margin-bottom: 20px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 15px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 12px 16px;
+  border: 1px solid #e5e5e5;
+  font-size: 13px;
+}
+
+th {
+  font-weight: 600;
+  color: #333;
+}
+
+td {
+  color: #555;
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+.status-badge.present {
+  background-color: #22c55e;
+}
+
+.status-badge.absent {
+  background-color: #ef4444;
 }
