@@ -21,17 +21,14 @@
         <input type="text" placeholder="Search here" />
         <svg class="search-icon" viewBox="0 0 24 24">
           <path
-            d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-          />
+            d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" />
         </svg>
       </div>
 
       <div class="globeicon">
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" />
-          <path
-            d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z"
-          />
+          <path d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z" />
         </svg>
       </div>
 
@@ -47,9 +44,7 @@
 
       <div class="notification">
         <svg viewBox="0 0 24 24">
-          <path
-            d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z"
-          />
+          <path d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z" />
           <path d="M9 19C9.5 20 10.5 21 12 21C13.5 21 14.5 20 15 19" />
         </svg>
         <span class="badge">3</span>
@@ -87,8 +82,8 @@
     </div>
   </div>
   <!-- count box -->
-  
-  <div class="count-box"> 
+
+  <div class="count-box">
     <div class="card total_project">
       <div class="card-content">
         <div>
@@ -145,66 +140,141 @@
     </div>
   </div>
 
-<!-- chart data -->
-<div class="chart_data">
-  <div class="card work_breakdown">
-    <div class="card-header">
-     Work Location Breakdown
-    </div>
-    <div class="divider"></div>
-    <div class="chart-workContainers">
-      <canvas baseChart 
-        [data]="pieChartData" 
-        [type]="pieChartType" 
-        [options]="pieChartOptions"
-        [plugins]="pieChartPlugins">
-      </canvas>
-      <div class="center-text">
-        <p>Total</p>
-        <h2>{{ total }}</h2>
+  <!-- chart data -->
+  <div class="chart_data">
+    <div class="card work_breakdown">
+      <div class="card-header">
+        Work Location Breakdown
       </div>
-    </div>
-  </div>
-
-  <div class="card gender_breakdown">
-    <div class="card-header">
-      Gender Breakdown
-    </div>
-   <div class="divider"></div>
-   <div class="chart-genderContainers">
-      <canvas baseChart 
-        [data]="pieChartData2" 
-        [type]="pieChartType2" 
-        [options]="pieChartOptions2"
-        [plugins]="pieChartPlugins">
-      </canvas>
-      <div class="center-text">
-        <p>Total</p>
-        <h2>{{ gendertotal }}</h2>
-      </div>
-    </div>
-
-  </div>
-  <div class="card upcoming_events">
-    <div class="card-header">
-      Upcoming Events
-    </div>
-    <div class="divider"></div>
-    <div class="event-list">
-      <div class="event-item" *ngFor="let event of events">
-        <div class="event-icon">
-          <i class="fas fa-birthday-cake"></i>
+      <div class="divider"></div>
+      <div class="chart-workContainers">
+        <canvas baseChart [data]="pieChartData" [type]="pieChartType" [options]="pieChartOptions"
+          [plugins]="pieChartPlugins">
+        </canvas>
+        <div class="center-text">
+          <p>Total</p>
+          <h2>{{ total }}</h2>
         </div>
-        <div class="event-info">
-          <p class="event-name">{{ event.name }}</p>
-          <p class="event-note">{{ event.note }}</p>
-          <p class="event-role">{{ event.role }}</p>
+      </div>
+    </div>
+
+    <div class="card gender_breakdown">
+      <div class="card-header">
+        Gender Breakdown
+      </div>
+      <div class="divider"></div>
+      <div class="chart-genderContainers">
+        <canvas baseChart [data]="pieChartData2" [type]="pieChartType2" [options]="pieChartOptions2"
+          [plugins]="pieChartPlugins">
+        </canvas>
+        <div class="center-text">
+          <p>Total</p>
+          <h2>{{ gendertotal }}</h2>
+        </div>
+      </div>
+
+    </div>
+    <div class="card upcoming_events">
+      <div class="card-header">
+        Upcoming Events
+      </div>
+      <div class="divider"></div>
+      <div class="event-list">
+        <div class="event-item" *ngFor="let event of events">
+          <div class="event-icon">
+            <i id="cakei" class="fas fa-birthday-cake blue-icon"></i>
+          </div>
+          <div class="event-info">
+            <p class="event-name">{{ event.name }}</p>
+            <p class="event-note">{{ event.note }}</p>
+            <p class="event-role">{{ event.role }}</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+
+  <!-- map -->
+  <div class="map_data">
+    <div class="card mapping">
+      <div class="card-header">
+        Employee Location Map
+      </div>
+      <div class="divider"></div>
+
+    </div>
+  </div>
+  <!-- absent tate and quick stats -->
+  
+  <div class="abs_and_stats">
+    <div class="card absence_rate">
+      <div class="card-header">
+        Absence Rate(Last 7 Days)
+      </div>
+      <div class="divider"></div>
+        <div class="chart_abs_data">
+          <canvas baseChart 
+            [data]="absenceChartData" 
+            [type]="absenceChartType" 
+            [options]="absenceChartOptions">
+          </canvas>
+        </div>
+      </div>
+    <div class="card quick_Stats">
+      <div class="card-header">
+        Quick Stats
+      </div>
+      <div class="divider"></div>
+      <div class="quick_stats">
+        <div class="quick_stats-item" *ngFor="let event of stats">
+          <div class="quick_stats-info">
+            <p class="quick_stats-total">{{ event.total }}</p>
+            <p class="quick_stats-name">{{ event.name }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- sheets -->
+  <div class="time_sheet">
+    <div class="card recent_time">
+      <div class="card-header">
+        Recent Time Sheets
+      </div>
+      <div class="divider"></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Date</th>
+              <th>Punch In</th>
+              <th>Punch Out</th>
+              <th>Break Time</th>
+              <th>Overtime</th>
+              <th>Total Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let sheet of recentTimeSheets">
+              <td>{{ sheet.employee }}</td>
+              <td>{{ sheet.date }}</td>
+              <td>{{ sheet.punchIn }}</td>
+              <td>{{ sheet.punchOut }}</td>
+              <td>{{ sheet.breakTime }}</td>
+              <td>{{ sheet.overtime }}</td>
+              <td>{{ sheet.totalHours }}</td>
+              <td><span class="status-badge" [ngClass]="sheet.status.toLowerCase()">
+                {{ sheet.status }}
+              </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 </div>
-
-
