@@ -1,0 +1,114 @@
+<div class="Emp_dashboard">
+    <nav>
+        <!-- left side -->
+        <div class="leftnav">
+            <div class="logo">
+                <img src="assets/AivanLogo.png" alt="Logo" />
+            </div>
+            <div class="hamburger">
+                <span class="line long"></span>
+                <span class="line mid"></span>
+                <span class="line short"></span>
+            </div>
+            <div class="hrname">
+                <span>Hi, Kaushal</span>
+            </div>
+        </div>
+
+        <!-- right side -->
+        <div class="rightnav">
+            <div class="searchbar">
+                <input type="text" placeholder="Search here" />
+                <svg class="search-icon" viewBox="0 0 24 24">
+                    <path
+                        d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" />
+                </svg>
+            </div>
+
+            <div class="globeicon">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z" />
+                </svg>
+            </div>
+
+            <div class="language">
+                <mat-form-field appearance="outline">
+                    <mat-select [(value)]="selectedLang">
+                        <mat-option value="en">English</mat-option>
+                        <mat-option value="hi">Hindi</mat-option>
+                        <mat-option value="es">Spanish</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+
+            <div class="notification">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z" />
+                    <path d="M9 19C9.5 20 10.5 21 12 21C13.5 21 14.5 20 15 19" />
+                </svg>
+                <span class="badge">3</span>
+            </div>
+
+            <div class="profile">
+                <div class="avatar">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="online-dot"></span>
+                </div>
+                <span class="profilename">Kaushal</span>
+                <svg class="chevron-icon" viewBox="0 0 24 24">
+                    <path d="M6 9L12 15L18 9" />
+                </svg>
+            </div>
+        </div>
+    </nav>
+
+    <div class="card timezone">
+
+        <div class="empname">
+            Welcome, Kaushal
+        </div>
+        <div class="pertime">
+            {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
+        </div>
+    </div>
+
+    <!-- Mark Attendence and Request Time off -->
+    <div class="mark_attendence_request_time">
+        <div class="card Mark_attendance">
+            <div class="card-header">
+                <span>Mark Attendance</span>
+                <div class="status-buttons">
+                    <button class="status-btn work" [class.active]="status === 'work'" (click)="status = 'work'">
+                    <span class="dot"></span> Work
+                    </button>
+                    <button class="status-btn break" [class.active]="status === 'break'" (click)="status = 'break'">
+                    <span class="dot"></span> Break
+                    </button>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="punch-container" (click)="togglePunch()">
+                <!-- Outer Circle -->
+                <div class="outer-circle">
+                    <!-- Inner Circle -->
+                    <div class="inner-circle" [class.punched-in]="isPunchedIn">
+                        <div class="punch-text">
+                            <span>Punch</span>
+                            <span>{{ isPunchedIn ? 'In' : 'Out' }}</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        <div class="card request_time_off">
+            <div class="card-header">
+                Request Time Off
+            </div>
+            <div class="divider"></div>
+        </div>
+    </div>
+
+</div>

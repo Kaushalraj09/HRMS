@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartType } from 'chart.js';
+import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 @Component({
@@ -35,23 +35,6 @@ export class HrDashboardComponent {
     { label: 'UNSCHEDULED ABSENTS', value: 0, icon: 'userX', accent: 'red' as const },
   ];
 
-  workLocation = {
-    title: 'Work Location Breakdown',
-    total: 5,
-    segments: [
-      { label: 'Work from Office', value: 20, color: '#22c55e' },
-      { label: 'Work from Home', value: 80, color: '#2563eb' },
-    ],
-  };
-
-  gender = {
-    title: 'Gender Breakdown',
-    total: 19,
-    segments: [
-      { label: 'Female', value: 16, color: '#fb7185' },
-      { label: 'Male', value: 84, color: '#38bdf8' },
-    ],
-  };
 
   events = [
     { name: 'Kaushal Raj', note: 'Birthday: Mar 22', role: 'Full Stack Developer' },
@@ -96,7 +79,7 @@ export class HrDashboardComponent {
         display: false,
       },
       datalabels: {
-        color: '#000',
+        color: '#f8f3f3',
         font: {
           weight: 'bold',
           size: 12,
@@ -151,7 +134,7 @@ export class HrDashboardComponent {
         display: false,
       },
       datalabels: {
-        color: '#000',
+        color: '#fcf8f8',
         font: {
           weight: 'bold',
           size: 12,
@@ -183,16 +166,16 @@ export class HrDashboardComponent {
 
           const angle = element.startAngle + (element.endAngle - element.startAngle) / 2;
 
-        
+
           const startX = x + Math.cos(angle) * outerRadius;
           const startY = y + Math.sin(angle) * outerRadius;
 
-          
+
           const lineLength = 20;
           const midX = startX + Math.cos(angle) * lineLength;
           const midY = startY + Math.sin(angle) * lineLength;
 
-        
+
           const horizontalLength = 5;
           const endX = midX + (Math.cos(angle) >= 0 ? horizontalLength : -horizontalLength);
           const endY = midY;
@@ -203,11 +186,11 @@ export class HrDashboardComponent {
           ctx.strokeStyle = bgColor;
           ctx.lineWidth = 2;
 
-        
+
           ctx.moveTo(startX, startY);
           ctx.lineTo(midX, midY);
 
-        
+
           ctx.lineTo(endX, endY);
 
           ctx.stroke();
@@ -232,56 +215,56 @@ export class HrDashboardComponent {
 
   absenceChartType: 'line' = 'line';
 
-absenceChartData: ChartConfiguration<'line'>['data'] = {
-  labels: ['Mar 04', 'Mar 05', 'Mar 06', 'Mar 07', 'Mar 08', 'Mar 09', 'Mar 10'],
-  datasets: [
-    {
-      label: 'Absence Count',
-      data: [0, 0, 0, 0, 0, 0, 0],
-      borderColor: '#6b7280',
-      backgroundColor: '#6b7280',
-      tension: 0.3,
-      pointRadius: 4,
-      pointHoverRadius: 5,
-      fill: false
-    }
-  ]
-};
-absenceChartOptions: ChartConfiguration<'line'>['options'] = {
-  responsive: true,
-  maintainAspectRatio: false,
+  absenceChartData: ChartConfiguration<'line'>['data'] = {
+    labels: ['Mar 04', 'Mar 05', 'Mar 06', 'Mar 07', 'Mar 08', 'Mar 09', 'Mar 10'],
+    datasets: [
+      {
+        label: 'Absence Count',
+        data: [0, 0, 0, 0, 0, 0, 0],
+        borderColor: '#6b7280',
+        backgroundColor: '#6b7280',
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 5,
+        fill: false
+      }
+    ]
+  };
+  absenceChartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
 
-  plugins: {
-    legend: {
-      display: false
-    }
-  },
-
-  scales: {
-    x: {
-      grid: {
+    plugins: {
+      legend: {
         display: false
-      },
-      ticks: {
-        color: '#6b7280'
       }
     },
-    y: {
-      beginAtZero: true,
-      ticks: {
-        stepSize: 1,
-        color: '#6b7280'
+
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          color: '#6b7280'
+        }
       },
-      grid: {
-        color: '#e5e7eb'
-      },
-      title: {
-        display: true,
-        text: 'Absence Count'
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          color: '#6b7280'
+        },
+        grid: {
+          color: '#e5e7eb'
+        },
+        title: {
+          display: true,
+          text: 'Absence Count'
+        }
       }
     }
-  }
-};
+  };
 
   stats = [
     { total: '0', name: 'Total Employees' },
@@ -293,7 +276,7 @@ absenceChartOptions: ChartConfiguration<'line'>['options'] = {
   recentTimeSheets = [
     { employee: 'Kaushal Raj', date: '10-03-2026', punchIn: '09:30 AM', punchOut: '06:00 PM', breakTime: '1.00 hrs', overtime: '0.00 hrs', totalHours: '7.30 hrs', status: 'Present' },
     { employee: 'Rishu ', date: '10-03-2026', punchIn: '00:00 AM', punchOut: '00:00 PM', breakTime: '00.00 hrs', overtime: '00.00 hrs', totalHours: '00.00 hrs', status: 'Absent' },
-     { employee: 'Ankit Singh', date: '10-03-2026', punchIn: '09:30 AM', punchOut: '06:00 PM', breakTime: '1.00 hrs', overtime: '0.00 hrs', totalHours: '7.30 hrs', status: 'Present' }
+    { employee: 'Ankit Singh', date: '10-03-2026', punchIn: '09:30 AM', punchOut: '06:00 PM', breakTime: '1.00 hrs', overtime: '0.00 hrs', totalHours: '7.30 hrs', status: 'Present' }
   ];
 
 }
