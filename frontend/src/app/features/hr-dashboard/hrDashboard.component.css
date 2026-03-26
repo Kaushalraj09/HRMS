@@ -535,6 +535,11 @@ canvas {
   gap: 20px;
   padding: 10px;
   background: #f5f6f8;
+  
+}
+.world_map{
+  height: 500px;
+  width: auto;
 }
 
 /* absent tate and quick stats */
