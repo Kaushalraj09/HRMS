@@ -88,19 +88,15 @@
                 </div>
             </div>
             <div class="divider"></div>
-            <div class="punch-container" (click)="togglePunch()">
-                <!-- Outer Circle -->
+            <div class="punch-container">
                 <div class="outer-circle">
-                    <!-- Inner Circle -->
-                    <div class="inner-circle" [class.punched-in]="isPunchedIn">
+                    <div class="inner-circle" [class.punched-in]="isPunchedIn" (click)="togglePunch()">
                         <div class="punch-text">
                             <span>Punch</span>
                             <span>{{ isPunchedIn ? 'In' : 'Out' }}</span>
                         </div>
                     </div>
-
                 </div>
-
             </div>
         </div>
         <div class="card request_time_off">
@@ -108,7 +104,94 @@
                 Request Time Off
             </div>
             <div class="divider"></div>
+            <div class="stats">
+                <div class="stat-box">
+                    <h2>{{ approvedHours }} hrs</h2>
+                    <p>Approved</p>
+                </div>
+                <div class="stat-box">
+                    <h2>{{ remainingHours }} hrs</h2>
+                    <p>Remaining</p>
+                </div>
+                
+            </div>
+            <button class="apply-btn" (click)="startTimer()">
+                Apply Time Off
+            </button>
+            
+
         </div>
     </div>
 
+    <div class="time_sheet">
+        <div class="card recent_time">
+            <div class="card-header">
+                Time Sheets
+            </div>
+            <div class="divider"></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Day</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Total</th>
+                                <th>Overtime</th>
+                                <th>Break</th>
+                                <th>Grand Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="timeSheets.length === 0">
+                                <td colspan="8" class="no-data">
+                                    No attendance records found
+                                </td>
+                            </tr>
+                            <tr *ngFor="let sheet of timeSheets">
+                                <td>{{ sheet.date }}</td>
+                                <td>{{ sheet.day }}</td>
+                                <td>{{ sheet.entry }}</td>
+                                <td>{{ sheet.exit }}</td>
+                                <td>{{ sheet.total }}</td>
+                                <td>{{ sheet.overtime }}</td>
+                                <td>{{ sheet.break }}</td>
+                                <td>{{ sheet.grandTotal }}</td>
+    
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+<!-- attendence summary -->
+    <div class="attendance_summary">
+        <div class="card attendance_summary_card">
+            <div class="card-header">
+                <span>Attendance Summary</span>
+            </div>
+            <div class="divider"></div>
+            <div class="summary-content">
+                <div class="summary-item" *ngFor="let item of attendanceSummary">
+
+                    <i [class]="item.icon" class="summary-icon"></i>
+
+                    <div class="summary-text-container">
+                        <span class="summary-label">{{ item.label }}</span>
+                        <span class="summary-value">{{ item.value }}</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="latest_news">
+        <div class="card latest_news_card">
+            <div class="card-header">
+                <span>Latest News</span>
+            </div>
+            <div class="divider"></div>
+        </div>
+    </div>
 </div>

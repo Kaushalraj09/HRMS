@@ -10,22 +10,18 @@ nav {
   display: flex;
   align-items: center;
   gap: 20px;
-
 }
 
 .logo img {
   height: 50px;
   width: 50px;
   margin-left: 50px;
-
 }
 
 .hrname {
   color: white;
   margin-left: 10px;
-
 }
-
 
 .hamburger {
   width: 28px;
@@ -67,7 +63,6 @@ nav {
   margin-left: 10px;
 }
 
-
 .searchbar {
   position: relative;
 }
@@ -76,34 +71,27 @@ nav {
   padding: 8px 35px 8px 12px;
   border-radius: 20px;
 
-
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 
-
   border: 1px solid rgba(255, 255, 255, 0.2);
-
 
   color: white;
   font-size: 12px;
   outline: none;
 
-
   transition: all 0.3s ease;
 }
-
 
 .searchbar input::placeholder {
   color: rgba(255, 255, 255, 0.7);
 }
 
-
 .searchbar input:focus {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
-
 
 .search-icon {
   position: absolute;
@@ -119,7 +107,6 @@ nav {
   opacity: 0.8;
 }
 
-
 .search-icon {
   position: absolute;
   right: 10px;
@@ -133,7 +120,6 @@ nav {
   pointer-events: none;
 }
 
-
 .globeicon svg {
   width: 18px;
   height: 18px;
@@ -142,7 +128,6 @@ nav {
   fill: none;
   cursor: pointer;
 }
-
 
 .language {
   display: flex;
@@ -174,7 +159,6 @@ nav {
   display: flex;
   align-items: center;
   padding: 0 !important;
-
 }
 
 ::ng-deep .mat-mdc-select {
@@ -183,18 +167,15 @@ nav {
   height: 30px;
 }
 
-
 ::ng-deep .mat-mdc-select-value {
   color: white !important;
   font-weight: 600;
   font-size: 14px;
 }
 
-
 ::ng-deep .mat-mdc-select-arrow {
   color: white !important;
 }
-
 
 .clientcount span,
 .projectcount span {
@@ -205,7 +186,6 @@ nav {
   border-radius: 10px;
   margin-left: 10px;
 }
-
 
 .profile {
   display: flex;
@@ -254,7 +234,6 @@ nav {
   border-radius: 50%;
   margin-right: 10px;
 }
-
 
 .avatar {
   position: relative;
@@ -317,7 +296,6 @@ nav {
   height: 1px;
   background-color: #e9eaed;
 }
-
 
 .mark_attendence_request_time {
   display: grid;
@@ -386,8 +364,6 @@ nav {
   background-color: #ef4444;
 }
 
-
-
 .punch-container {
   display: flex;
   justify-content: center;
@@ -404,9 +380,7 @@ nav {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: conic-gradient(#ef4444 0deg 120deg,
-      #3b82f6 120deg 240deg,
-      #1f2937 240deg 360deg);
+  background: conic-gradient(#ef4444 0deg 120deg, #3b82f6 120deg 240deg, #1f2937 240deg 360deg);
   padding: 12px;
   transition: transform 0.3s ease;
   position: relative;
@@ -417,7 +391,6 @@ nav {
   width: 170px;
   height: 170px;
   border-radius: 50%;
-  /* Default Red for Punch Out (isPunchedIn is false) */
   background: linear-gradient(135deg, #f87171, #ef4444);
   display: flex;
   justify-content: center;
@@ -429,7 +402,6 @@ nav {
   z-index: 2;
 }
 
-/* When isPunchedIn is true, color changes (to Blue for example) */
 .inner-circle.punched-in {
   background: linear-gradient(135deg, #2d994a, #032c1a);
   box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
@@ -456,9 +428,8 @@ nav {
   font-weight: 600;
 }
 
-/* White ring between outer and inner */
 .outer-circle::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 20px;
   left: 20px;
@@ -467,4 +438,186 @@ nav {
   border-radius: 50%;
   background: white;
   z-index: 1;
+}
+
+.request_time_off {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.request_time_off .card-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.stats {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+}
+
+.stat-box {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 25px 15px;
+  text-align: center;
+}
+
+.stat-box h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+  font-family: Consolas, 'Courier New', monospace;
+  font-weight: bold;
+}
+
+.stat-box p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.apply-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  width: max-content;
+  margin: 0 0 20px 20px;
+}
+
+.apply-btn:hover {
+  background: #0056b3;
+}
+
+/* toal sheet */
+.time_sheet {
+  display: grid;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 15px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 12px 16px;
+  border: 1px solid #e5e5e5;
+  font-size: 13px;
+}
+
+th {
+  font-weight: 600;
+  color: #333;
+}
+
+td {
+  color: #555;
+  font-weight: 500;
+}
+
+.no-data {
+  padding: 40px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.attendance_summary{
+  display: grid;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+  margin-bottom: 20px;
+}
+.attendance_summary_card {
+  background: #ffffff;
+  border: 1px solid #fafafa;
+  border-radius: 8px;
+  
+}
+
+.summary-content {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  padding: 20px 20px ;
+
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb; 
+  background: #f9fafb; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blue-icon {
+  color: #2563eb; 
+}
+.summary-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+   font-size: 11px;
+  color: #6b7280; 
+  font-weight: 500;
+}
+.summary-value {
+  font-size: 16px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.latest_news{
+  display: grid;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f6f8;
+  margin-bottom: 20px;
+}
+.latest_news_card {
+  background: #ffffff;
+  border: 1px solid #fafafa;
+  border-radius: 8px;
+  
 }
