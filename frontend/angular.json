@@ -32,6 +32,7 @@
             "styles": [
               "src/material-theme.scss",
               "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
+              "node_modules/angular-calendar/css/angular-calendar.css",
               "src/styles.css"
             ]
           },
