@@ -499,6 +499,216 @@ nav {
 .apply-btn:hover {
   background: #0056b3;
 }
+/* calender */
+.calender_container {
+  display: flex;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 15px 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.calendar-left {
+  width: 65%;
+  padding: 30px;
+}
+
+.calendar-header-info {
+  margin-bottom: 30px;
+}
+
+.calendar-header-info h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.calendar-header-info p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 5px 0 0;
+}
+
+.calendar-right {
+  width: 35%;
+  background: #f8fafc;
+  padding: 30px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.calendar-right h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 25px;
+}
+
+/* Timeline Styling */
+.timeline-container {
+  position: relative;
+}
+
+.event-item {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+  position: relative;
+}
+
+.marker-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.marker-section .dot {
+  width: 10px;
+  height: 10px;
+  background: #3b82f6;
+  border-radius: 50%;
+  z-index: 2;
+  margin-top: 5px;
+}
+
+.marker-section .line {
+  width: 2px;
+  flex-grow: 1;
+  background: #e2e8f0;
+  position: absolute;
+  top: 15px;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.event-item:last-child .marker-section .line {
+  display: none;
+}
+
+.event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-info .time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.event-info .title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-top: 2px;
+}
+
+.event-info .location {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Angular Calendar Overrides */
+::ng-deep .cal-month-view {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+::ng-deep .cal-month-view .cal-header .cal-cell {
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: none !important;
+  text-align: center;
+}
+
+::ng-deep .cal-month-view .cal-header .cal-cell span {
+  display: block;
+  width: 1.2ch; /* Show only first character */
+  overflow: hidden;
+  margin: 0 auto;
+  font-size: 14px;
+}
+
+::ng-deep .cal-month-view .cal-days {
+  border: none !important;
+}
+
+::ng-deep .cal-month-view .cal-cell-row {
+  border-bottom: none !important;
+  display: flex !important;
+}
+
+::ng-deep .cal-month-view .cal-day-cell {
+  min-height: 55px !important;
+  border-right: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+::ng-deep .cal-month-view .cal-day-cell:hover {
+  background-color: #f1f5f9 !important;
+  border-radius: 50%;
+}
+
+/* Today's Date Highlight (Image 2 style) */
+::ng-deep .cal-month-view .cal-day-cell.cal-today {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 45px !important;
+  height: 45px !important;
+  flex: 0 0 45px !important; /* Force circle shape */
+  margin: 5px auto !important;
+  z-index: 2;
+}
+
+::ng-deep .cal-month-view .cal-day-cell.cal-today .cal-day-number {
+  color: white !important;
+  font-weight: 700;
+  opacity: 1 !important;
+  font-size: 16px;
+}
+
+::ng-deep .cal-month-view .cal-day-number {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  margin: 0 !important;
+  float: none !important;
+}
+
+::ng-deep .cal-month-view .cal-events {
+  display: flex !important;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 5px;
+}
+
+::ng-deep .cal-month-view .cal-event {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: #3b82f6 !important;
+  margin: 0 !important;
+}
+
+::ng-deep .cal-month-view .cal-active .cal-event {
+  background-color: white !important;
+}
+
+::ng-deep .cal-month-view .cal-out-month .cal-day-number {
+  color: #cbd5e1 !important;
+}
+
 
 /* toal sheet */
 .time_sheet {

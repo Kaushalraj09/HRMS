@@ -122,6 +122,36 @@
 
         </div>
     </div>
+    <div class="card calender_container">
+        <div class="calendar-left">
+            <div class="calendar-header-info">
+                <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
+                <p>Week {{ weekNumber }}</p>
+            </div>
+            <mwl-calendar-month-view 
+                [viewDate]="viewDate" 
+                \\[events]="events"
+                (dayClicked)="onDayClick($event.day)">
+            </mwl-calendar-month-view>
+        </div>
+        <div class="calendar-right">
+            <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
+    
+            <div class="timeline-container">
+                <div *ngFor="let event of selectedEvents" class="event-item">
+                    <div class="marker-section">
+                        <div class="dot"></div>
+                        <div class="line"></div>
+                    </div>
+                    <div class="event-info">
+                        <div class="time">{{ event.time }}</div>
+                        <div class="title">{{ event.title }}</div>
+                        <div class="location">{{ event.location }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="time_sheet">
         <div class="card recent_time">
@@ -181,7 +211,6 @@
                         <span class="summary-label">{{ item.label }}</span>
                         <span class="summary-value">{{ item.value }}</span>
                     </div>
-
                 </div>
             </div>
         </div>
