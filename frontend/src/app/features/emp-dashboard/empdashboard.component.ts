@@ -1,9 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, Injectable } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { CalendarModule } from 'angular-calendar';
+import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
+
+@Injectable()
+export class CustomDateFormatter extends CalendarNativeDateFormatter {
+  public override monthViewColumnHeader({ date, locale }: DateFormatterParams): string {
+    return new Intl.DateTimeFormat(locale, { weekday: 'narrow' }).format(date);
+  }
+}
 
 @Component({
   selector: 'app-emp-dashboard',
@@ -17,6 +24,12 @@ import { CalendarModule } from 'angular-calendar';
   ],
   templateUrl: './empdashboard.component.html',
   styleUrls: ['./empdashboard.component.css'],
+  providers: [
+    {
+      provide: CalendarDateFormatter,
+      useClass: CustomDateFormatter,
+    },
+  ],
 })
 export class EmpDashboardComponent {
   selectedLang = 'en';
@@ -28,6 +41,7 @@ export class EmpDashboardComponent {
       this.currentDate = new Date();
     }, 1000);
 
+    this.weekNumber = this.getWeekOfMonth(this.selectedDate);
     this.filterEvents(this.selectedDate);
   }
 
@@ -93,23 +107,28 @@ export class EmpDashboardComponent {
       time: '10:12 PM',
       title: 'Punch Out',
       location: 'Office'
+    },
+    {
+      date: new Date(2026, 2, 31),
+      time: '06:12 PM',
+      title: 'Punch Out',
+      location: 'Office'
     }
   ];
 
 
   selectedEvents: any[] = [];
 
-  onDayClick(day: any) {
+  onDayClick(day: { date: Date }) {
     this.selectedDate = day.date;
     this.weekNumber = this.getWeekOfMonth(day.date);
     this.filterEvents(day.date);
   }
 
   getWeekOfMonth(date: Date): number {
-    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const dayOfMonth = date.getDate();
-    const dayOfWeek = startOfMonth.getDay();
-    return Math.ceil((dayOfMonth + dayOfWeek) / 7);
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const dayOfWeek = firstDayOfMonth.getDay();
+    return Math.ceil((date.getDate() + dayOfWeek) / 7);
   }
 
   filterEvents(date: Date) {
@@ -117,6 +136,23 @@ export class EmpDashboardComponent {
       e.date.toDateString() === date.toDateString()
     );
   }
-}
 
+  latestNews_content = [
+    {
+      heading: 'Welcome to Aivan ERP System',
+      contents: 'We are excited to announce the launch of our new ERP system designed to streamline your business operations and improve productivity.',
+      newsType: 'General',
+      date: new Date(2026, 3, 10)
+    },
+    {
+      heading: 'Welcome to New Branch opening',
+      contents: 'We are excited to announce the launch of our new branch in downtown!',
+      newsType: 'Promotional',
+      date: new Date(2026, 3, 10)
+    },
+
+  ];
+
+
+}
 

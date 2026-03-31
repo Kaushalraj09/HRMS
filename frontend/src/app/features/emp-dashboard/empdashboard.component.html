@@ -122,31 +122,30 @@
 
         </div>
     </div>
-    <div class="card calender_container">
-        <div class="calendar-left">
-            <div class="calendar-header-info">
-                <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
-                <p>Week {{ weekNumber }}</p>
+    <div class="calendar_body">
+        <div class="card calender_container">
+            <div class="calendar-left">
+                <div class="calendar-header-info">
+                    <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
+                    <p>Week {{ weekNumber }}</p>
+                </div>
+                <mwl-calendar-month-view [viewDate]="viewDate" \\[events]="events" (dayClicked)="onDayClick($event.day)">
+                </mwl-calendar-month-view>
             </div>
-            <mwl-calendar-month-view 
-                [viewDate]="viewDate" 
-                \\[events]="events"
-                (dayClicked)="onDayClick($event.day)">
-            </mwl-calendar-month-view>
-        </div>
-        <div class="calendar-right">
-            <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
+            <div class="calendar-right">
+                <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
     
-            <div class="timeline-container">
-                <div *ngFor="let event of selectedEvents" class="event-item">
-                    <div class="marker-section">
-                        <div class="dot"></div>
-                        <div class="line"></div>
-                    </div>
-                    <div class="event-info">
-                        <div class="time">{{ event.time }}</div>
-                        <div class="title">{{ event.title }}</div>
-                        <div class="location">{{ event.location }}</div>
+                <div class="timeline-container">
+                    <div *ngFor="let event of selectedEvents" class="event-item">
+                        <div class="marker-section">
+                            <div class="dot"></div>
+                            <div class="line"></div>
+                        </div>
+                        <div class="event-info">
+                            <div class="time">{{ event.time }}</div>
+                            <div class="title">{{ event.title }}</div>
+                            <div class="location">{{ event.location }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -221,6 +220,24 @@
                 <span>Latest News</span>
             </div>
             <div class="divider"></div>
+            <div class="latest_news_content">
+                <div *ngFor="let event of latestNews_content" class="news-item">
+                    <div class="news-icon-container">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="news-details">
+                        <div class="news-title">{{ event.heading }}</div>
+                        <div class="news-description">{{ event.contents }}</div>
+                        <div class="news-footer">
+                            <span class="news-badge" [ngClass]="event.newsType.toLowerCase()">{{ event.newsType }}</span>
+                            <span class="news-date">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ event.date | date:'MMMM dd, yyyy' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
