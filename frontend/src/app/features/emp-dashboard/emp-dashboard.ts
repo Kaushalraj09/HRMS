@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Injectable } from '@angular/core';
+import { Component, Injectable, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -22,8 +22,8 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     FormsModule,
     CalendarModule
   ],
-  templateUrl: './empdashboard.component.html',
-  styleUrls: ['./empdashboard.component.css'],
+  templateUrl: './emp-dashboard.html',
+  styleUrls: ['./emp-dashboard.css'],
   providers: [
     {
       provide: CalendarDateFormatter,
@@ -31,7 +31,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     },
   ],
 })
-export class EmpDashboardComponent {
+export class EmpDashboard {
   selectedLang = 'en';
   currentDate: Date = new Date();
   status: string = 'work';

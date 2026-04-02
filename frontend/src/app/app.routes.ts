@@ -1,7 +1,8 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/pages/login/login.component';
-import { HrDashboardComponent } from './features/hr-dashboard/hrDashboard.component';
-import { EmpDashboardComponent } from './features/emp-dashboard/empdashboard.component';
+import { HrDashboard } from './features/hr-dashboard/hr-dashboard';
+import { EmpDashboard } from './features/emp-dashboard/emp-dashboard';
+import { MasterDashboard } from './features/master-dashboard/master-dashboard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -9,8 +10,9 @@ export const routes: Routes = [
     path: 'auth',
     children: [{ path: 'login', component: LoginComponent }],
   },
-  { path: 'hr-dashboard', component: HrDashboardComponent },
-  { path: 'emp-dashboard', component: EmpDashboardComponent },
+  { path: 'hr-dashboard', component: HrDashboard },
+  { path: 'emp-dashboard', component: EmpDashboard },
+  { path: 'master-dashboard', component: MasterDashboard},
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },
   { path: '**', redirectTo: 'auth/login' },
 ];

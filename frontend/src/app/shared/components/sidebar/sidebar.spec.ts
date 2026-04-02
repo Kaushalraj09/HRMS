@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { HrDashboardComponent } from './hrDashboard.component';
+import { Sidebar } from './sidebar';
 
-describe('HrDashboardComponent', () => {
-  let component: HrDashboardComponent;
-  let fixture: ComponentFixture<HrDashboardComponent>;
+describe('Sidebar', () => {
+  let component: Sidebar;
+  let fixture: ComponentFixture<Sidebar>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HrDashboardComponent],
+      imports: [Sidebar],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(HrDashboardComponent);
+    fixture = TestBed.createComponent(Sidebar);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
