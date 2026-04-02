@@ -45,7 +45,7 @@ export class LoginComponent {
 
       this.timeoutRef = setTimeout(() => {
         this.showPopup = false;
-        this.router.navigate(['/emp-dashboard']);
+        this.router.navigate(['/master-dashboard']);
       }, 1500);
     } else {
       this.message = 'Invalid email or password ❌';

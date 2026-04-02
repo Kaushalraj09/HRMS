@@ -10,10 +10,10 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
   selector: 'app-hr-dashboard',
   standalone: true,
   imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective],
-  templateUrl: './hrDashboard.component.html',
-  styleUrls: ['./hrDashboard.component.css'],
+  templateUrl: './hr-dashboard.html',
+  styleUrls: ['./hr-dashboard.css'],
 })
-export class HrDashboardComponent {
+export class HrDashboard {
   selectedLang = 'en';
   projects = [
     { id: 1, name: 'AivanHR' },
