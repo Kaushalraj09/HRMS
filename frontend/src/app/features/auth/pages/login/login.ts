@@ -7,10 +7,10 @@ import { Router } from '@angular/router';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
+  templateUrl: './login.html',
+  styleUrls: ['./login.css'],
 })
-export class LoginComponent {
+export class Login {
   loginForm: FormGroup;
   message: string = '';
   messageType: 'success' | 'error' | '' = 'success';

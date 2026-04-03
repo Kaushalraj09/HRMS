@@ -1,67 +1,12 @@
 <div class="Emp_dashboard">
-    <nav>
-        <!-- left side -->
-        <div class="leftnav">
-            <div class="logo">
-                <img src="assets/AivanLogo.png" alt="Logo" />
-            </div>
-            <div class="hamburger">
-                <span class="line long"></span>
-                <span class="line mid"></span>
-                <span class="line short"></span>
-            </div>
-            <div class="hrname">
-                <span>Hi, Kaushal</span>
-            </div>
-        </div>
-
-        <!-- right side -->
-        <div class="rightnav">
-            <div class="searchbar">
-                <input type="text" placeholder="Search here" />
-                <svg class="search-icon" viewBox="0 0 24 24">
-                    <path
-                        d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" />
-                </svg>
-            </div>
-
-            <div class="globeicon">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z" />
-                </svg>
-            </div>
-
-            <div class="language">
-                <mat-form-field appearance="outline">
-                    <mat-select [(value)]="selectedLang">
-                        <mat-option value="en">English</mat-option>
-                        <mat-option value="hi">Hindi</mat-option>
-                        <mat-option value="es">Spanish</mat-option>
-                    </mat-select>
-                </mat-form-field>
-            </div>
-
-            <div class="notification">
-                <svg viewBox="0 0 24 24">
-                    <path d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z" />
-                    <path d="M9 19C9.5 20 10.5 21 12 21C13.5 21 14.5 20 15 19" />
-                </svg>
-                <span class="badge">3</span>
-            </div>
-
-            <div class="profile">
-                <div class="avatar">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="online-dot"></span>
-                </div>
-                <span class="profilename">Kaushal</span>
-                <svg class="chevron-icon" viewBox="0 0 24 24">
-                    <path d="M6 9L12 15L18 9" />
-                </svg>
-            </div>
-        </div>
-    </nav>
+    <app-navbar 
+        [userName]="'Kaushal'" 
+        [notificationCount]="5" 
+        (hamburgerClick)="toggleSidebar()"
+        (searchChange)="onSearch($event)" 
+        (profileClick)="openProfile()" 
+        (notificationClick)="openNotifications()">
+    </app-navbar>
     <div class="card ">
 
         <div class="empname">
@@ -69,7 +14,7 @@
         </div>
         <div class="dashboard">
             Dashboard
-            
+
         </div>
     </div>
 
@@ -88,7 +33,7 @@
     </div>
 
     <!-- clients & recent projects -->
-     <div class="project_details">
+    <div class="project_details">
         <div class="card clients">
             <h3 class="project_title">Clients</h3>
             <div class="divider"></div>
@@ -102,39 +47,71 @@
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
-                    <tbody>
-                        <tr *ngFor="let client of clients">
-                            <td class="name-cell">
-                                <div class="avatar_client">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                                <div>
-                                    <div class="name">{{ client.name }}</div>
-                                    <div class="role">{{ client.role }}</div>
-                                </div>
-                            </td>
-                    
-                            <td>{{ client.email }}</td>
-                    
-                            <td>
-                                <select [(ngModel)]="client.status" class="status">
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </select>
-                            </td>
+                <tbody>
+                    <tr *ngFor="let client of clients">
+                        <td class="name-cell">
+                            <div class="avatar_client">
+                                <i class="fas fa-image"></i>
+                            </div>
+                            <div>
+                                <div class="name">{{ client.name }}</div>
+                                <div class="role">{{ client.role }}</div>
+                            </div>
+                        </td>
 
-                            <td class="text-center">
-                                <i class="fas fa-ellipsis-v action-icon"></i>
-                            </td>
-                    
-                        </tr>
-                    </tbody>
+                        <td>{{ client.email }}</td>
+
+                        <td>
+                            <select [(ngModel)]="client.status" class="status">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </td>
+
+                        <td class="text-center">
+                            <i class="fas fa-ellipsis-v action-icon"></i>
+                        </td>
+
+                    </tr>
+                </tbody>
             </table>
-            <div class="view-all">View all clients</div>
+            <div class="footer">
+                <a>View all clients</a>
+            </div>
         </div>
         <div class="card recent_projects">
             <h3 class="project_title">Recent Projects</h3>
             <div class="divider"></div>
+            <div class="table">
+                <div class="table-head">
+                    <span>Project Name</span>
+                    <span>Value</span>
+                    <span>Progress</span>
+                    <span>Action</span>
+                </div>
+
+                <div class="table-row" *ngFor="let project of projects">
+                    <div class="project-info">
+                        <strong>{{ project.name }}</strong>
+                        <p>{{ project.tasks }}</p>
+                    </div>
+                    <div class="value">
+                        ₹{{ project.value | number }}
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" [style.width.%]="project.progress"></div>
+                        </div>
+                    </div>
+                    <div class="action">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <a>View all projects</a>
+            </div>
         </div>
-     </div>
+    </div>
 </div>
