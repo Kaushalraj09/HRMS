@@ -5,16 +5,31 @@ import { MatSelectModule } from '@angular/material/select';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { SharedModule } from '../../shared/shared-module';
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective],
+  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
 export class HrDashboard {
   selectedLang = 'en';
+
+  toggleSidebar() {
+    console.log('Sidebar toggled');
+  }
+  onSearch(event: any) {
+    console.log('Search:', event);
+  }
+  openProfile() {
+    console.log('Opening profile');
+  }
+  openNotifications() {
+    console.log('Opening notifications');
+  }
+  
   projects = [
     { id: 1, name: 'AivanHR' },
     { id: 2, name: 'AivanERP' },
@@ -280,3 +295,4 @@ export class HrDashboard {
   ];
 
 }
+

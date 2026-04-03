@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
+import { SharedModule } from '../../shared/shared-module';
+
 
 @Injectable()
 export class CustomDateFormatter extends CalendarNativeDateFormatter {
@@ -20,7 +22,8 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     MatFormFieldModule,
     MatSelectModule,
     FormsModule,
-    CalendarModule
+    CalendarModule,
+    SharedModule
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -35,6 +38,19 @@ export class EmpDashboard {
   selectedLang = 'en';
   currentDate: Date = new Date();
   status: string = 'work';
+
+    toggleSidebar() {
+    console.log('Sidebar toggled');
+  }
+  onSearch(event: any) {
+    console.log('Search:', event);
+  }
+  openProfile() {
+    console.log('Opening profile');
+  }
+  openNotifications() {
+    console.log('Opening notifications');
+  }
 
   ngOnInit() {
     setInterval(() => {

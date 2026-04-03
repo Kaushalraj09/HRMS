@@ -1,0 +1,265 @@
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  height: 50px;
+}
+
+.leftnav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo img {
+  height: 50px;
+  width: 50px;
+  margin-left: 50px;
+}
+
+.hrname {
+  color: white;
+  margin-left: 10px;
+}
+
+.hamburger {
+  width: 28px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-left: 30px;
+}
+
+.line {
+  height: 2px;
+  background-color: white;
+  border-radius: 2px;
+}
+
+.short {
+  width: 50%;
+}
+
+.mid {
+  width: 75%;
+}
+
+.long {
+  width: 100%;
+}
+
+/* rightnav */
+.rightnav {
+  display: flex;
+  align-items: center;
+  margin-right: 50px;
+}
+
+.globeicon {
+  height: 20px;
+  width: 20px;
+  margin-left: 10px;
+}
+
+.searchbar {
+  position: relative;
+}
+
+.searchbar input {
+  padding: 8px 35px 8px 12px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  color: white;
+  font-size: 12px;
+  outline: none;
+
+  transition: all 0.3s ease;
+}
+
+.searchbar input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.searchbar input:focus {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.8;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
+  color: white;
+}
+
+.globeicon svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  stroke-width: 1.5;
+  fill: none;
+  cursor: pointer;
+}
+
+.language {
+  display: flex;
+  align-items: center;
+  width: 120px;
+  padding: 10px;
+  height: 70%;
+  position: relative;
+  top: -10px;
+}
+
+::ng-deep .mdc-notched-outline {
+  display: none !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
+::ng-deep .mat-mdc-form-field {
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  height: 36px !important;
+  display: flex;
+  align-items: center;
+  padding: 0 !important;
+}
+
+::ng-deep .mat-mdc-select {
+  display: flex;
+  align-items: center;
+  height: 30px;
+}
+
+::ng-deep .mat-mdc-select-value {
+  color: white !important;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+::ng-deep .mat-mdc-select-arrow {
+  color: white !important;
+}
+
+.clientcount span,
+.projectcount span {
+  background: #4fc3f7;
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  margin-left: 10px;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.profilename {
+  color: white;
+  font-size: 13px;
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+}
+
+.notification {
+  position: relative;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.notification svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  stroke-width: 1.5;
+  fill: none;
+  margin-right: 10px;
+}
+
+.notification .badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+
+  background: #ef4444;
+  color: white;
+
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  border-radius: 999px;
+  /* pill shape when needed */
+}
+
+.avatar {
+  position: relative;
+  font-size: 35px;
+  color: #eeeaea;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid white;
+}
