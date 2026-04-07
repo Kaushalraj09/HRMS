@@ -4,19 +4,32 @@ import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
+import { Sidebar } from '../../shared/components/sidebar/sidebar';
+import { RouterModule, Router } from '@angular/router';
+import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+
 
 @Component({
   selector: 'app-master-dashboard',
-  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, SharedModule],
+  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, SharedModule, Sidebar, RouterModule],
   standalone: true,
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',
 })
 export class MasterDashboard {
   selectedLang = 'en';
+  isSidebarOpen$!: import('rxjs').Observable<boolean>;
+
+  constructor(private sidebarService: SidebarService, private router: Router) {
+    this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+  }
 
   toggleSidebar() {
-    console.log('Sidebar toggled');
+    this.sidebarService.toggleSidebar();
+  }
+
+  isMainDashboardRoute(): boolean {
+    return this.router.url === '/master-dashboard' || this.router.url === '/master-dashboard/main';
   }
   onSearch(event: any) {
     console.log('Search:', event);

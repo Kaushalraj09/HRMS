@@ -1,13 +1,24 @@
-<div class="Emp_dashboard">
-    <app-navbar 
-        [userName]="'Kaushal'" 
-        [notificationCount]="5" 
-        (hamburgerClick)="toggleSidebar()"
-        (searchChange)="onSearch($event)" 
-        (profileClick)="openProfile()" 
-        (notificationClick)="openNotifications()">
-    </app-navbar>
-    <div class="card ">
+<div class="dashboard-wrapper">
+  <app-navbar 
+      [userName]="'abc'" 
+      [notificationCount]="5" 
+      (hamburgerClick)="toggleSidebar()"
+      (searchChange)="onSearch($event)" 
+      (profileClick)="openProfile()" 
+      (notificationClick)="openNotifications()">
+  </app-navbar>
+
+  <div class="dashboard-layout">
+    <app-sidebar>
+        
+    </app-sidebar>
+    
+    <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
+      <div class="page-content">
+        <router-outlet></router-outlet>
+      
+      <div class="Emp_dashboard" *ngIf="isMainDashboardRoute()">
+        <div class="card ">
 
         <div class="empname">
             Welcome, Kaushal
@@ -114,4 +125,8 @@
             </div>
         </div>
     </div>
+      </div>
+    </div>
+  </div>
+</div>
 </div>

@@ -30,6 +30,7 @@ nav {
   flex-direction: column;
   gap: 5px;
   margin-left: 30px;
+  transition: 50% 50%;
 }
 
 .line {
