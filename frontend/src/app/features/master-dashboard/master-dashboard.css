@@ -1,3 +1,34 @@
+/* Layout Styling */
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background-color: #f7f9fa;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 
 .empname {
@@ -16,12 +47,13 @@
 
 
 .full_details {
-  padding: 20px 40px;
-  background-color: #f6f6f6;
+  padding: 20px 20px;
+  /* background-color: #f6f6f6; */
 }
 
 .full_details-content {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   flex-wrap: wrap;
   justify-content: space-between;
