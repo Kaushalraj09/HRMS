@@ -20,9 +20,11 @@ export class Navbar {
   @Output() notificationClick = new EventEmitter<void>();
 
   selectedLang = 'en';
+  isOpen = false;
 
   onHamburgerClick() {
     this.hamburgerClick.emit();
+    this.isOpen = !this.isOpen;
   }
 
   onSearch(value: string) {

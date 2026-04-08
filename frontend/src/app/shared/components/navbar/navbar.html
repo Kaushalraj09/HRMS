@@ -4,7 +4,7 @@
         <div class="logo">
             <img src="assets/AivanLogo.png" alt="Logo" />
         </div>
-        <div class="hamburger" (click)="onHamburgerClick()">
+        <div class="hamburger" (click)="onHamburgerClick()" [class.rotate]="isOpen">
             <span class="line long"></span>
             <span class="line mid"></span>
             <span class="line short"></span>

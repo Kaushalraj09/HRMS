@@ -6,19 +6,27 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { SharedModule } from '../../shared/shared-module';
+import { Router, RouterModule } from '@angular/router';
+import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+import { Sidebar } from '../../shared/components/sidebar/sidebar';
+
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule],
+  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, Sidebar],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
 export class HrDashboard {
   selectedLang = 'en';
-
+  isSidebarOpen$!: import('rxjs').Observable<boolean>;
+  
+  constructor(private sidebarService: SidebarService, private router: Router) {
+      this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+    }
   toggleSidebar() {
-    console.log('Sidebar toggled');
+    this.sidebarService.toggleSidebar();
   }
   onSearch(event: any) {
     console.log('Search:', event);
