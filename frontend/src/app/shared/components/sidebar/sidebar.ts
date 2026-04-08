@@ -54,7 +54,7 @@ export class Sidebar implements OnInit {
         { label: 'Employees', icon: 'far fa-user', route: '/employees' }
       ]
     },
-    /*
+  
     {
       groupName: 'HR',
       items: [
@@ -77,7 +77,7 @@ export class Sidebar implements OnInit {
         { label: 'Jobs', icon: 'fas fa-briefcase', route: '/jobs' }
       ]
     },
-    */
+
     {
       groupName: 'Pages',
       items: [

@@ -5,6 +5,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
 import { SharedModule } from '../../shared/shared-module';
+import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+import { Router, RouterModule } from '@angular/router';
+import { Sidebar } from '../../shared/components/sidebar/sidebar';
 
 
 @Injectable()
@@ -23,7 +26,9 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     MatSelectModule,
     FormsModule,
     CalendarModule,
-    SharedModule
+    SharedModule,
+    RouterModule,
+    Sidebar
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -38,9 +43,14 @@ export class EmpDashboard {
   selectedLang = 'en';
   currentDate: Date = new Date();
   status: string = 'work';
+  isSidebarOpen$!: import('rxjs').Observable<boolean>;
+    
+  constructor(private sidebarService: SidebarService, private router: Router) {
+        this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+      }
 
-    toggleSidebar() {
-    console.log('Sidebar toggled');
+  toggleSidebar() {
+    this.sidebarService.toggleSidebar();
   }
   onSearch(event: any) {
     console.log('Search:', event);
