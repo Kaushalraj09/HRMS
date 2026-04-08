@@ -1,0 +1,56 @@
+<aside class="sidebar bg-dark-theme" [class.collapsed]="!(isSidebarOpen$ | async)">
+  <div class="sidebar-inner menu-container scroll-enabled">
+    <ng-container *ngFor="let group of menuConfig">
+      <div class="menu-group">
+        <h5 class="group-title" *ngIf="group.groupName">
+          <span class="title-text">{{ group.groupName }}</span>
+          <i class="fas fa-ellipsis-h collapsed-title-icon"></i>
+        </h5>
+        
+        <ul class="menu-list">
+          <li *ngFor="let item of group.items" class="menu-item-wrapper">
+            
+            <!-- Item without children -->
+            <a *ngIf="!item.children" 
+               [routerLink]="item.route" 
+               routerLinkActive="active" 
+               [routerLinkActiveOptions]="{exact: true}"
+               class="menu-link hover-effect">
+              <i [class]="item.icon" class="menu-icon"></i>
+              <span class="menu-text">{{ item.label }}</span>
+            </a>
+            
+            <!-- Item with children -->
+            <ng-container *ngIf="item.children">
+              <a (click)="toggleExpand(item)" 
+                 class="menu-link has-dropdown hover-effect" 
+                 [class.active-parent]="isParentActive(item)"
+                 [class.expanded]="item.expanded"
+                 href="javascript:void(0)">
+                <i [class]="item.icon" class="menu-icon"></i>
+                <span class="menu-text">{{ item.label }}</span>
+                <span class="notification-dot" *ngIf="isParentActive(item) && !(isSidebarOpen$ | async)"></span>
+                <span class="menu-arrow">
+                  <span class="notification-dot position-relative mr-2" *ngIf="isParentActive(item)"></span>
+                  <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>
+                </span>
+              </a>
+              
+              <!-- Sub Menu -->
+              <ul class="sub-menu" [class.open]="item.expanded" [style.maxHeight]="item.expanded ? item.children.length * 45 + 'px' : '0'">
+                <li *ngFor="let child of item.children" class="sub-menu-item">
+                  <a [routerLink]="child.route" 
+                     routerLinkActive="active" 
+                     [routerLinkActiveOptions]="{exact: true}"
+                     class="sub-menu-link">
+                    <span class="sub-menu-text">{{ child.label }}</span>
+                  </a>
+                </li>
+              </ul>
+            </ng-container>
+          </li>
+        </ul>
+      </div>
+    </ng-container>
+  </div>
+</aside>

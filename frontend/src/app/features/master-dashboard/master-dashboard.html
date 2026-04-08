@@ -1,0 +1,131 @@
+<div class="dashboard-wrapper">
+    <app-navbar 
+        [userName]="'abc'" 
+        [notificationCount]="5" 
+        (hamburgerClick)="toggleSidebar()"
+        (searchChange)="onSearch($event)" 
+        (profileClick)="openProfile()" 
+        (notificationClick)="openNotifications()">
+    </app-navbar>
+
+    <div class="dashboard-layout">
+        <app-sidebar>
+        </app-sidebar>
+
+        <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
+            <div class="page-content">
+                <router-outlet></router-outlet>
+
+                <div class="Emp_dashboard" *ngIf="isMainDashboardRoute()">
+                    <div class="card ">
+
+                        <div class="empname">
+                            Welcome, Kaushal
+                        </div>
+                        <div class="dashboard">
+                            Dashboard
+
+                        </div>
+                    </div>
+
+                    <div class="full_details">
+                        <div class="full_details-content">
+                            <div class="fullDetail-item" *ngFor="let item of fullDetails">
+                                <div class="icon-circle">
+                                    <i [class]="item.icon" class="fullDetail-icon"></i>
+                                </div>
+                                <div class="full_detail-info">
+                                    <span class="fullDetail-value">{{ item.value }}</span>
+                                    <span class="fullDetail-label">{{ item.label }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- clients & recent projects -->
+                    <div class="project_details">
+                        <div class="card clients">
+                            <h3 class="project_title">Clients</h3>
+                            <div class="divider"></div>
+
+                            <table class="client-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let client of clients">
+                                        <td class="name-cell">
+                                            <div class="avatar_client">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                            <div>
+                                                <div class="name">{{ client.name }}</div>
+                                                <div class="role">{{ client.role }}</div>
+                                            </div>
+                                        </td>
+
+                                        <td>{{ client.email }}</td>
+
+                                        <td>
+                                            <select [(ngModel)]="client.status" class="status">
+                                                <option value="Active">Active</option>
+                                                <option value="Inactive">Inactive</option>
+                                            </select>
+                                        </td>
+
+                                        <td class="text-center">
+                                            <i class="fas fa-ellipsis-v action-icon"></i>
+                                        </td>
+
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="footer">
+                                <a>View all clients</a>
+                            </div>
+                        </div>
+                        <div class="card recent_projects">
+                            <h3 class="project_title">Recent Projects</h3>
+                            <div class="divider"></div>
+                            <div class="table">
+                                <div class="table-head">
+                                    <span>Project Name</span>
+                                    <span>Value</span>
+                                    <span>Progress</span>
+                                    <span>Action</span>
+                                </div>
+
+                                <div class="table-row" *ngFor="let project of projects">
+                                    <div class="project-info">
+                                        <strong>{{ project.name }}</strong>
+                                        <p>{{ project.tasks }}</p>
+                                    </div>
+                                    <div class="value">
+                                        ₹{{ project.value | number }}
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" [style.width.%]="project.progress"></div>
+                                        </div>
+                                    </div>
+                                    <div class="action">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="footer">
+                                <a>View all projects</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

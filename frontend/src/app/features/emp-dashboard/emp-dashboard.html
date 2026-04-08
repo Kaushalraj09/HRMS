@@ -1,0 +1,197 @@
+<div class="Emp_dashboard">
+    <app-navbar 
+        [userName]="'Kaushal'" 
+        [notificationCount]="5" 
+        (hamburgerClick)="toggleSidebar()"
+        (searchChange)="onSearch($event)" 
+        (profileClick)="openProfile()" 
+        (notificationClick)="openNotifications()">
+    </app-navbar>
+    <div class="dashboard-layout">
+    <app-sidebar>
+    </app-sidebar>
+    <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
+      <div class="page-content">
+        <router-outlet></router-outlet>
+
+    <div class="card timezone">
+
+        <div class="empname">
+            Welcome, Kaushal
+        </div>
+        <div class="pertime">
+            {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
+        </div>
+    </div>
+
+    <!-- Mark Attendence and Request Time off -->
+    <div class="mark_attendence_request_time">
+        <div class="card Mark_attendance">
+            <div class="card-header">
+                <span>Mark Attendance</span>
+                <div class="status-buttons">
+                    <button class="status-btn work" [class.active]="status === 'work'" (click)="status = 'work'">
+                    <span class="dot"></span> Work
+                    </button>
+                    <button class="status-btn break" [class.active]="status === 'break'" (click)="status = 'break'">
+                    <span class="dot"></span> Break
+                    </button>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="punch-container">
+                <div class="outer-circle">
+                    <div class="inner-circle" [class.punched-in]="isPunchedIn" (click)="togglePunch()">
+                        <div class="punch-text">
+                            <span>Punch</span>
+                            <span>{{ isPunchedIn ? 'In' : 'Out' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card request_time_off">
+            <div class="card-header">
+                Request Time Off
+            </div>
+            <div class="divider"></div>
+            <div class="stats">
+                <div class="stat-box">
+                    <h2>{{ approvedHours }} hrs</h2>
+                    <p>Approved</p>
+                </div>
+                <div class="stat-box">
+                    <h2>{{ remainingHours }} hrs</h2>
+                    <p>Remaining</p>
+                </div>
+                
+            </div>
+            <button class="apply-btn" (click)="startTimer()">
+                Apply Time Off
+            </button>
+            
+
+        </div>
+    </div>
+    <div class="calendar_body">
+        <div class="card calender_container">
+            <div class="calendar-left">
+                <div class="calendar-header-info">
+                    <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
+                    <p>Week {{ weekNumber }}</p>
+                </div>
+                <mwl-calendar-month-view [viewDate]="viewDate" \\[events]="events" (dayClicked)="onDayClick($event.day)">
+                </mwl-calendar-month-view>
+            </div>
+            <div class="calendar-right">
+                <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
+    
+                <div class="timeline-container">
+                    <div *ngFor="let event of selectedEvents" class="event-item">
+                        <div class="marker-section">
+                            <div class="dot"></div>
+                            <div class="line"></div>
+                        </div>
+                        <div class="event-info">
+                            <div class="time">{{ event.time }}</div>
+                            <div class="title">{{ event.title }}</div>
+                            <div class="location">{{ event.location }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="time_sheet">
+        <div class="card recent_time">
+            <div class="card-header">
+                Time Sheets
+            </div>
+            <div class="divider"></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Day</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Total</th>
+                                <th>Overtime</th>
+                                <th>Break</th>
+                                <th>Grand Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="timeSheets.length === 0">
+                                <td colspan="8" class="no-data">
+                                    No attendance records found
+                                </td>
+                            </tr>
+                            <tr *ngFor="let sheet of timeSheets">
+                                <td>{{ sheet.date }}</td>
+                                <td>{{ sheet.day }}</td>
+                                <td>{{ sheet.entry }}</td>
+                                <td>{{ sheet.exit }}</td>
+                                <td>{{ sheet.total }}</td>
+                                <td>{{ sheet.overtime }}</td>
+                                <td>{{ sheet.break }}</td>
+                                <td>{{ sheet.grandTotal }}</td>
+    
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+<!-- attendence summary -->
+    <div class="attendance_summary">
+        <div class="card attendance_summary_card">
+            <div class="card-header">
+                <span>Attendance Summary</span>
+            </div>
+            <div class="divider"></div>
+            <div class="summary-content">
+                <div class="summary-item" *ngFor="let item of attendanceSummary">
+
+                    <i [class]="item.icon" class="summary-icon"></i>
+
+                    <div class="summary-text-container">
+                        <span class="summary-label">{{ item.label }}</span>
+                        <span class="summary-value">{{ item.value }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="latest_news">
+        <div class="card latest_news_card">
+            <div class="card-header">
+                <span>Latest News</span>
+            </div>
+            <div class="divider"></div>
+            <div class="latest_news_content">
+                <div *ngFor="let event of latestNews_content" class="news-item">
+                    <div class="news-icon-container">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="news-details">
+                        <div class="news-title">{{ event.heading }}</div>
+                        <div class="news-description">{{ event.contents }}</div>
+                        <div class="news-footer">
+                            <span class="news-badge" [ngClass]="event.newsType.toLowerCase()">{{ event.newsType }}</span>
+                            <span class="news-date">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ event.date | date:'MMMM dd, yyyy' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</div>
