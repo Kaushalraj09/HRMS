@@ -1,0 +1,61 @@
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 15px); /* Position it just below the profile container */
+    right: 0; /* Align perfectly to the right side of the profile block */
+    background: #ffffff;
+    min-width: 180px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.dropdown-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+}
+
+.dropdown-menu li {
+    padding: 0;
+}
+
+.dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dropdown-menu li a i {
+    margin-right: 12px;
+    font-size: 14px;
+    color: #9ca3af;
+    width: 16px;
+    text-align: center;
+}
+
+.dropdown-menu li a:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.dropdown-menu li a:hover i {
+    color: #3b82f6;
+}
+
+.dropdown-menu .divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 8px 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

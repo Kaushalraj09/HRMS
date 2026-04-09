@@ -8,12 +8,11 @@
         (notificationClick)="openNotifications()">
     </app-navbar>
     <div class="dashboard-layout">
-    <app-sidebar>
-    </app-sidebar>
-    <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
+    <app-emp-sidebar>
+    </app-emp-sidebar>
+    <div class="main-content" [class.expanded]="!(isEmpSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
-
     <div class="card timezone">
 
         <div class="empname">
