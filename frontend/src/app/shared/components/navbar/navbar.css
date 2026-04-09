@@ -191,7 +191,10 @@ nav {
   gap: 5px;
   cursor: pointer;
   margin-left: 10px;
+<<<<<<< HEAD
   position: relative;
+=======
+>>>>>>> company/main
 }
 
 .profilename {
