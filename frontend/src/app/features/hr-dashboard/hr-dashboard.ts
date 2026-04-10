@@ -7,26 +7,27 @@ import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { SharedModule } from '../../shared/shared-module';
 import { Router, RouterModule } from '@angular/router';
-import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
-import { Sidebar } from '../../shared/components/sidebar/sidebar';
+import { HrSidebarService } from '../../shared/components/sidebar/hr-sidebar/hr-sidebar.service';
+import { FormsModule } from '@angular/forms';
+import { HrSidebar } from '../../shared/components/sidebar/hr-sidebar/hr-sidebar';
 
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, Sidebar],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
 export class HrDashboard {
   selectedLang = 'en';
-  isSidebarOpen$!: import('rxjs').Observable<boolean>;
+  isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   
-  constructor(private sidebarService: SidebarService, private router: Router) {
-      this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+  constructor(private hrsidebarService: HrSidebarService, private router: Router) {
+      this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
     }
   toggleSidebar() {
-    this.sidebarService.toggleSidebar();
+    this.hrsidebarService.toggleSidebar();
   }
   onSearch(event: any) {
     console.log('Search:', event);

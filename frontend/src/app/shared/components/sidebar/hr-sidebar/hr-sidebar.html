@@ -1,4 +1,4 @@
-<aside class="sidebar bg-dark-theme" [class.collapsed]="!(isSidebarOpen$ | async)">
+<aside class="sidebar bg-dark-theme" [class.collapsed]="!(isHrSidebarOpen$ | async)">
   <div class="sidebar-inner menu-container scroll-enabled">
     <ng-container *ngFor="let group of menuConfig">
       <div class="menu-group">
@@ -15,7 +15,7 @@
                [routerLink]="item.route" 
                routerLinkActive="active" 
                [routerLinkActiveOptions]="{exact: true}"
-               class="menu-link hover-effect">
+               class="menu-link hover-effect"> 
               <i [class]="item.icon" class="menu-icon"></i>
               <span class="menu-text">{{ item.label }}</span>
             </a>
@@ -24,7 +24,7 @@
             <a *ngIf="item.isLogout" 
                (click)="handleLogout(item)"
                style="cursor: pointer;"
-               class="menu-link hover-effect">
+               class="menu-link hover-effect"> 
               <i [class]="item.icon" class="menu-icon"></i>
               <span class="menu-text">{{ item.label }}</span>
             </a>
@@ -38,7 +38,7 @@
                  href="javascript:void(0)">
                 <i [class]="item.icon" class="menu-icon"></i>
                 <span class="menu-text">{{ item.label }}</span>
-                <span class="notification-dot" *ngIf="isParentActive(item) && !(isSidebarOpen$ | async)"></span>
+                <span class="notification-dot" *ngIf="isParentActive(item) && !(isHrSidebarOpen$ | async)"></span>
                 <span class="menu-arrow">
                   <span class="notification-dot position-relative mr-2" *ngIf="isParentActive(item)"></span>
                   <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>

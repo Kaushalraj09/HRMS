@@ -5,10 +5,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
 import { SharedModule } from '../../shared/shared-module';
-import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+import { EmpSidebarService } from '../../shared/components/sidebar/emp-sidebar/emp-sidebar.service';
 import { Router, RouterModule } from '@angular/router';
-import { Sidebar } from '../../shared/components/sidebar/sidebar';
-
+import { EmpSidebar } from '../../shared/components/sidebar/emp-sidebar/emp-sidebar';
 
 @Injectable()
 export class CustomDateFormatter extends CalendarNativeDateFormatter {
@@ -28,7 +27,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     CalendarModule,
     SharedModule,
     RouterModule,
-    Sidebar
+    EmpSidebar
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -43,14 +42,14 @@ export class EmpDashboard {
   selectedLang = 'en';
   currentDate: Date = new Date();
   status: string = 'work';
-  isSidebarOpen$!: import('rxjs').Observable<boolean>;
+  isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
     
-  constructor(private sidebarService: SidebarService, private router: Router) {
-        this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+  constructor(private empsidebarService: EmpSidebarService, private router: Router) {
+        this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
       }
 
   toggleSidebar() {
-    this.sidebarService.toggleSidebar();
+    this.empsidebarService.toggleSidebar();
   }
   onSearch(event: any) {
     console.log('Search:', event);

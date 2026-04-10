@@ -1,11 +1,12 @@
-import { Component } from '@angular/core';
-import {  EventEmitter, Input, Output } from '@angular/core';
+import { Component, HostListener, EventEmitter, Input, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { Dropdown } from '../dropdown/dropdown';
 
 @Component({
   selector: 'app-navbar',
-  imports: [MatFormFieldModule, MatSelectModule],
+  imports: [CommonModule, MatFormFieldModule, MatSelectModule, Dropdown],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
@@ -21,6 +22,16 @@ export class Navbar {
 
   selectedLang = 'en';
   isOpen = false;
+  isProfileDropdownOpen = false;
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    // Close dropdown if click is outside of profile completely
+    if (!target.closest('.profile') && !target.closest('app-dropdown')) {
+      this.isProfileDropdownOpen = false;
+    }
+  }
 
   onHamburgerClick() {
     this.hamburgerClick.emit();
@@ -32,6 +43,7 @@ export class Navbar {
   }
 
   onProfileClick() {
+    this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
     this.profileClick.emit();
   }
 

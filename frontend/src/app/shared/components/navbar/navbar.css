@@ -191,6 +191,7 @@ nav {
   gap: 5px;
   cursor: pointer;
   margin-left: 10px;
+  position: relative;
 }
 
 .profilename {
