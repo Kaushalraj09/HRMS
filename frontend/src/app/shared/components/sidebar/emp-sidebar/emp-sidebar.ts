@@ -10,6 +10,7 @@ export interface MenuItem {
   route?: string;
   children?: MenuItem[];
   expanded?: boolean;
+  isLogout?: boolean;
 }
 
 export interface MenuGroup {
@@ -24,6 +25,7 @@ export interface MenuGroup {
   styleUrl: './emp-sidebar.css',
 })
 export class EmpSidebar {
+    isLogoutPopupOpen = false;
     @Input() menuConfig: MenuGroup[] = [
       { 
         groupName: 'Employee Dashboard',
@@ -32,7 +34,7 @@ export class EmpSidebar {
               { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/attendance' },
               { label: 'My Profile', icon: 'far fa-user', route: '/profile' },
               { label: 'Change Password', icon: 'fas fa-key', route: '/change-password' },
-              { label: 'Logout', icon: 'fas fa-sign-out-alt', route: '/login' }
+              { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }
     ];
@@ -41,6 +43,23 @@ export class EmpSidebar {
       constructor(private empSidebarService: EmpSidebarService, private router: Router) {
         this.isEmpSidebarOpen$ = this.empSidebarService.isEmpSidebarOpen$;
       }
+
+      handleLogout(item: MenuItem) {
+        if (item.isLogout) {
+          this.isLogoutPopupOpen = true;
+        }
+      }
+
+      closeLogoutPopup() {
+        this.isLogoutPopupOpen = false;
+      }
+
+      confirmLogout() {
+        localStorage.clear();
+        sessionStorage.clear();
+        this.router.navigate(['/login']);
+      }
+
     
       ngOnInit(): void {
         // Optionally auto-expand menu based on current route

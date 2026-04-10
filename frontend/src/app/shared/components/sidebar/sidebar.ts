@@ -10,6 +10,7 @@ export interface MenuItem {
   route?: string;
   children?: MenuItem[];
   expanded?: boolean;
+  isLogout?: boolean;
 }
 
 export interface MenuGroup {
@@ -25,6 +26,7 @@ export interface MenuGroup {
   styleUrls: ['./sidebar.css']
 })
 export class Sidebar implements OnInit {
+  isLogoutPopupOpen = false;
   @Input() menuConfig: MenuGroup[] = [
     {
       groupName: 'Main',
@@ -81,7 +83,8 @@ export class Sidebar implements OnInit {
     {
       groupName: 'Pages',
       items: [
-        { label: 'Profile', icon: 'far fa-user', route: '/profile' }
+        { label: 'Profile', icon: 'far fa-user', route: '/profile' },
+        { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
       ]
     }
   ];
@@ -91,6 +94,23 @@ export class Sidebar implements OnInit {
   constructor(private sidebarService: SidebarService, private router: Router) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
   }
+
+  handleLogout(item: MenuItem) {
+    if (item.isLogout) {
+      this.isLogoutPopupOpen = true;
+    }
+  }
+
+  closeLogoutPopup() {
+    this.isLogoutPopupOpen = false;
+  }
+
+  confirmLogout() {
+    localStorage.clear();
+    sessionStorage.clear();
+    this.router.navigate(['/login']);
+  }
+
 
   ngOnInit(): void {
     // Optionally auto-expand menu based on current route
