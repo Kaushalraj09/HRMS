@@ -2,6 +2,7 @@ import { Component, Input, OnInit} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { HrSidebarService } from './hr-sidebar.service';
 
 
 export interface MenuItem {
@@ -26,9 +27,9 @@ export interface MenuGroup {
 export class HrSidebar {
      @Input() menuConfig: MenuGroup[] = [
       { 
-        groupName: 'Employee Dashboard',
+        groupName: 'Hr Dashboard',
         items: [ 
-              { label: 'Employee Dashboard',icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
+              { label: 'Hr Dashboard',icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
               { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/attendance' },
               { label: 'My Profile', icon: 'far fa-user', route: '/profile' },
               { label: 'Change Password', icon: 'fas fa-key', route: '/change-password' },
@@ -36,10 +37,10 @@ export class HrSidebar {
         ]
       }
     ];
-     isEmpSidebarOpen$! : import('rxjs').Observable<boolean>;
+     isHrSidebarOpen$! : import('rxjs').Observable<boolean>;
     
-      constructor( private router: Router) {
-        // this.isSidebarOpen$ = this.SidebarService.isHrSidebarOpen$;
+      constructor( private router: Router, private hrSidebarService: HrSidebarService) {
+        this.isHrSidebarOpen$ = this.hrSidebarService.isHrSidebarOpen$;
       }
     
       ngOnInit(): void {
