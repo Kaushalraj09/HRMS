@@ -11,6 +11,7 @@ export interface MenuItem {
   route?: string;
   children?: MenuItem[];
   expanded?: boolean;
+  isLogout?: boolean;
 }
 
 export interface MenuGroup {
@@ -25,15 +26,15 @@ export interface MenuGroup {
   styleUrl: './hr-sidebar.css',
 })
 export class HrSidebar {
+     isLogoutPopupOpen = false;
      @Input() menuConfig: MenuGroup[] = [
       { 
         groupName: 'Hr Dashboard',
         items: [ 
-              { label: 'Hr Dashboard',icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
-              { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/attendance' },
-              { label: 'My Profile', icon: 'far fa-user', route: '/profile' },
-              { label: 'Change Password', icon: 'fas fa-key', route: '/change-password' },
-              { label: 'Logout', icon: 'fas fa-sign-out-alt', route: '/login' }
+              { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
+              { label: 'Employees', icon: 'fas fa-users', route: '/employees' },
+              { label: 'Attendance', icon: 'fas fa-clock', route: '/attendance' },
+              { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }
     ];
@@ -42,6 +43,23 @@ export class HrSidebar {
       constructor( private router: Router, private hrSidebarService: HrSidebarService) {
         this.isHrSidebarOpen$ = this.hrSidebarService.isHrSidebarOpen$;
       }
+
+      handleLogout(item: MenuItem) {
+        if (item.isLogout) {
+          this.isLogoutPopupOpen = true;
+        }
+      }
+
+      closeLogoutPopup() {
+        this.isLogoutPopupOpen = false;
+      }
+
+      confirmLogout() {
+        localStorage.clear();
+        sessionStorage.clear();
+        this.router.navigate(['/login']);
+      }
+
     
       ngOnInit(): void {
         // Optionally auto-expand menu based on current route

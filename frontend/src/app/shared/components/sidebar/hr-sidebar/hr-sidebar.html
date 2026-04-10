@@ -11,10 +11,19 @@
           <li *ngFor="let item of group.items" class="menu-item-wrapper">
             
             <!-- Item without children -->
-            <a *ngIf="!item.children" 
+            <a *ngIf="!item.children && !item.isLogout" 
                [routerLink]="item.route" 
                routerLinkActive="active" 
                [routerLinkActiveOptions]="{exact: true}"
+               class="menu-link hover-effect"> 
+              <i [class]="item.icon" class="menu-icon"></i>
+              <span class="menu-text">{{ item.label }}</span>
+            </a>
+
+            <!-- Logout Item -->
+            <a *ngIf="item.isLogout" 
+               (click)="handleLogout(item)"
+               style="cursor: pointer;"
                class="menu-link hover-effect"> 
               <i [class]="item.icon" class="menu-icon"></i>
               <span class="menu-text">{{ item.label }}</span>
@@ -54,3 +63,14 @@
     </ng-container>
   </div>
 </aside>
+
+<div class="logout-popup" *ngIf="isLogoutPopupOpen">
+  <div class="popup-box">
+    <p>Are you sure you want to logout?</p>
+
+    <div class="actions">
+      <button class="yes-btn" (click)="confirmLogout()">Yes</button>
+      <button class="no-btn" (click)="closeLogoutPopup()">No</button>
+    </div>
+  </div>
+</div>
