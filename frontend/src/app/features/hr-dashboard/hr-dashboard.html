@@ -8,9 +8,9 @@
     (notificationClick)="openNotifications()">
   </app-navbar>
   <div class="dashboard-layout">
-    <app-sidebar>
-    </app-sidebar>
-    <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
+    <app-hr-sidebar>
+    </app-hr-sidebar>
+    <div class="main-content" [class.expanded]="!(isHrSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
 

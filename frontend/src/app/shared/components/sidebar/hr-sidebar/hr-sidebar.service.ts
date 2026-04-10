@@ -4,7 +4,7 @@ import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 @Injectable({
   providedIn: 'root',
 })
-export class HrSidebarServiceTs {
+export class HrSidebarService {
     private hrSidebarOpenSubject = new BehaviorSubject<boolean>(true);
     
     isHrSidebarOpen$ = this.hrSidebarOpenSubject.asObservable();
