@@ -13,6 +13,7 @@
     <div class="main-content" [class.expanded]="!(isEmpSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
+        <ng-container *ngIf="isDashboardHome">
     <div class="card timezone">
 
         <div class="empname">
@@ -190,6 +191,7 @@
             </div>
         </div>
     </div>
+    </ng-container>
 </div>
 </div>
 </div>

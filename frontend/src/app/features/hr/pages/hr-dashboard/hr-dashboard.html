@@ -13,26 +13,17 @@
     <div class="main-content" [class.expanded]="!(isHrSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
+        <ng-container *ngIf="isDashboardHome">
 
         <!-- Dashboard content -->
         <div class="dashboard-content-A">
-          <div class="dashboard-content">
+          <div class="dashboard-content" style="min-width: 200px;">
             <label for="project">Select Project</label>
-            <select id="project">
-              <option value="">Choose a project...</option>
-              <option value="project1">Project 1</option>
-              <option value="project2">Project 2</option>
-              <option value="project3">Project 3</option>
-            </select>
+            <app-custom-select [options]="projectOptions"></app-custom-select>
           </div>
-          <div class="dashboard-content">
+          <div class="dashboard-content" style="min-width: 200px;">
             <label for="client">Select Client</label>
-            <select id="client">
-              <option value="">Choose a client...</option>
-              <option value="client1">Client 1</option>
-              <option value="client2">Client 2</option>
-              <option value="client3">Client 3</option>
-            </select>
+            <app-custom-select [options]="clientOptions"></app-custom-select>
           </div>
         </div>
         <!-- count box -->
@@ -229,6 +220,7 @@
             </div>
           </div>
         </div>
+        </ng-container>
 
       </div>
     </div>

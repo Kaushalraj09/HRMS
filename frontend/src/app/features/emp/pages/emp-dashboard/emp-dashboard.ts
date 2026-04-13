@@ -4,10 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
-import { SharedModule } from '../../shared/shared-module';
-import { EmpSidebarService } from '../../shared/components/sidebar/emp-sidebar/emp-sidebar.service';
-import { Router, RouterModule } from '@angular/router';
-import { EmpSidebar } from '../../shared/components/sidebar/emp-sidebar/emp-sidebar';
+import { SharedModule } from '../../../../shared/shared-module';
+import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 
 @Injectable()
 export class CustomDateFormatter extends CalendarNativeDateFormatter {
@@ -43,9 +43,16 @@ export class EmpDashboard {
   currentDate: Date = new Date();
   status: string = 'work';
   isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
+  isDashboardHome: boolean = true;
     
   constructor(private empsidebarService: EmpSidebarService, private router: Router) {
         this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
+        this.isDashboardHome = this.router.url === '/emp-dashboard';
+        this.router.events.subscribe((event) => {
+          if (event instanceof NavigationEnd) {
+            this.isDashboardHome = event.urlAfterRedirects === '/emp-dashboard';
+          }
+        });
       }
 
   toggleSidebar() {

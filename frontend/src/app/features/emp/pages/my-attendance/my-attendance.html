@@ -1,0 +1,59 @@
+<div class="my-attendance">
+    <div class="filter-section">
+        <div class="filter-inputs">
+            <input type="text" class="filter-input" placeholder="From Date">
+            <input type="text" class="filter-input" placeholder="To Date">
+            <input type="text" class="filter-input" placeholder="Status">
+            <button class="reset-btn">Reset</button>
+        </div>
+        <button class="search-btn">Search</button>
+    </div>
+
+    <div class="time_sheet">
+        <div class="card recent_time">
+            <div class="card-header">
+                Time Sheets
+            </div>
+            <div class="divider"></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Day</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Total</th>
+                                <th>Overtime</th>
+                                <th>Break</th>
+                                <th>Grand Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="timeSheets.length === 0">
+                                <td colspan="9" class="no-data">
+                                    No attendance records found
+                                </td>
+                            </tr>
+                            <tr *ngFor="let sheet of timeSheets">
+                                <td>{{ sheet.date }}</td>
+                                <td>{{ sheet.day }}</td>
+                                <td>{{ sheet.entry }}</td>
+                                <td>{{ sheet.exit }}</td>
+                                <td>{{ sheet.total }}</td>
+                                <td>{{ sheet.overtime }}</td>
+                                <td>{{ sheet.break }}</td>
+                                <td>{{ sheet.grandTotal }}</td>
+                                <td>
+                                    <span *ngIf="sheet.status" class="status-badge" [ngClass]="sheet.status.toLowerCase()">
+                                        {{ sheet.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+</div>

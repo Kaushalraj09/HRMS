@@ -1,0 +1,187 @@
+<div class="attendance-wrapper">
+  <div class="attendance-container">
+    
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-text">
+        <h1>Attendance Management</h1>
+        <p>Monitor employee attendance by date and status</p>
+      </div>
+      <div class="header-right">
+        <span class="live-indicator"><span class="pulse"></span> Live Sync: {{ currentTime$ | async | date:'shortTime' }}</span>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-panel" [formGroup]="filterForm">
+      <div class="filter-grid">
+        <!-- From Date -->
+        <div class="filter-group">
+          <label>From Date</label>
+          <input type="date" formControlName="fromDate" class="filter-input">
+        </div>
+        
+        <!-- To Date -->
+        <div class="filter-group">
+          <label>To Date</label>
+          <input type="date" formControlName="toDate" class="filter-input">
+        </div>
+
+        <!-- Employee Name -->
+        <div class="filter-group">
+          <label>Employee Name/Code</label>
+          <input type="text" formControlName="employeeSearch" placeholder="Search..." class="filter-input">
+        </div>
+
+        <!-- Department -->
+        <div class="filter-group">
+          <label>Department</label>
+          <app-custom-select formControlName="department" [options]="departmentsOptions"></app-custom-select>
+        </div>
+
+        <!-- Status -->
+        <div class="filter-group">
+          <label>Status</label>
+          <app-custom-select formControlName="status" [options]="statusOptions"></app-custom-select>
+        </div>
+      </div>
+      
+      <!-- Filter Actions -->
+      <div class="filter-actions-row">
+        <button type="button" class="btn btn-outline" (click)="onReset()">Reset</button>
+        <button type="button" class="btn btn-primary" (click)="onSearch()">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Cards Section -->
+    <div class="summary-cards" *ngIf="(attendanceData$ | async) as result">
+      <div class="metrics-card">
+        <div class="metric-label">Present</div>
+        <div class="metric-value present">{{ result.metrics.present }}</div>
+      </div>
+      <div class="metrics-card">
+        <div class="metric-label">Checked In</div>
+        <div class="metric-value checked-in">{{ result.metrics.checkedIn }}</div>
+      </div>
+      <div class="metrics-card">
+        <div class="metric-label">Checked Out</div>
+        <div class="metric-value checked-out">{{ result.metrics.checkedOut }}</div>
+      </div>
+      <div class="metrics-card">
+        <div class="metric-label">Not Marked</div>
+        <div class="metric-value not-marked">{{ result.metrics.notMarked }}</div>
+      </div>
+    </div>
+    
+    <!-- Shimmer Summary Cards (While Loading First Time) -->
+    <div class="summary-cards" *ngIf="!(attendanceData$ | async)">
+      <div class="metrics-card skeleton s-card"></div>
+      <div class="metrics-card skeleton s-card"></div>
+      <div class="metrics-card skeleton s-card"></div>
+      <div class="metrics-card skeleton s-card"></div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          
+          <!-- Loading State -->
+          <tbody *ngIf="(isLoading$ | async)">
+            <tr *ngFor="let i of [1,2,3,4,5,6]">
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text" style="width: 80%"></div></td>
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text" style="width: 40%"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+            </tr>
+          </tbody>
+
+          <!-- Loaded Data -->
+          <ng-container *ngIf="!(isLoading$ | async) && (attendanceData$ | async) as result">
+            <tbody>
+              <tr *ngFor="let rec of result.data; trackBy: trackById">
+                <td class="font-medium text-dark">{{ rec.code }}</td>
+                <td class="font-medium text-dark">{{ rec.name }}</td>
+                <td>{{ rec.department }}</td>
+                <td>{{ rec.date | date:'mediumDate' }}</td>
+                <td>{{ rec.checkIn || '-' }}</td>
+                <td>{{ rec.checkOut || '-' }}</td>
+                <td>{{ rec.hours }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="
+                     rec.status === 'Present' ? 'green' :
+                     rec.status === 'Checked In' ? 'yellow' :
+                     rec.status === 'Checked Out' ? 'blue' : 'gray'
+                  ">{{ rec.status }}</span>
+                </td>
+              </tr>
+              
+              <tr *ngIf="result.data.length === 0">
+                <td colspan="8" class="empty-state">
+                  <div class="empty-content">
+                    <i class="fas fa-calendar-times empty-icon"></i>
+                    <p>No attendance records found</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </ng-container>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-footer" *ngIf="!(isLoading$ | async) && (attendanceData$ | async) as result">
+        <div class="pagination-info">
+          Showing <span class="font-medium">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to 
+          <span class="font-medium">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of 
+          <span class="font-medium">{{ result.total }}</span> entries
+        </div>
+        
+        <div class="pagination-controls" *ngIf="result.total > pageSize">
+           <ng-container *ngIf="(paginationArray$ | async) as pages">
+              <button 
+                class="page-btn" 
+                [disabled]="pageSubject.value === 1"
+                (click)="setPage(pageSubject.value - 1)">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              
+              <button 
+                *ngFor="let p of pages" 
+                class="page-btn" 
+                [class.active]="p === pageSubject.value"
+                (click)="setPage(p)">
+                {{ p }}
+              </button>
+              
+              <button 
+                class="page-btn" 
+                [disabled]="pageSubject.value === pages.length"
+                (click)="setPage(pageSubject.value + 1)">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+           </ng-container>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>

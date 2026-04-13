@@ -1,0 +1,149 @@
+<div class="profile-wrapper">
+  <div class="profile-container">
+    
+    <!-- Loading Skeleton -->
+    <ng-container *ngIf="!(profile$ | async)">
+      <div class="skeleton-wrapper">
+        <div class="profile-header-card">
+          <div class="header-left">
+            <div class="skeleton s-avatar"></div>
+            <div class="user-info" style="width: 200px">
+              <div class="skeleton s-line" style="height: 24px; width: 80%"></div>
+              <div class="skeleton s-line" style="width: 100%"></div>
+            </div>
+          </div>
+          <div class="header-right">
+            <div class="skeleton s-badge"></div>
+            <div class="skeleton s-badge"></div>
+            <div class="skeleton s-button"></div>
+          </div>
+        </div>
+        
+        <div class="main-content">
+          <div class="details-card">
+            <div class="skeleton s-title"></div>
+            <div class="details-grid">
+              <div class="detail-item"><div class="skeleton s-line"></div><div class="skeleton s-text"></div></div>
+              <div class="detail-item"><div class="skeleton s-line"></div><div class="skeleton s-text"></div></div>
+              <div class="detail-item"><div class="skeleton s-line"></div><div class="skeleton s-text"></div></div>
+              <div class="detail-item"><div class="skeleton s-line"></div><div class="skeleton s-text"></div></div>
+            </div>
+          </div>
+          <div class="details-card">
+            <div class="skeleton s-title"></div>
+            <div class="details-list">
+              <div class="skeleton s-line" style="height: 48px; margin-bottom: 12px"></div>
+              <div class="skeleton s-line" style="height: 48px; margin-bottom: 12px"></div>
+              <div class="skeleton s-line" style="height: 48px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Actual Data -->
+    <ng-container *ngIf="profile$ | async as profile">
+      
+      <!-- 1. Profile Header Card -->
+      <div class="profile-header-card">
+        
+        <div class="header-left">
+          <div class="avatar">
+            {{ profile.initials }}
+          </div>
+          <div class="user-info">
+            <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
+            <p class="subtext">
+              {{ profile.employeeId }} &middot; {{ profile.role }} &middot; {{ profile.department }}
+            </p>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <span class="shift-badge">
+            <i class="far fa-clock"></i> {{ profile.shift }}
+          </span>
+          <span class="status-badge" [ngClass]="profile.status === 'Active' ? '' : 'inactive'">
+            {{ profile.status }}
+          </span>
+          <button class="edit-btn">
+            <i class="fas fa-pen"></i> Edit Profile
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 2. Main Content Section -->
+      <div class="main-content">
+        
+        <!-- Left Card: Personal Details -->
+        <div class="details-card">
+          <h2>Personal Details</h2>
+          
+          <div class="details-grid">
+            <div class="detail-item">
+              <label>First Name</label>
+              <span>{{ profile.personalDetails.firstName }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Last Name</label>
+              <span>{{ profile.personalDetails.lastName }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Gender</label>
+              <span>{{ profile.personalDetails.gender }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <label>Date of Birth</label>
+              <span>{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Card: Contact Details -->
+        <div class="details-card">
+          <h2>Contact</h2>
+          
+          <div class="details-list">
+            
+            <div class="detail-row">
+              <div class="row-left">
+                <i class="far fa-envelope"></i>
+                <label>Official Email</label>
+              </div>
+              <div class="row-right" title="Send Email">
+                {{ profile.contactDetails.officialEmail }}
+              </div>
+            </div>
+
+            <div class="detail-row">
+              <div class="row-left">
+                <i class="fas fa-phone-alt"></i>
+                <label>Mobile Number</label>
+              </div>
+              <div class="row-right" title="Call Number">
+                {{ profile.contactDetails.mobileNumber }}
+              </div>
+            </div>
+
+            <div class="detail-row">
+              <div class="row-left">
+                <i class="fas fa-map-marker-alt"></i>
+                <label>Location</label>
+              </div>
+              <div class="row-right">
+                {{ profile.contactDetails.location }}
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+      </div>
+    </ng-container>
+
+  </div>
+</div>

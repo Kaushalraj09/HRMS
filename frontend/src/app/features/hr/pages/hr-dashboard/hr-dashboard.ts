@@ -5,26 +5,34 @@ import { MatSelectModule } from '@angular/material/select';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { SharedModule } from '../../shared/shared-module';
-import { Router, RouterModule } from '@angular/router';
-import { HrSidebarService } from '../../shared/components/sidebar/hr-sidebar/hr-sidebar.service';
+import { SharedModule } from '../../../../shared/shared-module';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service';
 import { FormsModule } from '@angular/forms';
-import { HrSidebar } from '../../shared/components/sidebar/hr-sidebar/hr-sidebar';
+import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar, CustomSelectComponent],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
 export class HrDashboard {
   selectedLang = 'en';
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
+  isDashboardHome: boolean = true;
   
   constructor(private hrsidebarService: HrSidebarService, private router: Router) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
+      this.isDashboardHome = this.router.url === '/hr-dashboard';
+      this.router.events.subscribe((event) => {
+        if (event instanceof NavigationEnd) {
+          this.isDashboardHome = event.urlAfterRedirects === '/hr-dashboard';
+        }
+      });
     }
   toggleSidebar() {
     this.hrsidebarService.toggleSidebar();
@@ -49,6 +57,9 @@ export class HrDashboard {
     { id: 2, name: 'Client B' },
     { id: 3, name: 'Client C' },
   ];
+
+  get projectOptions() { return [{label: 'Choose a project...', value: ''}, ...this.projects.map(p => ({label: p.name, value: p.id}))]; }
+  get clientOptions() { return [{label: 'Choose a client...', value: ''}, ...this.clients.map(c => ({label: c.name, value: c.id}))]; }
 
   kpis = [
     { label: 'TOTAL PROJECTS', value: 2, icon: 'folder', accent: 'gold' as const },
