@@ -31,9 +31,9 @@ export class EmpSidebar {
         groupName: 'Employee Dashboard',
         items: [ 
               { label: 'Employee Dashboard',icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
-              { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/attendance' },
-              { label: 'My Profile', icon: 'far fa-user', route: '/profile' },
-              { label: 'Change Password', icon: 'fas fa-key', route: '/change-password' },
+              { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/emp-dashboard/my-attendance' },
+              { label: 'My Profile', icon: 'far fa-user', route: '/emp-dashboard/my-profile' },
+              { label: 'Change Password', icon: 'fas fa-key', route: '/emp-dashboard/change-password' },
               { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }

@@ -1,0 +1,17 @@
+<div class="custom-select-container" [class.disabled]="disabled">
+  <div class="select-trigger" (click)="toggleDropdown()" [class.open]="isOpen">
+    <span class="selected-value" [class.placeholder-text]="!value && value !== ''">{{ currentLabel }}</span>
+    <i class="fas fa-chevron-down caret" [class.rotated]="isOpen"></i>
+  </div>
+  
+  <div class="dropdown-menu" *ngIf="isOpen">
+    <ul>
+      <li 
+        *ngFor="let option of options" 
+        (click)="selectOption(option)"
+        [class.active]="option.value === value">
+        {{ option.label }}
+      </li>
+    </ul>
+  </div>
+</div>

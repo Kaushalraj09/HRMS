@@ -1,0 +1,116 @@
+.custom-select-container {
+  position: relative;
+  width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.select-trigger {
+  height: 44px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.select-trigger:hover:not(.disabled) {
+  border-color: #9ca3af;
+}
+
+.select-trigger.open:not(.disabled) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.custom-select-container.disabled .select-trigger {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.selected-value {
+  font-size: 14px;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selected-value.placeholder-text {
+  color: #6b7280;
+}
+
+.caret {
+  color: #9ca3af;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.caret.rotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu - Mapping Profile Dropdown Style */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f3f4f6;
+  z-index: 1050;
+  overflow: hidden;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.dropdown-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+}
+
+.dropdown-menu li {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #374151;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+}
+
+.dropdown-menu li:last-child {
+  margin-bottom: 0;
+}
+
+.dropdown-menu li:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.dropdown-menu li.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

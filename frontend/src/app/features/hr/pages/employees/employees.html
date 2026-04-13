@@ -1,0 +1,144 @@
+<div class="employees-wrapper">
+  <div class="employees-container">
+    
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-text">
+        <h1>Employees</h1>
+        <p>Search, manage, and maintain employee records</p>
+      </div>
+      <button class="btn-primary" routerLink="/hr-dashboard/employees/add">Add Employee</button>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-section">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [formControl]="searchControl" placeholder="Search employee name, email, code" class="filter-input search-input">
+      </div>
+      
+      <div class="dropdown-filters">
+        <div style="min-width: 160px;">
+          <app-custom-select [formControl]="departmentControl" [options]="departmentsOptions"></app-custom-select>
+        </div>
+
+        <div style="min-width: 160px;">
+          <app-custom-select [formControl]="typeControl" [options]="typesOptions"></app-custom-select>
+        </div>
+
+        <div style="min-width: 160px;">
+          <app-custom-select [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
+        </div>
+      </div>
+      
+      <div class="filter-actions-row">
+        <button type="button" class="btn-outline" (click)="onReset()">Reset</button>
+        <button type="button" class="btn-primary" (click)="onSearch()">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <ng-container *ngIf="{ loading: isLoading$ | async, result: employeesData$ | async } as state">
+    <div class="table-card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee Code</th>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Status</th>
+              <th>Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          
+          <tbody *ngIf="state.loading">
+            <tr *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-text" style="width: 80%"></div></td>
+              <td><div class="skeleton s-text" style="width: 60%"></div></td>
+              <td><div class="skeleton s-text" style="width: 70%"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-text" style="width: 100px"></div></td>
+            </tr>
+          </tbody>
+
+          <ng-container *ngIf="!state.loading && state.result as result">
+            <tbody>
+              <tr *ngFor="let emp of result.data; trackBy: trackById">
+                <td class="font-medium text-dark">{{ emp.employeeCode }}</td>
+                <td class="font-medium text-dark">{{ emp.name }}</td>
+                <td>{{ emp.department }}</td>
+                <td>{{ emp.designation }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="emp.status.toLowerCase()">{{ emp.status }}</span>
+                </td>
+                <td>
+                  <span class="login-badge" [ngClass]="emp.login.toLowerCase()">{{ emp.login }}</span>
+                </td>
+                <td class="actions-col">
+                  <a href="javascript:void(0)" class="action-link">View</a>
+                  <span class="separator">&middot;</span>
+                  <a href="javascript:void(0)" class="action-link">Edit</a>
+                  <span class="separator">&middot;</span>
+                  <a href="javascript:void(0)" class="action-link">Credential</a>
+                </td>
+              </tr>
+              
+              <tr *ngIf="result.data.length === 0">
+                <td colspan="7" class="empty-state">
+                  <div class="empty-content">
+                    <i class="fas fa-users-slash empty-icon"></i>
+                    <p>No employees found</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </ng-container>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-footer" *ngIf="!state.loading && state.result as result">
+        <div class="pagination-info">
+          Showing <span class="font-medium">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to 
+          <span class="font-medium">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of 
+          <span class="font-medium">{{ result.total }}</span> results
+        </div>
+        
+        <div class="pagination-controls" *ngIf="result.total > pageSize">
+           <ng-container *ngIf="(paginationArray$ | async) as pages">
+              <button 
+                class="page-btn" 
+                [disabled]="pageSubject.value === 1"
+                (click)="setPage(pageSubject.value - 1)">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              
+              <button 
+                *ngFor="let p of pages" 
+                class="page-btn" 
+                [class.active]="p === pageSubject.value"
+                (click)="setPage(p)">
+                {{ p }}
+              </button>
+              
+              <button 
+                class="page-btn" 
+                [disabled]="pageSubject.value === pages.length"
+                (click)="setPage(pageSubject.value + 1)">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+           </ng-container>
+        </div>
+      </div>
+    </div>
+    </ng-container>
+    
+  </div>
+</div>
