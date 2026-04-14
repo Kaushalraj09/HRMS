@@ -1,757 +1,655 @@
-# Phase 1 Frontend Implementation Specification
+# Phase 1 Frontend Implementation Guide
 
-## 1. Objective
+## 1. What This Document Is For
 
-This document defines the exact Angular implementation plan for Phase 1:
+This document is the **updated Phase 1 frontend implementation guide** for the Aivan HRMS Portal.
 
-- shared login portal for `admin`, `hr`, and `employee`
-- HR dashboard
-- HR attendance history
-- add employee wizard with account creation
-- employee dashboard with today, weekly, monthly attendance and profile summary
+This file is now aligned with the **actual frontend that is already implemented** in the repo.
 
-The existing frontend already includes:
+It is written in a practical way so that a fresher developer can understand:
 
-- auth pages
-- HR dashboard page
-- employee dashboard page
-- master dashboard page
-- shared navbar/sidebar components
+- what has already been completed
+- which screens exist
+- how the current frontend is structured
+- how role flow works
+- how the frontend will connect to backend later
 
-Phase 1 implementation must extend these assets instead of discarding them.
+This is now the correct Phase 1 frontend reference.
 
 ---
 
-## 2. Current Files to Reuse and Modify
+## 2. Phase 1 Frontend Scope
 
-### Reuse / Modify
+Phase 1 frontend supports 3 roles in one portal:
 
-- [frontend/src/app/app.routes.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.routes.ts)
-- [frontend/src/app/services/auth.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/services/auth.ts)
-- [frontend/src/app/features/auth/pages/login/login.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/auth/pages/login/login.ts)
-- [frontend/src/app/features/auth/pages/login/login.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/auth/pages/login/login.html)
-- [frontend/src/app/features/hr-dashboard/hr-dashboard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr-dashboard/hr-dashboard.ts)
-- [frontend/src/app/features/hr-dashboard/hr-dashboard.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr-dashboard/hr-dashboard.html)
-- [frontend/src/app/features/emp-dashboard/emp-dashboard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp-dashboard/emp-dashboard.ts)
-- [frontend/src/app/features/emp-dashboard/emp-dashboard.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp-dashboard/emp-dashboard.html)
+- `admin`
+- `hr`
+- `employee`
 
-### Fix Before Starting
+### Admin Flow
 
-- remove merge conflict markers from [frontend/src/app/features/emp-dashboard/emp-dashboard.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp-dashboard/emp-dashboard.html)
+- login
+- view admin dashboard
+- view HR users
+- create HR user
+- view employee list
+
+### HR Flow
+
+- login
+- view HR dashboard
+- view employee list
+- create employee with login access
+- view employee detail
+- edit employee
+- view attendance history
+
+### Employee Flow
+
+- login
+- view employee dashboard
+- punch in / punch out
+- view own attendance
+- view own profile
+- change password
 
 ---
 
-## 3. Target Angular Folder Map
+## 3. Current Frontend Status
+
+Phase 1 frontend is already implemented in **mock backend-ready mode**.
+
+That means:
+
+- UI is implemented
+- role flow is implemented
+- route protection is implemented
+- services are implemented
+- a browser-based local store is working as a temporary mock backend
+- real backend APIs can be connected later without changing screen flow
+
+### Important Note
+
+The frontend currently uses:
+
+- `Phase1StoreService`
+
+This is a temporary browser-side data engine that behaves like a backend.
+
+When backend is ready, frontend services should stop calling the store directly and should start calling real APIs using `HttpClient`.
+
+---
+
+## 4. Current Frontend Folder Structure
+
+This is the real structure now used by the app:
 
 ```text
 frontend/
 └── src/
     └── app/
-        ├── app.config.ts                           (modify)
-        ├── app.routes.ts                           (modify)
+        ├── app.routes.ts
         ├── core/
-        │   ├── constants/
-        │   │   ├── api-endpoints.ts
-        │   │   └── storage-keys.ts
         │   ├── guards/
         │   │   ├── auth.guard.ts
         │   │   └── role.guard.ts
-        │   ├── interceptors/
-        │   │   └── auth.interceptor.ts
-        │   └── utils/
-        │       ├── role-redirect.ts
-        │       └── date-range.util.ts
-        ├── models/
-        │   ├── auth.models.ts
-        │   ├── employee.models.ts
-        │   ├── attendance.models.ts
-        │   ├── dashboard.models.ts
-        │   └── master-data.models.ts
-        ├── services/
-        │   ├── auth.ts                             (modify)
-        │   ├── employee.service.ts
-        │   ├── attendance.service.ts
-        │   ├── dashboard.service.ts
-        │   └── master-data.service.ts
+        │   ├── models/
+        │   │   ├── auth.model.ts
+        │   │   ├── attendance.model.ts
+        │   │   ├── dashboard.model.ts
+        │   │   ├── employee.model.ts
+        │   │   ├── hr.model.ts
+        │   │   └── profile.model.ts
+        │   └── services/
+        │       ├── auth.service.ts
+        │       ├── attendance.service.ts
+        │       ├── dashboard.service.ts
+        │       ├── employee.service.ts
+        │       ├── hr.service.ts
+        │       ├── phase1-store.service.ts
+        │       └── profile.service.ts
         ├── features/
-        │   ├── auth/
-        │   │   ├── auth-module.ts                  (existing)
-        │   │   ├── auth-routing-module.ts          (existing)
+        │   ├── admin/
         │   │   └── pages/
-        │   │       ├── login/                      (modify)
-        │   │       ├── forgot-password/            (existing)
-        │   │       └── first-login/
-        │   │           ├── first-login.ts
-        │   │           ├── first-login.html
-        │   │           └── first-login.css
-        │   ├── hr-dashboard/                       (modify existing)
-        │   ├── hr-attendance/
-        │   │   ├── pages/
-        │   │   │   └── attendance-history/
-        │   │   │       ├── attendance-history.ts
-        │   │   │       ├── attendance-history.html
-        │   │   │       └── attendance-history.css
-        │   │   └── components/
-        │   │       ├── attendance-filter-bar/
-        │   │       └── attendance-summary-cards/
-        │   ├── hr-employees/
-        │   │   ├── pages/
-        │   │   │   ├── employee-list/
-        │   │   │   │   ├── employee-list.ts
-        │   │   │   │   ├── employee-list.html
-        │   │   │   │   └── employee-list.css
-        │   │   │   ├── add-employee/
-        │   │   │   │   ├── add-employee.ts
-        │   │   │   │   ├── add-employee.html
-        │   │   │   │   └── add-employee.css
-        │   │   │   └── employee-detail/
-        │   │   │       ├── employee-detail.ts
-        │   │   │       ├── employee-detail.html
-        │   │   │       └── employee-detail.css
-        │   │   └── components/
-        │   │       ├── employee-personal-form/
-        │   │       ├── employee-account-form/
-        │   │       ├── employee-job-form/
-        │   │       ├── employee-attendance-form/
-        │   │       └── employee-review-panel/
-        │   ├── emp-dashboard/                      (modify existing)
-        │   └── emp-profile/
-        │       └── pages/
-        │           └── profile/
-        │               ├── profile.ts
-        │               ├── profile.html
-        │               └── profile.css
+        │   │       ├── add-hr/
+        │   │       ├── admin-employees/
+        │   │       └── hr-users/
+        │   ├── auth/
+        │   │   └── pages/
+        │   │       ├── forgot-password/
+        │   │       └── login/
+        │   ├── emp/
+        │   │   ├── components/
+        │   │   │   └── emp-sidebar/
+        │   │   └── pages/
+        │   │       ├── change-password/
+        │   │       ├── emp-dashboard/
+        │   │       ├── my-attendance/
+        │   │       └── my-profile/
+        │   ├── hr/
+        │   │   ├── components/
+        │   │   │   └── hr-sidebar/
+        │   │   └── pages/
+        │   │       ├── attendance/
+        │   │       ├── employees/
+        │   │       │   ├── add-employee/
+        │   │       │   ├── employee-detail/
+        │   │       │   └── employees.ts/html/css
+        │   │       └── hr-dashboard/
+        │   └── master-dashboard/
         └── shared/
-            ├── shared-module.ts                    (modify as needed)
-            └── components/                         (reuse existing navbar/sidebar)
+            └── components/
+                ├── dropdown/
+                ├── navbar/
+                ├── sidebar/
+                └── custom-select/
 ```
 
 ---
 
-## 4. Route Design
+## 5. Actual Route Structure
 
-### Final Route Table
+The route structure is now defined in:
 
-| Path | Component | Roles |
+- [app.routes.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.routes.ts)
+
+### Current Route Map
+
+| Path | Role Access | Purpose |
 |---|---|---|
-| `/auth/login` | Login | public |
-| `/auth/forgot-password` | Forgot Password | public |
-| `/auth/first-login` | First Login | employee/admin/hr |
-| `/hr/dashboard` | HrDashboard | admin, hr |
-| `/hr/attendance` | AttendanceHistory | admin, hr |
-| `/hr/employees` | EmployeeList | admin, hr |
-| `/hr/employees/new` | AddEmployee | admin, hr |
-| `/hr/employees/:employeeId` | EmployeeDetail | admin, hr |
-| `/employee/dashboard` | EmpDashboard | employee |
-| `/employee/profile` | Profile | employee |
+| `/auth/login` | public | login |
+| `/auth/forgot-password` | public | forgot password |
+| `/master-dashboard` | admin | admin dashboard |
+| `/master-dashboard/hr-users` | admin | HR user list |
+| `/master-dashboard/hr-users/add` | admin | create HR |
+| `/master-dashboard/employees` | admin | employee list |
+| `/hr-dashboard` | admin, hr | HR dashboard |
+| `/hr-dashboard/attendance` | admin, hr | HR attendance page |
+| `/hr-dashboard/employees` | admin, hr | employee list |
+| `/hr-dashboard/employees/add` | admin, hr | add employee |
+| `/hr-dashboard/employees/:employeeId` | admin, hr | employee detail/edit |
+| `/emp-dashboard` | admin, employee | employee dashboard |
+| `/emp-dashboard/my-attendance` | admin, employee | employee attendance |
+| `/emp-dashboard/my-profile` | admin, employee | employee profile |
+| `/emp-dashboard/change-password` | admin, employee | employee password change |
 
-### Route Guard Rules
+### Guard Rules
 
-- `auth.guard.ts`
-  - redirects unauthenticated users to `/auth/login`
-- `role.guard.ts`
-  - checks route `data.roles`
-  - redirects to default landing route if role mismatch
+Two guards are already created:
 
-### Role Redirect Logic
+- [auth.guard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/guards/auth.guard.ts)
+- [role.guard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/guards/role.guard.ts)
 
-- `admin` -> `/hr/dashboard`
-- `hr` -> `/hr/dashboard`
-- `employee` -> `/employee/dashboard`
+### Redirect Flow
 
----
-
-## 5. Frontend Data Models
-
-### auth.models.ts
-
-```ts
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoggedInUser {
-  id: string;
-  employeeId: string | null;
-  fullName: string;
-  email: string;
-  roles: string[];
-  primaryRole: 'admin' | 'hr' | 'employee';
-  firstLoginRequired: boolean;
-}
-
-export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: 'bearer';
-  expiresIn: number;
-  me: LoggedInUser;
-}
-```
-
-### master-data.models.ts
-
-```ts
-export interface DepartmentOption {
-  id: number;
-  code: string;
-  name: string;
-}
-
-export interface DesignationOption {
-  id: number;
-  code: string;
-  name: string;
-  departmentId: number | null;
-}
-
-export interface ShiftTemplateOption {
-  id: number;
-  code: string;
-  name: string;
-  startTime: string;
-  endTime: string;
-}
-```
-
-### employee.models.ts
-
-```ts
-export interface CreateEmployeeRequest {
-  account: {
-    officialEmail: string;
-    loginEmail: string;
-    roleCode: 'employee';
-    passwordSetupMode: 'setup_link' | 'temporary_password';
-    temporaryPassword?: string | null;
-  };
-  personal: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    dateOfBirth?: string | null;
-    genderCode?: string | null;
-    personalEmail?: string | null;
-    emergencyContactName?: string | null;
-    emergencyContactPhone?: string | null;
-  };
-  job: {
-    employeeCode: string;
-    departmentId: number;
-    designationId: number;
-    employmentTypeId: number;
-    workModeId: number;
-    officeLocationId: number;
-    shiftTemplateId: number;
-    holidayCalendarId: number;
-    weekendPolicyId: number;
-    managerEmployeeId?: string | null;
-    joiningDate: string;
-  };
-  attendanceProfile: {
-    allowWebPunch: boolean;
-    graceMinutesOverride?: number | null;
-    timezone: string;
-  };
-}
-
-export interface CreateEmployeeResponse {
-  employeeId: string;
-  userId: string;
-  employeeCode: string;
-  accountStatus: string;
-  firstLoginRequired: boolean;
-  passwordSetupMode: 'setup_link' | 'temporary_password';
-}
-```
-
-### attendance.models.ts
-
-```ts
-export interface PunchRequest {
-  direction: 'in' | 'out';
-  source: 'web';
-  workModeCode: 'office' | 'remote' | 'hybrid';
-  officeLocationId?: number | null;
-  remarks?: string | null;
-}
-
-export interface TodayAttendanceResponse {
-  attendanceDate: string;
-  firstIn: string | null;
-  lastOut: string | null;
-  statusCode: string;
-  totalWorkMinutes: number;
-  totalBreakMinutes: number;
-  overtimeMinutes: number;
-  latestDirection: 'in' | 'out' | null;
-}
-```
+- `admin` -> `/master-dashboard`
+- `hr` -> `/hr-dashboard`
+- `employee` -> `/emp-dashboard`
 
 ---
 
-## 6. Frontend Services
+## 6. Current Role Flow
 
-### auth.ts
+### Admin
 
-Must expose:
+1. Admin logs in
+2. Admin lands on master dashboard
+3. Admin can:
+   - view summary cards
+   - view HR users
+   - create HR
+   - view employees
 
-- `login(payload: LoginRequest)`
-- `getMe()`
-- `setSession(response: LoginResponse)`
-- `clearSession()`
-- `getAccessToken()`
-- `getCurrentUser()`
-- `isLoggedIn()`
+### HR
 
-### master-data.service.ts
+1. HR logs in
+2. HR lands on HR dashboard
+3. HR can:
+   - view HR summary metrics
+   - view attendance history
+   - open employee list
+   - add employee
+   - open employee detail
+   - edit employee
 
-Must expose:
+### Employee
 
-- `getBootstrap()`
-- `getDepartments()`
-- `getDesignations()`
-- `getShifts()`
-- `getLocations()`
-- `getManagers()`
-
-### employee.service.ts
-
-Must expose:
-
-- `createEmployee(payload: CreateEmployeeRequest)`
-- `getEmployees(params)`
-- `getEmployeeById(employeeId)`
-- `updateEmployee(employeeId, payload)`
-
-### attendance.service.ts
-
-Must expose:
-
-- `punch(payload: PunchRequest)`
-- `getMyTodayAttendance()`
-- `getMyWeeklyAttendance(params)`
-- `getMyMonthlyAttendance(params)`
-- `getMyAttendanceHistory(params)`
-- `getHrAttendanceHistory(params)`
-- `getHrAttendanceSummary(params)`
-
-### dashboard.service.ts
-
-Must expose:
-
-- `getHrDashboardSummary(params)`
-- `getEmployeeDashboardSummary()`
+1. Employee logs in
+2. Employee lands on employee dashboard
+3. Employee can:
+   - punch in / punch out
+   - view today summary
+   - view timesheets
+   - view attendance page
+   - view profile
+   - change password
 
 ---
 
-## 7. Screen Specifications
+## 7. Current Implemented Screens
 
-## 7.1 Login Page
+### 7.1 Updated Existing Screens
 
-### Existing Base
+1. `Login page`  
+   Updated to use Phase 1 mock auth flow and seeded credentials.  
+   [login.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/auth/pages/login/login.ts)
 
-- [login.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/auth/pages/login/login.html)
+2. `Master/Admin Dashboard`  
+   Updated to show Phase 1 admin cards, HR users, and employee summaries.  
+   [master-dashboard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/master-dashboard/master-dashboard.ts)
 
-### Required Behavior
+3. `HR Dashboard`  
+   Updated to show dashboard cards, attendance metrics, work mode breakdown, and summary data.  
+   [hr-dashboard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/hr-dashboard/hr-dashboard.ts)
 
-- submit `email` and `password`
-- show loader during API call
-- on success:
-  - save token
-  - save current user
-  - redirect by role
-- on failure:
-  - show inline toast/banner error
+4. `HR Employee List`  
+   Updated for HR/Admin usage and linked to employee detail.  
+   [employees.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/employees/employees.ts)
 
-### Validation
+5. `Add Employee`  
+   Updated to include account access and login creation fields in the same form.  
+   [add-employee.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/employees/add-employee/add-employee.ts)
 
-- email required
-- valid email format
-- password required
-- min length 6
+6. `HR Attendance`  
+   Updated to use real Phase 1 filter flow.  
+   [attendance.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/attendance/attendance.ts)
 
-## 7.2 HR Dashboard
+7. `Employee Dashboard`  
+   Updated to support punch flow, summary, timesheet data, and mock dashboard logic.  
+   [emp-dashboard.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/pages/emp-dashboard/emp-dashboard.ts)
 
-### Existing Base
+8. `My Attendance`  
+   Updated to support filtering by date and status.  
+   [my-attendance.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/pages/my-attendance/my-attendance.ts)
 
-- [hr-dashboard.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr-dashboard/hr-dashboard.html)
+9. `My Profile`  
+   Updated to read employee profile from store-backed service.  
+   [my-profile.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/pages/my-profile/my-profile.ts)
 
-### Required API Data
+10. `Change Password`  
+   Updated to work with Phase 1 password flow.  
+   [change-password.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/pages/change-password/change-password.service.ts)
 
-- total employees
-- present employees
-- absent employees
-- late employees
-- work mode breakdown
-- gender breakdown
-- recent attendance rows
-- upcoming birthdays/events
+11. `Shared Sidebar`  
+   Updated for admin Phase 1 navigation.  
+   [sidebar.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/shared/components/sidebar/sidebar.ts)
 
-### Widget API Mapping
+12. `Shared Dropdown`  
+   Updated for role-aware profile link and logout behavior.  
+   [dropdown.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/shared/components/dropdown/dropdown.ts)
 
-| Widget | API |
-|---|---|
-| KPI cards | `GET /api/v1/attendance/hr/summary` |
-| recent time sheets | `GET /api/v1/attendance/hr/history?limit=10` |
-| work mode breakdown | `GET /api/v1/attendance/hr/summary` |
-| gender breakdown | `GET /api/v1/employees?summary=true` |
+13. `HR Sidebar`  
+   Updated to use auth-based logout.  
+   [hr-sidebar.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/components/hr-sidebar/hr-sidebar.ts)
 
-## 7.3 HR Attendance History
+14. `Employee Sidebar`  
+   Updated to use auth-based logout.  
+   [emp-sidebar.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/components/emp-sidebar/emp-sidebar.ts)
 
-### Filters
+15. `App Routes`  
+   Updated to include full Phase 1 route structure and role guards.  
+   [app.routes.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.routes.ts)
 
-- date from
-- date to
-- employee
-- department
-- status
-- work mode
-- pagination
+### 7.2 New Screens Created
 
-### Table Columns
+1. `Admin HR Users List`  
+   [hr-users.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/admin/pages/hr-users/hr-users.ts)
 
-- employee code
-- employee name
-- department
-- date
-- first in
-- last out
-- total hours
-- overtime
-- status
-- work mode
+2. `Admin Create HR`  
+   [add-hr.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/admin/pages/add-hr/add-hr.ts)
 
-## 7.4 Add Employee Wizard
+3. `Admin Employees Page`  
+   [admin-employees.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/admin/pages/admin-employees/admin-employees.ts)
 
-### Steps
-
-1. Account Access
-2. Personal Details
-3. Job Details
-4. Attendance Setup
-5. Review and Submit
-
-### Step 1: Account Access Fields
-
-- official email
-- login email
-- role code fixed as `employee`
-- password setup mode
-- temporary password if selected
-
-### Step 2: Personal Details Fields
-
-- first name
-- last name
-- phone
-- personal email
-- gender
-- date of birth
-- emergency contact name
-- emergency contact phone
-
-### Step 3: Job Details Fields
-
-- employee code
-- joining date
-- department
-- designation
-- employment type
-- work mode
-- office location
-- shift template
-- holiday calendar
-- weekend policy
-- manager
-
-### Step 4: Attendance Setup Fields
-
-- allow web punch
-- timezone
-- grace minutes override optional
-
-### Step 5: Review and Submit
-
-- render all values read-only
-- allow edit jump-back
-- confirm before submit
-
-### Validation Rules
-
-- official email required and unique
-- login email required and unique
-- phone required
-- employee code required and unique
-- department required
-- designation required
-- joining date required
-- work mode required
-- location required
-- shift required
-
-### Submission UX
-
-- disable submit button while request pending
-- show success with employee code and login status
-- show backend validation errors at field level if available
-
-## 7.5 Employee Dashboard
-
-### Existing Base
-
-- [emp-dashboard.html](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp-dashboard/emp-dashboard.html)
-
-### Required Sections
-
-- welcome card
-- today punch card
-- request time off placeholder
-- monthly calendar view
-- schedule timeline
-- timesheet table
-- attendance summary
-- latest news
-
-### API Data Binding
-
-| Section | API |
-|---|---|
-| today punch state | `GET /api/v1/attendance/me/today` |
-| punch button | `POST /api/v1/attendance/punch` |
-| week/month totals | `GET /api/v1/attendance/me/weekly`, `GET /api/v1/attendance/me/monthly` |
-| timesheet table | `GET /api/v1/attendance/me/history` |
-| profile snippet | `GET /api/v1/employees/{employee_id}` |
-
-## 7.6 Employee Profile Page
-
-### Sections
-
-- basic profile
-- contact details
-- job details
-- reporting manager
-- shift and work mode
+4. `Employee Detail / Edit`  
+   [employee-detail.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/employees/employee-detail/employee-detail.ts)
 
 ---
 
-## 8. Frontend State Management
+## 8. Current Frontend Data Models
 
-Phase 1 should stay simple:
+These are the actual frontend models now in use.
 
-- use service-based HTTP calls
-- use Angular signals or RxJS in page-level services only where needed
-- do not introduce NgRx in Phase 1
+### Auth Model
 
-### Session State
+- [auth.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/auth.model.ts)
 
-- store JWT in local storage
-- store minimal `me` object in local storage
-- expose current user via signal or `BehaviorSubject`
+Main types:
 
-### Filter State
+- `UserRole`
+- `LoginRequest`
+- `SessionUser`
+- `LoginResponse`
+- `ChangePasswordPayload`
 
-- attendance history filter state can stay inside feature component
-- reuse query param sync for date range and page
+### Employee Model
+
+- [employee.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/employee.model.ts)
+
+Main types:
+
+- `Employee`
+- `PaginatedResult<T>`
+- `EmployeePayload`
+- `EmployeeDetailView`
+
+### Attendance Model
+
+- [attendance.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/attendance.model.ts)
+
+Main types:
+
+- `AttendanceRecord`
+- `AttendanceMetrics`
+- `PaginatedAttendance`
+- `EmployeeTimesheetRow`
+- `TodayAttendanceState`
+
+### HR Model
+
+- [hr.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/hr.model.ts)
+
+Main types:
+
+- `HrUser`
+- `CreateHrPayload`
+
+### Dashboard Model
+
+- [dashboard.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/dashboard.model.ts)
+
+Main types:
+
+- `AdminDashboardData`
+- `HrDashboardData`
+
+### Profile Model
+
+- [profile.model.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/models/profile.model.ts)
+
+Main type:
+
+- `EmployeeProfile`
 
 ---
 
-## 9. Form Strategy
+## 9. Current Frontend Services
 
-### Use Angular Reactive Forms For
+These services are already created and working in mock mode.
+
+### Auth Service
+
+- [auth.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/auth.service.ts)
+
+Current responsibilities:
 
 - login
-- add employee wizard
-- attendance filter bar
-- first-login password setup
+- logout
+- session user
+- landing route by role
 
-### Recommended Wizard Form Structure
+### HR Service
 
-```ts
-this.form = this.fb.group({
-  account: this.fb.group({
-    officialEmail: ['', [Validators.required, Validators.email]],
-    loginEmail: ['', [Validators.required, Validators.email]],
-    passwordSetupMode: ['setup_link', Validators.required],
-    temporaryPassword: ['']
-  }),
-  personal: this.fb.group({
-    firstName: ['', Validators.required],
-    lastName: ['', Validators.required],
-    phone: ['', Validators.required],
-    personalEmail: [''],
-    genderCode: [''],
-    dateOfBirth: [''],
-    emergencyContactName: [''],
-    emergencyContactPhone: ['']
-  }),
-  job: this.fb.group({
-    employeeCode: ['', Validators.required],
-    joiningDate: ['', Validators.required],
-    departmentId: [null, Validators.required],
-    designationId: [null, Validators.required],
-    employmentTypeId: [null, Validators.required],
-    workModeId: [null, Validators.required],
-    officeLocationId: [null, Validators.required],
-    shiftTemplateId: [null, Validators.required],
-    holidayCalendarId: [null, Validators.required],
-    weekendPolicyId: [null, Validators.required],
-    managerEmployeeId: [null]
-  }),
-  attendanceProfile: this.fb.group({
-    allowWebPunch: [true, Validators.required],
-    timezone: ['Asia/Kolkata', Validators.required],
-    graceMinutesOverride: [null]
-  })
-});
-```
+- [hr.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/hr.service.ts)
 
----
+Current responsibilities:
 
-## 10. Frontend API Integration Rules
+- list HR users
+- create HR user
 
-### HTTP Rules
+### Employee Service
 
-- all secured API calls go through auth interceptor
-- bearer token attached automatically
-- 401 -> clear session -> redirect to login
-- 403 -> redirect to correct home page with access denied toast
+- [employee.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/employee.service.ts)
 
-### Date Rules
+Current responsibilities:
 
-- frontend sends ISO date strings: `YYYY-MM-DD`
-- datetime values displayed in user timezone
-- backend remains source of truth for attendance date calculations
+- list employees
+- get employee detail
+- create employee
+- update employee
 
----
+### Attendance Service
 
-## 11. UI Error States
+- [attendance.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/attendance.service.ts)
 
-### Login
+Current responsibilities:
 
-- invalid credentials
-- inactive account
-- first login required
+- HR attendance logs
+- employee timesheets
+- today attendance state
+- punch in/out
+- employee summary
 
-### Add Employee
+### Dashboard Service
 
-- duplicate email
-- duplicate employee code
-- invalid manager reference
-- invalid shift or location
-- backend unavailable
+- [dashboard.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/dashboard.service.ts)
 
-### Attendance History
+Current responsibilities:
 
-- no results
-- invalid date range
-- unauthorized access
+- admin dashboard
+- HR dashboard
 
-### Employee Dashboard
+### Profile Service
 
-- no attendance yet today
-- missing punch state
-- punch API failed
+- [profile.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/profile.service.ts)
+
+Current responsibilities:
+
+- employee profile
+
+### Mock Backend Store
+
+- [phase1-store.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/phase1-store.service.ts)
+
+This is the temporary backend simulator.
+
+It currently handles:
+
+- seeded users
+- seeded HR users
+- seeded employees
+- seeded attendance
+- dashboard values
+- login validation
+- password change
+- employee create and update
+- HR create
 
 ---
 
-## 12. Frontend Testing Plan
+## 10. Demo Credentials
 
-### Unit Tests
+These credentials are seeded in the mock store:
 
-- auth service token/session handling
-- auth guard route blocking
-- role guard redirects
-- login form validation
-- add employee wizard validation
-- employee dashboard punch button state handling
-
-### Component Tests
-
-- HR dashboard renders API data
-- attendance history filter changes query params
-- employee wizard shows backend field errors
-- employee dashboard updates after punch action
-
-### Manual QA Checklist
-
-- login works for admin/hr/employee
-- admin/hr redirected to HR area
-- employee redirected to employee area
-- employee creation form loads all dropdowns
-- employee created successfully
-- employee first login works
-- employee dashboard shows correct data
-- HR attendance filters work
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@aivan.com` | `Admin@123` |
+| HR | `hr@aivan.com` | `Hr@12345` |
+| Employee | `kaushal@aivan.com` | `Employee@123` |
+| Employee | `ananya.employee@aivan.com` | `Employee@123` |
+| Employee | `rahul@aivan.com` | `Employee@123` |
 
 ---
 
-## 13. Frontend Developer Task Breakdown
+## 11. What The Frontend Still Needs From Backend
 
-### Task Group A: Foundation
+The screen flow is ready, but the frontend still needs real backend APIs.
 
-1. Clean existing merge conflict in employee dashboard template.
-2. Create `core/guards/auth.guard.ts`.
-3. Create `core/guards/role.guard.ts`.
-4. Create `core/interceptors/auth.interceptor.ts`.
-5. Add interceptor registration in [app.config.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.config.ts).
-6. Extend [auth.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/services/auth.ts) with session helpers.
-7. Update [app.routes.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.routes.ts) for new role routes.
+These are the actual service replacements needed later:
 
-### Task Group B: Shared Models and Services
+### Auth APIs
 
-1. Add `models/auth.models.ts`.
-2. Add `models/employee.models.ts`.
-3. Add `models/attendance.models.ts`.
-4. Add `models/master-data.models.ts`.
-5. Add `services/master-data.service.ts`.
-6. Add `services/employee.service.ts`.
-7. Add `services/attendance.service.ts`.
-8. Add `services/dashboard.service.ts`.
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/change-password`
 
-### Task Group C: Auth Flow
+### HR APIs
 
-1. Update login page submit logic.
-2. Add success redirect by role.
-3. Add `first-login` page and route.
-4. Implement password setup form.
+- `GET /api/v1/hr-users`
+- `POST /api/v1/hr-users`
 
-### Task Group D: HR Modules
+### Employee APIs
 
-1. Bind existing HR dashboard widgets to APIs.
-2. Create attendance history page.
-3. Create employee list page.
-4. Create add employee wizard page.
-5. Create reusable employee wizard section components.
-6. Create employee detail page.
+- `GET /api/v1/employees`
+- `GET /api/v1/employees/{id}`
+- `POST /api/v1/employees`
+- `PUT /api/v1/employees/{id}`
 
-### Task Group E: Employee Modules
+### Attendance APIs
 
-1. Bind existing employee dashboard to APIs.
-2. Implement punch in/out integration.
-3. Implement attendance summary widgets.
-4. Create employee profile page.
+- `GET /api/v1/attendance`
+- `GET /api/v1/attendance/me/timesheets`
+- `GET /api/v1/attendance/me/today`
+- `POST /api/v1/attendance/me/punch`
+- `GET /api/v1/attendance/me/summary`
 
-### Task Group F: QA and Hardening
+### Dashboard APIs
 
-1. Add unit tests for guards and services.
-2. Add page-level tests for forms and API error states.
-3. Run `ng test`.
-4. Run `ng build`.
+- `GET /api/v1/dashboard/admin`
+- `GET /api/v1/dashboard/hr`
+
+### Profile API
+
+- `GET /api/v1/profile/me`
 
 ---
 
-## 14. Frontend Integration Dependencies on Backend
+## 12. How To Connect Backend Later
 
-The frontend cannot finish without these backend contracts being stable:
+When backend is ready, follow this order:
 
-- login payload and role response
-- master data bootstrap payload
-- create employee payload and validation errors
-- attendance summary payload
-- punch endpoint response
-- employee detail payload
+1. update `AuthService`
+2. update `HrService`
+3. update `EmployeeService`
+4. update `AttendanceService`
+5. update `DashboardService`
+6. update `MyProfileService`
 
-These payloads are defined in [phase1 backend.md](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/phase1%20backend.md).
+### Important Rule
+
+Do not replace every service in one go.
+
+Replace one service, test one screen flow, then move to next service.
+
+That is the safest approach.
+
+---
+
+## 13. Step By Step Frontend-to-Backend Integration Plan
+
+### Step 1. Auth
+
+Replace:
+
+- store-based login
+
+With:
+
+- `HttpClient.post('/api/v1/auth/login')`
+
+Then store token and user session.
+
+### Step 2. HR Module
+
+Replace:
+
+- HR list mock
+- create HR mock
+
+With backend calls.
+
+### Step 3. Employee Module
+
+Replace:
+
+- employee list
+- employee detail
+- create employee
+- update employee
+
+### Step 4. Attendance Module
+
+Replace:
+
+- attendance list
+- employee punch flow
+- employee timesheets
+- employee summary
+
+### Step 5. Dashboard Module
+
+Replace:
+
+- admin dashboard
+- HR dashboard
+
+### Step 6. Profile And Password
+
+Replace:
+
+- employee profile
+- change password
+
+---
+
+## 14. Validation Already Present In Frontend
+
+Some validation is already implemented on the frontend:
+
+- login email format
+- required login password
+- add employee required fields
+- mobile number pattern
+- temporary password min length
+- date of birth past date validation
+- create HR email and phone validation
+
+Backend must still validate everything again.
+
+Frontend validation is helpful, but backend validation is mandatory.
+
+---
+
+## 15. Current Phase 1 Completion Status
+
+### Completed In Frontend
+
+- login flow
+- admin role flow
+- HR role flow
+- employee role flow
+- route guards
+- dashboards
+- create HR screen
+- HR users list
+- employee list
+- add employee
+- employee detail/edit
+- attendance pages
+- employee profile
+- change password
+- seeded mock data
+
+### Still Pending In Frontend
+
+- real API integration
+- JWT token storage flow
+- backend error handling polish
+- production backend environment wiring
+
+---
+
+## 16. Final Recommendation
+
+Frontend Phase 1 is already in a strong shape.
+
+The correct next step is **not** rebuilding screens.
+
+The correct next step is:
+
+1. keep this frontend structure
+2. build backend to match these models and services
+3. replace store calls with real API calls step by step
+
+This is the cleanest and safest Phase 1 path.
 
