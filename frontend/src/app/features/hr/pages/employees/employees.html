@@ -5,7 +5,7 @@
     <div class="header-section">
       <div class="header-text">
         <h1>Employees</h1>
-        <p>Search, manage, and maintain employee records</p>
+        <p>{{ userRoleLabel }} can search, manage, and maintain employee records</p>
       </div>
       <button class="btn-primary" routerLink="/hr-dashboard/employees/add">Add Employee</button>
     </div>
@@ -82,11 +82,11 @@
                   <span class="login-badge" [ngClass]="emp.login.toLowerCase()">{{ emp.login }}</span>
                 </td>
                 <td class="actions-col">
-                  <a href="javascript:void(0)" class="action-link">View</a>
+                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" class="action-link">View</a>
                   <span class="separator">&middot;</span>
-                  <a href="javascript:void(0)" class="action-link">Edit</a>
+                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" [queryParams]="{ mode: 'edit' }" class="action-link">Edit</a>
                   <span class="separator">&middot;</span>
-                  <a href="javascript:void(0)" class="action-link">Credential</a>
+                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" class="action-link">Credential</a>
                 </td>
               </tr>
               

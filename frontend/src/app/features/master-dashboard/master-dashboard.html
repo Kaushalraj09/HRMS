@@ -1,6 +1,6 @@
 <div class="dashboard-wrapper">
     <app-navbar 
-        [userName]="'abc'" 
+        [userName]="userName" 
         [notificationCount]="5" 
         (hamburgerClick)="toggleSidebar()"
         (searchChange)="onSearch($event)" 
@@ -20,11 +20,10 @@
                     <div class="card ">
 
                         <div class="empname">
-                            Welcome, Kaushal
+                            Welcome, {{ userName }}
                         </div>
                         <div class="dashboard">
-                            Dashboard
-
+                            Master Dashboard
                         </div>
                     </div>
 
@@ -45,82 +44,77 @@
                     <!-- clients & recent projects -->
                     <div class="project_details">
                         <div class="card clients">
-                            <h3 class="project_title">Clients</h3>
+                            <h3 class="project_title">HR Users</h3>
                             <div class="divider"></div>
 
                             <table class="client-table">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
-                                        <th>Email</th>
+                                        <th>Department</th>
                                         <th>Status</th>
-                                        <th class="text-center">Action</th>
+                                        <th class="text-center">Details</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr *ngFor="let client of clients">
+                                    <tr *ngFor="let client of hrUsers">
                                         <td class="name-cell">
                                             <div class="avatar_client">
-                                                <i class="fas fa-image"></i>
+                                                <i class="fas fa-user-shield"></i>
                                             </div>
                                             <div>
-                                                <div class="name">{{ client.name }}</div>
-                                                <div class="role">{{ client.role }}</div>
+                                                <div class="name">{{ client.primary }}</div>
+                                                <div class="role">{{ client.secondary }}</div>
                                             </div>
                                         </td>
 
-                                        <td>{{ client.email }}</td>
+                                        <td>{{ client.tertiary }}</td>
 
                                         <td>
-                                            <select [(ngModel)]="client.status" class="status">
-                                                <option value="Active">Active</option>
-                                                <option value="Inactive">Inactive</option>
-                                            </select>
+                                            <span class="status">{{ client.status }}</span>
                                         </td>
 
                                         <td class="text-center">
-                                            <i class="fas fa-ellipsis-v action-icon"></i>
+                                            <a routerLink="/master-dashboard/hr-users" class="action-icon">View list</a>
                                         </td>
 
                                     </tr>
                                 </tbody>
                             </table>
                             <div class="footer">
-                                <a>View all clients</a>
+                                <a routerLink="/master-dashboard/hr-users">View all HR users</a>
                             </div>
                         </div>
                         <div class="card recent_projects">
-                            <h3 class="project_title">Recent Projects</h3>
+                            <h3 class="project_title">Recent Employees</h3>
                             <div class="divider"></div>
                             <div class="table">
                                 <div class="table-head">
-                                    <span>Project Name</span>
-                                    <span>Value</span>
-                                    <span>Progress</span>
+                                    <span>Employee</span>
+                                    <span>Email</span>
+                                    <span>Status</span>
                                     <span>Action</span>
                                 </div>
 
-                                <div class="table-row" *ngFor="let project of projects">
+                                <div class="table-row" *ngFor="let project of employees">
                                     <div class="project-info">
-                                        <strong>{{ project.name }}</strong>
-                                        <p>{{ project.tasks }}</p>
+                                        <strong>{{ project.primary }}</strong>
+                                        <p>{{ project.tertiary }}</p>
                                     </div>
                                     <div class="value">
-                                        ₹{{ project.value | number }}
+                                        {{ project.secondary }}
                                     </div>
                                     <div class="progress">
-                                        <div class="progress-bar">
-                                            <div class="progress-fill" [style.width.%]="project.progress"></div>
-                                        </div>
+                                        {{ project.status }}
                                     </div>
                                     <div class="action">
-                                        <i class="fas fa-ellipsis-v"></i>
+                                        <a routerLink="/master-dashboard/employees">View list</a>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="footer">
-                                <a>View all projects</a>
+                                <a routerLink="/master-dashboard/employees">View all employees</a>
                             </div>
                         </div>
                     </div>

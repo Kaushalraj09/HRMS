@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
+import { AuthService } from '../../../core/services/auth.service';
+
 @Component({
   selector: 'app-dropdown',
   standalone: true,
@@ -12,7 +14,19 @@ import { CommonModule } from '@angular/common';
 export class Dropdown {
   isLogoutPopupOpen = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private readonly authService: AuthService) {}
+
+  get profileRoute(): string {
+    const user = this.authService.getCurrentUser();
+
+    if (user?.role === 'employee') {
+      return '/emp-dashboard/my-profile';
+    }
+    if (user?.role === 'hr') {
+      return '/hr-dashboard/employees';
+    }
+    return '/master-dashboard';
+  }
 
   openLogoutConfirm(event: MouseEvent) {
     event.stopPropagation();
@@ -26,11 +40,7 @@ export class Dropdown {
 
   confirmLogout(event: MouseEvent) {
     event.stopPropagation();
-    // clear auth data
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // redirect to login
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 }

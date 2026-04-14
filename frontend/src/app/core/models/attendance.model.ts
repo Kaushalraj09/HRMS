@@ -1,3 +1,6 @@
+export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked';
+export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
+
 export interface AttendanceRecord {
   id: string;
   code: string;
@@ -7,7 +10,7 @@ export interface AttendanceRecord {
   checkIn: string;
   checkOut: string;
   hours: string;
-  status: 'Present' | 'Checked In' | 'Not Marked' | 'Checked Out';
+  status: AttendanceStatus;
 }
 
 export interface AttendanceMetrics {
@@ -21,4 +24,37 @@ export interface PaginatedAttendance {
   data: AttendanceRecord[];
   total: number;
   metrics: AttendanceMetrics;
+}
+
+export interface EmployeeTimesheetRow {
+  date: string;
+  day: string;
+  entry: string;
+  exit: string;
+  total: string;
+  overtime: string;
+  break: string;
+  grandTotal: string;
+  status: AttendanceStatus;
+}
+
+export interface EmployeeAttendanceSummaryItem {
+  label: string;
+  value: number;
+  icon: string;
+}
+
+export interface EmployeeTimelineEvent {
+  date: string;
+  time: string;
+  title: string;
+  location: string;
+}
+
+export interface TodayAttendanceState {
+  isPunchedIn: boolean;
+  status: AttendanceStatus;
+  approvedHours: number;
+  remainingHours: number;
+  workMode: WorkMode;
 }

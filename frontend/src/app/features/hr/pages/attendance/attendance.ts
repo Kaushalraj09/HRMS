@@ -18,7 +18,7 @@ import { CustomSelectComponent } from '../../../../shared/components/custom-sele
 export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
 
-  departments = ['Engineering', 'HR', 'Finance', 'Marketing', 'Sales', 'Support'];
+  departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
   statuses = ['Present', 'Checked In', 'Not Marked', 'Checked Out'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }

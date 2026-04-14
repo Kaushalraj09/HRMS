@@ -1,12 +1,12 @@
-<div class="my-attendance">
+<div class="my-attendance" [formGroup]="filterForm">
     <div class="filter-section">
         <div class="filter-inputs">
-            <input type="text" class="filter-input" placeholder="From Date">
-            <input type="text" class="filter-input" placeholder="To Date">
-            <input type="text" class="filter-input" placeholder="Status">
-            <button class="reset-btn">Reset</button>
+            <input type="date" class="filter-input" formControlName="fromDate" placeholder="From Date">
+            <input type="date" class="filter-input" formControlName="toDate" placeholder="To Date">
+            <input type="text" class="filter-input" formControlName="status" placeholder="Status">
+            <button class="reset-btn" type="button" (click)="onReset()">Reset</button>
         </div>
-        <button class="search-btn">Search</button>
+        <button class="search-btn" type="button" (click)="onSearch()">Search</button>
     </div>
 
     <div class="time_sheet">

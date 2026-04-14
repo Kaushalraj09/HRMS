@@ -1,6 +1,6 @@
 <div class="Hr_dashboard">
   <app-navbar 
-    [userName]="'Kaushal'" 
+    [userName]="userName" 
     [notificationCount]="5" 
     (hamburgerClick)="toggleSidebar()"
     (searchChange)="onSearch($event)" 
@@ -18,11 +18,11 @@
         <!-- Dashboard content -->
         <div class="dashboard-content-A">
           <div class="dashboard-content" style="min-width: 200px;">
-            <label for="project">Select Project</label>
+            <label for="project">Department</label>
             <app-custom-select [options]="projectOptions"></app-custom-select>
           </div>
           <div class="dashboard-content" style="min-width: 200px;">
-            <label for="client">Select Client</label>
+            <label for="client">Work Mode</label>
             <app-custom-select [options]="clientOptions"></app-custom-select>
           </div>
         </div>
@@ -32,35 +32,35 @@
           <div class="card total_project">
             <div class="card-content">
               <div>
-                <p class="title">TOTAL PROJECTS</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[0]?.label }}</p>
+                <h2>{{ kpis[0]?.value }}</h2>
               </div>
-              <i class="fas fa-folder"></i>
+              <i class="fas fa-users"></i>
             </div>
           </div>
           <div class="card total_clients">
             <div class="card-content">
               <div>
-                <p class="title">TOTAL CLIENTS</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[1]?.label }}</p>
+                <h2>{{ kpis[1]?.value }}</h2>
               </div>
-              <i class="fas fa-building"></i>
+              <i class="fas fa-user-check"></i>
             </div>
           </div>
           <div class="card total_emp">
             <div class="card-content">
               <div>
-                <p class="title">TOTAL EMPLOYEES</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[2]?.label }}</p>
+                <h2>{{ kpis[2]?.value }}</h2>
               </div>
-              <i class="fas fa-users"></i>
+              <i class="fas fa-user-clock"></i>
             </div>
           </div>
           <div class="card present_emp">
             <div class="card-content">
               <div>
-                <p class="title">PRESENT EMPLOYEES</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[3]?.label }}</p>
+                <h2>{{ kpis[3]?.value }}</h2>
               </div>
               <i class="fas fa-user-check"></i>
             </div>
@@ -68,8 +68,8 @@
           <div class="card absent_emp">
             <div class="card-content">
               <div>
-                <p class="title">ABSENT(Approved)</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[4]?.label }}</p>
+                <h2>{{ kpis[4]?.value }}</h2>
               </div>
               <i class="fas fa-user-clock"></i>
             </div>
@@ -77,10 +77,10 @@
           <div class="card unschegule_abs">
             <div class="card-content">
               <div>
-                <p class="title">UNSCHEDULED ABSENTS</p>
-                <h2>0</h2>
+                <p class="title">{{ kpis[5]?.label }}</p>
+                <h2>{{ kpis[5]?.value }}</h2>
               </div>
-              <i class="fas fa-user-times"></i>
+              <i class="fas fa-building"></i>
             </div>
           </div>
         </div>

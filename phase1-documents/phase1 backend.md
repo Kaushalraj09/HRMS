@@ -1,566 +1,690 @@
-# Phase 1 Backend Implementation Specification
+# Phase 1 Backend Implementation Guide
 
-## 1. Objective
+## 1. What This Document Is For
 
-This document defines the backend implementation for Phase 1 of the Aivan HRMS Portal.
+This document is the **backend implementation guide for Phase 1** of the Aivan HRMS Portal.
 
-Phase 1 backend must support:
+It is written for a fresher developer who is handling **both frontend and backend**.
 
-- shared login for admin, hr, and employee
-- new employee creation with login creation in the same transaction
-- historical attendance monitoring for HR
-- employee self-service attendance dashboard
-- master data driven employee setup
+This version is now aligned with the **actual frontend already implemented**.
 
-Recommended stack:
+Phase 1 frontend already has:
 
-- Python
+- login page
+- admin dashboard
+- admin HR list
+- admin create HR page
+- admin employee list
+- HR dashboard
+- HR employee list
+- HR add employee
+- HR employee detail/edit
+- HR attendance page
+- employee dashboard
+- employee attendance page
+- employee profile page
+- employee change password page
+
+The frontend currently works on a browser-based mock store. Your backend job is to replace that mock store with **real APIs and real database data**.
+
+This document explains:
+
+- what to build first
+- in what order to build it
+- what folder structure to use
+- what database tables to create
+- what exact APIs the frontend needs
+- how to connect backend to the frontend later
+
+---
+
+## 2. Phase 1 Scope
+
+### Must Be Implemented
+
+- single login for `admin`, `hr`, and `employee`
+- admin can create HR users
+- admin can view HR users
+- admin can view employees
+- HR can create employee with login access in same flow
+- HR can view employee list
+- HR can view employee detail
+- HR can edit employee detail
+- HR can view attendance history
+- employee can login and view own dashboard
+- employee can view own attendance
+- employee can punch in and punch out
+- employee can view own profile
+- employee can change password
+- admin and HR dashboards should return real values from database
+
+### Not Required In Phase 1
+
+- payroll
+- leave approval workflow
+- project/client management
+- document upload
+- notifications
+- multi-company tenancy
+- mobile app APIs
+
+---
+
+## 3. First Important Rule
+
+Do **not** start by building every table and every API.
+
+For Phase 1, the safest order is:
+
+1. project setup
+2. database connection
+3. auth
+4. admin create HR
+5. employee create/edit/list/detail
+6. attendance
+7. dashboards
+8. profile and password change
+9. connect frontend APIs one by one
+
+If you try to build everything together, it will become confusing very fast.
+
+---
+
+## 4. How To Think About The System
+
+There are 3 user roles in the same portal:
+
+- `admin`
+- `hr`
+- `employee`
+
+### Access Flow
+
+1. Admin logs in
+2. Admin lands on master dashboard
+3. Admin creates HR account
+4. HR logs in
+5. HR lands on HR dashboard
+6. HR creates employee account with login
+7. Employee logs in
+8. Employee lands on employee dashboard
+
+### Phase 1 Role Responsibility
+
+#### Admin
+
+- create HR
+- view HR list
+- view employee list
+- view admin dashboard
+
+#### HR
+
+- create employee
+- view employee list
+- edit employee
+- view attendance history
+- view HR dashboard
+
+#### Employee
+
+- login
+- view own dashboard
+- punch in/out
+- view own attendance
+- view own profile
+- change password
+
+---
+
+## 5. Recommended Backend Stack
+
+Use:
+
+- Python 3.12+
 - FastAPI
 - SQLAlchemy
 - Alembic
 - PostgreSQL
 - Pydantic
-- JWT auth
+- Uvicorn
+- Passlib or pwdlib for password hashing
+- python-jose or PyJWT for JWT tokens
+
+This is good because:
+
+- FastAPI is simple and beginner-friendly
+- SQLAlchemy is standard and works well with PostgreSQL
+- Alembic helps you manage schema changes safely
+- JWT works well for single portal role-based auth
 
 ---
 
-## 2. Backend Folder Map
+## 6. Backend Folder Structure
+
+Create this structure:
 
 ```text
 backend/
-└── app/
-    ├── main.py
-    ├── core/
-    │   ├── config.py
-    │   ├── database.py
-    │   ├── security.py
-    │   ├── dependencies.py
-    │   └── exceptions.py
-    ├── api/
-    │   └── v1/
-    │       ├── auth_routes.py
-    │       ├── employee_routes.py
-    │       ├── attendance_routes.py
-    │       ├── dashboard_routes.py
-    │       └── master_data_routes.py
-    ├── models/
-    │   ├── base.py
-    │   ├── user_account.py
-    │   ├── role.py
-    │   ├── employee.py
-    │   ├── employee_job_detail.py
-    │   ├── employee_attendance_profile.py
-    │   ├── attendance_event.py
-    │   ├── attendance_day_summary.py
-    │   ├── password_setup_token.py
-    │   ├── audit_log.py
-    │   └── master_data.py
-    ├── schemas/
-    │   ├── auth.py
-    │   ├── employee.py
-    │   ├── attendance.py
-    │   ├── dashboard.py
-    │   └── master_data.py
-    ├── repositories/
-    │   ├── user_repository.py
-    │   ├── employee_repository.py
-    │   ├── attendance_repository.py
-    │   └── master_data_repository.py
-    ├── services/
-    │   ├── auth_service.py
-    │   ├── employee_service.py
-    │   ├── attendance_service.py
-    │   ├── dashboard_service.py
-    │   ├── master_data_service.py
-    │   └── audit_service.py
-    ├── seeds/
-    │   └── phase1_master_data.sql
-    └── tests/
-        ├── test_auth.py
-        ├── test_employee_api.py
-        ├── test_attendance_api.py
-        └── test_master_data_api.py
+├── app/
+│   ├── main.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── security.py
+│   │   ├── dependencies.py
+│   │   └── constants.py
+│   ├── api/
+│   │   └── v1/
+│   │       ├── auth_routes.py
+│   │       ├── hr_routes.py
+│   │       ├── employee_routes.py
+│   │       ├── attendance_routes.py
+│   │       ├── dashboard_routes.py
+│   │       └── profile_routes.py
+│   ├── models/
+│   │   ├── base.py
+│   │   ├── user.py
+│   │   ├── hr_user.py
+│   │   ├── employee.py
+│   │   ├── attendance.py
+│   │   └── master_data.py
+│   ├── schemas/
+│   │   ├── auth.py
+│   │   ├── hr.py
+│   │   ├── employee.py
+│   │   ├── attendance.py
+│   │   ├── dashboard.py
+│   │   └── profile.py
+│   ├── services/
+│   │   ├── auth_service.py
+│   │   ├── hr_service.py
+│   │   ├── employee_service.py
+│   │   ├── attendance_service.py
+│   │   ├── dashboard_service.py
+│   │   └── profile_service.py
+│   ├── repositories/
+│   │   ├── user_repository.py
+│   │   ├── hr_repository.py
+│   │   ├── employee_repository.py
+│   │   └── attendance_repository.py
+│   └── seeds/
+│       ├── seed_master_data.py
+│       └── seed_demo_users.py
+├── alembic/
+├── requirements.txt
+└── .env
+```
+
+### What Each Folder Means
+
+#### `core/`
+
+This is for project-level logic:
+
+- environment variables
+- database session
+- password hashing
+- JWT helpers
+- role helper functions
+
+#### `api/v1/`
+
+This is where API routes live.
+
+Each file should only define route handlers.
+
+#### `models/`
+
+This is where SQLAlchemy database models live.
+
+#### `schemas/`
+
+This is where Pydantic request and response models live.
+
+#### `services/`
+
+This is where business logic goes.
+
+Example:
+
+- create employee + create login + validate email uniqueness
+
+That logic should live in `employee_service.py`, not directly inside route handler.
+
+#### `repositories/`
+
+This is optional but good practice.
+
+This is where raw DB query logic goes.
+
+If you are fresher and want to keep it simple, you can begin with route -> service -> model, and add repository layer later.
+
+---
+
+## 7. Where To Start Step By Step
+
+This is the most important section.
+
+Follow this exact order.
+
+### Step 1. Create The Backend App Skeleton
+
+Inside `backend/`:
+
+1. create virtual environment
+2. install FastAPI, SQLAlchemy, Alembic, PostgreSQL driver
+3. create `app/main.py`
+4. create `core/config.py`
+5. create `core/database.py`
+6. create base route `/health`
+
+### Step 2. Setup Database Connection
+
+In `core/database.py`:
+
+- create SQLAlchemy engine
+- create session maker
+- create declarative base
+
+Do not create business logic yet.
+
+First confirm:
+
+- app starts
+- DB connects
+- `/health` works
+
+### Step 3. Create The Main User Table
+
+Create `users` table first.
+
+Without this, nothing else can login.
+
+### Step 4. Build Login API First
+
+Frontend login is already ready.
+
+So first real API should be:
+
+- `POST /api/v1/auth/login`
+
+Once login works, route guards and role redirects become real.
+
+### Step 5. Build Admin HR APIs
+
+After login:
+
+- create HR
+- list HR users
+
+This supports admin area.
+
+### Step 6. Build Employee APIs
+
+After HR APIs:
+
+- create employee with login
+- list employee
+- get employee detail
+- update employee
+
+This supports admin and HR employee screens.
+
+### Step 7. Build Attendance APIs
+
+After employee APIs:
+
+- HR attendance history
+- employee timesheets
+- employee today attendance state
+- employee punch API
+- employee summary
+
+### Step 8. Build Dashboard APIs
+
+After attendance APIs:
+
+- admin dashboard
+- HR dashboard
+
+### Step 9. Build Profile And Change Password APIs
+
+After dashboards:
+
+- employee profile
+- change password
+
+### Step 10. Connect Frontend One Service At A Time
+
+Do not switch all frontend services at once.
+
+Replace them one by one:
+
+1. auth service
+2. HR service
+3. employee service
+4. attendance service
+5. dashboard service
+6. profile service
+
+---
+
+## 8. Beginner-Friendly Setup Commands
+
+Example setup:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn sqlalchemy alembic psycopg[binary] pydantic-settings python-jose passlib[bcrypt]
+```
+
+Create `requirements.txt` after install:
+
+```bash
+pip freeze > requirements.txt
+```
+
+Create `.env`:
+
+```env
+APP_NAME=Aivan HRMS Portal API
+APP_ENV=development
+APP_PORT=8000
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/aivan_hrms
+JWT_SECRET_KEY=change-this-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+Start backend:
+
+```bash
+uvicorn app.main:app --reload --port 8000
 ```
 
 ---
 
-## 3. Domain Modules
+## 9. Database Design For Phase 1
 
-### Auth Module
+Keep Phase 1 simple.
 
-Responsibilities:
+Do not over-normalize too early.
 
-- validate credentials
-- issue JWT tokens
-- return logged-in user profile and roles
-- enforce first-login password setup
+For Phase 1, these are enough:
 
-### Employee Module
+### 9.1 Core Tables
 
-Responsibilities:
+- `roles`
+- `users`
+- `hr_users`
+- `employees`
+- `attendance_records`
 
-- create employee
-- manage employee profile and job information
-- return employee detail for HR and self-service use
+### 9.2 Lookup Tables
 
-### Attendance Module
+- `departments`
+- `designations`
+- `employment_types`
+- `work_locations`
+- `shift_types`
 
-Responsibilities:
-
-- store punch events
-- compute day summaries
-- return self and HR attendance views
-
-### Master Data Module
-
-Responsibilities:
-
-- return normalized lookup data
-- power all employee creation dropdowns
-
-### Audit Module
-
-Responsibilities:
-
-- log important writes
-- support traceability for employee creation and attendance corrections later
+You can keep lookup tables simple in Phase 1.
 
 ---
 
-## 4. Exact Database Schema
+## 10. Exact Database Schema
 
-### 4.1 PostgreSQL Notes
+Use PostgreSQL.
 
-- use `uuid` primary keys for transactional entities
-- use `bigserial` for lookup/master entities
-- enable `pgcrypto` for `gen_random_uuid()`
-
-### 4.2 SQL Schema
+### 10.1 Roles Table
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    code VARCHAR(30) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL
 );
+```
 
-CREATE TABLE departments (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+Seed values:
 
-CREATE TABLE designations (
-    id BIGSERIAL PRIMARY KEY,
-    department_id BIGINT NULL REFERENCES departments(id),
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+- `admin`
+- `hr`
+- `employee`
 
-CREATE TABLE employment_types (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+### 10.2 Users Table
 
-CREATE TABLE work_modes (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+This is the login table.
 
-CREATE TABLE office_locations (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(150) NOT NULL,
-    address_line_1 VARCHAR(255) NULL,
-    address_line_2 VARCHAR(255) NULL,
-    city VARCHAR(100) NULL,
-    state VARCHAR(100) NULL,
-    country VARCHAR(100) NULL,
-    timezone VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE shift_templates (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    grace_minutes SMALLINT NOT NULL DEFAULT 15,
-    full_day_minutes INTEGER NOT NULL DEFAULT 480,
-    half_day_minutes INTEGER NOT NULL DEFAULT 240,
-    is_night_shift BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE holiday_calendars (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    calendar_year INTEGER NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE holiday_calendar_days (
-    id BIGSERIAL PRIMARY KEY,
-    holiday_calendar_id BIGINT NOT NULL REFERENCES holiday_calendars(id) ON DELETE CASCADE,
-    holiday_date DATE NOT NULL,
-    holiday_name VARCHAR(150) NOT NULL,
-    is_optional BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (holiday_calendar_id, holiday_date)
-);
-
-CREATE TABLE weekend_policies (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE weekend_policy_days (
-    id BIGSERIAL PRIMARY KEY,
-    weekend_policy_id BIGINT NOT NULL REFERENCES weekend_policies(id) ON DELETE CASCADE,
-    weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6),
-    UNIQUE (weekend_policy_id, weekday)
-);
-
-CREATE TABLE attendance_statuses (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    sort_order SMALLINT NOT NULL DEFAULT 0,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE gender_master (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE marital_status_master (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE user_accounts (
+```sql
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL UNIQUE,
-    username VARCHAR(255) NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    account_status VARCHAR(30) NOT NULL CHECK (account_status IN ('invited', 'active', 'suspended', 'inactive')),
-    first_login_required BOOLEAN NOT NULL DEFAULT TRUE,
-    last_login_at TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE user_role_assignments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_account_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
     role_id BIGINT NOT NULL REFERENCES roles(id),
-    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    display_name VARCHAR(150) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Active',
+    linked_hr_id UUID NULL,
+    linked_employee_id UUID NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_account_id, role_id)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+```
 
-CREATE TABLE employees (
+### 10.3 HR Users Table
+
+```sql
+CREATE TABLE hr_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_account_id UUID NOT NULL UNIQUE REFERENCES user_accounts(id) ON DELETE CASCADE,
-    employee_code VARCHAR(50) NOT NULL UNIQUE,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    official_email VARCHAR(255) NOT NULL UNIQUE,
-    personal_email VARCHAR(255) NULL,
-    phone VARCHAR(30) NOT NULL UNIQUE,
-    emergency_contact_name VARCHAR(150) NULL,
-    emergency_contact_phone VARCHAR(30) NULL,
-    date_of_birth DATE NULL,
-    gender_id BIGINT NULL REFERENCES gender_master(id),
-    marital_status_id BIGINT NULL REFERENCES marital_status_master(id),
-    employment_status VARCHAR(30) NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'inactive', 'probation', 'separated')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE employee_job_details (
-    employee_id UUID PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
-    department_id BIGINT NOT NULL REFERENCES departments(id),
-    designation_id BIGINT NOT NULL REFERENCES designations(id),
-    employment_type_id BIGINT NOT NULL REFERENCES employment_types(id),
-    work_mode_id BIGINT NOT NULL REFERENCES work_modes(id),
-    office_location_id BIGINT NOT NULL REFERENCES office_locations(id),
-    shift_template_id BIGINT NOT NULL REFERENCES shift_templates(id),
-    holiday_calendar_id BIGINT NOT NULL REFERENCES holiday_calendars(id),
-    weekend_policy_id BIGINT NOT NULL REFERENCES weekend_policies(id),
-    manager_employee_id UUID NULL REFERENCES employees(id),
-    joining_date DATE NOT NULL,
-    probation_end_date DATE NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE employee_attendance_profiles (
-    employee_id UUID PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
-    attendance_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    allow_web_punch BOOLEAN NOT NULL DEFAULT TRUE,
-    timezone VARCHAR(100) NOT NULL DEFAULT 'Asia/Kolkata',
-    grace_minutes_override SMALLINT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE attendance_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    event_timestamp TIMESTAMPTZ NOT NULL,
-    event_local_date DATE NOT NULL,
-    direction VARCHAR(10) NOT NULL CHECK (direction IN ('in', 'out')),
-    source VARCHAR(30) NOT NULL CHECK (source IN ('web', 'admin')),
-    work_mode_id BIGINT NULL REFERENCES work_modes(id),
-    office_location_id BIGINT NULL REFERENCES office_locations(id),
-    remarks TEXT NULL,
-    created_by_user_id UUID NULL REFERENCES user_accounts(id),
+    hr_code VARCHAR(30) NOT NULL UNIQUE,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(20) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    designation VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Active',
+    login VARCHAR(20) NOT NULL DEFAULT 'Enabled',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+```
 
-CREATE TABLE attendance_day_summaries (
+### 10.4 Employees Table
+
+```sql
+CREATE TABLE employees (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    employee_code VARCHAR(30) NOT NULL UNIQUE,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    designation VARCHAR(100) NOT NULL,
+    employee_type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Active',
+    login VARCHAR(20) NOT NULL DEFAULT 'Enabled',
+    official_email VARCHAR(255) NOT NULL UNIQUE,
+    personal_email VARCHAR(255) NULL,
+    mobile VARCHAR(20) NOT NULL,
+    alternate_mobile VARCHAR(20) NULL,
+    emergency_contact_name VARCHAR(150) NULL,
+    emergency_contact_number VARCHAR(20) NULL,
+    gender VARCHAR(20) NULL,
+    dob DATE NULL,
+    marital_status VARCHAR(30) NULL,
+    blood_group VARCHAR(10) NULL,
+    work_location VARCHAR(150) NULL,
+    shift_type VARCHAR(100) NULL,
+    doj DATE NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 10.5 Attendance Records Table
+
+For Phase 1, one daily record per employee per day is enough.
+
+```sql
+CREATE TABLE attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
     attendance_date DATE NOT NULL,
-    first_in TIMESTAMPTZ NULL,
-    last_out TIMESTAMPTZ NULL,
-    total_work_minutes INTEGER NOT NULL DEFAULT 0,
-    total_break_minutes INTEGER NOT NULL DEFAULT 0,
+    check_in TIME NULL,
+    check_out TIME NULL,
+    break_minutes INTEGER NOT NULL DEFAULT 0,
     overtime_minutes INTEGER NOT NULL DEFAULT 0,
-    attendance_status_id BIGINT NOT NULL REFERENCES attendance_statuses(id),
-    is_late BOOLEAN NOT NULL DEFAULT FALSE,
-    is_missing_punch BOOLEAN NOT NULL DEFAULT FALSE,
-    source_version INTEGER NOT NULL DEFAULT 1,
+    work_mode VARCHAR(20) NOT NULL DEFAULT 'Office',
+    status VARCHAR(30) NOT NULL DEFAULT 'Not Marked',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (employee_id, attendance_date)
 );
+```
 
-CREATE TABLE password_setup_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_account_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
-    token_hash TEXT NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used_at TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+### 10.6 Lookup Tables
 
-CREATE TABLE audit_logs (
+```sql
+CREATE TABLE departments (
     id BIGSERIAL PRIMARY KEY,
-    actor_user_id UUID NULL REFERENCES user_accounts(id),
-    entity_type VARCHAR(50) NOT NULL,
-    entity_id UUID NULL,
-    action VARCHAR(100) NOT NULL,
-    before_json JSONB NULL,
-    after_json JSONB NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    name VARCHAR(100) NOT NULL UNIQUE
 );
 
-CREATE INDEX idx_employees_full_name
-ON employees (first_name, last_name);
+CREATE TABLE designations (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
 
-CREATE INDEX idx_employee_job_details_department
-ON employee_job_details (department_id);
+CREATE TABLE employment_types (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
 
-CREATE INDEX idx_attendance_events_employee_date
-ON attendance_events (employee_id, event_local_date);
+CREATE TABLE work_locations (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL UNIQUE
+);
 
-CREATE INDEX idx_attendance_day_summaries_employee_date
-ON attendance_day_summaries (employee_id, attendance_date);
+CREATE TABLE shift_types (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
 ```
 
 ---
 
-## 5. Phase 1 Master Data Seeds
+## 11. Seed Data You Must Add
 
-### roles
+You need demo data so frontend and backend can be tested quickly.
 
-```sql
-INSERT INTO roles (code, name) VALUES
-('admin', 'Admin'),
-('hr', 'HR'),
-('employee', 'Employee');
-```
+### Roles
 
-### departments
+- admin
+- hr
+- employee
 
-```sql
-INSERT INTO departments (code, name) VALUES
-('engineering', 'Engineering'),
-('human-resources', 'Human Resources'),
-('finance', 'Finance'),
-('operations', 'Operations'),
-('sales', 'Sales');
-```
+### Departments
 
-### designations
+- Engineering
+- Human Resources
+- Finance
+- Marketing
+- Sales
+- Support
 
-```sql
-INSERT INTO designations (department_id, code, name)
-SELECT d.id, x.code, x.name
-FROM departments d
-JOIN (
-    VALUES
-    ('engineering', 'software-engineer', 'Software Engineer'),
-    ('engineering', 'senior-software-engineer', 'Senior Software Engineer'),
-    ('human-resources', 'hr-executive', 'HR Executive'),
-    ('human-resources', 'hr-manager', 'HR Manager'),
-    ('operations', 'operations-executive', 'Operations Executive')
-) AS x(department_code, code, name)
-ON d.code = x.department_code;
-```
+### Designations
 
-### employment_types
+- Frontend Developer
+- Backend Developer
+- HR Executive
+- HR Manager
+- Finance Analyst
 
-```sql
-INSERT INTO employment_types (code, name) VALUES
-('full-time', 'Full Time'),
-('contract', 'Contract'),
-('intern', 'Intern');
-```
+### Employment Types
 
-### work_modes
+- Full-Time
+- Contract
+- Intern
 
-```sql
-INSERT INTO work_modes (code, name) VALUES
-('office', 'Office'),
-('remote', 'Remote'),
-('hybrid', 'Hybrid');
-```
+### Work Locations
 
-### shift_templates
+- Indore Office
+- Remote Home Office
+- Hybrid
 
-```sql
-INSERT INTO shift_templates
-(code, name, start_time, end_time, grace_minutes, full_day_minutes, half_day_minutes, is_night_shift)
-VALUES
-('general', 'General Shift', '09:30', '18:30', 15, 480, 240, FALSE),
-('morning', 'Morning Shift', '07:00', '16:00', 10, 480, 240, FALSE),
-('evening', 'Evening Shift', '13:00', '22:00', 10, 480, 240, FALSE);
-```
+### Shift Types
 
-### office_locations
+- General Shift
+- Night Shift
 
-```sql
-INSERT INTO office_locations
-(code, name, address_line_1, city, state, country, timezone)
-VALUES
-('hq-indore', 'Indore HQ', 'Vijay Nagar', 'Indore', 'Madhya Pradesh', 'India', 'Asia/Kolkata'),
-('blr-office', 'Bangalore Office', 'Outer Ring Road', 'Bangalore', 'Karnataka', 'India', 'Asia/Kolkata');
-```
+### Demo Users
 
-### holiday_calendars
+- `admin@aivan.com` / `Admin@123`
+- `hr@aivan.com` / `Hr@12345`
+- `kaushal@aivan.com` / `Employee@123`
+- `ananya.employee@aivan.com` / `Employee@123`
+- `rahul@aivan.com` / `Employee@123`
 
-```sql
-INSERT INTO holiday_calendars (code, name, calendar_year)
-VALUES ('india-2026', 'India Holiday Calendar 2026', 2026);
-```
+Important:
 
-### weekend_policies
-
-```sql
-INSERT INTO weekend_policies (code, name)
-VALUES ('sat-sun', 'Saturday and Sunday');
-```
-
-### weekend_policy_days
-
-```sql
-INSERT INTO weekend_policy_days (weekend_policy_id, weekday)
-SELECT id, x.weekday
-FROM weekend_policies
-JOIN (VALUES (0), (6)) AS x(weekday) ON weekend_policies.code = 'sat-sun';
-```
-
-### attendance_statuses
-
-```sql
-INSERT INTO attendance_statuses (code, name, sort_order) VALUES
-('present', 'Present', 1),
-('late', 'Late', 2),
-('half-day', 'Half Day', 3),
-('absent', 'Absent', 4),
-('week-off', 'Week Off', 5),
-('holiday', 'Holiday', 6),
-('missing-punch', 'Missing Punch', 7);
-```
-
-### gender_master
-
-```sql
-INSERT INTO gender_master (code, name) VALUES
-('male', 'Male'),
-('female', 'Female'),
-('other', 'Other');
-```
-
-### marital_status_master
-
-```sql
-INSERT INTO marital_status_master (code, name) VALUES
-('single', 'Single'),
-('married', 'Married'),
-('other', 'Other');
-```
+- store only hashed passwords in DB
+- keep same demo credentials for development seed
 
 ---
 
-## 6. API Contracts
+## 12. Backend Models You Need
 
-All Phase 1 APIs should be under `/api/v1`.
+Create SQLAlchemy models for:
 
-## 6.1 POST /api/v1/auth/login
+- `Role`
+- `User`
+- `HrUser`
+- `Employee`
+- `AttendanceRecord`
+
+### Relationship Rule
+
+- one `User` belongs to one role
+- one HR login should link to one `HrUser`
+- one employee login should link to one `Employee`
+
+This is enough for Phase 1.
+
+---
+
+## 13. Exact APIs The Frontend Needs
+
+This section is the most important for integration.
+
+These APIs must match the current frontend models.
+
+---
+
+## 14. Auth APIs
+
+### 14.1 POST `/api/v1/auth/login`
+
+Used by:
+
+- login page
+
+Frontend file:
+
+- [auth.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/auth.service.ts)
 
 ### Request
 
 ```json
 {
-  "email": "ananya.sharma@aivan.com",
-  "password": "StrongPassword123"
+  "email": "admin@aivan.com",
+  "password": "Admin@123"
 }
 ```
 
-### Success Response
+### Response
 
 ```json
 {
@@ -569,414 +693,592 @@ All Phase 1 APIs should be under `/api/v1`.
   "tokenType": "bearer",
   "expiresIn": 3600,
   "me": {
-    "id": "7eb87695-df52-4df1-bffe-4e260c2822b8",
-    "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-    "fullName": "Ananya Sharma",
-    "email": "ananya.sharma@aivan.com",
-    "roles": ["employee"],
-    "primaryRole": "employee",
-    "firstLoginRequired": false
+    "id": "uuid",
+    "email": "admin@aivan.com",
+    "displayName": "Master Admin",
+    "role": "admin",
+    "linkedEmployeeId": null,
+    "linkedHrId": null,
+    "status": "Active"
   }
 }
 ```
 
-### Error Response
+### Notes
 
-```json
-{
-  "message": "Invalid email or password",
-  "code": "INVALID_CREDENTIALS"
-}
-```
+- verify password hash
+- create JWT token
+- return same response shape as frontend model
 
-## 6.2 GET /api/v1/auth/me
+### 14.2 GET `/api/v1/auth/me`
 
-### Success Response
+Used for:
 
-```json
-{
-  "id": "7eb87695-df52-4df1-bffe-4e260c2822b8",
-  "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-  "fullName": "Ananya Sharma",
-  "email": "ananya.sharma@aivan.com",
-  "roles": ["employee"],
-  "primaryRole": "employee",
-  "firstLoginRequired": false
-}
-```
+- future refresh
+- route-based user bootstrap
 
-## 6.3 POST /api/v1/auth/first-login/set-password
+### Response
+
+Same `me` object as login response.
+
+### 14.3 POST `/api/v1/auth/change-password`
+
+Used by:
+
+- employee change password page
 
 ### Request
 
 ```json
 {
-  "token": "password-setup-token-from-email",
-  "newPassword": "StrongPassword123",
-  "confirmPassword": "StrongPassword123"
+  "currentPassword": "Employee@123",
+  "newPassword": "Employee@456",
+  "confirmPassword": "Employee@456"
 }
 ```
 
-### Success Response
+### Response
 
 ```json
 {
-  "message": "Password set successfully",
-  "accountStatus": "active"
+  "success": true,
+  "message": "Password updated successfully"
 }
 ```
 
-## 6.4 GET /api/v1/master-data/bootstrap
+---
 
-### Purpose
+## 15. Admin HR APIs
 
-Return all initial dropdown data needed by `Add Employee`.
+### 15.1 GET `/api/v1/hr-users`
 
-### Success Response
+Used by:
+
+- admin HR users list page
+
+### Query Params
+
+- `page`
+- `limit`
+- `search`
+- `status`
+
+Example:
+
+```text
+/api/v1/hr-users?page=1&limit=8&search=ananya&status=Active
+```
+
+### Response
 
 ```json
 {
-  "departments": [
-    { "id": 1, "code": "engineering", "name": "Engineering" }
-  ],
-  "designations": [
-    { "id": 1, "code": "software-engineer", "name": "Software Engineer", "departmentId": 1 }
-  ],
-  "employmentTypes": [
-    { "id": 1, "code": "full-time", "name": "Full Time" }
-  ],
-  "workModes": [
-    { "id": 1, "code": "office", "name": "Office" }
-  ],
-  "officeLocations": [
-    { "id": 1, "code": "hq-indore", "name": "Indore HQ", "timezone": "Asia/Kolkata" }
-  ],
-  "shiftTemplates": [
+  "data": [
     {
-      "id": 1,
-      "code": "general",
-      "name": "General Shift",
-      "startTime": "09:30:00",
-      "endTime": "18:30:00",
-      "graceMinutes": 15
-    }
-  ],
-  "holidayCalendars": [
-    { "id": 1, "code": "india-2026", "name": "India Holiday Calendar 2026" }
-  ],
-  "weekendPolicies": [
-    { "id": 1, "code": "sat-sun", "name": "Saturday and Sunday" }
-  ],
-  "genders": [
-    { "id": 1, "code": "male", "name": "Male" }
-  ],
-  "managers": [
-    { "employeeId": "uuid", "employeeCode": "EMP001", "fullName": "Ravi Kumar" }
-  ]
-}
-```
-
-## 6.5 POST /api/v1/employees
-
-### Request
-
-```json
-{
-  "account": {
-    "officialEmail": "ananya.sharma@aivan.com",
-    "loginEmail": "ananya.sharma@aivan.com",
-    "roleCode": "employee",
-    "passwordSetupMode": "setup_link",
-    "temporaryPassword": null
-  },
-  "personal": {
-    "firstName": "Ananya",
-    "lastName": "Sharma",
-    "phone": "9876543210",
-    "dateOfBirth": "1998-06-15",
-    "genderCode": "female",
-    "personalEmail": "ananya.personal@gmail.com",
-    "emergencyContactName": "Rakesh Sharma",
-    "emergencyContactPhone": "9876500000"
-  },
-  "job": {
-    "employeeCode": "EMP0024",
-    "departmentId": 1,
-    "designationId": 1,
-    "employmentTypeId": 1,
-    "workModeId": 1,
-    "officeLocationId": 1,
-    "shiftTemplateId": 1,
-    "holidayCalendarId": 1,
-    "weekendPolicyId": 1,
-    "managerEmployeeId": "49e48738-4f47-4ff9-b799-3b9f8e39fc70",
-    "joiningDate": "2026-04-15"
-  },
-  "attendanceProfile": {
-    "allowWebPunch": true,
-    "timezone": "Asia/Kolkata",
-    "graceMinutesOverride": null
-  }
-}
-```
-
-### Success Response
-
-```json
-{
-  "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-  "userId": "7eb87695-df52-4df1-bffe-4e260c2822b8",
-  "employeeCode": "EMP0024",
-  "accountStatus": "invited",
-  "firstLoginRequired": true,
-  "passwordSetupMode": "setup_link",
-  "message": "Employee created successfully"
-}
-```
-
-### Validation Error Response
-
-```json
-{
-  "message": "Validation failed",
-  "code": "VALIDATION_ERROR",
-  "errors": {
-    "account.loginEmail": ["Email already exists"],
-    "job.employeeCode": ["Employee code already exists"]
-  }
-}
-```
-
-## 6.6 GET /api/v1/employees
-
-### Example Query Params
-
-`?search=ananya&departmentId=1&page=1&pageSize=20`
-
-### Success Response
-
-```json
-{
-  "items": [
-    {
-      "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-      "employeeCode": "EMP0024",
+      "id": "uuid",
+      "userId": "uuid",
+      "hrCode": "HR-001",
       "fullName": "Ananya Sharma",
-      "departmentName": "Engineering",
-      "designationName": "Software Engineer",
-      "workModeName": "Office",
-      "employmentStatus": "active",
-      "officialEmail": "ananya.sharma@aivan.com"
+      "email": "hr@aivan.com",
+      "phone": "9876500100",
+      "department": "Human Resources",
+      "designation": "HR Manager",
+      "status": "Active",
+      "login": "Enabled",
+      "createdAt": "2026-01-10"
     }
   ],
-  "page": 1,
-  "pageSize": 20,
   "total": 1
 }
 ```
 
-## 6.7 GET /api/v1/employees/{employee_id}
+### 15.2 POST `/api/v1/hr-users`
 
-### Success Response
+Used by:
 
-```json
-{
-  "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-  "employeeCode": "EMP0024",
-  "firstName": "Ananya",
-  "lastName": "Sharma",
-  "fullName": "Ananya Sharma",
-  "officialEmail": "ananya.sharma@aivan.com",
-  "personalEmail": "ananya.personal@gmail.com",
-  "phone": "9876543210",
-  "department": { "id": 1, "name": "Engineering" },
-  "designation": { "id": 1, "name": "Software Engineer" },
-  "manager": { "employeeId": "49e48738-4f47-4ff9-b799-3b9f8e39fc70", "fullName": "Ravi Kumar" },
-  "shiftTemplate": { "id": 1, "name": "General Shift" },
-  "officeLocation": { "id": 1, "name": "Indore HQ" },
-  "workMode": { "id": 1, "name": "Office" },
-  "joiningDate": "2026-04-15",
-  "employmentStatus": "active"
-}
-```
-
-## 6.8 POST /api/v1/attendance/punch
+- admin create HR page
 
 ### Request
 
 ```json
 {
-  "direction": "in",
-  "source": "web",
-  "workModeCode": "office",
-  "officeLocationId": 1,
-  "remarks": "Reached office"
+  "fullName": "New HR User",
+  "email": "newhr@aivan.com",
+  "phone": "9876500101",
+  "designation": "HR Executive",
+  "department": "Human Resources",
+  "temporaryPassword": "Hr@12345",
+  "status": "Active"
 }
 ```
 
-### Success Response
+### Response
 
 ```json
 {
-  "eventId": "8f1a2f4d-0982-4963-8cf2-4fc5c9c7b54c",
-  "attendanceDate": "2026-04-10",
-  "latestDirection": "in",
-  "firstIn": "2026-04-10T09:31:02+05:30",
-  "lastOut": null,
-  "statusCode": "present",
-  "message": "Punch recorded"
+  "success": true,
+  "message": "New HR User created successfully as HR",
+  "hr": {
+    "id": "uuid",
+    "userId": "uuid",
+    "hrCode": "HR-002",
+    "fullName": "New HR User",
+    "email": "newhr@aivan.com",
+    "phone": "9876500101",
+    "department": "Human Resources",
+    "designation": "HR Executive",
+    "status": "Active",
+    "login": "Enabled",
+    "createdAt": "2026-04-14"
+  }
 }
 ```
 
-## 6.9 GET /api/v1/attendance/me/today
+### Backend Logic
 
-### Success Response
+When this API is called:
 
-```json
-{
-  "attendanceDate": "2026-04-10",
-  "firstIn": "2026-04-10T09:31:02+05:30",
-  "lastOut": null,
-  "statusCode": "present",
-  "totalWorkMinutes": 245,
-  "totalBreakMinutes": 15,
-  "overtimeMinutes": 0,
-  "latestDirection": "in"
-}
+1. validate email uniqueness
+2. hash temporary password
+3. create `hr_users` row
+4. create `users` row with role `hr`
+5. link user to hr row
+6. return created HR object
+
+---
+
+## 16. Employee APIs
+
+### 16.1 GET `/api/v1/employees`
+
+Used by:
+
+- HR employee list
+- admin employee list
+
+### Query Params
+
+- `page`
+- `limit`
+- `search`
+- `department`
+- `type`
+- `status`
+
+Example:
+
+```text
+/api/v1/employees?page=1&limit=10&search=kaushal&department=Engineering&type=Full-Time&status=Active
 ```
 
-## 6.10 GET /api/v1/attendance/me/weekly
-
-### Success Response
+### Response
 
 ```json
 {
-  "weekStart": "2026-04-06",
-  "weekEnd": "2026-04-12",
-  "presentDays": 5,
-  "absentDays": 0,
-  "lateDays": 1,
-  "totalWorkMinutes": 2310,
-  "items": [
+  "data": [
     {
-      "attendanceDate": "2026-04-10",
-      "statusCode": "present",
-      "totalWorkMinutes": 480
-    }
-  ]
-}
-```
-
-## 6.11 GET /api/v1/attendance/me/monthly
-
-### Success Response
-
-```json
-{
-  "month": "2026-04",
-  "presentDays": 8,
-  "absentDays": 0,
-  "lateDays": 1,
-  "totalWorkMinutes": 3840,
-  "workingDays": 22,
-  "items": [
-    {
-      "attendanceDate": "2026-04-10",
-      "statusCode": "present",
-      "firstIn": "2026-04-10T09:31:02+05:30",
-      "lastOut": "2026-04-10T18:42:10+05:30"
-    }
-  ]
-}
-```
-
-## 6.12 GET /api/v1/attendance/me/history
-
-### Example Query Params
-
-`?dateFrom=2026-04-01&dateTo=2026-04-30&page=1&pageSize=31`
-
-### Success Response
-
-```json
-{
-  "items": [
-    {
-      "attendanceDate": "2026-04-10",
-      "dayName": "Friday",
-      "firstIn": "09:31",
-      "lastOut": "18:42",
-      "totalWorkMinutes": 480,
-      "totalBreakMinutes": 15,
-      "overtimeMinutes": 12,
-      "statusCode": "present"
+      "id": "uuid",
+      "userId": "uuid",
+      "employeeCode": "EMP-001",
+      "name": "Kaushal Raj",
+      "firstName": "Kaushal",
+      "lastName": "Raj",
+      "department": "Engineering",
+      "designation": "Frontend Developer",
+      "employeeType": "Full-Time",
+      "status": "Active",
+      "login": "Enabled",
+      "officialEmail": "kaushal@aivan.com",
+      "personalEmail": "kaushal.personal@gmail.com",
+      "mobile": "9876543210",
+      "alternateMobile": "9876500001",
+      "emergencyContactName": "Rakesh Raj",
+      "emergencyContactNumber": "9876500002",
+      "gender": "Male",
+      "dob": "1998-03-22",
+      "maritalStatus": "Single",
+      "bloodGroup": "B+",
+      "workLocation": "Indore Office",
+      "shiftType": "General Shift",
+      "doj": "2025-10-01"
     }
   ],
-  "page": 1,
-  "pageSize": 31,
-  "total": 10
-}
-```
-
-## 6.13 GET /api/v1/attendance/hr/history
-
-### Example Query Params
-
-`?dateFrom=2026-04-01&dateTo=2026-04-30&departmentId=1&statusCode=present&page=1&pageSize=50`
-
-### Success Response
-
-```json
-{
-  "items": [
-    {
-      "employeeId": "e13063ef-1672-4e38-b20e-f6b93be1d9ff",
-      "employeeCode": "EMP0024",
-      "employeeName": "Ananya Sharma",
-      "departmentName": "Engineering",
-      "attendanceDate": "2026-04-10",
-      "firstIn": "09:31",
-      "lastOut": "18:42",
-      "totalWorkMinutes": 480,
-      "overtimeMinutes": 12,
-      "statusCode": "present",
-      "workModeCode": "office"
-    }
-  ],
-  "page": 1,
-  "pageSize": 50,
   "total": 1
 }
 ```
 
-## 6.14 GET /api/v1/attendance/hr/summary
+### 16.2 GET `/api/v1/employees/{employee_id}`
 
-### Success Response
+Used by:
+
+- employee detail page
+
+### Response
 
 ```json
 {
-  "date": "2026-04-10",
-  "totalEmployees": 23,
-  "presentEmployees": 19,
-  "absentEmployees": 2,
-  "lateEmployees": 2,
-  "missingPunchEmployees": 1,
-  "workModeBreakdown": [
-    { "code": "office", "count": 12 },
-    { "code": "remote", "count": 7 },
-    { "code": "hybrid", "count": 4 }
-  ],
-  "genderBreakdown": [
-    { "code": "male", "count": 10 },
-    { "code": "female", "count": 13 }
-  ],
-  "recentEntries": [
+  "employee": {
+    "id": "uuid",
+    "userId": "uuid",
+    "employeeCode": "EMP-001",
+    "name": "Kaushal Raj",
+    "firstName": "Kaushal",
+    "lastName": "Raj",
+    "department": "Engineering",
+    "designation": "Frontend Developer",
+    "employeeType": "Full-Time",
+    "status": "Active",
+    "login": "Enabled",
+    "officialEmail": "kaushal@aivan.com",
+    "personalEmail": "kaushal.personal@gmail.com",
+    "mobile": "9876543210",
+    "alternateMobile": "9876500001",
+    "emergencyContactName": "Rakesh Raj",
+    "emergencyContactNumber": "9876500002",
+    "gender": "Male",
+    "dob": "1998-03-22",
+    "maritalStatus": "Single",
+    "bloodGroup": "B+",
+    "workLocation": "Indore Office",
+    "shiftType": "General Shift",
+    "doj": "2025-10-01"
+  },
+  "managerName": "Assigned HR Team",
+  "loginEmail": "kaushal@aivan.com",
+  "temporaryPasswordHint": "Temp password set during account creation"
+}
+```
+
+### 16.3 POST `/api/v1/employees`
+
+Used by:
+
+- add employee page
+
+### Request
+
+This must match the current frontend payload exactly:
+
+```json
+{
+  "accountAccess": {
+    "loginEmail": "new.employee@aivan.com",
+    "temporaryPassword": "Employee@123",
+    "role": "employee"
+  },
+  "personalInfo": {
+    "firstName": "New",
+    "lastName": "Employee",
+    "gender": "Male",
+    "dob": "1998-01-10",
+    "maritalStatus": "Single",
+    "bloodGroup": "B+"
+  },
+  "employmentInfo": {
+    "employeeType": "Full-Time",
+    "department": "Engineering",
+    "designation": "Frontend Developer",
+    "workLocation": "Indore Office",
+    "shiftType": "General Shift",
+    "doj": "2026-04-14"
+  },
+  "contactInfo": {
+    "officialEmail": "new.employee@aivan.com",
+    "personalEmail": "new.employee@gmail.com",
+    "mobile": "9876500200",
+    "alternateMobile": "9876500201",
+    "emergencyContactName": "Father Name",
+    "emergencyContactNumber": "9876500202"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "New Employee created successfully. Login email: new.employee@aivan.com",
+  "employee": {
+    "id": "uuid",
+    "userId": "uuid",
+    "employeeCode": "EMP-004",
+    "name": "New Employee",
+    "firstName": "New",
+    "lastName": "Employee",
+    "department": "Engineering",
+    "designation": "Frontend Developer",
+    "employeeType": "Full-Time",
+    "status": "Active",
+    "login": "Enabled",
+    "officialEmail": "new.employee@aivan.com",
+    "personalEmail": "new.employee@gmail.com",
+    "mobile": "9876500200",
+    "alternateMobile": "9876500201",
+    "emergencyContactName": "Father Name",
+    "emergencyContactNumber": "9876500202",
+    "gender": "Male",
+    "dob": "1998-01-10",
+    "maritalStatus": "Single",
+    "bloodGroup": "B+",
+    "workLocation": "Indore Office",
+    "shiftType": "General Shift",
+    "doj": "2026-04-14"
+  }
+}
+```
+
+### Backend Logic
+
+This should happen in one transaction:
+
+1. validate official email uniqueness
+2. validate login email uniqueness
+3. generate next employee code if not sent
+4. hash temporary password
+5. create user row with role `employee`
+6. create employee row
+7. update user.linked_employee_id
+8. create today blank attendance row optionally
+9. commit transaction
+
+### 16.4 PUT `/api/v1/employees/{employee_id}`
+
+Used by:
+
+- employee detail edit page
+
+### Request
+
+Use the same structure as employee create payload.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Employee updated successfully"
+}
+```
+
+---
+
+## 17. Attendance APIs
+
+### 17.1 GET `/api/v1/attendance`
+
+Used by:
+
+- HR attendance page
+
+### Query Params
+
+- `page`
+- `limit`
+- `fromDate`
+- `toDate`
+- `search`
+- `department`
+- `status`
+
+### Response
+
+```json
+{
+  "data": [
     {
-      "employeeName": "Ananya Sharma",
-      "attendanceDate": "2026-04-10",
-      "firstIn": "09:31",
-      "lastOut": "18:42",
-      "statusCode": "present"
+      "id": "uuid",
+      "code": "EMP-001",
+      "name": "Kaushal Raj",
+      "department": "Engineering",
+      "date": "2026-04-14",
+      "checkIn": "09:05",
+      "checkOut": "18:15",
+      "hours": "8h 25m",
+      "status": "Present"
+    }
+  ],
+  "total": 1,
+  "metrics": {
+    "present": 1,
+    "checkedIn": 0,
+    "notMarked": 0,
+    "checkedOut": 0
+  }
+}
+```
+
+### 17.2 GET `/api/v1/attendance/me/timesheets`
+
+Used by:
+
+- employee attendance page
+- employee dashboard table
+
+### Response
+
+```json
+[
+  {
+    "date": "2026-04-14",
+    "day": "Mon",
+    "entry": "09:05",
+    "exit": "18:15",
+    "total": "8h 25m",
+    "overtime": "0h 15m",
+    "break": "0h 45m",
+    "grandTotal": "8h 40m",
+    "status": "Present"
+  }
+]
+```
+
+### 17.3 GET `/api/v1/attendance/me/today`
+
+Used by:
+
+- employee dashboard
+
+### Response
+
+```json
+{
+  "isPunchedIn": false,
+  "status": "Not Marked",
+  "approvedHours": 2,
+  "remainingHours": 8,
+  "workMode": "Office"
+}
+```
+
+### 17.4 POST `/api/v1/attendance/me/punch`
+
+Used by:
+
+- employee dashboard punch button
+
+### Request
+
+```json
+{
+  "workMode": "Office"
+}
+```
+
+### Response
+
+Same shape as `GET /attendance/me/today`.
+
+### Backend Logic
+
+If no record for today:
+
+- create one
+- set `check_in`
+- set status `Checked In`
+
+If record exists with `check_in` but no `check_out`:
+
+- set `check_out`
+- calculate break/overtime if needed
+- set status `Checked Out`
+
+### 17.5 GET `/api/v1/attendance/me/summary`
+
+Used by:
+
+- employee dashboard attendance summary
+
+### Response
+
+```json
+[
+  {
+    "label": "Total Days",
+    "value": 7,
+    "icon": "fas fa-calendar total blue-icon"
+  },
+  {
+    "label": "Worked Days",
+    "value": 6,
+    "icon": "fas fa-calendar-check worked blue-icon"
+  }
+]
+```
+
+---
+
+## 18. Dashboard APIs
+
+### 18.1 GET `/api/v1/dashboard/admin`
+
+Used by:
+
+- admin dashboard
+
+### Response
+
+Must match frontend admin dashboard model:
+
+```json
+{
+  "cards": [
+    {
+      "icon": "fas fa-user-shield",
+      "label": "Total HR Users",
+      "value": "1"
+    }
+  ],
+  "hrUsers": [
+    {
+      "primary": "Ananya Sharma",
+      "secondary": "hr@aivan.com",
+      "tertiary": "Human Resources · HR Manager",
+      "status": "Active"
+    }
+  ],
+  "employees": [
+    {
+      "primary": "Kaushal Raj",
+      "secondary": "kaushal@aivan.com",
+      "tertiary": "Engineering · Frontend Developer",
+      "status": "Active"
+    }
+  ]
+}
+```
+
+### 18.2 GET `/api/v1/dashboard/hr`
+
+Used by:
+
+- HR dashboard
+
+### Response
+
+```json
+{
+  "totalEmployees": 3,
+  "presentEmployees": 2,
+  "checkedInEmployees": 1,
+  "checkedOutEmployees": 0,
+  "notMarkedEmployees": 0,
+  "workModeBreakdown": [1, 2],
+  "genderBreakdown": [1, 2],
+  "quickStats": [
+    { "total": 1, "name": "HR Users" },
+    { "total": 3, "name": "Departments" }
+  ],
+  "recentTimeSheets": [
+    {
+      "employee": "Kaushal Raj",
+      "date": "2026-04-14",
+      "punchIn": "09:05",
+      "punchOut": "18:15",
+      "breakTime": "45 mins",
+      "overtime": "15 mins",
+      "totalHours": "8h 25m",
+      "status": "Present"
     }
   ]
 }
@@ -984,292 +1286,441 @@ Return all initial dropdown data needed by `Add Employee`.
 
 ---
 
-## 7. Backend Business Rules
+## 19. Profile API
 
-### Employee Creation
+### 19.1 GET `/api/v1/profile/me`
 
-- `account.loginEmail` must be unique in `user_accounts.email`
-- `account.officialEmail` must match company mail format if policy is enabled
-- `job.employeeCode` must be unique
-- role for Phase 1 employee creation is always `employee`
-- all inserts happen in one DB transaction
-- if any insert fails, rollback all prior inserts
+Used by:
+
+- employee profile page
+
+### Response
+
+```json
+{
+  "id": "uuid",
+  "employeeId": "EMP-001",
+  "firstName": "Kaushal",
+  "lastName": "Raj",
+  "initials": "KR",
+  "role": "Frontend Developer",
+  "department": "Engineering",
+  "shift": "General Shift",
+  "status": "Active",
+  "personalDetails": {
+    "firstName": "Kaushal",
+    "lastName": "Raj",
+    "gender": "Male",
+    "dateOfBirth": "1998-03-22",
+    "maritalStatus": "Single",
+    "bloodGroup": "B+"
+  },
+  "contactDetails": {
+    "officialEmail": "kaushal@aivan.com",
+    "personalEmail": "kaushal.personal@gmail.com",
+    "mobileNumber": "9876543210",
+    "alternateMobile": "9876500001",
+    "location": "Indore Office"
+  }
+}
+```
+
+---
+
+## 20. Route And Service Mapping
+
+This is how frontend services should map to backend APIs later.
+
+### AuthService
+
+Current frontend file:
+
+- [auth.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/auth.service.ts)
+
+Replace local store calls with:
+
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/change-password`
+
+### HrService
+
+Current frontend file:
+
+- [hr.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/hr.service.ts)
+
+Replace with:
+
+- `GET /api/v1/hr-users`
+- `POST /api/v1/hr-users`
+
+### EmployeeService
+
+Current frontend file:
+
+- [employee.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/employee.service.ts)
+
+Replace with:
+
+- `GET /api/v1/employees`
+- `GET /api/v1/employees/{id}`
+- `POST /api/v1/employees`
+- `PUT /api/v1/employees/{id}`
+
+### AttendanceService
+
+Current frontend file:
+
+- [attendance.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/attendance.service.ts)
+
+Replace with:
+
+- `GET /api/v1/attendance`
+- `GET /api/v1/attendance/me/timesheets`
+- `GET /api/v1/attendance/me/today`
+- `POST /api/v1/attendance/me/punch`
+- `GET /api/v1/attendance/me/summary`
+
+### DashboardService
+
+Current frontend file:
+
+- [dashboard.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/dashboard.service.ts)
+
+Replace with:
+
+- `GET /api/v1/dashboard/admin`
+- `GET /api/v1/dashboard/hr`
+
+### ProfileService
+
+Replace with:
+
+- `GET /api/v1/profile/me`
+
+---
+
+## 21. Step By Step Implementation Plan For Kaushal
+
+This is the exact recommended order.
+
+### Day 1. Backend Setup
+
+Do only this:
+
+1. create FastAPI project
+2. create DB connection
+3. create `.env`
+4. run app
+5. make `/health` API
+
+Do not build business modules yet.
+
+### Day 2. User, Role, Auth
+
+Do this:
+
+1. create `roles` table
+2. create `users` table
+3. seed admin, hr, employee roles
+4. seed demo accounts
+5. create `POST /auth/login`
+6. create JWT token helper
+7. create dependency to get current user
+
+After this, test login from Postman first.
+
+### Day 3. HR Module
+
+Do this:
+
+1. create `hr_users` table
+2. create `GET /hr-users`
+3. create `POST /hr-users`
+4. test admin can create HR
+
+### Day 4. Employee Module
+
+Do this:
+
+1. create `employees` table
+2. create `GET /employees`
+3. create `GET /employees/{id}`
+4. create `POST /employees`
+5. create `PUT /employees/{id}`
+
+Important:
+
+`POST /employees` must create both:
+
+- login user
+- employee record
+
+in one transaction.
+
+### Day 5. Attendance Module
+
+Do this:
+
+1. create `attendance_records` table
+2. create HR attendance API
+3. create employee timesheet API
+4. create employee today attendance API
+5. create punch API
+6. create summary API
+
+### Day 6. Dashboard Module
+
+Do this:
+
+1. create admin dashboard API
+2. create HR dashboard API
+3. build aggregate queries
+
+### Day 7. Profile And Password
+
+Do this:
+
+1. create profile API
+2. create change password API
+3. verify all employee self-service pages
+
+### Day 8. Frontend Integration
+
+Do this one service at a time:
+
+1. replace auth mock with backend call
+2. replace HR service mock
+3. replace employee service mock
+4. replace attendance service mock
+5. replace dashboard service mock
+6. replace profile service mock
+
+Do not replace all services together.
+
+---
+
+## 22. How To Write One API Properly
+
+Use this method for every API.
+
+Example: `POST /api/v1/hr-users`
+
+### Step A. Schema
+
+Create request schema and response schema in `schemas/hr.py`.
+
+### Step B. Model
+
+Make sure DB model exists in `models/hr_user.py`.
+
+### Step C. Service
+
+Write business logic in `services/hr_service.py`.
+
+### Step D. Route
+
+Add endpoint in `api/v1/hr_routes.py`.
+
+### Step E. Test
+
+Test in Postman or curl.
+
+### Step F. Connect Frontend
+
+After API works, replace frontend mock method with real HTTP call.
+
+Use the same pattern for every module.
+
+---
+
+## 23. Basic Security Rules
+
+Even in Phase 1, do not skip these:
+
+- never store plain passwords
+- always hash passwords
+- protect APIs with JWT auth
+- restrict routes by role
+- employee should only access own profile and own attendance
+- admin-only APIs must check admin role
+- HR-only write APIs must check admin or HR role
+
+### Simple Role Protection Example
+
+- admin routes: only `admin`
+- HR routes: `admin`, `hr`
+- employee self routes: only `employee`
+
+---
+
+## 24. Validation Rules
+
+### Create HR
+
+- email must be unique
+- phone should be valid format
+- password min length 8
+
+### Create Employee
+
+- official email must be unique
+- login email must be unique
+- mobile must be valid
+- first name required
+- last name required
+- DOB valid date
+- joining date valid date
+
+### Punch API
+
+- employee must exist
+- one attendance row per employee per date
+- do not create duplicate record for same date
+
+---
+
+## 25. Testing Checklist
+
+Before connecting frontend, backend developer should test:
+
+### Auth
+
+- valid login
+- invalid login
+- inactive user login blocked
+
+### HR
+
+- create HR success
+- duplicate HR email fails
+- HR list pagination works
+
+### Employee
+
+- create employee success
+- duplicate official email fails
+- duplicate login email fails
+- employee detail returns data
+- employee update works
 
 ### Attendance
 
-- employee can only punch self
-- HR cannot punch for employee in Phase 1 unless future admin correction API is added
-- punch direction must alternate logically where possible
-- summary is recalculated after every punch write
-- holiday and week-off can override final summary status
+- HR attendance filter works
+- employee timesheet works
+- employee today status works
+- punch in works
+- punch out works
 
-### Authorization
+### Dashboard
 
-- only `admin` and `hr` can call `/employees`, `/attendance/hr/*`
-- `employee` can call only `/attendance/me/*`
-- `/employees/{employee_id}` can be accessed by self or HR/Admin
+- admin dashboard values load
+- HR dashboard values load
 
----
+### Profile
 
-## 8. Service Responsibilities
-
-### auth_service.py
-
-- verify password
-- issue token
-- decode current user
-- manage first-login password change
-
-### employee_service.py
-
-- validate create payload
-- resolve master data references
-- create user account
-- assign employee role
-- create employee
-- create job details
-- create attendance profile
-- create password setup token
-- write audit log
-
-### attendance_service.py
-
-- create punch event
-- fetch employee attendance data
-- compute day summary
-- fetch HR filtered history
-- fetch dashboard aggregates
-
-### master_data_service.py
-
-- list dropdown entities
-- provide bootstrap payload
-
-### audit_service.py
-
-- central write helper for audit events
+- employee profile loads
+- change password works
 
 ---
 
-## 9. Transaction Flow for Employee Creation
+## 26. Biggest Mistakes To Avoid
 
-```mermaid
-sequenceDiagram
-    participant HR as HR/Admin
-    participant API as Employee API
-    participant SVC as EmployeeService
-    participant DB as PostgreSQL
+### Mistake 1
 
-    HR->>API: POST /employees
-    API->>SVC: validate and create
-    SVC->>DB: validate unique email/code
-    SVC->>DB: insert user_accounts
-    SVC->>DB: insert user_role_assignments
-    SVC->>DB: insert employees
-    SVC->>DB: insert employee_job_details
-    SVC->>DB: insert employee_attendance_profiles
-    SVC->>DB: insert password_setup_tokens
-    SVC->>DB: insert audit_logs
-    DB-->>SVC: commit
-    SVC-->>API: success payload
-    API-->>HR: employee created
-```
+Creating frontend payloads different from the current frontend models.
 
-Pseudo-order inside service:
+Fix:
 
-1. open DB transaction
-2. validate master data FK references
-3. validate unique login email
-4. validate unique official email
-5. validate unique employee code
-6. hash temporary password or generate placeholder password
-7. create `user_accounts`
-8. assign `employee` role
-9. create `employees`
-10. create `employee_job_details`
-11. create `employee_attendance_profiles`
-12. generate setup token if `setup_link`
-13. write `audit_logs`
-14. commit
+Follow the payloads in this document exactly.
 
----
+### Mistake 2
 
-## 10. Attendance Summary Rules
+Writing all DB logic directly inside route files.
 
-### Input
+Fix:
 
-- ordered `attendance_events` for one employee and one date
+Keep routes thin, use services.
 
-### Output
+### Mistake 3
 
-- `first_in`
-- `last_out`
-- `total_work_minutes`
-- `total_break_minutes`
-- `overtime_minutes`
-- `attendance_status_id`
-- `is_late`
-- `is_missing_punch`
+Creating employee record without login user.
 
-### Recommended Algorithm
+Fix:
 
-1. load employee shift template for target date
-2. load raw events ordered by timestamp
-3. pair `in` and `out` records sequentially
-4. accumulate worked minutes
-5. detect unmatched `in` or `out` -> `is_missing_punch = true`
-6. compare `first_in` with shift start + grace
-7. determine overtime if `total_work_minutes > full_day_minutes`
-8. pick status in priority order:
-   - holiday
-   - week-off
-   - missing-punch
-   - absent
-   - half-day
-   - late
-   - present
+Create both in one transaction.
+
+### Mistake 4
+
+Trying to build payroll or leave module now.
+
+Fix:
+
+Stay inside Phase 1 scope.
+
+### Mistake 5
+
+Replacing all frontend services at once.
+
+Fix:
+
+Replace one service at a time and test after each.
 
 ---
 
-## 11. Backend Validation and Error Codes
+## 27. Final Recommendation
 
-### Suggested Error Codes
+If Kaushal is starting from zero, this is the cleanest path:
 
-- `INVALID_CREDENTIALS`
-- `ACCOUNT_INACTIVE`
-- `FIRST_LOGIN_REQUIRED`
-- `VALIDATION_ERROR`
-- `DUPLICATE_EMAIL`
-- `DUPLICATE_EMPLOYEE_CODE`
-- `MASTER_DATA_NOT_FOUND`
-- `FORBIDDEN`
-- `ATTENDANCE_PUNCH_INVALID`
-- `ATTENDANCE_SUMMARY_REBUILD_FAILED`
+1. make backend run
+2. make login work
+3. make admin create HR work
+4. make HR create employee work
+5. make attendance work
+6. make dashboard work
+7. connect frontend gradually
 
-### Error Shape
+That is the correct Phase 1 implementation path.
 
-```json
-{
-  "message": "Validation failed",
-  "code": "VALIDATION_ERROR",
-  "errors": {
-    "job.employeeCode": ["Employee code already exists"]
-  }
-}
-```
+Do not optimize too early.
+Do not over-abstract too early.
+Do not try to make Phase 2 features now.
+
+First make the existing frontend screens run on real APIs.
 
 ---
 
-## 12. Security Rules
+## 28. Frontend Files Waiting For Backend
 
-- bcrypt or argon2 for password hashing
-- JWT access token expiration 1 hour
-- refresh token support optional in Phase 1, but recommended
-- first login token expiry 24 hours
-- all protected routes require bearer token
-- role checks must happen in backend dependencies
-- audit every employee create action
+These frontend files are the main integration points:
 
----
+- [auth.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/auth.service.ts)
+- [hr.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/hr.service.ts)
+- [employee.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/employee.service.ts)
+- [attendance.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/attendance.service.ts)
+- [dashboard.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/dashboard.service.ts)
+- [profile.service.ts](/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/profile.service.ts)
 
-## 13. Backend Testing Plan
-
-### Unit Tests
-
-- password verification
-- token generation/validation
-- employee creation validator
-- attendance pairing calculator
-- status resolution rules
-
-### API Tests
-
-- login success/failure
-- master data bootstrap
-- employee create success
-- employee create duplicate email
-- employee create duplicate employee code
-- self attendance today
-- HR attendance history authorization
-- employee unauthorized access to HR routes
-
-### Database Tests
-
-- transaction rollback on partial create failure
-- unique constraints
-- summary upsert behavior
+When backend APIs are ready, these services should stop using local store and start using `HttpClient`.
 
 ---
 
-## 14. Backend Developer Task Breakdown
+## 29. Done Means
 
-### Task Group A: Project Bootstrap
+Phase 1 backend is complete when:
 
-1. Create FastAPI application structure.
-2. Create DB connection setup.
-3. Add Alembic.
-4. Add env config handling.
-
-### Task Group B: Core Auth
-
-1. Create `user_accounts` model and migration.
-2. Create `roles` and `user_role_assignments`.
-3. Seed base roles.
-4. Implement password hashing.
-5. Implement login endpoint.
-6. Implement `me` endpoint.
-7. Implement role dependency helpers.
-
-### Task Group C: Master Data
-
-1. Create all master tables.
-2. Add seed script `phase1_master_data.sql`.
-3. Add bootstrap endpoint.
-
-### Task Group D: Employee Module
-
-1. Create `employees` table and migration.
-2. Create `employee_job_details` table and migration.
-3. Create `employee_attendance_profiles` table and migration.
-4. Implement create employee service transaction.
-5. Implement create employee API.
-6. Implement employee list/detail APIs.
-
-### Task Group E: First Login Flow
-
-1. Create `password_setup_tokens` table.
-2. Implement setup token generator and validator.
-3. Implement `first-login/set-password` API.
-
-### Task Group F: Attendance Module
-
-1. Create `attendance_events` table.
-2. Create `attendance_day_summaries` table.
-3. Implement punch endpoint.
-4. Implement summary rebuild logic.
-5. Implement self attendance APIs.
-6. Implement HR attendance history and summary APIs.
-
-### Task Group G: Audit and Hardening
-
-1. Create `audit_logs` table.
-2. Log employee creation.
-3. Add API tests.
-4. Add transaction rollback tests.
-
----
-
-## 15. Backend-Frontend Contract Freeze Checklist
-
-These must be agreed before parallel implementation moves too far:
-
-- login response shape
-- `me` response shape
-- bootstrap master data shape
-- create employee request/response
-- HR attendance history query param names
-- pagination response structure
-- attendance status codes
-- date string format
-- timezone assumptions
+- login works for admin, HR, employee
+- admin can create HR
+- admin can view HR list
+- admin can view employee list
+- HR can create employee with login
+- HR can view and edit employee
+- HR can view attendance history
+- employee can punch in/out
+- employee can view own attendance
+- employee can view own profile
+- employee can change password
+- admin dashboard returns real data
+- HR dashboard returns real data
+- frontend services are connected to backend instead of local mock store
 

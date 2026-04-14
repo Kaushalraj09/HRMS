@@ -4,10 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
+import { CalendarEvent } from 'calendar-utils';
 import { SharedModule } from '../../../../shared/shared-module';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
+import { AttendanceService } from '../../../../core/services/attendance.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, WorkMode } from '../../../../core/models/attendance.model';
 
 @Injectable()
 export class CustomDateFormatter extends CalendarNativeDateFormatter {
@@ -40,14 +44,21 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
 })
 export class EmpDashboard {
   selectedLang = 'en';
+  userName = 'Employee';
   currentDate: Date = new Date();
-  status: string = 'work';
+  status: WorkMode = 'Office';
   isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
     
-  constructor(private empsidebarService: EmpSidebarService, private router: Router) {
+  constructor(
+    private empsidebarService: EmpSidebarService,
+    private router: Router,
+    private readonly attendanceService: AttendanceService,
+    private readonly authService: AuthService
+  ) {
         this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
         this.isDashboardHome = this.router.url === '/emp-dashboard';
+        this.userName = this.authService.getDisplayName();
         this.router.events.subscribe((event) => {
           if (event instanceof NavigationEnd) {
             this.isDashboardHome = event.urlAfterRedirects === '/emp-dashboard';
@@ -74,13 +85,19 @@ export class EmpDashboard {
     }, 1000);
 
     this.weekNumber = this.getWeekOfMonth(this.selectedDate);
-    this.filterEvents(this.selectedDate);
+    this.loadDashboardData();
   }
 
   isPunchedIn: boolean = false;
 
   togglePunch() {
-    this.isPunchedIn = !this.isPunchedIn;
+    this.attendanceService.toggleMyPunch(this.status).subscribe(todayState => {
+      this.isPunchedIn = todayState.isPunchedIn;
+      this.approvedHours = todayState.approvedHours;
+      this.remainingHours = todayState.remainingHours;
+      this.status = todayState.workMode;
+      this.loadDashboardData();
+    });
   }
 
 
@@ -91,35 +108,9 @@ export class EmpDashboard {
   }
 
 
-  timeSheets: any[] = [];
+  timeSheets: EmployeeTimesheetRow[] = [];
 
-  attendanceSummary = [
-    {
-      label: 'Total Days',
-      value: 0,
-      icon: 'fas fa-calendar total blue-icon'
-    },
-    {
-      label: 'Worked Days',
-      value: 0,
-      icon: 'fas fa-calendar-check worked blue-icon'
-    },
-    {
-      label: 'Present',
-      value: 0,
-      icon: 'fas fa-check-circle blue-icon'
-    },
-    {
-      label: 'Absent with Approval',
-      value: 0,
-      icon: 'fas fa-user-check blue-icon'
-    },
-    {
-      label: 'Absent without Approval',
-      value: 0,
-      icon: 'fas fa-user-times unapproved blue-icon'
-    }
-  ];
+  attendanceSummary: EmployeeAttendanceSummaryItem[] = [];
 
 
 
@@ -127,29 +118,17 @@ export class EmpDashboard {
   selectedDate: Date = new Date();
   weekNumber: number = 2;
 
-  events = [
+  timelineEvents = [
     {
-      date: new Date(2026, 2, 30),
-      time: '10:08 PM',
+      date: new Date().toISOString().slice(0, 10),
+      time: '09:30',
       title: 'Punch In',
-      location: 'Office'
-    },
-    {
-      date: new Date(2026, 2, 30),
-      time: '10:12 PM',
-      title: 'Punch Out',
-      location: 'Office'
-    },
-    {
-      date: new Date(2026, 2, 31),
-      time: '06:12 PM',
-      title: 'Punch Out',
       location: 'Office'
     }
   ];
 
-
-  selectedEvents: any[] = [];
+  calendarEvents: CalendarEvent[] = [];
+  selectedEvents: Array<{ date: string; time: string; title: string; location: string }> = [];
 
   onDayClick(day: { date: Date }) {
     this.selectedDate = day.date;
@@ -164,8 +143,9 @@ export class EmpDashboard {
   }
 
   filterEvents(date: Date) {
-    this.selectedEvents = this.events.filter(e =>
-      e.date.toDateString() === date.toDateString()
+    const isoDate = date.toISOString().slice(0, 10);
+    this.selectedEvents = this.timelineEvents.filter(e =>
+      e.date === isoDate
     );
   }
 
@@ -185,6 +165,36 @@ export class EmpDashboard {
 
   ];
 
+  private loadDashboardData(): void {
+    this.attendanceService.getTodayAttendanceState().subscribe(todayState => {
+      this.isPunchedIn = todayState.isPunchedIn;
+      this.approvedHours = todayState.approvedHours;
+      this.remainingHours = todayState.remainingHours;
+      this.status = todayState.workMode;
+    });
+
+    this.attendanceService.getMyTimesheets().subscribe(rows => {
+      this.timeSheets = rows;
+      this.timelineEvents = rows
+        .filter(row => row.entry !== '-')
+        .flatMap(row => {
+          const events = [{ date: row.date, time: row.entry, title: 'Punch In', location: 'Office' }];
+          if (row.exit !== '-') {
+            events.push({ date: row.date, time: row.exit, title: 'Punch Out', location: 'Office' });
+          }
+          return events;
+        });
+      this.calendarEvents = this.timelineEvents.map(event => ({
+        start: new Date(`${event.date}T00:00:00`),
+        title: event.title
+      }));
+      this.filterEvents(this.selectedDate);
+    });
+
+    this.attendanceService.getMyAttendanceSummary().subscribe(summary => {
+      this.attendanceSummary = summary;
+    });
+  }
+
 
 }
-

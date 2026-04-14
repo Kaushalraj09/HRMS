@@ -1,0 +1,64 @@
+<div class="add-hr-wrapper">
+  <div class="header-section">
+    <div class="header-text">
+      <div class="back-link" routerLink="/master-dashboard/hr-users">
+        <i class="fas fa-arrow-left"></i> Back to HR Users
+      </div>
+      <h1>Create HR Account</h1>
+      <p>Create a backend-ready HR user with login access and dashboard permission.</p>
+    </div>
+  </div>
+
+  <div class="success-toast" *ngIf="successMessage$ | async as message">
+    <i class="fas fa-check-circle"></i> {{ message }}
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-container">
+    <div class="card">
+      <h2 class="card-title">Account Access</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name <span class="required">*</span></label>
+          <input type="text" formControlName="fullName" class="form-input" [class.error]="isInvalid('fullName')">
+          <span class="error-msg" *ngIf="isInvalid('fullName')">Full name is required</span>
+        </div>
+        <div class="form-group">
+          <label>Email <span class="required">*</span></label>
+          <input type="email" formControlName="email" class="form-input" [class.error]="isInvalid('email')">
+          <span class="error-msg" *ngIf="isInvalid('email')">Valid email is required</span>
+        </div>
+        <div class="form-group">
+          <label>Phone <span class="required">*</span></label>
+          <input type="tel" formControlName="phone" class="form-input" [class.error]="isInvalid('phone')">
+          <span class="error-msg" *ngIf="isInvalid('phone')">Valid 10-digit phone is required</span>
+        </div>
+        <div class="form-group">
+          <label>Designation <span class="required">*</span></label>
+          <input type="text" formControlName="designation" class="form-input" [class.error]="isInvalid('designation')">
+          <span class="error-msg" *ngIf="isInvalid('designation')">Designation is required</span>
+        </div>
+        <div class="form-group">
+          <label>Department <span class="required">*</span></label>
+          <app-custom-select formControlName="department" [options]="departmentOptions" placeholder="Select Department"></app-custom-select>
+        </div>
+        <div class="form-group">
+          <label>Status <span class="required">*</span></label>
+          <app-custom-select formControlName="status" [options]="statusOptions" placeholder="Select Status"></app-custom-select>
+        </div>
+        <div class="form-group full-width">
+          <label>Temporary Password <span class="required">*</span></label>
+          <input type="text" formControlName="temporaryPassword" class="form-input" [class.error]="isInvalid('temporaryPassword')">
+          <span class="error-msg" *ngIf="isInvalid('temporaryPassword')">Minimum 8 characters required</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-cancel" routerLink="/master-dashboard/hr-users">Cancel</button>
+      <button type="submit" class="btn btn-submit" [disabled]="form.invalid || (isSubmitting$ | async)">
+        <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting$ | async" style="margin-right: 6px;"></i>
+        <span>Create HR Account</span>
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,6 +1,6 @@
 <div class="Emp_dashboard">
     <app-navbar 
-        [userName]="'Kaushal'" 
+        [userName]="userName" 
         [notificationCount]="5" 
         (hamburgerClick)="toggleSidebar()"
         (searchChange)="onSearch($event)" 
@@ -17,7 +17,7 @@
     <div class="card timezone">
 
         <div class="empname">
-            Welcome, Kaushal
+            Welcome, {{ userName }}
         </div>
         <div class="pertime">
             {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
@@ -30,11 +30,11 @@
             <div class="card-header">
                 <span>Mark Attendance</span>
                 <div class="status-buttons">
-                    <button class="status-btn work" [class.active]="status === 'work'" (click)="status = 'work'">
-                    <span class="dot"></span> Work
+                    <button class="status-btn work" [class.active]="status === 'Office'" (click)="status = 'Office'">
+                    <span class="dot"></span> Office
                     </button>
-                    <button class="status-btn break" [class.active]="status === 'break'" (click)="status = 'break'">
-                    <span class="dot"></span> Break
+                    <button class="status-btn break" [class.active]="status === 'Remote'" (click)="status = 'Remote'">
+                    <span class="dot"></span> Remote
                     </button>
                 </div>
             </div>
@@ -80,7 +80,7 @@
                     <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
                     <p>Week {{ weekNumber }}</p>
                 </div>
-                <mwl-calendar-month-view [viewDate]="viewDate" \\[events]="events" (dayClicked)="onDayClick($event.day)">
+                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents" (dayClicked)="onDayClick($event.day)">
                 </mwl-calendar-month-view>
             </div>
             <div class="calendar-right">

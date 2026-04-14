@@ -10,8 +10,14 @@ import { ChangePasswordComponent } from './features/emp/pages/change-password/ch
 import { AttendanceComponent } from './features/hr/pages/attendance/attendance';
 import { Employees } from './features/hr/pages/employees/employees';
 import { AddEmployeeComponent } from './features/hr/pages/employees/add-employee/add-employee';
+import { EmployeeDetailComponent } from './features/hr/pages/employees/employee-detail/employee-detail';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { HrUsersComponent } from './features/admin/pages/hr-users/hr-users';
+import { AddHrComponent } from './features/admin/pages/add-hr/add-hr';
+import { AdminEmployeesComponent } from './features/admin/pages/admin-employees/admin-employees';
 
-export const routes: Routes = [ // Force IDE reload
+export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   {
     path: 'auth',
@@ -23,22 +29,37 @@ export const routes: Routes = [ // Force IDE reload
   { 
     path: 'hr-dashboard', 
     component: HrDashboard,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin', 'hr'] },
     children: [
       { path: 'attendance', component: AttendanceComponent },
       { path: 'employees', component: Employees },
-      { path: 'employees/add', component: AddEmployeeComponent }
+      { path: 'employees/add', component: AddEmployeeComponent },
+      { path: 'employees/:employeeId', component: EmployeeDetailComponent }
     ]
   },
   { 
     path: 'emp-dashboard', 
     component: EmpDashboard,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin', 'employee'] },
     children: [
       { path: 'my-attendance', component: MyAttendance },
       { path: 'my-profile', component: MyProfile },
       { path: 'change-password', component: ChangePasswordComponent }
     ]
   },
-  { path: 'master-dashboard', component: MasterDashboard},
+  {
+    path: 'master-dashboard',
+    component: MasterDashboard,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+    children: [
+      { path: 'hr-users', component: HrUsersComponent },
+      { path: 'hr-users/add', component: AddHrComponent },
+      { path: 'employees', component: AdminEmployeesComponent }
+    ]
+  },
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },
   { path: '**', redirectTo: 'auth/login' },
 ];

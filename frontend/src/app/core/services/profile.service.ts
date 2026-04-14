@@ -3,38 +3,37 @@ import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { EmployeeProfile } from '../models/profile.model';
 
+import { Phase1StoreService } from './phase1-store.service';
+
 @Injectable({
   providedIn: 'root'
 })
 export class MyProfileService {
-
-  constructor() { }
+  constructor(private readonly store: Phase1StoreService) {}
 
   getProfile(): Observable<EmployeeProfile> {
-    const mockProfile: EmployeeProfile = {
-      id: '1',
-      employeeId: 'EMP001',
-      firstName: 'Kaushal',
-      lastName: 'Raj',
-      initials: 'KR',
-      role: 'Full Stack Developer',
-      department: 'Engineering',
+    const profile = this.store.getEmployeeProfile() || {
+      id: 'na',
+      employeeId: 'NA',
+      firstName: 'Portal',
+      lastName: 'User',
+      initials: 'PU',
+      role: 'User',
+      department: 'General',
       shift: 'General Shift',
-      status: 'Active',
+      status: 'Active' as const,
       personalDetails: {
-        firstName: 'Kaushal',
-        lastName: 'Raj',
-        gender: 'Male',
-        dateOfBirth: '1995-03-22'
+        firstName: 'Portal',
+        lastName: 'User',
+        gender: 'Not Available',
+        dateOfBirth: '2000-01-01'
       },
       contactDetails: {
-        officialEmail: 'kaushal.raj@company.com',
-        mobileNumber: '+91 9876543210',
-        location: 'Tech Park, Block B, Bangalore'
+        officialEmail: 'not.available@aivan.com',
+        mobileNumber: '0000000000',
+        location: 'Not Assigned'
       }
     };
-
-    // Simulate network delay for loading skeleton
-    return of(mockProfile).pipe(delay(800));
+    return of(profile).pipe(delay(300));
   }
 }

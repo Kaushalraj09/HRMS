@@ -11,6 +11,8 @@ import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service
 import { FormsModule } from '@angular/forms';
 import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+import { DashboardService } from '../../../../core/services/dashboard.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 
 @Component({
@@ -24,14 +26,41 @@ export class HrDashboard {
   selectedLang = 'en';
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
+  userName = 'HR User';
   
-  constructor(private hrsidebarService: HrSidebarService, private router: Router) {
+  constructor(
+    private hrsidebarService: HrSidebarService,
+    private router: Router,
+    private readonly dashboardService: DashboardService,
+    private readonly authService: AuthService
+  ) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
       this.isDashboardHome = this.router.url === '/hr-dashboard';
+      this.userName = this.authService.getDisplayName();
       this.router.events.subscribe((event) => {
         if (event instanceof NavigationEnd) {
           this.isDashboardHome = event.urlAfterRedirects === '/hr-dashboard';
         }
+      });
+      this.dashboardService.getHrDashboard().subscribe(data => {
+        this.workFromHome = data.workModeBreakdown[0];
+        this.workFromOffice = data.workModeBreakdown[1];
+        this.total = this.workFromHome + this.workFromOffice;
+        this.female = data.genderBreakdown[0];
+        this.male = data.genderBreakdown[1];
+        this.gendertotal = this.female + this.male;
+        this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
+        this.recentTimeSheets = data.recentTimeSheets;
+        this.kpis = [
+          { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
+          { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
+          { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
+          { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
+          { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
+          { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
+        ];
+        this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
+        this.pieChartData2.datasets[0].data = [this.female, this.male];
       });
     }
   toggleSidebar() {
@@ -48,26 +77,27 @@ export class HrDashboard {
   }
   
   projects = [
-    { id: 1, name: 'AivanHR' },
-    { id: 2, name: 'AivanERP' },
+    { id: 1, name: 'Engineering' },
+    { id: 2, name: 'Human Resources' },
+    { id: 3, name: 'Finance' },
   ];
 
   clients = [
-    { id: 1, name: 'Client A' },
-    { id: 2, name: 'Client B' },
-    { id: 3, name: 'Client C' },
+    { id: 1, name: 'Office' },
+    { id: 2, name: 'Remote' },
+    { id: 3, name: 'Hybrid' },
   ];
 
   get projectOptions() { return [{label: 'Choose a project...', value: ''}, ...this.projects.map(p => ({label: p.name, value: p.id}))]; }
   get clientOptions() { return [{label: 'Choose a client...', value: ''}, ...this.clients.map(c => ({label: c.name, value: c.id}))]; }
 
   kpis = [
-    { label: 'TOTAL PROJECTS', value: 2, icon: 'folder', accent: 'gold' as const },
-    { label: 'TOTAL CLIENTS', value: 3, icon: 'building', accent: 'blue' as const },
     { label: 'TOTAL EMPLOYEES', value: 23, icon: 'users', accent: 'green' as const },
     { label: 'PRESENT EMPLOYEES', value: 23, icon: 'userCheck', accent: 'green' as const },
-    { label: 'ABSENT (APPROVED)', value: 0, icon: 'userMinus', accent: 'orange' as const },
-    { label: 'UNSCHEDULED ABSENTS', value: 0, icon: 'userX', accent: 'red' as const },
+    { label: 'CHECKED IN', value: 0, icon: 'userClock', accent: 'blue' as const },
+    { label: 'CHECKED OUT', value: 0, icon: 'userCheck', accent: 'gold' as const },
+    { label: 'NOT MARKED', value: 0, icon: 'userX', accent: 'red' as const },
+    { label: 'HR USERS', value: 1, icon: 'building', accent: 'blue' as const },
   ];
 
 
@@ -302,9 +332,9 @@ export class HrDashboard {
   };
 
   stats = [
-    { total: '0', name: 'Total Employees' },
-    { total: '0', name: 'Present Today' },
-    { total: '0', name: 'Total Absents' }
+    { total: '0', name: 'HR Users' },
+    { total: '0', name: 'Departments' },
+    { total: '0', name: 'Active Employees' }
   ];
 
   // recent time sheets
@@ -315,4 +345,3 @@ export class HrDashboard {
   ];
 
 }
-
