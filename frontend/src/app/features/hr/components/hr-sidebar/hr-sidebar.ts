@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { HrSidebarService } from './hr-sidebar.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 
 export interface MenuItem {
@@ -40,7 +41,7 @@ export class HrSidebar {
     ];
      isHrSidebarOpen$! : import('rxjs').Observable<boolean>;
     
-      constructor( private router: Router, private hrSidebarService: HrSidebarService) {
+      constructor( private router: Router, private hrSidebarService: HrSidebarService, private readonly authService: AuthService) {
         this.isHrSidebarOpen$ = this.hrSidebarService.isHrSidebarOpen$;
       }
 
@@ -55,8 +56,7 @@ export class HrSidebar {
       }
 
       confirmLogout() {
-        localStorage.clear();
-        sessionStorage.clear();
+        this.authService.logout();
         this.router.navigate(['/login']);
       }
 

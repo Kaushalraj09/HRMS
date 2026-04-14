@@ -1,0 +1,168 @@
+.admin-list-wrapper {
+  padding: 12px 8px 24px;
+}
+
+.admin-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.header-section,
+.filter-section,
+.table-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  padding: 20px 22px;
+}
+
+.header-section,
+.filter-section,
+.filter-actions-row,
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.header-text h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.header-text p,
+.pagination-info {
+  margin: 0;
+  color: #64748b;
+}
+
+.search-container {
+  position: relative;
+  min-width: 260px;
+  flex: 1;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.filter-input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px 12px 36px;
+  font-size: 0.95rem;
+}
+
+.dropdown-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-primary,
+.btn-outline,
+.page-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #ff4d4f, #6f42c1);
+  color: #fff;
+}
+
+.btn-outline,
+.page-btn {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #dbe4f0;
+}
+
+.page-btn.active,
+.status-badge.active {
+  background: #eff6ff;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 10px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+}
+
+th {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.status-badge {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-badge.active {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.status-badge.inactive {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 10px;
+}
+
+.s-text {
+  height: 16px;
+}
+
+.s-badge {
+  height: 30px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 28px 12px;
+}
+
+.empty-content {
+  color: #64748b;
+}
+
+.empty-icon {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

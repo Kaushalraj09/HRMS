@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { EmpSidebarService } from './emp-sidebar.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 export interface MenuItem {
   label: string;
@@ -40,7 +41,7 @@ export class EmpSidebar {
     ];
      isEmpSidebarOpen$! : import('rxjs').Observable<boolean>;
     
-      constructor(private empSidebarService: EmpSidebarService, private router: Router) {
+      constructor(private empSidebarService: EmpSidebarService, private router: Router, private readonly authService: AuthService) {
         this.isEmpSidebarOpen$ = this.empSidebarService.isEmpSidebarOpen$;
       }
 
@@ -55,8 +56,7 @@ export class EmpSidebar {
       }
 
       confirmLogout() {
-        localStorage.clear();
-        sessionStorage.clear();
+        this.authService.logout();
         this.router.navigate(['/login']);
       }
 

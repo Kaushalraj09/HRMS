@@ -1,0 +1,101 @@
+<div class="employee-detail-wrapper" *ngIf="employeeDetail$ | async as detail; else missingState">
+  <div class="header-section">
+    <div class="header-text">
+      <div class="back-link" routerLink="/hr-dashboard/employees">
+        <i class="fas fa-arrow-left"></i> Back to Employees
+      </div>
+      <h1>{{ detail.employee.name }}</h1>
+      <p>{{ detail.employee.employeeCode }} · {{ detail.employee.designation }} · {{ detail.employee.department }}</p>
+    </div>
+    <div class="action-buttons">
+      <button class="btn btn-outline" (click)="toggleEdit()">{{ (isEditing$ | async) ? 'Cancel Edit' : 'Edit Employee' }}</button>
+      <button class="btn btn-primary" *ngIf="isEditing$ | async" (click)="saveChanges()">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="success-toast" *ngIf="saveMessage$ | async as message">
+    <i class="fas fa-check-circle"></i> {{ message }}
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <h2>Employee Summary</h2>
+      <div class="summary-list">
+        <div><label>Status</label><span>{{ detail.employee.status }}</span></div>
+        <div><label>Login</label><span>{{ detail.employee.login }}</span></div>
+        <div><label>Shift</label><span>{{ detail.employee.shiftType }}</span></div>
+        <div><label>Work Location</label><span>{{ detail.employee.workLocation }}</span></div>
+        <div><label>Login Email</label><span>{{ detail.loginEmail }}</span></div>
+        <div><label>Manager</label><span>{{ detail.managerName }}</span></div>
+      </div>
+    </div>
+
+    <form class="detail-card edit-form" [formGroup]="form">
+      <h2>Employee Details</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" formControlName="firstName" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" formControlName="lastName" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <ng-container *ngIf="isEditing$ | async; else departmentRead">
+            <app-custom-select formControlName="department" [options]="departmentOptions"></app-custom-select>
+          </ng-container>
+          <ng-template #departmentRead>
+            <input type="text" formControlName="department" class="form-input" readonly>
+          </ng-template>
+        </div>
+        <div class="form-group">
+          <label>Employee Type</label>
+          <ng-container *ngIf="isEditing$ | async; else typeRead">
+            <app-custom-select formControlName="employeeType" [options]="employeeTypeOptions"></app-custom-select>
+          </ng-container>
+          <ng-template #typeRead>
+            <input type="text" formControlName="employeeType" class="form-input" readonly>
+          </ng-template>
+        </div>
+        <div class="form-group">
+          <label>Designation</label>
+          <input type="text" formControlName="designation" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Shift Type</label>
+          <ng-container *ngIf="isEditing$ | async; else shiftRead">
+            <app-custom-select formControlName="shiftType" [options]="shiftOptions"></app-custom-select>
+          </ng-container>
+          <ng-template #shiftRead>
+            <input type="text" formControlName="shiftType" class="form-input" readonly>
+          </ng-template>
+        </div>
+        <div class="form-group">
+          <label>Official Email</label>
+          <input type="email" formControlName="officialEmail" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Login Email</label>
+          <input type="email" formControlName="loginEmail" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Mobile</label>
+          <input type="tel" formControlName="mobile" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+        <div class="form-group">
+          <label>Emergency Contact</label>
+          <input type="text" formControlName="emergencyContactName" class="form-input" [readonly]="!(isEditing$ | async)">
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<ng-template #missingState>
+  <div class="empty-state">
+    <i class="fas fa-user-slash"></i>
+    <p>Employee detail not found.</p>
+  </div>
+</ng-template>

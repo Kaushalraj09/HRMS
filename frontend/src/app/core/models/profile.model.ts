@@ -3,11 +3,15 @@ export interface PersonalDetails {
   lastName: string;
   gender: string;
   dateOfBirth: string;
+  maritalStatus?: string;
+  bloodGroup?: string;
 }
 
 export interface ContactDetails {
   officialEmail: string;
+  personalEmail?: string;
   mobileNumber: string;
+  alternateMobile?: string;
   location: string;
 }
 

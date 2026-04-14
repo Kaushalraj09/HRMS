@@ -8,6 +8,10 @@ import { Sidebar } from '../../shared/components/sidebar/sidebar';
 import { RouterModule, Router } from '@angular/router';
 import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
 
+import { DashboardService } from '../../core/services/dashboard.service';
+import { AdminDashboardData } from '../../core/models/dashboard.model';
+import { AuthService } from '../../core/services/auth.service';
+
 
 @Component({
   selector: 'app-master-dashboard',
@@ -19,9 +23,20 @@ import { SidebarService } from '../../shared/components/sidebar/sidebar.service'
 export class MasterDashboard {
   selectedLang = 'en';
   isSidebarOpen$!: import('rxjs').Observable<boolean>;
+  dashboardData: AdminDashboardData | null = null;
+  userName = 'Admin';
 
-  constructor(private sidebarService: SidebarService, private router: Router) {
+  constructor(
+    private sidebarService: SidebarService,
+    private router: Router,
+    private readonly dashboardService: DashboardService,
+    private readonly authService: AuthService
+  ) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
+    this.userName = this.authService.getDisplayName();
+    this.dashboardService.getAdminDashboard().subscribe(data => {
+      this.dashboardData = data;
+    });
   }
 
   toggleSidebar() {
@@ -41,56 +56,15 @@ export class MasterDashboard {
     console.log('Opening notifications');
   }
 
-  fullDetails = [
-    {
-      icon: 'fas fa-cubes',
-      label: 'Total Projects',
-      value: '2'
-    },
-    {
-      icon: 'fas fa-users',
-      label: 'Total Clients',
-      value: '3'
-    },
-    {
-      icon: 'fas fa-user',
-      label: 'Total Employees',
-      value: '23'
-    },
-    {
-      icon: 'fas fa-clock',
-      label: 'Pending Work Mode Requests',
-      value: '0'
-    },
-  ]
+  get fullDetails() {
+    return this.dashboardData?.cards || [];
+  }
 
-  clients = [
-    {
-      name: 'kaushal raj',
-      role: 'CEO',
-      email: 'kaushal@example.com',
-      status: 'Active'
-    },
-    {
-      name: 'Shubham Mandal',
-      role: 'Manager',
-      email: 'shubham@example.com',
-      status: 'Active'
-    }
-  ]
+  get hrUsers() {
+    return this.dashboardData?.hrUsers || [];
+  }
 
-  projects = [
-    {
-      name: 'Office Management',
-      value: 1000000,
-      progress: 60,
-      tasks: '1 open tasks, 9 tasks completed'
-    },
-    {
-      name: 'Website Redesign',
-      value: 500000,
-      progress: 40,
-      tasks: '2 open tasks, 5 tasks completed'
-    }
-  ]
+  get employees() {
+    return this.dashboardData?.employees || [];
+  }
 }

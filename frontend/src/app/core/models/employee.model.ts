@@ -1,12 +1,31 @@
+export type EmployeeStatus = 'Active' | 'Inactive';
+export type LoginStatus = 'Enabled' | 'Disabled';
+
 export interface Employee {
   id: string;
+  userId: string;
   employeeCode: string;
   name: string;
+  firstName: string;
+  lastName: string;
   department: string;
   designation: string;
   employeeType: string;
-  status: 'Active' | 'Inactive';
-  login: 'Enabled' | 'Disabled';
+  status: EmployeeStatus;
+  login: LoginStatus;
+  officialEmail: string;
+  personalEmail: string;
+  mobile: string;
+  alternateMobile: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  gender: string;
+  dob: string;
+  maritalStatus: string;
+  bloodGroup: string;
+  workLocation: string;
+  shiftType: string;
+  doj: string;
 }
 
 export interface PaginatedResult<T> {
@@ -15,6 +34,11 @@ export interface PaginatedResult<T> {
 }
 
 export interface EmployeePayload {
+  accountAccess?: {
+    loginEmail?: string;
+    temporaryPassword?: string;
+    role?: 'employee';
+  };
   personalInfo: {
     firstName: string;
     lastName: string;
@@ -30,6 +54,7 @@ export interface EmployeePayload {
     workLocation: string;
     shiftType: string;
     doj: string;
+    employeeCode?: string;
   };
   contactInfo: {
     officialEmail: string;
@@ -39,4 +64,11 @@ export interface EmployeePayload {
     emergencyContactName: string;
     emergencyContactNumber: string;
   };
+}
+
+export interface EmployeeDetailView {
+  employee: Employee;
+  managerName: string;
+  loginEmail: string;
+  temporaryPasswordHint: string;
 }

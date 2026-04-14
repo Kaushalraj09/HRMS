@@ -1,0 +1,98 @@
+<div class="admin-list-wrapper">
+  <div class="admin-list-container">
+    <div class="header-section">
+      <div class="header-text">
+        <h1>HR Users</h1>
+        <p>View and manage all active HR accounts created by Admin.</p>
+      </div>
+      <button class="btn-primary" routerLink="/master-dashboard/hr-users/add">Create HR</button>
+    </div>
+
+    <div class="filter-section">
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [formControl]="searchControl" placeholder="Search HR name, email, code" class="filter-input search-input">
+      </div>
+      <div class="dropdown-filters">
+        <div style="min-width: 160px;">
+          <app-custom-select [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
+        </div>
+      </div>
+      <div class="filter-actions-row">
+        <button type="button" class="btn-outline" (click)="onReset()">Reset</button>
+        <button type="button" class="btn-primary" (click)="onSearch()">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </div>
+
+    <ng-container *ngIf="{ loading: isLoading$ | async, result: hrData$ | async } as state">
+      <div class="table-card">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>HR Code</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="state.loading">
+              <tr *ngFor="let i of [1,2,3,4,5,6]">
+                <td><div class="skeleton s-text"></div></td>
+                <td><div class="skeleton s-text"></div></td>
+                <td><div class="skeleton s-text"></div></td>
+                <td><div class="skeleton s-text"></div></td>
+                <td><div class="skeleton s-text"></div></td>
+                <td><div class="skeleton s-badge"></div></td>
+              </tr>
+            </tbody>
+            <tbody *ngIf="!state.loading && state.result as result">
+              <tr *ngFor="let hr of result.data; trackBy: trackById">
+                <td>{{ hr.hrCode }}</td>
+                <td>{{ hr.fullName }}</td>
+                <td>{{ hr.email }}</td>
+                <td>{{ hr.department }}</td>
+                <td>{{ hr.designation }}</td>
+                <td><span class="status-badge" [ngClass]="hr.status.toLowerCase()">{{ hr.status }}</span></td>
+              </tr>
+              <tr *ngIf="result.data.length === 0">
+                <td colspan="6" class="empty-state">
+                  <div class="empty-content">
+                    <i class="fas fa-user-shield empty-icon"></i>
+                    <p>No HR users found</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-footer" *ngIf="!state.loading && state.result as result">
+          <div class="pagination-info">
+            Showing <span class="font-medium">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to
+            <span class="font-medium">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of
+            <span class="font-medium">{{ result.total }}</span> results
+          </div>
+
+          <div class="pagination-controls" *ngIf="result.total > pageSize">
+            <ng-container *ngIf="pages$ | async as pages">
+              <button class="page-btn" [disabled]="pageSubject.value === 1" (click)="setPage(pageSubject.value - 1)">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <button *ngFor="let page of pages" class="page-btn" [class.active]="page === pageSubject.value" (click)="setPage(page)">
+                {{ page }}
+              </button>
+              <button class="page-btn" [disabled]="pageSubject.value === pages.length" (click)="setPage(pageSubject.value + 1)">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

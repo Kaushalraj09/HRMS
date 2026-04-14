@@ -7,6 +7,7 @@ import { switchMap, tap, map, shareReplay } from 'rxjs/operators';
 import { Employee, PaginatedResult } from '../../../../core/models/employee.model';
 import { EmployeeService } from '../../../../core/services/employee.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-employees',
@@ -22,7 +23,7 @@ export class Employees implements OnInit {
   typeControl = new FormControl('');
   statusControl = new FormControl('');
 
-  departments = ['Engineering', 'HR', 'Finance', 'Marketing', 'Sales', 'Support'];
+  departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
   employeeTypes = ['Full-Time', 'Part-Time', 'Contract', 'Intern'];
   statuses = ['Active', 'Inactive'];
 
@@ -40,10 +41,12 @@ export class Employees implements OnInit {
   paginationArray$!: Observable<number[]>;
 
   searchTrigger$ = new BehaviorSubject<boolean>(true);
+  userRoleLabel = 'HR';
 
-  constructor(private employeeService: EmployeeService) {}
+  constructor(private employeeService: EmployeeService, private readonly authService: AuthService) {}
 
   ngOnInit(): void {
+    this.userRoleLabel = this.authService.getCurrentUser()?.role === 'admin' ? 'Admin' : 'HR';
     this.employeesData$ = combineLatest([
       this.searchTrigger$,
       this.pageSubject.asObservable()

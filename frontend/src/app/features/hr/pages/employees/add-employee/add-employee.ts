@@ -33,10 +33,16 @@ export class AddEmployeeComponent {
   bloodOptions = [{label: 'A+', value: 'A+'}, {label: 'B+', value: 'B+'}, {label: 'O+', value: 'O+'}, {label: 'AB+', value: 'AB+'}];
   empTypeOptions = [{label: 'Full-Time', value: 'Full-Time'}, {label: 'Contract', value: 'Contract'}, {label: 'Intern', value: 'Intern'}];
   shiftOptions = [{label: 'General Shift', value: 'General Shift'}, {label: 'Night Shift', value: 'Night Shift'}];
-  departmentOptions = [{label: 'Engineering', value: 'Engineering'}, {label: 'HR', value: 'HR'}, {label: 'Finance', value: 'Finance'}];
+  departmentOptions = [{label: 'Engineering', value: 'Engineering'}, {label: 'Human Resources', value: 'Human Resources'}, {label: 'Finance', value: 'Finance'}];
+  roleOptions = [{label: 'Employee', value: 'employee'}];
 
   constructor(private fb: FormBuilder, private employeeService: EmployeeService, private router: Router) {
     this.employeeForm = this.fb.group({
+      accountAccess: this.fb.group({
+        loginEmail: ['', [Validators.required, Validators.email]],
+        temporaryPassword: ['Employee@123', [Validators.required, Validators.minLength(8)]],
+        role: ['employee', Validators.required]
+      }),
       personalInfo: this.fb.group({
         firstName: ['', Validators.required],
         lastName: ['', Validators.required],
@@ -64,6 +70,7 @@ export class AddEmployeeComponent {
     });
   }
 
+  get accountAccess() { return this.employeeForm.get('accountAccess') as FormGroup; }
   get personalInfo() { return this.employeeForm.get('personalInfo') as FormGroup; }
   get contactInfo() { return this.employeeForm.get('contactInfo') as FormGroup; }
 
@@ -79,7 +86,10 @@ export class AddEmployeeComponent {
       if (res.success) {
         this.successMessage$.next(res.message);
         this.employeeForm.reset();
-        setTimeout(() => this.successMessage$.next(''), 4000);
+        setTimeout(() => {
+          this.successMessage$.next('');
+          this.router.navigate(['/hr-dashboard/employees']);
+        }, 1200);
       }
     });
   }

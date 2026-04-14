@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { SidebarService } from './sidebar.service';
 import { filter } from 'rxjs/operators';
+import { AuthService } from '../../../core/services/auth.service';
 
 export interface MenuItem {
   label: string;
@@ -31,59 +32,33 @@ export class Sidebar implements OnInit {
     {
       groupName: 'Main',
       items: [
-        { 
-          label: 'Dashboard', 
-          icon: 'fas fa-tachometer-alt',
-          expanded: true,
-          children: [
-            { label: 'Admin Dashboard', route: '/master-dashboard' },
-            { label: 'Hr Dashboard', route: '/hr-dashboard' },
-            { label: 'Employee Dashboard', route: '/emp-dashboard' }
-          ]
-        }
+        { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' }
       ]
     },
     {
-      groupName: 'Authentication',
+      groupName: 'Access Management',
       items: [
-        { label: 'User Controller', icon: 'fas fa-user-secret', route: '/users' },
-        { label: 'Work Mode Requests', icon: 'far fa-check-circle', route: '/work-modes' }
+        { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' },
+        { label: 'Create HR', icon: 'fas fa-user-plus', route: '/master-dashboard/hr-users/add' }
       ]
     },
     {
-      groupName: 'Employees',
+      groupName: 'People',
       items: [
-        { label: 'Employees', icon: 'far fa-user', route: '/employees' }
-      ]
-    },
-  
-    {
-      groupName: 'HR',
-      items: [
-        { label: 'Sales', icon: 'far fa-copy', route: '/sales' },
-        { label: 'Payroll', icon: 'fas fa-money-bill-wave', route: '/payroll' },
-        { label: 'Reports', icon: 'fas fa-chart-pie', route: '/reports' }
+        { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' }
       ]
     },
     {
-      groupName: 'Performance',
+      groupName: 'Cross Role Views',
       items: [
-        { label: 'Performance', icon: 'fas fa-graduation-cap', route: '/performance' },
-        { label: 'Training', icon: 'fas fa-edit', route: '/training' }
-      ]
-    },
-    {
-      groupName: 'Administration',
-      items: [
-        { label: 'Assets', icon: 'fas fa-cubes', route: '/assets' },
-        { label: 'Jobs', icon: 'fas fa-briefcase', route: '/jobs' }
+        { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
+        { label: 'Employee Dashboard', icon: 'fas fa-user-circle', route: '/emp-dashboard' }
       ]
     },
 
     {
       groupName: 'Pages',
       items: [
-        { label: 'Profile', icon: 'far fa-user', route: '/profile' },
         { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
       ]
     }
@@ -91,7 +66,7 @@ export class Sidebar implements OnInit {
 
   isSidebarOpen$! : import('rxjs').Observable<boolean>;
 
-  constructor(private sidebarService: SidebarService, private router: Router) {
+  constructor(private sidebarService: SidebarService, private router: Router, private readonly authService: AuthService) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
   }
 
@@ -106,8 +81,7 @@ export class Sidebar implements OnInit {
   }
 
   confirmLogout() {
-    localStorage.clear();
-    sessionStorage.clear();
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 

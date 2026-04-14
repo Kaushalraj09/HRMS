@@ -1,0 +1,101 @@
+.add-hr-wrapper {
+  padding: 12px 8px 24px;
+}
+
+.header-section,
+.card,
+.success-toast {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+
+.back-link {
+  color: #6f42c1;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.header-text h1 {
+  margin: 0 0 6px;
+}
+
+.header-text p {
+  margin: 0;
+  color: #64748b;
+}
+
+.success-toast {
+  color: #047857;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.card-title {
+  margin: 0 0 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-input {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+}
+
+.form-input.error {
+  border-color: #ef4444;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.error-msg {
+  color: #ef4444;
+  font-size: 0.82rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #dbe4f0;
+}
+
+.btn-submit {
+  background: linear-gradient(90deg, #ff4d4f, #6f42c1);
+  color: #fff;
+}
