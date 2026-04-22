@@ -44,6 +44,11 @@
     <!-- Actual Data -->
     <ng-container *ngIf="profile$ | async as profile">
       
+      <!-- Success Toast -->
+      <div class="save-toast" *ngIf="saveMessage$ | async as message">
+        <i class="fas fa-check-circle"></i> {{ message }}
+      </div>
+
       <!-- 1. Profile Header Card -->
       <div class="profile-header-card">
         
@@ -52,7 +57,13 @@
             {{ profile.initials }}
           </div>
           <div class="user-info">
-            <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
+            <h1 *ngIf="!(isEditing$ | async); else nameEdit">{{ profile.firstName }} {{ profile.lastName }}</h1>
+            <ng-template #nameEdit>
+              <div class="name-edit-group" [formGroup]="profileForm">
+                <input type="text" formControlName="firstName" class="header-input" placeholder="First Name">
+                <input type="text" formControlName="lastName" class="header-input" placeholder="Last Name">
+              </div>
+            </ng-template>
             <p class="subtext">
               {{ profile.employeeId }} &middot; {{ profile.role }} &middot; {{ profile.department }}
             </p>
@@ -66,15 +77,24 @@
           <span class="status-badge" [ngClass]="profile.status === 'Active' ? '' : 'inactive'">
             {{ profile.status }}
           </span>
-          <button class="edit-btn">
-            <i class="fas fa-pen"></i> Edit Profile
-          </button>
+          
+          <ng-container *ngIf="!(isEditing$ | async); else editActions">
+            <button class="edit-btn" (click)="toggleEdit()">
+              <i class="fas fa-pen"></i> Edit Profile
+            </button>
+          </ng-container>
+          <ng-template #editActions>
+            <div class="edit-actions">
+              <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
+              <button class="save-btn" (click)="saveChanges()">Save Changes</button>
+            </div>
+          </ng-template>
         </div>
 
       </div>
 
       <!-- 2. Main Content Section -->
-      <div class="main-content">
+      <div class="main-content" [formGroup]="profileForm">
         
         <!-- Left Card: Personal Details -->
         <div class="details-card">
@@ -82,23 +102,39 @@
           
           <div class="details-grid">
             <div class="detail-item">
-              <label>First Name</label>
-              <span>{{ profile.personalDetails.firstName }}</span>
-            </div>
-            
-            <div class="detail-item">
-              <label>Last Name</label>
-              <span>{{ profile.personalDetails.lastName }}</span>
-            </div>
-            
-            <div class="detail-item">
               <label>Gender</label>
-              <span>{{ profile.personalDetails.gender }}</span>
+              <span *ngIf="!(isEditing$ | async); else genderEdit">{{ profile.personalDetails.gender || 'Not Specified' }}</span>
+              <ng-template #genderEdit>
+                <select formControlName="gender" class="form-input-premium">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </ng-template>
             </div>
             
             <div class="detail-item">
               <label>Date of Birth</label>
-              <span>{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
+              <span *ngIf="!(isEditing$ | async); else dobEdit">{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
+              <ng-template #dobEdit>
+                <input type="date" formControlName="dateOfBirth" class="form-input-premium">
+              </ng-template>
+            </div>
+
+            <div class="detail-item">
+                <label>Marital Status</label>
+                <span *ngIf="!(isEditing$ | async); else maritalEdit">{{ profile.personalDetails.maritalStatus || '—' }}</span>
+                <ng-template #maritalEdit>
+                  <input type="text" formControlName="maritalStatus" class="form-input-premium">
+                </ng-template>
+            </div>
+
+            <div class="detail-item">
+                <label>Blood Group</label>
+                <span *ngIf="!(isEditing$ | async); else bloodEdit">{{ profile.personalDetails.bloodGroup || '—' }}</span>
+                <ng-template #bloodEdit>
+                  <input type="text" formControlName="bloodGroup" class="form-input-premium">
+                </ng-template>
             </div>
           </div>
         </div>
@@ -114,9 +150,22 @@
                 <i class="far fa-envelope"></i>
                 <label>Official Email</label>
               </div>
-              <div class="row-right" title="Send Email">
+              <div class="row-right">
                 {{ profile.contactDetails.officialEmail }}
               </div>
+            </div>
+
+            <div class="detail-row">
+              <div class="row-left">
+                <i class="fas fa-at"></i>
+                <label>Personal Email</label>
+              </div>
+              <div class="row-right" *ngIf="!(isEditing$ | async); else emailEdit">
+                {{ profile.contactDetails.personalEmail || 'Not Provided' }}
+              </div>
+              <ng-template #emailEdit>
+                <input type="email" formControlName="personalEmail" class="form-input-premium" placeholder="Enter personal email">
+              </ng-template>
             </div>
 
             <div class="detail-row">
@@ -124,9 +173,12 @@
                 <i class="fas fa-phone-alt"></i>
                 <label>Mobile Number</label>
               </div>
-              <div class="row-right" title="Call Number">
+              <div class="row-right" *ngIf="!(isEditing$ | async); else mobileEdit">
                 {{ profile.contactDetails.mobileNumber }}
               </div>
+              <ng-template #mobileEdit>
+                <input type="tel" formControlName="mobileNumber" class="form-input-premium">
+              </ng-template>
             </div>
 
             <div class="detail-row">
@@ -134,9 +186,12 @@
                 <i class="fas fa-map-marker-alt"></i>
                 <label>Location</label>
               </div>
-              <div class="row-right">
+              <div class="row-right" *ngIf="!(isEditing$ | async); else locEdit">
                 {{ profile.contactDetails.location }}
               </div>
+              <ng-template #locEdit>
+                <input type="text" formControlName="location" class="form-input-premium">
+              </ng-template>
             </div>
             
           </div>

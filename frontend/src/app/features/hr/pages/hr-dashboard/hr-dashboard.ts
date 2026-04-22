@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -22,7 +22,7 @@ import { AuthService } from '../../../../core/services/auth.service';
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
-export class HrDashboard {
+export class HrDashboard implements OnInit {
   selectedLang = 'en';
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
@@ -32,7 +32,8 @@ export class HrDashboard {
     private hrsidebarService: HrSidebarService,
     private router: Router,
     private readonly dashboardService: DashboardService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly cdr: ChangeDetectorRef
   ) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
       this.isDashboardHome = this.router.url === '/hr-dashboard';
@@ -42,27 +43,31 @@ export class HrDashboard {
           this.isDashboardHome = event.urlAfterRedirects === '/hr-dashboard';
         }
       });
-      this.dashboardService.getHrDashboard().subscribe(data => {
-        this.workFromHome = data.workModeBreakdown[0];
-        this.workFromOffice = data.workModeBreakdown[1];
-        this.total = this.workFromHome + this.workFromOffice;
-        this.female = data.genderBreakdown[0];
-        this.male = data.genderBreakdown[1];
-        this.gendertotal = this.female + this.male;
-        this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
-        this.recentTimeSheets = data.recentTimeSheets;
-        this.kpis = [
-          { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
-          { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
-          { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
-          { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
-          { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
-          { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
-        ];
-        this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
-        this.pieChartData2.datasets[0].data = [this.female, this.male];
-      });
-    }
+  }
+
+  ngOnInit() {
+    this.dashboardService.getHrDashboard().subscribe(data => {
+      this.workFromHome = data.workModeBreakdown[0];
+      this.workFromOffice = data.workModeBreakdown[1];
+      this.total = this.workFromHome + this.workFromOffice;
+      this.female = data.genderBreakdown[0];
+      this.male = data.genderBreakdown[1];
+      this.gendertotal = this.female + this.male;
+      this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
+      this.recentTimeSheets = data.recentTimeSheets;
+      this.kpis = [
+        { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
+        { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
+        { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
+        { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
+        { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
+        { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
+      ];
+      this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
+      this.pieChartData2.datasets[0].data = [this.female, this.male];
+      this.cdr.detectChanges();
+    });
+  }
   toggleSidebar() {
     this.hrsidebarService.toggleSidebar();
   }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
@@ -20,7 +20,7 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',
 })
-export class MasterDashboard {
+export class MasterDashboard implements OnInit {
   selectedLang = 'en';
   isSidebarOpen$!: import('rxjs').Observable<boolean>;
   dashboardData: AdminDashboardData | null = null;
@@ -30,12 +30,17 @@ export class MasterDashboard {
     private sidebarService: SidebarService,
     private router: Router,
     private readonly dashboardService: DashboardService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
     this.userName = this.authService.getDisplayName();
+  }
+
+  ngOnInit() {
     this.dashboardService.getAdminDashboard().subscribe(data => {
       this.dashboardData = data;
+      this.cdr.detectChanges();
     });
   }
 

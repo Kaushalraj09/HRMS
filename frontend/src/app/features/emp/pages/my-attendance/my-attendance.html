@@ -1,12 +1,35 @@
 <div class="my-attendance" [formGroup]="filterForm">
-    <div class="filter-section">
-        <div class="filter-inputs">
-            <input type="date" class="filter-input" formControlName="fromDate" placeholder="From Date">
-            <input type="date" class="filter-input" formControlName="toDate" placeholder="To Date">
-            <input type="text" class="filter-input" formControlName="status" placeholder="Status">
-            <button class="reset-btn" type="button" (click)="onReset()">Reset</button>
+    <div class="filter-card">
+        <div class="filter-header">
+            <h3 class="filter-title">Attendance</h3>
+            <p class="filter-desc">Search through your attendance history</p>
         </div>
-        <button class="search-btn" type="button" (click)="onSearch()">Search</button>
+        
+        <div class="filter-body">
+            <div class="filter-inputs-row">
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <input type="date" class="filter-input" formControlName="fromDate">
+                </div>
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <input type="date" class="filter-input" formControlName="toDate">
+                </div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <input type="text" class="filter-input" formControlName="status" placeholder="Present, Absent...">
+                </div>
+            </div>
+            
+            <div class="filter-actions-row">
+                <button class="search-btn" type="button" (click)="onSearch()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button class="reset-btn" type="button" (click)="onReset()">
+                    <i class="fas fa-undo"></i> Reset
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="time_sheet">

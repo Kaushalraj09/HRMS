@@ -17,9 +17,9 @@ export interface SessionUser {
 
 export interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType: 'bearer';
-  expiresIn: number;
+  expiresIn?: number;
   me: SessionUser;
 }
 

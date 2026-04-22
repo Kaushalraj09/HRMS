@@ -264,7 +264,7 @@
 }
 
 .apply-btn {
-  background: #007bff;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   color: white;
   border: none;
   padding: 10px 15px;

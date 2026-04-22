@@ -154,7 +154,7 @@ label {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,13 +186,13 @@ label {
 }
 
 .btn-submit {
-  background: #2563eb;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   border: none;
   color: white;
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: linear-gradient(90deg, #4c1d95 0%, #e11d48 100%);
 }
 
 /* Responsive Grid */
