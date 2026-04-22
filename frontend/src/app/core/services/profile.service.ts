@@ -36,4 +36,8 @@ export class MyProfileService {
     };
     return of(profile).pipe(delay(300));
   }
+
+  updateProfile(profile: EmployeeProfile): Observable<{ success: boolean; message: string }> {
+    return of(this.store.updateEmployeeProfile(profile)).pipe(delay(400));
+  }
 }

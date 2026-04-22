@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import { ChangePasswordPayload, LoginRequest, SessionUser, UserRole } from '../models/auth.model';
+import { ChangePasswordPayload, LoginRequest, LoginResponse, SessionUser, UserRole } from '../models/auth.model';
 import { AttendanceMetrics, AttendanceRecord, AttendanceStatus, EmployeeTimesheetRow, TodayAttendanceState, WorkMode } from '../models/attendance.model';
 import { AdminDashboardData, HrDashboardData } from '../models/dashboard.model';
 import { Employee, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
@@ -69,6 +69,8 @@ interface AttendanceFilters {
 export class Phase1StoreService {
   private readonly stateKey = 'aivan_hrms_phase1_state_v1';
   private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
+  private readonly tokenKey = 'aivan_hrms_phase1_token_v1';
+  private readonly userKey = 'aivan_hrms_phase1_user_v1';
 
   private state: Phase1State = this.loadState();
 
@@ -84,20 +86,44 @@ export class Phase1StoreService {
     }
 
     this.saveSession(user.id);
+    this.persistUser(this.toSessionUser(user));
     return this.toSessionUser(user);
+  }
+
+  saveBackendSession(response: LoginResponse): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(this.tokenKey, response.accessToken);
+      localStorage.setItem(this.userKey, JSON.stringify(response.me));
+      localStorage.setItem(this.sessionKey, String(response.me.id));
+    }
   }
 
   logout(): void {
     this.removeSession();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(this.tokenKey);
+      localStorage.removeItem(this.userKey);
+    }
   }
 
   getCurrentUser(): SessionUser | null {
+    if (typeof localStorage !== 'undefined') {
+      const userJson = localStorage.getItem(this.userKey);
+      if (userJson) {
+        try {
+          return JSON.parse(userJson) as SessionUser;
+        } catch {
+          return null;
+        }
+      }
+    }
+
     const currentId = this.getSessionUserId();
     if (!currentId) {
       return null;
     }
 
-    const user = this.state.users.find(item => item.id === currentId);
+    const user = this.state.users.find(item => String(item.id) === String(currentId));
     return user ? this.toSessionUser(user) : null;
   }
 
@@ -559,6 +585,38 @@ export class Phase1StoreService {
     };
   }
 
+  updateEmployeeProfile(profile: EmployeeProfile): { success: boolean; message: string } {
+    const employeeIdx = this.state.employees.findIndex(e => e.id === profile.id);
+    if (employeeIdx === -1) {
+      return { success: false, message: 'Employee profile not found' };
+    }
+
+    const employee = this.state.employees[employeeIdx];
+    const updatedEmployee: Employee = {
+      ...employee,
+      firstName: profile.personalDetails.firstName,
+      lastName: profile.personalDetails.lastName,
+      name: `${profile.personalDetails.firstName} ${profile.personalDetails.lastName}`.trim(),
+      gender: profile.personalDetails.gender,
+      dob: profile.personalDetails.dateOfBirth,
+      maritalStatus: profile.personalDetails.maritalStatus || '',
+      bloodGroup: profile.personalDetails.bloodGroup || '',
+      mobile: profile.contactDetails.mobileNumber,
+      alternateMobile: profile.contactDetails.alternateMobile || '',
+      personalEmail: profile.contactDetails.personalEmail || '',
+      workLocation: profile.contactDetails.location
+    };
+
+    this.state = {
+      ...this.state,
+      employees: this.state.employees.map(e => e.id === profile.id ? updatedEmployee : e),
+      users: this.state.users.map(u => u.id === employee.userId ? { ...u, displayName: updatedEmployee.name } : u)
+    };
+
+    this.persistState();
+    return { success: true, message: 'Profile updated successfully' };
+  }
+
   updateCurrentPassword(payload: ChangePasswordPayload): { success: boolean; message: string } {
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
@@ -610,6 +668,12 @@ export class Phase1StoreService {
   private persistState(): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(this.stateKey, JSON.stringify(this.state));
+    }
+  }
+
+  private persistUser(user: SessionUser): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(this.userKey, JSON.stringify(user));
     }
   }
 

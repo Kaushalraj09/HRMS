@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
@@ -16,7 +16,11 @@ export class MyAttendance implements OnInit {
   timeSheets: EmployeeTimesheetRow[] = [];
   filterForm;
 
-  constructor(private readonly fb: FormBuilder, private readonly attendanceService: AttendanceService) {
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly attendanceService: AttendanceService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
     this.filterForm = this.fb.group({
       fromDate: [''],
       toDate: [''],
@@ -28,6 +32,7 @@ export class MyAttendance implements OnInit {
     this.attendanceService.getMyTimesheets().subscribe(rows => {
       this.allSheets = rows;
       this.timeSheets = rows;
+      this.cdr.detectChanges();
     });
   }
 

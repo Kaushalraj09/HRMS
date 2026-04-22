@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Injectable, OnInit } from '@angular/core';
+import { Component, Injectable, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -54,7 +54,8 @@ export class EmpDashboard {
     private empsidebarService: EmpSidebarService,
     private router: Router,
     private readonly attendanceService: AttendanceService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly cdr: ChangeDetectorRef
   ) {
         this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
         this.isDashboardHome = this.router.url === '/emp-dashboard';
@@ -171,6 +172,7 @@ export class EmpDashboard {
       this.approvedHours = todayState.approvedHours;
       this.remainingHours = todayState.remainingHours;
       this.status = todayState.workMode;
+      this.cdr.detectChanges();
     });
 
     this.attendanceService.getMyTimesheets().subscribe(rows => {
@@ -189,10 +191,12 @@ export class EmpDashboard {
         title: event.title
       }));
       this.filterEvents(this.selectedDate);
+      this.cdr.detectChanges();
     });
 
     this.attendanceService.getMyAttendanceSummary().subscribe(summary => {
       this.attendanceSummary = summary;
+      this.cdr.detectChanges();
     });
   }
 
