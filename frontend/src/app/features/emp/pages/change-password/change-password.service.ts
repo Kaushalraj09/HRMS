@@ -1,21 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
-
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { ChangePasswordPayload } from '../../../../core/models/auth.model';
-import { Phase1StoreService } from '../../../../core/services/phase1-store.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChangePasswordService {
-  constructor(private readonly store: Phase1StoreService) {}
+  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
+
+  constructor(private readonly http: HttpClient) {}
 
   updatePassword(data: ChangePasswordPayload): Observable<{ success: boolean; message: string }> {
-    try {
-      return of(this.store.updateCurrentPassword(data)).pipe(delay(300));
-    } catch (error) {
-      return throwError(() => error);
-    }
+    // In a real application, you would pass the JWT token in the headers.
+    // Assuming your Angular app has an interceptor that attaches the token,
+    // this request will be authorized automatically.
+    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/change-password`, data);
   }
 }

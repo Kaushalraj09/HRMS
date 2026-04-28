@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { Router, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
+import { EmployeePayload } from '../../../../../core/models/employee.model';
 import { EmployeeService } from '../../../../../core/services/employee.service';
 
 function pastDateValidator(control: AbstractControl): ValidationErrors | null {
@@ -80,8 +81,10 @@ export class AddEmployeeComponent {
       return;
     }
 
+    const payload = this.employeeForm.getRawValue() as EmployeePayload;
+
     this.isSubmitting$.next(true);
-    this.employeeService.createEmployee(this.employeeForm.value).subscribe(res => {
+    this.employeeService.createEmployee(payload).subscribe(res => {
       this.isSubmitting$.next(false);
       if (res.success) {
         this.successMessage$.next(res.message);

@@ -29,7 +29,7 @@ export class MyAttendance implements OnInit {
   }
 
   ngOnInit(): void {
-    this.attendanceService.getMyTimesheets().subscribe(rows => {
+    this.attendanceService.getMyTimesheets().subscribe((rows: EmployeeTimesheetRow[]) => {
       this.allSheets = rows;
       this.timeSheets = rows;
       this.cdr.detectChanges();

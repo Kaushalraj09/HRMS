@@ -106,7 +106,20 @@ export class Phase1StoreService {
     }
   }
 
+  getToken(): string | null {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(this.tokenKey);
+    }
+    return null;
+  }
+
+
   getCurrentUser(): SessionUser | null {
+    const token = this.getToken();
+    if (!token) {
+      return null;
+    }
+
     if (typeof localStorage !== 'undefined') {
       const userJson = localStorage.getItem(this.userKey);
       if (userJson) {
@@ -128,7 +141,7 @@ export class Phase1StoreService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getCurrentUser();
+    return !!this.getToken() && !!this.getCurrentUser();
   }
 
   canAccess(roles: UserRole[]): boolean {
