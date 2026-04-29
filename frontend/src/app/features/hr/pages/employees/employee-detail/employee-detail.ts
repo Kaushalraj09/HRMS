@@ -116,7 +116,7 @@ export class EmployeeDetailComponent implements OnInit {
       }
     };
 
-    this.employeeService.updateEmployee(current.employee.id, payload).subscribe(result => {
+    this.employeeService.updateEmployee(current.employee.id, payload).subscribe((result: { success: boolean; message: string }) => {
       this.saveMessage$.next(result.message);
       this.isEditing$.next(false);
       this.loadEmployee();
@@ -130,7 +130,7 @@ export class EmployeeDetailComponent implements OnInit {
       return;
     }
 
-    this.employeeService.getEmployeeById(employeeId).subscribe(detail => {
+    this.employeeService.getEmployeeById(employeeId).subscribe((detail: EmployeeDetailView | null) => {
       this.employeeDetail$.next(detail);
       if (!detail) {
         return;

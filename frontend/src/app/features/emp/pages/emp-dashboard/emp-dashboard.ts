@@ -11,7 +11,7 @@ import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, WorkMode } from '../../../../core/models/attendance.model';
+import { EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, TodayAttendanceState, WorkMode } from '../../../../core/models/attendance.model';
 
 @Injectable()
 export class CustomDateFormatter extends CalendarNativeDateFormatter {
@@ -92,7 +92,7 @@ export class EmpDashboard {
   isPunchedIn: boolean = false;
 
   togglePunch() {
-    this.attendanceService.toggleMyPunch(this.status).subscribe(todayState => {
+    this.attendanceService.toggleMyPunch(this.status).subscribe((todayState: TodayAttendanceState) => {
       this.isPunchedIn = todayState.isPunchedIn;
       this.approvedHours = todayState.approvedHours;
       this.remainingHours = todayState.remainingHours;
@@ -167,7 +167,7 @@ export class EmpDashboard {
   ];
 
   private loadDashboardData(): void {
-    this.attendanceService.getTodayAttendanceState().subscribe(todayState => {
+    this.attendanceService.getTodayAttendanceState().subscribe((todayState: TodayAttendanceState) => {
       this.isPunchedIn = todayState.isPunchedIn;
       this.approvedHours = todayState.approvedHours;
       this.remainingHours = todayState.remainingHours;
@@ -175,11 +175,11 @@ export class EmpDashboard {
       this.cdr.detectChanges();
     });
 
-    this.attendanceService.getMyTimesheets().subscribe(rows => {
+    this.attendanceService.getMyTimesheets().subscribe((rows: EmployeeTimesheetRow[]) => {
       this.timeSheets = rows;
       this.timelineEvents = rows
-        .filter(row => row.entry !== '-')
-        .flatMap(row => {
+        .filter((row: EmployeeTimesheetRow) => row.entry !== '-')
+        .flatMap((row: EmployeeTimesheetRow) => {
           const events = [{ date: row.date, time: row.entry, title: 'Punch In', location: 'Office' }];
           if (row.exit !== '-') {
             events.push({ date: row.date, time: row.exit, title: 'Punch Out', location: 'Office' });
@@ -194,7 +194,7 @@ export class EmpDashboard {
       this.cdr.detectChanges();
     });
 
-    this.attendanceService.getMyAttendanceSummary().subscribe(summary => {
+    this.attendanceService.getMyAttendanceSummary().subscribe((summary: EmployeeAttendanceSummaryItem[]) => {
       this.attendanceSummary = summary;
       this.cdr.detectChanges();
     });

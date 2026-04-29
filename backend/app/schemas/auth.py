@@ -19,3 +19,13 @@ class LoginResponse(BaseModel):
     accessToken: str
     tokenType: str = "bearer"
     me: UserSession
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+    confirmPassword: str
+
+class StandardResponse(BaseModel):
+    success: bool
+    message: str
+

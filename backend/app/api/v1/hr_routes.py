@@ -10,7 +10,10 @@ router = APIRouter(prefix="/hr-users", tags=["hr-management"])
 @router.post("", response_model=HrResponse)
 def create_hr_user(request: HrCreate, db: Session = Depends(get_db)):
     # You should add a check here later to make sure ONLY admins can do this!
-    return hr_service.create_hr(db, request)
+    try:
+        return hr_service.create_hr(db, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 @router.get("", response_model=List[HrResponse])
 def get_hr_users(db: Session = Depends(get_db)):

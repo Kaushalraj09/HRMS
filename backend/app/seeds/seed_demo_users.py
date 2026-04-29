@@ -62,25 +62,27 @@ def seed_users(db: Session):
     for user_info in demo_users:
         existing_user = db.query(User).filter(User.email == user_info["email"]).first()
         if not existing_user:
-            # Create User
-            new_user = User(
-                email=user_info["email"],
-                password_hash=hash_password(user_info["password"]),
-                display_name=user_info["display_name"],
-                role_id=user_info["role_id"]
-            )
-            db.add(new_user)
-            db.flush() # Get the user id
+            existing_user = User(email=user_info["email"])
+            db.add(existing_user)
+            db.flush()
 
-            # Create Employee Profile
-            emp_data = user_info["employee_data"]
-            new_employee = Employee(
-                user_id=new_user.id,
-                **emp_data
-            )
-            db.add(new_employee)
+        # Keep demo credentials predictable in local/dev environments.
+        existing_user.password_hash = hash_password(user_info["password"])
+        existing_user.display_name = user_info["display_name"]
+        existing_user.role_id = user_info["role_id"]
+        existing_user.status = "Active"
+
+        emp_data = user_info["employee_data"]
+        existing_employee = db.query(Employee).filter(Employee.user_id == existing_user.id).first()
+        if not existing_employee:
+            existing_employee = Employee(user_id=existing_user.id, **emp_data)
+            db.add(existing_employee)
             print(f"Added demo user and profile: {user_info['email']}")
         else:
-            print(f"User {user_info['email']} already exists")
+            for field, value in emp_data.items():
+                setattr(existing_employee, field, value)
+            existing_employee.official_email = user_info["email"]
+            existing_employee.mobile = emp_data["mobile"]
+            print(f"Updated demo user and profile: {user_info['email']}")
     
     db.commit()

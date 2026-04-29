@@ -24,8 +24,7 @@ class EmployeeBase(BaseModel):
     status: str = "Active"
 
 class EmployeeCreate(EmployeeBase):
-    user_id: int
-    employee_code: str
+    pass
 
 class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = None

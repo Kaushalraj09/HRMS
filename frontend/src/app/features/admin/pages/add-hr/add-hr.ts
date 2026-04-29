@@ -4,6 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
+import { CreateHrPayload } from '../../../../core/models/hr.model';
 import { HrService } from '../../../../core/services/hr.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 
@@ -53,8 +54,10 @@ export class AddHrComponent {
       return;
     }
 
+    const payload = this.form.getRawValue() as CreateHrPayload;
+
     this.isSubmitting$.next(true);
-    this.hrService.createHr(this.form.getRawValue() as any).subscribe(result => {
+    this.hrService.createHr(payload).subscribe((result: { success: boolean; message: string }) => {
       this.isSubmitting$.next(false);
       this.successMessage$.next(result.message);
       setTimeout(() => this.router.navigate(['/master-dashboard/hr-users']), 900);
