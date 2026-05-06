@@ -6,6 +6,7 @@ import { AdminDashboardData, HrDashboardData } from '../models/dashboard.model';
 import { Employee, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
 import { CreateHrPayload, HrUser } from '../models/hr.model';
 import { EmployeeProfile } from '../models/profile.model';
+import { SHIFT_TOTAL_SECONDS } from '../utils/attendance-time.util';
 
 interface UserAccountRecord {
   id: string;
@@ -494,21 +495,34 @@ export class Phase1StoreService {
 
     if (!employeeId) {
       return {
-        isPunchedIn: false,
+        isWorking: false,
         status: 'Not Marked',
-        approvedHours: 2,
-        remainingHours: 8,
+        totalWorkedSeconds: 0,
+        approvedSeconds: 2 * 3600,
+        remainingSeconds: 8 * 3600,
+        shiftStart: '09:00',
+        shiftEnd: '18:00',
+        shiftElapsedSeconds: 0,
+        shiftTotalSeconds: SHIFT_TOTAL_SECONDS,
         workMode: 'Office'
       };
     }
 
     const record = this.getOrCreateTodayAttendance(employeeId);
+    const totalWorkedSeconds = this.minutesBetween(record.checkIn, record.checkOut) * 60;
     return {
-      isPunchedIn: !!record.checkIn && !record.checkOut,
+      isWorking: !!record.checkIn && !record.checkOut,
       status: record.status,
-      approvedHours: 2,
-      remainingHours: 8,
-      workMode: record.workMode
+      totalWorkedSeconds,
+      approvedSeconds: 2 * 3600,
+      remainingSeconds: 8 * 3600,
+      shiftStart: '09:00',
+      shiftEnd: '18:00',
+      shiftElapsedSeconds: 0,
+      shiftTotalSeconds: SHIFT_TOTAL_SECONDS,
+      workMode: record.workMode,
+      checkIn: record.checkIn || null,
+      checkOut: record.checkOut || null
     };
   }
 
@@ -841,6 +855,35 @@ export class Phase1StoreService {
 
   private todayIsoDate(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private minutesBetween(start: string, end: string): number {
+    const startMinutes = this.toMinutes(start);
+    const endMinutes = this.toMinutes(end);
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+      return 0;
+    }
+    return endMinutes - startMinutes;
+  }
+
+  private minutesAfter(later: string, earlier: string): number {
+    const laterMinutes = this.toMinutes(later);
+    const earlierMinutes = this.toMinutes(earlier);
+    if (laterMinutes === null || earlierMinutes === null || laterMinutes <= earlierMinutes) {
+      return 0;
+    }
+    return laterMinutes - earlierMinutes;
+  }
+
+  private toMinutes(value: string): number | null {
+    if (!value) {
+      return null;
+    }
+    const [hours, minutes] = value.split(':').map(part => Number(part));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+      return null;
+    }
+    return hours * 60 + minutes;
   }
 
   private currentTimeString(): string {

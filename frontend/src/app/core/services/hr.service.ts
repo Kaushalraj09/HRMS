@@ -7,15 +7,19 @@ import { CreateHrPayload, HrUser } from '../models/hr.model';
 
 interface BackendHrUser {
   id: number;
-  userId: number;
-  hrCode: string;
-  fullName: string;
+  userId?: number;
+  user_id?: number;
+  hrCode?: string;
+  hr_code?: string;
+  fullName?: string;
+  full_name?: string;
   email: string;
   phone: string;
   department: string;
   designation: string;
   status: 'Active' | 'Inactive';
-  createdAt: string;
+  createdAt?: string;
+  created_at?: string;
 }
 
 @Injectable({
@@ -69,16 +73,16 @@ export class HrService {
   private mapHr(row: BackendHrUser): HrUser {
     return {
       id: String(row.id),
-      userId: String(row.userId),
-      hrCode: row.hrCode,
-      fullName: row.fullName,
+      userId: String(row.userId ?? row.user_id ?? row.id),
+      hrCode: row.hrCode ?? row.hr_code ?? '',
+      fullName: row.fullName ?? row.full_name ?? '',
       email: row.email,
       phone: row.phone,
       department: row.department,
       designation: row.designation,
       status: row.status,
       login: row.status === 'Active' ? 'Enabled' : 'Disabled',
-      createdAt: row.createdAt
+      createdAt: row.createdAt ?? row.created_at ?? ''
     };
   }
 }

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.employee import Employee
 from app.models.user import User
 from app.schemas.profile import EmployeeProfile, ProfileUpdate
+from app.utils.employee_code import normalize_employee_code
 
 def get_employee_profile(db: Session, user_id: int) -> Optional[EmployeeProfile]:
     employee = db.query(Employee).filter(Employee.user_id == user_id).first()
@@ -13,7 +14,7 @@ def get_employee_profile(db: Session, user_id: int) -> Optional[EmployeeProfile]
     
     return {
         "id": employee.id,
-        "employeeId": employee.employee_code,
+        "employeeId": normalize_employee_code(employee.employee_code),
         "firstName": employee.first_name,
         "lastName": employee.last_name,
         "initials": initials,

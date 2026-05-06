@@ -57,7 +57,7 @@
                 <td>{{ hr.email }}</td>
                 <td>{{ hr.department }}</td>
                 <td>{{ hr.designation }}</td>
-                <td><span class="status-badge" [ngClass]="hr.status.toLowerCase()">{{ hr.status }}</span></td>
+                <td><span class="status-badge" [ngClass]="hr.status?.toLowerCase() || ''">{{ hr.status }}</span></td>
               </tr>
               <tr *ngIf="result.data.length === 0">
                 <td colspan="6" class="empty-state">

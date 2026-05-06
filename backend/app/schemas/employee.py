@@ -1,6 +1,8 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_serializer
 from typing import Optional, List
 from datetime import date, datetime
+
+from app.utils.employee_code import normalize_employee_code
 
 class EmployeeBase(BaseModel):
     first_name: str
@@ -54,5 +56,10 @@ class EmployeeResponse(EmployeeBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+    @field_serializer("employee_code")
+    def _serialize_employee_code(self, value: str) -> str:
+        return normalize_employee_code(value)
+
     class Config:
         from_attributes = True
+        

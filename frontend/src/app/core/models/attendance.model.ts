@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked';
+export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked' | 'Working' | 'Not working';
 export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
 
 export interface AttendanceRecord {
@@ -7,6 +7,9 @@ export interface AttendanceRecord {
   name: string;
   department: string;
   date: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  taskDescription?: string;
   checkIn: string;
   checkOut: string;
   hours: string;
@@ -29,6 +32,9 @@ export interface PaginatedAttendance {
 export interface EmployeeTimesheetRow {
   date: string;
   day: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  taskDescription?: string;
   entry: string;
   exit: string;
   total: string;
@@ -49,12 +55,21 @@ export interface EmployeeTimelineEvent {
   time: string;
   title: string;
   location: string;
+  taskDescription?: string;
+  type?: 'schedule' | 'punch-in' | 'punch-out';
 }
 
 export interface TodayAttendanceState {
-  isPunchedIn: boolean;
-  status: AttendanceStatus;
-  approvedHours: number;
-  remainingHours: number;
+  isWorking: boolean;
+  status: string;
+  totalWorkedSeconds: number;
+  approvedSeconds: number;
+  remainingSeconds: number;
+  shiftTotalSeconds: number;
+  shiftElapsedSeconds: number;
+  shiftStart: string;
+  shiftEnd: string;
   workMode: WorkMode;
+  checkIn?: string | null;
+  checkOut?: string | null;
 }

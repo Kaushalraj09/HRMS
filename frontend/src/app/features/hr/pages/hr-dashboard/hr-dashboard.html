@@ -210,13 +210,70 @@
                     <td>{{ sheet.breakTime }}</td>
                     <td>{{ sheet.overtime }}</td>
                     <td>{{ sheet.totalHours }}</td>
-                    <td><span class="status-badge" [ngClass]="sheet.status.toLowerCase()">
+                    <td><span class="status-badge" [ngClass]="sheet.status?.toLowerCase() || ''">
                         {{ sheet.status }}
                       </span>
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Off Management Section -->
+        <div class="time_sheet">
+          <div class="card recent_time">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #2563eb; font-weight: 700;">Time Off Management</span>
+              <span class="status-badge working" *ngIf="pendingRequests.length > 0">
+                {{ pendingRequests.length }} Pending Requests
+              </span>
+            </div>
+            <div class="divider"></div>
+            <div class="table-container">
+              <table *ngIf="pendingRequests.length > 0">
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Leave Type</th>
+                    <th>Date</th>
+                    <th>Time Slot</th>
+                    <th>Duration</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let req of pendingRequests">
+                    <td><strong>#{{ req.employee_id }}</strong></td>
+                    <td>
+                      <span class="status-badge" [ngClass]="req.leave_type === 'Hourly' ? 'working' : 'present'">
+                        {{ req.leave_type }}
+                      </span>
+                    </td>
+                    <td>{{ req.date | date:'dd MMM yyyy' }}</td>
+                    <td>
+                      <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
+                      <span *ngIf="!req.start_time">Full Day</span>
+                    </td>
+                    <td>{{ req.duration_hours }} hrs</td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="status-btn work" style="background: #10b981; color: white; border: none;" (click)="processRequest(req.id, 'APPROVE', 'Full')">
+                          Accept
+                        </button>
+                        <button class="status-btn absent" (click)="processRequest(req.id, 'REJECT')" style="background: #ef4444; color: white; border: none;">
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div *ngIf="pendingRequests.length === 0" style="padding: 40px; text-align: center; color: #64748b;">
+                <i class="fas fa-check-circle" style="font-size: 48px; margin-bottom: 10px; color: #10b981;"></i>
+                <p>All time off requests have been processed.</p>
+              </div>
             </div>
           </div>
         </div>

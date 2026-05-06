@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user import User, Role
 from app.models.employee import Employee
+from app.models.hr_user import HrUser
 from app.core.security import hash_password
 from datetime import date
 
@@ -20,38 +21,35 @@ def seed_users(db: Session):
             "password": "admin123",
             "display_name": "System Admin",
             "role_id": admin_role.id,
-            "employee_data": {
-                "employee_code": "EMP001",
-                "first_name": "System",
-                "last_name": "Admin",
-                "mobile": "9876543210",
-                "official_email": "admin@hrms.com",
-                "doj": date(2024, 1, 1)
-            }
+            "profile_type": "admin"
         },
         {
             "email": "hr@hrms.com",
             "password": "hr1234",
             "display_name": "HR Manager",
             "role_id": hr_role.id,
-            "employee_data": {
-                "employee_code": "EMP002",
-                "first_name": "HR",
-                "last_name": "Manager",
-                "mobile": "9876543211",
-                "official_email": "hr@hrms.com",
-                "doj": date(2024, 1, 15)
+            "profile_type": "hr",
+            "hr_data": {
+                "full_name": "HR Manager",
+                "phone": "9876543211",
+                "department": "Human Resources",
+                "designation": "HR Manager"
             }
         },
         {
             "email": "emp@hrms.com",
             "password": "emp123",
-            "display_name": "Kaushal",
+            "display_name": "Kaushal Raj",
             "role_id": emp_role.id,
+            "profile_type": "employee",
             "employee_data": {
-                "employee_code": "EMP003",
-                "first_name": "John",
-                "last_name": "Employee",
+                "first_name": "Kaushal",
+                "last_name": "Raj",
+                "department": "Engineering",
+                "designation": "Frontend Developer",
+                "employee_type": "Full-Time",
+                "work_location": "Main Office",
+                "shift_type": "General Shift",
                 "mobile": "9876543212",
                 "official_email": "emp@hrms.com",
                 "doj": date(2024, 2, 1)
@@ -72,17 +70,53 @@ def seed_users(db: Session):
         existing_user.role_id = user_info["role_id"]
         existing_user.status = "Active"
 
-        emp_data = user_info["employee_data"]
         existing_employee = db.query(Employee).filter(Employee.user_id == existing_user.id).first()
-        if not existing_employee:
-            existing_employee = Employee(user_id=existing_user.id, **emp_data)
-            db.add(existing_employee)
-            print(f"Added demo user and profile: {user_info['email']}")
+        existing_hr = db.query(HrUser).filter(HrUser.user_id == existing_user.id).first()
+
+        if user_info["profile_type"] == "employee":
+            emp_data = {**user_info["employee_data"], "employee_code": f"EMP-{existing_user.id:04d}"}
+            if not existing_employee:
+                existing_employee = Employee(user_id=existing_user.id, **emp_data)
+                db.add(existing_employee)
+                print(f"Added demo employee profile: {user_info['email']}")
+            else:
+                for field, value in emp_data.items():
+                    setattr(existing_employee, field, value)
+                existing_employee.official_email = user_info["email"]
+                existing_employee.mobile = emp_data["mobile"]
+                print(f"Updated demo employee profile: {user_info['email']}")
+
+            if existing_hr:
+                db.delete(existing_hr)
+        elif user_info["profile_type"] == "hr":
+            hr_data = user_info["hr_data"]
+            if existing_employee:
+                db.delete(existing_employee)
+
+            if not existing_hr:
+                existing_hr = HrUser(
+                    user_id=existing_user.id,
+                    hr_code=f"HR-{existing_user.id:03d}",
+                    email=user_info["email"],
+                    status="Active",
+                    **hr_data
+                )
+                db.add(existing_hr)
+                print(f"Added demo HR profile: {user_info['email']}")
+            else:
+                existing_hr.hr_code = f"HR-{existing_user.id:03d}"
+                existing_hr.full_name = hr_data["full_name"]
+                existing_hr.email = user_info["email"]
+                existing_hr.phone = hr_data["phone"]
+                existing_hr.department = hr_data["department"]
+                existing_hr.designation = hr_data["designation"]
+                existing_hr.status = "Active"
+                print(f"Updated demo HR profile: {user_info['email']}")
         else:
-            for field, value in emp_data.items():
-                setattr(existing_employee, field, value)
-            existing_employee.official_email = user_info["email"]
-            existing_employee.mobile = emp_data["mobile"]
-            print(f"Updated demo user and profile: {user_info['email']}")
+            if existing_employee:
+                db.delete(existing_employee)
+            if existing_hr:
+                db.delete(existing_hr)
+            print(f"Updated demo admin profile: {user_info['email']}")
     
     db.commit()

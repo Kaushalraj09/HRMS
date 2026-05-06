@@ -1,43 +1,25 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { EmployeeProfile } from '../models/profile.model';
+import { Observable } from 'rxjs';
 
-import { Phase1StoreService } from './phase1-store.service';
+import { EmployeeProfile } from '../models/profile.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MyProfileService {
-  constructor(private readonly store: Phase1StoreService) {}
+  private readonly apiUrl = 'http://localhost:8000/api/v1/profile';
+
+  constructor(private readonly http: HttpClient) {}
 
   getProfile(): Observable<EmployeeProfile> {
-    const profile = this.store.getEmployeeProfile() || {
-      id: 'na',
-      employeeId: 'NA',
-      firstName: 'Portal',
-      lastName: 'User',
-      initials: 'PU',
-      role: 'User',
-      department: 'General',
-      shift: 'General Shift',
-      status: 'Active' as const,
-      personalDetails: {
-        firstName: 'Portal',
-        lastName: 'User',
-        gender: 'Not Available',
-        dateOfBirth: '2000-01-01'
-      },
-      contactDetails: {
-        officialEmail: 'not.available@aivan.com',
-        mobileNumber: '0000000000',
-        location: 'Not Assigned'
-      }
-    };
-    return of(profile).pipe(delay(300));
+    return this.http.get<EmployeeProfile>(`${this.apiUrl}/`);
   }
 
   updateProfile(profile: EmployeeProfile): Observable<{ success: boolean; message: string }> {
-    return of(this.store.updateEmployeeProfile(profile)).pipe(delay(400));
+    return this.http.put<{ success: boolean; message: string }>(`${this.apiUrl}/update`, {
+      personalDetails: profile.personalDetails,
+      contactDetails: profile.contactDetails
+    });
   }
 }

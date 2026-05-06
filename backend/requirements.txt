@@ -3,7 +3,7 @@ annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0
 asgiref==3.11.1
-bcrypt==5.0.0
+bcrypt==3.2.2
 click==8.3.2
 colorama==0.4.6
 
@@ -34,3 +34,4 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
 uvicorn==0.44.0
+APScheduler==3.11.0

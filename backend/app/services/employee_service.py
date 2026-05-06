@@ -5,6 +5,14 @@ from app.models.employee import Employee
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 from app.core.security import hash_password
 
+def _employee_query(db: Session):
+    return (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name) == "employee")
+    )
+
 def create_employee(db: Session, obj_in: EmployeeCreate):
     # Support either "Employee" or "employee" naming in the roles table.
     emp_role = db.query(Role).filter(func.lower(Role.name) == "employee").first()
@@ -36,13 +44,13 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     return new_employee
 
 def list_employees(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Employee).order_by(Employee.id.desc()).offset(skip).limit(limit).all()
+    return _employee_query(db).order_by(Employee.id.desc()).offset(skip).limit(limit).all()
 
 def get_employee_by_id(db: Session, employee_id: int):
-    return db.query(Employee).filter(Employee.id == employee_id).first()
+    return _employee_query(db).filter(Employee.id == employee_id).first()
 
 def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
-    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    employee = _employee_query(db).filter(Employee.id == employee_id).first()
     if not employee:
         return None
 

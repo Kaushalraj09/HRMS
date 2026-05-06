@@ -76,10 +76,10 @@
                 <td>{{ emp.department }}</td>
                 <td>{{ emp.designation }}</td>
                 <td>
-                  <span class="status-badge" [ngClass]="emp.status.toLowerCase()">{{ emp.status }}</span>
+                  <span class="status-badge" [ngClass]="emp.status?.toLowerCase() || ''">{{ emp.status }}</span>
                 </td>
                 <td>
-                  <span class="login-badge" [ngClass]="emp.login.toLowerCase()">{{ emp.login }}</span>
+                  <span class="login-badge" [ngClass]="emp.login?.toLowerCase() || ''">{{ emp.login }}</span>
                 </td>
                 <td class="actions-col">
                   <a [routerLink]="['/hr-dashboard/employees', emp.id]" class="action-link">View</a>
