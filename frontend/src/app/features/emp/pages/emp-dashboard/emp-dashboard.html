@@ -40,37 +40,122 @@
             </div>
             <div class="divider"></div>
             <div class="punch-container">
-                <div class="outer-circle">
-                    <div class="inner-circle" [class.punched-in]="isPunchedIn" (click)="togglePunch()">
-                        <div class="punch-text">
-                            <span>Punch</span>
-                            <span>{{ isPunchedIn ? 'In' : 'Out' }}</span>
-                        </div>
-                    </div>
+                <div class="punch-dial" [class.punch-dial--busy]="isPunchSaving">
+                    <svg class="punch-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <g transform="rotate(-90 110 110)">
+                            <circle
+                                class="ring-arc ring-arc--red"
+                                cx="110" cy="110" r="104"
+                                fill="none" stroke-width="12" stroke-linecap="round"
+                                pathLength="100"
+                                stroke-dasharray="31 69"
+                                stroke-dashoffset="0"/>
+                            <circle
+                                class="ring-arc ring-arc--progress"
+                                cx="110" cy="110" r="104"
+                                fill="none" stroke-width="12" stroke-linecap="round"
+                                pathLength="100"
+                                stroke-dasharray="100"
+                                [attr.stroke-dashoffset]="progressDashOffset"/>
+                        </g>
+                    </svg>
+                    <button
+                        type="button"
+                        class="inner-circle"
+                        [class.inner-circle--out-action]="isPunchedIn"
+                        [class.inner-circle--in-action]="!isPunchedIn"
+                        [class.inner-circle--disabled]="isPunchDisabled"
+                        [disabled]="isPunchDisabled"
+                        (click)="togglePunch()"
+                    >
+                        <span class="punch-text">
+                            <span class="punch-text__line">Punch</span>
+                            <span class="punch-text__line punch-text__action">{{ isPunchedIn ? 'Out' : 'In' }}</span>
+                        </span>
+                    </button>
                 </div>
             </div>
+            <div class="attendance-live">
+                <div class="attendance-live__status" [class.attendance-live__status--working]="isPunchedIn">
+                    {{ attendanceStatusLabel }}
+                </div>
+                <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
+                <div class="attendance-live__meta">
+                    <span>Shift elapsed: {{ liveTimerDisplay }}</span>
+                    <span>Worked: {{ totalWorkedTodayDisplay }}</span>
+                </div>
+            </div>
+            <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
+
         </div>
         <div class="card request_time_off">
             <div class="card-header">
-                Request Time Off
+                Time Off Management
             </div>
             <div class="divider"></div>
             <div class="stats">
                 <div class="stat-box">
-                    <h2>{{ approvedHours }} hrs</h2>
-                    <p>Approved</p>
+                    <h2>{{ approvedHoursDisplay }}</h2>
+                    <p>Approved Time</p>
                 </div>
                 <div class="stat-box">
-                    <h2>{{ remainingHours }} hrs</h2>
-                    <p>Remaining</p>
+                    <h2>{{ remainingHoursDisplay }}</h2>
+                    <p>Remaining Time</p>
                 </div>
-                
+                <div class="stat-box">
+                    <h2>{{ requestedTimeDisplay }}</h2>
+                    <p>Requested Time</p>
+                </div>
             </div>
-            <button class="apply-btn" (click)="startTimer()">
-                Apply Time Off
-            </button>
-            
 
+            <div class="timeoff-inline">
+                <p class="timeoff-inline__hint">Shift: 9:00 AM - 6:00 PM. Time off is available only while you are marked as Working.</p>
+                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Hourly'">
+                    Requested: {{ requestedTimeDisplay }} | After request: {{ previewRemainingAfterDisplay }}
+                </p>
+                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Full Day'">
+                    Full day uses {{ requestedTimeDisplay }} of your shift balance.
+                </p>
+                <p class="punch-message" *ngIf="timeOffInlineError">{{ timeOffInlineError }}</p>
+
+                <div class="timeoff-inline__grid">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" class="form-control" [(ngModel)]="timeOffDate" [min]="todayIsoMin" (ngModelChange)="onTimeOffDateChange()" />
+                    </div>
+                    <div class="form-group">
+                        <label>Leave type</label>
+                        <select class="form-control" [(ngModel)]="timeOffLeaveType" (ngModelChange)="onLeaveTypeChange()">
+                            <option value="Hourly">Hourly</option>
+                            <option value="Full Day">Full Day</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="timeoff-inline__grid" *ngIf="timeOffLeaveType === 'Hourly'">
+                    <div class="form-group">
+                        <label>Start time</label>
+                        <select class="form-control" [(ngModel)]="timeOffStart" (ngModelChange)="onStartTimeChange()">
+                            <option *ngFor="let s of startTimeOptions" [value]="s.value">{{ s.label }} ({{ s.value }})</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>End time</label>
+                        <select class="form-control" [(ngModel)]="timeOffEnd">
+                            <option *ngFor="let s of endTimeOptions" [value]="s.value">{{ s.label }} ({{ s.value }})</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    class="apply-btn timeoff-inline__submit"
+                    (click)="submitInlineTimeOff()"
+                    [disabled]="isTimeOffSubmitting || !canSubmitInlineTimeOff"
+                >
+                    {{ isTimeOffSubmitting ? 'Submitting…' : 'Request time off' }}
+                </button>
+            </div>
         </div>
     </div>
     <div class="calendar_body">
@@ -196,3 +281,36 @@
 </div>
 </div>
 </div>
+
+<!-- Schedule Modal -->
+<div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeScheduleModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h2>Add Task</h2>
+            <button class="close-btn" (click)="closeScheduleModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" [(ngModel)]="scheduleForm.date" class="form-control" />
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="time" [(ngModel)]="scheduleForm.startTime" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Task / Important Work</label>
+                <textarea [(ngModel)]="scheduleForm.taskDescription" class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeScheduleModal()">Cancel</button>
+            <button class="btn btn-primary" (click)="saveSchedule()">Save Schedule</button>
+        </div>
+    </div>
+</div>
+

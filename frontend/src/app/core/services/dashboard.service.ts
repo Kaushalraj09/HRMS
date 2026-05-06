@@ -1,21 +1,22 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 import { AdminDashboardData, HrDashboardData } from '../models/dashboard.model';
-import { Phase1StoreService } from './phase1-store.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DashboardService {
-  constructor(private readonly store: Phase1StoreService) {}
+  private readonly apiUrl = 'http://localhost:8000/api/v1/dashboard';
+
+  constructor(private readonly http: HttpClient) {}
 
   getAdminDashboard(): Observable<AdminDashboardData> {
-    return of(this.store.getAdminDashboardData()).pipe(delay(250));
+    return this.http.get<AdminDashboardData>(`${this.apiUrl}/admin`);
   }
 
   getHrDashboard(): Observable<HrDashboardData> {
-    return of(this.store.getHrDashboardData()).pipe(delay(250));
+    return this.http.get<HrDashboardData>(`${this.apiUrl}/hr`);
   }
 }

@@ -15,6 +15,9 @@ import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
 
+import { AttendanceService } from '../../../../core/services/attendance.service';
+
+
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
@@ -27,12 +30,14 @@ export class HrDashboard implements OnInit {
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
   userName = 'HR User';
+  pendingRequests: any[] = [];
   
   constructor(
     private hrsidebarService: HrSidebarService,
     private router: Router,
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,
+    private readonly attendanceService: AttendanceService,
     private readonly cdr: ChangeDetectorRef
   ) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
@@ -66,6 +71,30 @@ export class HrDashboard implements OnInit {
       this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
       this.pieChartData2.datasets[0].data = [this.female, this.male];
       this.cdr.detectChanges();
+    });
+    this.loadPendingRequests();
+  }
+
+  loadPendingRequests() {
+    this.attendanceService.getPendingTimeOffRequests().subscribe(requests => {
+      this.pendingRequests = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  processRequest(requestId: number, action: string, type: string = 'Full') {
+    let approvedHours: number | undefined;
+    if (action === 'APPROVE') {
+      const req = this.pendingRequests.find(r => r.id === requestId);
+      approvedHours = req?.duration_hours;
+    }
+    
+    this.attendanceService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
+      next: () => {
+        alert(`Request ${action.toLowerCase()}d successfully`);
+        this.loadPendingRequests();
+      },
+      error: (err) => alert(err?.error?.detail || "Error processing request")
     });
   }
   toggleSidebar() {

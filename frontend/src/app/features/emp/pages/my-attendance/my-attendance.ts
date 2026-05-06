@@ -30,8 +30,19 @@ export class MyAttendance implements OnInit {
 
   ngOnInit(): void {
     this.attendanceService.getMyTimesheets().subscribe((rows: EmployeeTimesheetRow[]) => {
-      this.allSheets = rows;
-      this.timeSheets = rows;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const visibleRows = rows.filter(row =>
+        row.date <= todayIso
+        && (
+          row.entry !== '-'
+          || row.exit !== '-'
+          || !!row.scheduledStart
+          || !!row.scheduledEnd
+          || !!row.taskDescription
+        )
+      );
+      this.allSheets = visibleRows;
+      this.timeSheets = visibleRows;
       this.cdr.detectChanges();
     });
   }

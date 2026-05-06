@@ -1,25 +1,36 @@
-from sqlalchemy.orm import Session
 from datetime import date
-from app.models.user import User
-from app.models.hr_user import HrUser
-from app.models.employee import Employee
+
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.models.attendance import Attendance
+from app.models.employee import Employee
+from app.models.hr_user import HrUser
+from app.models.user import Role, User
+
+
+def _employee_query(db: Session):
+    return (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name) == "employee")
+    )
+
 
 def get_admin_dashboard_data(db: Session):
-    
     total_hrs = db.query(HrUser).count()
-    total_emps = db.query(Employee).count()
+    total_emps = _employee_query(db).count()
     active_users = db.query(User).filter(User.status == "Active").count()
-    
+
     today = date.today()
     present_today = db.query(Attendance).filter(
         Attendance.date == today,
         Attendance.status != "Not Marked"
     ).count()
 
-    
     recent_hrs = db.query(HrUser).order_by(HrUser.created_at.desc()).limit(6).all()
-    recent_emps = db.query(Employee).order_by(Employee.created_at.desc()).limit(6).all()
+    recent_emps = _employee_query(db).order_by(Employee.created_at.desc()).limit(6).all()
 
     return {
         "cards": [
@@ -38,7 +49,7 @@ def get_admin_dashboard_data(db: Session):
         ],
         "employees": [
             {
-                "primary": emp.full_name,
+                "primary": f"{emp.first_name} {emp.last_name}".strip(),
                 "secondary": emp.official_email,
                 "tertiary": f"{emp.department} · {emp.designation}",
                 "status": emp.status
@@ -46,27 +57,24 @@ def get_admin_dashboard_data(db: Session):
         ]
     }
 
+
 def get_hr_dashboard_data(db: Session):
     today = date.today()
-    
-    # 1. Attendance Metrics
-    total_emps = db.query(Employee).count()
+
+    total_emps = _employee_query(db).count()
     present = db.query(Attendance).filter(Attendance.date == today, Attendance.status == "Present").count()
     checked_in = db.query(Attendance).filter(Attendance.date == today, Attendance.status == "Checked In").count()
     checked_out = db.query(Attendance).filter(Attendance.date == today, Attendance.status == "Checked Out").count()
     not_marked = total_emps - (present + checked_in + checked_out)
 
-    # 2. Breakdowns
-    office_count = db.query(Employee).filter(Employee.work_location == "Main Office").count()
+    office_count = _employee_query(db).filter(Employee.work_location == "Main Office").count()
     remote_count = total_emps - office_count
-    
-    male_count = db.query(Employee).filter(Employee.gender == "Male").count()
-    female_count = db.query(Employee).filter(Employee.gender == "Female").count()
 
-    # 3. Recent Attendance (Last 8 records)
+    male_count = _employee_query(db).filter(Employee.gender == "Male").count()
+    female_count = _employee_query(db).filter(Employee.gender == "Female").count()
+
     recent_records = db.query(Attendance).order_by(Attendance.date.desc()).limit(8).all()
 
-    # 4. Format the response
     return {
         "totalEmployees": total_emps,
         "presentEmployees": present,
@@ -78,11 +86,11 @@ def get_hr_dashboard_data(db: Session):
         "quickStats": [
             {"total": db.query(HrUser).count(), "name": "HR Users"},
             {"total": 12, "name": "Departments"},
-            {"total": db.query(Employee).filter(Employee.status == "Active").count(), "name": "Active Employees"}
+            {"total": _employee_query(db).filter(Employee.status == "Active").count(), "name": "Active Employees"}
         ],
         "recentTimeSheets": [
             {
-                "employee": record.employee.full_name if record.employee else "Unknown",
+                "employee": f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown",
                 "date": record.date.strftime("%Y-%m-%d"),
                 "punchIn": record.check_in.strftime("%H:%M") if record.check_in else "-",
                 "punchOut": record.check_out.strftime("%H:%M") if record.check_out else "-",
@@ -93,4 +101,3 @@ def get_hr_dashboard_data(db: Session):
             } for record in recent_records
         ]
     }
-

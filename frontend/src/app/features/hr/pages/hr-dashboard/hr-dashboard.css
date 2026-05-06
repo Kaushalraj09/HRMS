@@ -361,47 +361,70 @@ canvas {
   margin-bottom: 20px;
 }
 
+/* Table and Badges are now handled globally */
 .table-container {
-  width: 100%;
-  overflow-x: auto;
-  padding: 15px;
+  padding: 0;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+
+/* Dropdown Styling */
+.dropdown {
+  position: relative;
+  display: inline-block;
+  margin-right: 10px;
 }
 
-th,
-td {
-  padding: 12px 16px;
-  border: 1px solid #e5e5e5;
-  font-size: 13px;
-}
-
-th {
-  font-weight: 600;
-  color: #333;
-}
-
-td {
-  color: #555;
-  font-weight: 500;
-}
-
-.status-badge {
-  padding: 4px 10px;
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 140px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 10;
   border-radius: 4px;
-  font-size: 11px;
+  right: 0;
+}
+
+.dropdown-content a {
+  color: #334155;
+  padding: 10px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-content a:hover {
+  background-color: #f1f5f9;
+  color: #2563eb;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.status-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-btn.work {
+  background-color: #3b82f6;
   color: white;
 }
 
-.status-badge.present {
-  background-color: #22c55e;
+.status-btn.absent {
+  background-color: #ef4444;
+  color: white;
 }
 
-.status-badge.absent {
-  background-color: #ef4444;
+.status-btn:hover {
+  opacity: 0.9;
 }

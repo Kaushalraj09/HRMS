@@ -88,30 +88,38 @@
                         <div class="card recent_projects">
                             <h3 class="project_title">Recent Employees</h3>
                             <div class="divider"></div>
-                            <div class="table">
-                                <div class="table-head">
-                                    <span>Employee</span>
-                                    <span>Email</span>
-                                    <span>Status</span>
-                                    <span>Action</span>
-                                </div>
-
-                                <div class="table-row" *ngFor="let project of employees">
-                                    <div class="project-info">
-                                        <strong>{{ project.primary }}</strong>
-                                        <p>{{ project.tertiary }}</p>
-                                    </div>
-                                    <div class="value">
-                                        {{ project.secondary }}
-                                    </div>
-                                    <div class="progress">
-                                        {{ project.status }}
-                                    </div>
-                                    <div class="action">
-                                        <a routerLink="/master-dashboard/employees">View list</a>
-                                    </div>
-                                </div>
+                            <div class="table-responsive">
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Email</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let project of employees">
+                                            <td>
+                                                <div class="project-info">
+                                                    <strong>{{ project.primary }}</strong>
+                                                    <p>{{ project.tertiary }}</p>
+                                                </div>
+                                            </td>
+                                            <td>{{ project.secondary }}</td>
+                                            <td>
+                                                <span class="status-badge" [ngClass]="project.status?.toLowerCase() || ''">
+                                                    {{ project.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a routerLink="/master-dashboard/employees" class="action-link">View list</a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
+
 
                             <div class="footer">
                                 <a routerLink="/master-dashboard/employees">View all employees</a>

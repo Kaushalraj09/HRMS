@@ -93,45 +93,11 @@
   background: #eff6ff;
 }
 
-.table-responsive {
-  overflow-x: auto;
+/* Table and Badges are now handled globally */
+.table-card {
+  padding: 0;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 14px 10px;
-  border-bottom: 1px solid #eef2f7;
-  text-align: left;
-}
-
-th {
-  color: #64748b;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.status-badge {
-  display: inline-flex;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-.status-badge.active {
-  color: #047857;
-  background: #dcfce7;
-}
-
-.status-badge.inactive {
-  color: #b45309;
-  background: #fef3c7;
-}
 
 .skeleton {
   background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9);

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -35,6 +35,7 @@ class Employee(Base):
     emergency_contact_number = Column(String(20))
     
     status = Column(String(20), default="Active") # Active, Inactive
+    timeoff_balance_hours = Column(Float, default=80.0)
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
