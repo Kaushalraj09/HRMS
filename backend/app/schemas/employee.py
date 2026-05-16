@@ -62,4 +62,15 @@ class EmployeeResponse(EmployeeBase):
 
     class Config:
         from_attributes = True
+
+
+class EmployeeCredentialsResponse(BaseModel):
+    employee_id: int
+    employee_code: str
+    employee_name: str
+    username: str
+    email: EmailStr
+    password: Optional[str] = None
+    temporary_password_hint: str
+    status: str
         

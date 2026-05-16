@@ -87,12 +87,12 @@ tbody tr:last-child td {
   line-height: 1rem;
 }
 
-.status-badge.present, .status-badge.active, .status-badge.green {
+.status-badge.present, .status-badge.active, .status-badge.green, .status-badge.approved {
   background-color: #dcfce7;
   color: #166534;
 }
 
-.status-badge.absent, .status-badge.inactive, .status-badge.red {
+.status-badge.absent, .status-badge.inactive, .status-badge.red, .status-badge.rejected {
   background-color: #fee2e2;
   color: #991b1b;
 }

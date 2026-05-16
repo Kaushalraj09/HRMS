@@ -29,6 +29,7 @@ export interface HrDashboardData {
   quickStats: Array<{ total: number; name: string }>;
   recentTimeSheets: Array<{
     employee: string;
+    employeeCode: string;
     date: string;
     punchIn: string;
     punchOut: string;

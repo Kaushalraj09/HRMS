@@ -91,6 +91,7 @@ def get_hr_dashboard_data(db: Session):
         "recentTimeSheets": [
             {
                 "employee": f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown",
+                "employeeCode": record.employee.employee_code if record.employee else "N/A",
                 "date": record.date.strftime("%Y-%m-%d"),
                 "punchIn": record.check_in.strftime("%H:%M") if record.check_in else "-",
                 "punchOut": record.check_out.strftime("%H:%M") if record.check_out else "-",

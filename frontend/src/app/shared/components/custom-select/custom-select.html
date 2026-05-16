@@ -1,5 +1,5 @@
 <div class="custom-select-container" [class.disabled]="disabled">
-  <div class="select-trigger" (click)="toggleDropdown()" [class.open]="isOpen">
+  <div class="select-trigger" [id]="inputId" (click)="toggleDropdown()" [class.open]="isOpen">
     <span class="selected-value" [class.placeholder-text]="!value && value !== ''">{{ currentLabel }}</span>
     <i class="fas fa-chevron-down caret" [class.rotated]="isOpen"></i>
   </div>

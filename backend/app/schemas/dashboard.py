@@ -23,6 +23,7 @@ class QuickStat(BaseModel):
 
 class RecentTimeSheet(BaseModel):
     employee: str
+    employeeCode: str
     date: str
     punchIn: str
     punchOut: str
@@ -41,4 +42,3 @@ class HrDashboardData(BaseModel):
     genderBreakdown: List[int]  
     quickStats: List[QuickStat]
     recentTimeSheets: List[RecentTimeSheet]
-

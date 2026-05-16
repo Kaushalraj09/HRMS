@@ -7,7 +7,7 @@
         <h1>Employees</h1>
         <p>{{ userRoleLabel }} can search, manage, and maintain employee records</p>
       </div>
-      <button class="btn-primary" routerLink="/hr-dashboard/employees/add">Add Employee</button>
+      <button type="button" class="btn-primary" (click)="openAddModal()">Add Employee</button>
     </div>
 
     <!-- Filters Section -->
@@ -76,17 +76,17 @@
                 <td>{{ emp.department }}</td>
                 <td>{{ emp.designation }}</td>
                 <td>
-                  <span class="status-badge" [ngClass]="emp.status?.toLowerCase() || ''">{{ emp.status }}</span>
+                  <span class="status-badge" [ngClass]="emp.status.toLowerCase()">{{ emp.status }}</span>
                 </td>
                 <td>
-                  <span class="login-badge" [ngClass]="emp.login?.toLowerCase() || ''">{{ emp.login }}</span>
+                  <span class="login-badge" [ngClass]="emp.login.toLowerCase()">{{ emp.login }}</span>
                 </td>
                 <td class="actions-col">
-                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" class="action-link">View</a>
+                  <button type="button" class="action-btn-link" (click)="openViewModal(emp)">View</button>
                   <span class="separator">&middot;</span>
-                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" [queryParams]="{ mode: 'edit' }" class="action-link">Edit</a>
+                  <button type="button" class="action-btn-link" (click)="openEditModal(emp)">Edit</button>
                   <span class="separator">&middot;</span>
-                  <a [routerLink]="['/hr-dashboard/employees', emp.id]" class="action-link">Credential</a>
+                  <button type="button" class="action-btn-link" (click)="openCredentialModal(emp)">Credential</button>
                 </td>
               </tr>
               
@@ -141,4 +141,28 @@
     </ng-container>
     
   </div>
+
+  <!-- Modals -->
+  <app-employee-add-modal 
+    *ngIf="activeModal === 'add'" 
+    (closed)="onModalClose($event)">
+  </app-employee-add-modal>
+
+  <app-employee-view-modal 
+    *ngIf="activeModal === 'view' && selectedEmployee" 
+    [employeeId]="selectedEmployee.id"
+    (closed)="onModalClose()">
+  </app-employee-view-modal>
+
+  <app-employee-edit-modal 
+    *ngIf="activeModal === 'edit' && selectedEmployee" 
+    [employeeId]="selectedEmployee.id"
+    (closed)="onModalClose($event)">
+  </app-employee-edit-modal>
+
+  <app-employee-credential-modal 
+    *ngIf="activeModal === 'credential' && selectedEmployee" 
+    [employeeId]="selectedEmployee.id"
+    (closed)="onModalClose()">
+  </app-employee-credential-modal>
 </div>

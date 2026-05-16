@@ -19,11 +19,11 @@
         <div class="dashboard-content-A">
           <div class="dashboard-content" style="min-width: 200px;">
             <label for="project">Department</label>
-            <app-custom-select [options]="projectOptions"></app-custom-select>
+            <app-custom-select inputId="project" [options]="projectOptions"></app-custom-select>
           </div>
           <div class="dashboard-content" style="min-width: 200px;">
             <label for="client">Work Mode</label>
-            <app-custom-select [options]="clientOptions"></app-custom-select>
+            <app-custom-select inputId="client" [options]="clientOptions"></app-custom-select>
           </div>
         </div>
         <!-- count box -->
@@ -191,6 +191,7 @@
               <table>
                 <thead>
                   <tr>
+                    <th>Emp ID</th>
                     <th>Employee</th>
                     <th>Date</th>
                     <th>Punch In</th>
@@ -203,6 +204,7 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let sheet of recentTimeSheets">
+                    <td><span style="color: #64748b; font-weight: 500;">{{ sheet.employeeCode }}</span></td>
                     <td>{{ sheet.employee }}</td>
                     <td>{{ sheet.date }}</td>
                     <td>{{ sheet.punchIn }}</td>
@@ -222,7 +224,7 @@
         </div>
 
         <!-- Time Off Management Section -->
-        <div class="time_sheet">
+        <!-- <div class="time_sheet">
           <div class="card recent_time">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span style="color: #2563eb; font-weight: 700;">Time Off Management</span>
@@ -276,7 +278,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
         </ng-container>
 
       </div>

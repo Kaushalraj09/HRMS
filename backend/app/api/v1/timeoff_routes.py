@@ -36,7 +36,7 @@ def get_remaining_hours(
     return {"remaining_hours": today_state["remainingHours"]}
 
 @router.post("/request", response_model=TimeOffRequestResponse)
-def request_timeoff(
+async def request_timeoff(
     request: TimeOffRequestCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
@@ -51,7 +51,27 @@ def request_timeoff(
             detail="Only employees can request time-off"
         )
     
-    return timeoff_service.request_timeoff(db, employee.id, request)
+    created = timeoff_service.request_timeoff(db, employee.id, request)
+
+    # Notify connected HR/Admin dashboards to refresh pending requests.
+    await manager.broadcast(
+        {
+            "type": "TIMEOFF_REQUEST",
+            "message": f"New time off request from employee #{employee.id}",
+            "request": {
+                "id": created.id,
+                "employee_id": created.employee_id,
+                "date": str(created.date),
+                "leave_type": created.leave_type,
+                "start_time": str(created.start_time) if created.start_time else None,
+                "end_time": str(created.end_time) if created.end_time else None,
+                "duration_hours": created.duration_hours,
+                "status": created.status,
+                "employee_name": created.employee_name,
+            },
+        }
+    )
+    return created
 
 
 @router.post("/apply", response_model=TimeOffApplyResponse)
@@ -142,6 +162,22 @@ def get_pending_requests(
             detail="Not authorized to view pending requests"
         )
     return timeoff_service.get_pending_requests(db)
+    
+@router.get("/history", response_model=List[TimeOffRequestResponse])
+def get_processed_requests(
+    limit: int = 20,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get processed time-off requests (Approved/Rejected) (HR/Admin only).
+    """
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not authorized to view request history"
+        )
+    return timeoff_service.get_processed_requests(db, limit)
 
 @router.put("/approve/{request_id}", response_model=TimeOffRequestResponse)
 async def approve_request(

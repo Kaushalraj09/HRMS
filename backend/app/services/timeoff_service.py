@@ -24,22 +24,42 @@ def get_timeoff_by_date(db: Session, employee_id: int, target_date: date):
     ).first()
 
 def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate):
+    # For same-day requests, user must be actively working (per product rule).
+    if request.date == date.today():
+        today_state = get_today_state(db, employee_id)
+        if not today_state["isWorking"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Time off can only be requested while you are working.",
+            )
+
     if request.leave_type == "Full-Day":
-        duration_hours = 8.0
+        duration_hours = float(TOTAL_SHIFT_WORKING_HOURS)
     elif request.leave_type == "Half-Day":
         duration_hours = 4.0
     else:
         duration_hours = request.duration_hours
 
-    if duration_hours < 0.5 or duration_hours > 8.0:
+    if duration_hours < 0.5 or duration_hours > float(TOTAL_SHIFT_WORKING_HOURS):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Approved time should be between 30 minutes (0.5 hrs) and 8 hours."
+            detail=f"Requested time should be between 30 minutes (0.5 hrs) and {TOTAL_SHIFT_WORKING_HOURS:.0f} hours."
         )
+
+    # Prevent requesting more than remaining shift balance for today.
+    if request.date == date.today():
+        today_state = get_today_state(db, employee_id)
+        remaining_hours = float(today_state["remainingSeconds"]) / 3600.0
+        if duration_hours > remaining_hours + 1e-6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Requested hours exceed remaining shift balance ({remaining_hours:.2f} h left).",
+            )
 
     existing = db.query(TimeOffRequest).filter(
         TimeOffRequest.employee_id == employee_id,
-        TimeOffRequest.date == request.date
+        TimeOffRequest.date == request.date,
+        TimeOffRequest.status != "Rejected"
     ).first()
     
     if existing:
@@ -61,17 +81,42 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
-    return new_request
+    
+    # Add employee_name and employee_code to the response object
+    resp = new_request
+    resp.employee_name = f"{new_request.employee.first_name} {new_request.employee.last_name}"
+    resp.employee_code = new_request.employee.employee_code
+    return resp
 
 def get_my_timeoffs(db: Session, employee_id: int):
-    return db.query(TimeOffRequest).filter(
+    results = db.query(TimeOffRequest).filter(
         TimeOffRequest.employee_id == employee_id
     ).order_by(TimeOffRequest.date.desc()).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+    return results
 
 def get_pending_requests(db: Session):
-    return db.query(TimeOffRequest).filter(
+    results = db.query(TimeOffRequest).filter(
         TimeOffRequest.status == "Pending"
     ).order_by(TimeOffRequest.created_at.desc()).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+    return results
+
+def get_processed_requests(db: Session, limit: int = 20):
+    results = db.query(TimeOffRequest).filter(
+        TimeOffRequest.status != "Pending"
+    ).order_by(TimeOffRequest.updated_at.desc()).limit(limit).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+    return results
 
 def approve_request(db: Session, request_id: int, action: str, admin_user_id: int, comments: str = None, approved_duration_hours: float = None):
     req = db.query(TimeOffRequest).filter(TimeOffRequest.id == request_id).first()
@@ -90,10 +135,11 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Approved duration must be > 0 and <= 8.")
             req.duration_hours = approved_duration_hours
             
-        if employee.timeoff_balance_hours < req.duration_hours:
+        current_balance = employee.timeoff_balance_hours if employee.timeoff_balance_hours is not None else 80.0
+        if current_balance < req.duration_hours:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient time-off balance.")
             
-        employee.timeoff_balance_hours -= req.duration_hours
+        employee.timeoff_balance_hours = current_balance - req.duration_hours
         req.status = "Approved"
     elif action.upper() == "REJECT":
         req.status = "Rejected"
@@ -109,6 +155,8 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     db.add(log)
     db.commit()
     db.refresh(req)
+    req.employee_name = f"{req.employee.first_name} {req.employee.last_name}"
+    req.employee_code = req.employee.employee_code
     return req
 
 
@@ -218,4 +266,7 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     refreshed_today = get_today_state(db, employee_id)
     remaining_seconds_today = int(refreshed_today["remainingSeconds"])
     remaining_today = round(remaining_seconds_today / 3600, 2)
+    
+    new_request.employee_name = f"{new_request.employee.first_name} {new_request.employee.last_name}"
+    new_request.employee_code = new_request.employee.employee_code
     return new_request, approved_today, remaining_today, approved_seconds_today, remaining_seconds_today

@@ -56,7 +56,7 @@ export interface EmployeeTimelineEvent {
   title: string;
   location: string;
   taskDescription?: string;
-  type?: 'schedule' | 'punch-in' | 'punch-out';
+  type?: 'schedule' | 'punch-in' | 'punch-out' | 'time-off';
 }
 
 export interface TodayAttendanceState {

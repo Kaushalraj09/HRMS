@@ -24,6 +24,7 @@ app = FastAPI(title=settings.PROJECT_NAME)
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    print(f"WebSocket connection attempt from user {user_id}")
     await manager.connect(websocket, user_id)
     try:
         while True:

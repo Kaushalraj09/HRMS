@@ -1,0 +1,147 @@
+<div class="modal-overlay" (click)="close()">
+  <div class="modal-container scrollable-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-content">
+        <h2>Edit Employee</h2>
+        <p *ngIf="employeeDetail">
+          {{ employeeDetail.employee.employeeCode }} · {{ employeeDetail.employee.name }}
+        </p>
+      </div>
+      <button class="close-btn" (click)="close()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <ng-container *ngIf="isLoading">
+        <div class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Processing...</p>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="!isLoading && errorMessage">
+        <div class="error-message alert-box" style="color: red; border-color: red; background-color: #fef2f2; padding: 16px; border-radius: 8px; display: flex; gap: 12px; margin-bottom: 16px;">
+          <i class="fas fa-exclamation-circle" style="margin-top: 3px;"></i>
+          <p style="margin: 0;">{{ errorMessage }}</p>
+        </div>
+      </ng-container>
+
+      <form [formGroup]="form" (ngSubmit)="save()" *ngIf="!isLoading && !errorMessage && employeeDetail">
+        <!-- Personal Info -->
+        <div class="form-section" formGroupName="personalInfo">
+          <h3>Personal Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="firstName">First Name <span class="required">*</span></label>
+              <input type="text" id="firstName" name="firstName" formControlName="firstName" class="form-input" [class.error-input]="isInvalid('personalInfo', 'firstName')">
+              <span class="error-text" *ngIf="isInvalid('personalInfo', 'firstName')">First name is required</span>
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name <span class="required">*</span></label>
+              <input type="text" id="lastName" name="lastName" formControlName="lastName" class="form-input" [class.error-input]="isInvalid('personalInfo', 'lastName')">
+              <span class="error-text" *ngIf="isInvalid('personalInfo', 'lastName')">Last name is required</span>
+            </div>
+            <div class="form-group">
+              <label for="gender">Gender</label>
+              <app-custom-select id="gender" name="gender" inputId="gender" formControlName="gender" [options]="genderOptions" placeholder="Select Gender"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="dob">Date of Birth <span class="required">*</span></label>
+              <input type="date" id="dob" name="dob" formControlName="dob" class="form-input" [class.error-input]="isInvalid('personalInfo', 'dob')" readonly>
+              <span class="error-text" *ngIf="personalInfo.get('dob')?.errors?.['futureDate'] && (personalInfo.get('dob')?.dirty || personalInfo.get('dob')?.touched)">
+                DOB must be in the past
+              </span>
+              <span class="error-text" *ngIf="personalInfo.get('dob')?.errors?.['required'] && (personalInfo.get('dob')?.dirty || personalInfo.get('dob')?.touched)">
+                DOB is required
+              </span>
+            </div>
+            <div class="form-group">
+              <label for="maritalStatus">Marital Status</label>
+              <app-custom-select id="maritalStatus" name="maritalStatus" inputId="maritalStatus" formControlName="maritalStatus" [options]="maritalOptions" placeholder="Select Status"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="bloodGroup">Blood Group</label>
+              <app-custom-select id="bloodGroup" name="bloodGroup" inputId="bloodGroup" formControlName="bloodGroup" [options]="bloodOptions" placeholder="Select Blood Group"></app-custom-select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employment Info -->
+        <div class="form-section" formGroupName="employmentInfo">
+          <h3>Employment Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="employeeType">Employee Type</label>
+              <app-custom-select id="employeeType" name="employeeType" inputId="employeeType" formControlName="employeeType" [options]="empTypeOptions" placeholder="Select Type"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="department">Department</label>
+              <app-custom-select id="department" name="department" inputId="department" formControlName="department" [options]="departmentOptions" placeholder="Select Department"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="designation">Designation</label>
+              <input type="text" id="designation" name="designation" formControlName="designation" class="form-input" placeholder="e.g. Software Engineer">
+            </div>
+            <div class="form-group">
+              <label for="workLocation">Work Location</label>
+              <input type="text" id="workLocation" name="workLocation" formControlName="workLocation" class="form-input" placeholder="e.g. New York Office">
+            </div>
+            <div class="form-group">
+              <label for="shiftType">Shift Type</label>
+              <app-custom-select id="shiftType" name="shiftType" inputId="shiftType" formControlName="shiftType" [options]="shiftOptions" placeholder="Select Shift"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="doj">Date of Joining</label>
+              <input type="date" id="doj" name="doj" formControlName="doj" class="form-input" readonly>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Info -->
+        <div class="form-section" formGroupName="contactInfo">
+          <h3>Contact Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="officialEmail">Official Email <span class="required">*</span></label>
+              <input type="email" id="officialEmail" name="officialEmail" formControlName="officialEmail" class="form-input" [class.error-input]="isInvalid('contactInfo', 'officialEmail')" placeholder="name@company.com">
+              <span class="error-text" *ngIf="isInvalid('contactInfo', 'officialEmail')">Valid official email is required</span>
+            </div>
+            <div class="form-group">
+              <label for="personalEmail">Personal Email</label>
+              <input type="email" id="personalEmail" name="personalEmail" formControlName="personalEmail" class="form-input" [class.error-input]="isInvalid('contactInfo', 'personalEmail')" placeholder="name@domain.com">
+              <span class="error-text" *ngIf="isInvalid('contactInfo', 'personalEmail')">Invalid email format</span>
+            </div>
+            <div class="form-group">
+              <label for="mobile">Mobile Number <span class="required">*</span></label>
+              <input type="tel" id="mobile" name="mobile" formControlName="mobile" class="form-input" [class.error-input]="isInvalid('contactInfo', 'mobile')" placeholder="10-digit number">
+              <span class="error-text" *ngIf="isInvalid('contactInfo', 'mobile')">Valid 10-digit mobile is required</span>
+            </div>
+            <div class="form-group">
+              <label for="alternateMobile">Alternate Number</label>
+              <input type="tel" id="alternateMobile" name="alternateMobile" formControlName="alternateMobile" class="form-input" [class.error-input]="isInvalid('contactInfo', 'alternateMobile')">
+              <span class="error-text" *ngIf="isInvalid('contactInfo', 'alternateMobile')">Must be 10 digits</span>
+            </div>
+            <div class="form-group">
+              <label for="emergencyContactName">Emergency Contact Name</label>
+              <input type="text" id="emergencyContactName" name="emergencyContactName" formControlName="emergencyContactName" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="emergencyContactNumber">Emergency Contact Number</label>
+              <input type="tel" id="emergencyContactNumber" name="emergencyContactNumber" formControlName="emergencyContactNumber" class="form-input" [class.error-input]="isInvalid('contactInfo', 'emergencyContactNumber')">
+              <span class="error-text" *ngIf="isInvalid('contactInfo', 'emergencyContactNumber')">Must be 10 digits</span>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="close()" [disabled]="isSaving">Cancel</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="form.invalid || isSaving">
+        <i class="fas fa-spinner fa-spin" *ngIf="isSaving" style="margin-right: 6px;"></i>
+        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>

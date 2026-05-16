@@ -33,9 +33,7 @@ export const routes: Routes = [
     data: { roles: ['admin', 'hr'] },
     children: [
       { path: 'attendance', component: AttendanceComponent },
-      { path: 'employees', component: Employees },
-      { path: 'employees/add', component: AddEmployeeComponent },
-      { path: 'employees/:employeeId', component: EmployeeDetailComponent }
+      { path: 'employees', component: Employees }
     ]
   },
   { 

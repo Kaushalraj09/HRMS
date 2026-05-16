@@ -13,10 +13,7 @@ import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AuthService } from '../../../../core/services/auth.service';
-
-
 import { AttendanceService } from '../../../../core/services/attendance.service';
-
 
 @Component({
   selector: 'app-hr-dashboard',
@@ -31,6 +28,8 @@ export class HrDashboard implements OnInit {
   isDashboardHome: boolean = true;
   userName = 'HR User';
   pendingRequests: any[] = [];
+  processedRequests: any[] = [];
+  recentTimeSheets: any[] = [];
   
   constructor(
     private hrsidebarService: HrSidebarService,
@@ -73,11 +72,30 @@ export class HrDashboard implements OnInit {
       this.cdr.detectChanges();
     });
     this.loadPendingRequests();
+    this.loadProcessedRequests();
+
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.attendanceService.connectWebSocket(user.id);
+    }
+
+    this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
+      if (event?.type === 'TIMEOFF_REQUEST') {
+        this.loadPendingRequests();
+      }
+    });
   }
 
   loadPendingRequests() {
     this.attendanceService.getPendingTimeOffRequests().subscribe(requests => {
       this.pendingRequests = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  loadProcessedRequests() {
+    this.attendanceService.getProcessedTimeOffRequests().subscribe(requests => {
+      this.processedRequests = requests;
       this.cdr.detectChanges();
     });
   }
@@ -93,19 +111,24 @@ export class HrDashboard implements OnInit {
       next: () => {
         alert(`Request ${action.toLowerCase()}d successfully`);
         this.loadPendingRequests();
+        this.loadProcessedRequests();
       },
       error: (err) => alert(err?.error?.detail || "Error processing request")
     });
   }
+
   toggleSidebar() {
     this.hrsidebarService.toggleSidebar();
   }
+
   onSearch(event: any) {
     console.log('Search:', event);
   }
+
   openProfile() {
     console.log('Opening profile');
   }
+
   openNotifications() {
     console.log('Opening notifications');
   }
@@ -125,14 +148,7 @@ export class HrDashboard implements OnInit {
   get projectOptions() { return [{label: 'Choose a project...', value: ''}, ...this.projects.map(p => ({label: p.name, value: p.id}))]; }
   get clientOptions() { return [{label: 'Choose a client...', value: ''}, ...this.clients.map(c => ({label: c.name, value: c.id}))]; }
 
-  kpis = [
-    { label: 'TOTAL EMPLOYEES', value: 23, icon: 'users', accent: 'green' as const },
-    { label: 'PRESENT EMPLOYEES', value: 23, icon: 'userCheck', accent: 'green' as const },
-    { label: 'CHECKED IN', value: 0, icon: 'userClock', accent: 'blue' as const },
-    { label: 'CHECKED OUT', value: 0, icon: 'userCheck', accent: 'gold' as const },
-    { label: 'NOT MARKED', value: 0, icon: 'userX', accent: 'red' as const },
-    { label: 'HR USERS', value: 1, icon: 'building', accent: 'blue' as const },
-  ];
+  kpis: any[] = [];
 
 
   events = [
@@ -365,17 +381,5 @@ export class HrDashboard implements OnInit {
     }
   };
 
-  stats = [
-    { total: '0', name: 'HR Users' },
-    { total: '0', name: 'Departments' },
-    { total: '0', name: 'Active Employees' }
-  ];
-
-  // recent time sheets
-  recentTimeSheets = [
-    { employee: 'Kaushal Raj', date: '10-03-2026', punchIn: '09:30 AM', punchOut: '06:00 PM', breakTime: '1.00 hrs', overtime: '0.00 hrs', totalHours: '7.30 hrs', status: 'Present' },
-    { employee: 'Rishu ', date: '10-03-2026', punchIn: '00:00 AM', punchOut: '00:00 PM', breakTime: '00.00 hrs', overtime: '00.00 hrs', totalHours: '00.00 hrs', status: 'Absent' },
-    { employee: 'Ankit Singh', date: '10-03-2026', punchIn: '09:30 AM', punchOut: '06:00 PM', breakTime: '1.00 hrs', overtime: '0.00 hrs', totalHours: '7.30 hrs', status: 'Present' }
-  ];
-
+  stats: any[] = [];
 }

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -9,13 +9,26 @@ import { EmployeeService } from '../../../../core/services/employee.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { AuthService } from '../../../../core/services/auth.service';
 
+import { EmployeeViewModalComponent } from './modals/employee-view-modal/employee-view-modal';
+import { EmployeeEditModalComponent } from './modals/employee-edit-modal/employee-edit-modal';
+import { EmployeeCredentialModalComponent } from './modals/employee-credential-modal/employee-credential-modal';
+import { EmployeeAddModalComponent } from './modals/employee-add-modal/employee-add-modal';
+
 @Component({
   selector: 'app-employees',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, RouterModule],
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule, 
+    CustomSelectComponent, 
+    RouterModule,
+    EmployeeViewModalComponent,
+    EmployeeEditModalComponent,
+    EmployeeCredentialModalComponent,
+    EmployeeAddModalComponent
+  ],
   templateUrl: './employees.html',
-  styleUrl: './employees.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './employees.css'
 })
 export class Employees implements OnInit {
   searchControl = new FormControl('');
@@ -35,15 +48,20 @@ export class Employees implements OnInit {
   pageSize = 10;
   
   isLoading$ = new BehaviorSubject<boolean>(true);
-  
   employeesData$!: Observable<PaginatedResult<Employee>>;
-  
   paginationArray$!: Observable<number[]>;
 
   searchTrigger$ = new BehaviorSubject<boolean>(true);
   userRoleLabel = 'HR';
 
-  constructor(private employeeService: EmployeeService, private readonly authService: AuthService) {}
+  // Modal State
+  activeModal: 'add' | 'view' | 'edit' | 'credential' | null = null;
+  selectedEmployee: Employee | null = null;
+
+  constructor(
+    private employeeService: EmployeeService, 
+    private readonly authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.userRoleLabel = this.authService.getCurrentUser()?.role === 'admin' ? 'Admin' : 'HR';
@@ -93,5 +111,34 @@ export class Employees implements OnInit {
 
   trackById(index: number, employee: Employee): string {
     return employee.id;
+  }
+
+  openViewModal(employee: Employee): void {
+    this.selectedEmployee = employee;
+    this.activeModal = 'view';
+  }
+
+  openEditModal(employee: Employee): void {
+    console.log('Employees: opening edit modal for employee:', employee?.id, employee);
+    this.selectedEmployee = employee;
+    this.activeModal = 'edit';
+  }
+
+  openCredentialModal(employee: Employee): void {
+    console.log('Employees: opening credential modal for employee:', employee?.id, employee);
+    this.selectedEmployee = employee;
+    this.activeModal = 'credential';
+  }
+
+  openAddModal(): void {
+    this.activeModal = 'add';
+  }
+
+  onModalClose(refresh: boolean = false): void {
+    this.activeModal = null;
+    this.selectedEmployee = null;
+    if (refresh) {
+      this.onSearch();
+    }
   }
 }

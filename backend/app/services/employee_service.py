@@ -49,6 +49,27 @@ def list_employees(db: Session, skip: int = 0, limit: int = 100):
 def get_employee_by_id(db: Session, employee_id: int):
     return _employee_query(db).filter(Employee.id == employee_id).first()
 
+def get_employee_credentials(db: Session, employee_id: int):
+    employee = _employee_query(db).filter(Employee.id == employee_id).first()
+    if not employee:
+        return None
+
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if not user:
+        return None
+
+    default_password = "emp123" if user.email == "emp@hrms.com" else "Employee@123"
+    return {
+        "employee_id": employee.id,
+        "employee_code": employee.employee_code,
+        "employee_name": f"{employee.first_name} {employee.last_name}".strip(),
+        "username": user.email,
+        "email": user.email,
+        "password": default_password,
+        "temporary_password_hint": "Default temporary password. Ask the employee to change it after first login.",
+        "status": user.status or employee.status or "Active",
+    }
+
 def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
     employee = _employee_query(db).filter(Employee.id == employee_id).first()
     if not employee:

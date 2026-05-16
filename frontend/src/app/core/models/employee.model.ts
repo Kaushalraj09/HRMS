@@ -72,3 +72,14 @@ export interface EmployeeDetailView {
   loginEmail: string;
   temporaryPasswordHint: string;
 }
+
+export interface EmployeeCredentials {
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  username: string;
+  email: string;
+  password: string | null;
+  temporaryPasswordHint: string;
+  status: EmployeeStatus;
+}

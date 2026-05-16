@@ -149,15 +149,20 @@
   gap: 8px;
 }
 
-.action-link {
+.action-btn-link {
+  background: none;
+  border: none;
+  padding: 0;
   color: #2563eb;
-  text-decoration: none;
+  font-size: 0.875rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
-.action-link:hover {
+.action-btn-link:hover {
+  color: #1e40af;
   text-decoration: underline;
-  color: #1d4ed8;
 }
 
 .separator {

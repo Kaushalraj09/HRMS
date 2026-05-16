@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
 import { CalendarEvent } from 'calendar-utils';
-import { finalize, Subscription } from 'rxjs';
+import { finalize, Subscription, interval, forkJoin } from 'rxjs';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -103,6 +103,7 @@ export class EmpDashboard implements OnDestroy {
   timeOffEnd = '10:00';
   isTimeOffSubmitting = false;
   timeOffInlineError = '';
+  timeOffInlineSuccess = '';
 
   timeSheets: EmployeeTimesheetRow[] = [];
   attendanceSummary: EmployeeAttendanceSummaryItem[] = [];
@@ -167,6 +168,7 @@ export class EmpDashboard implements OnDestroy {
     );
 
     this.initialize();
+    this.startClock();
   }
 
   ngOnDestroy(): void {
@@ -330,6 +332,7 @@ export class EmpDashboard implements OnDestroy {
 
   submitInlineTimeOff(): void {
     this.timeOffInlineError = '';
+    this.timeOffInlineSuccess = '';
     if (!this.canSubmitInlineTimeOff) {
       this.timeOffInlineError = this.isPunchedIn
         ? 'Requested time must fit inside your remaining shift balance.'
@@ -340,20 +343,25 @@ export class EmpDashboard implements OnDestroy {
     this.isTimeOffSubmitting = true;
     this.subscriptions.add(
       this.attendanceService
-        .applyTimeOffInline({
-          date: this.timeOffDate,
-          leave_type: this.timeOffLeaveType,
-          start_time: this.timeOffLeaveType === 'Full Day' ? null : this.timeOffStart,
-          end_time: this.timeOffLeaveType === 'Full Day' ? null : this.timeOffEnd
-        })
+        .requestTimeOff(
+          this.timeOffDate,
+          this.timeOffLeaveType === 'Full Day' ? 'Full-Day' : 'Hourly',
+          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffStart,
+          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffEnd,
+          this.previewRequestedSeconds / 3600
+        )
         .pipe(finalize(() => { this.isTimeOffSubmitting = false; }))
         .subscribe({
-          next: (response) => {
-            this.approvedHours = safeNumber(response.approved_hours_today, 0);
-            this.remainingHours = safeNumber(response.remaining_hours_today, 0);
-            this.approvedSecondsToday = safeNumber(response.approved_seconds_today, 0);
-            this.remainingSecondsToday = safeNumber(response.remaining_seconds_today, 0);
+          next: () => {
+            this.timeOffInlineSuccess = 'Time off request submitted to HR for approval.';
             this.loadDashboardData();
+            this.cdr.detectChanges();
+            
+            // Clear success message after 5 seconds
+            setTimeout(() => {
+              this.timeOffInlineSuccess = '';
+              this.cdr.detectChanges();
+            }, 5000);
           },
           error: (error) => {
             const detail = error?.error?.detail;
@@ -448,9 +456,14 @@ export class EmpDashboard implements OnDestroy {
     );
 
     this.subscriptions.add(
-      this.attendanceService.getMyTimesheets().subscribe((rows: EmployeeTimesheetRow[]) => {
+      forkJoin({
+        timesheets: this.attendanceService.getMyTimesheets(),
+        timeoffs: this.attendanceService.getMyTimeOffRequests()
+      }).subscribe(({ timesheets, timeoffs }) => {
         const todayIso = this.toIsoDate(new Date());
-        this.timeSheets = rows.filter((row) =>
+        
+        // Filter timesheets for display in the table (history only)
+        this.timeSheets = timesheets.filter((row) =>
           row.date <= todayIso
           && (
             row.entry !== '-'
@@ -461,7 +474,8 @@ export class EmpDashboard implements OnDestroy {
           )
         );
 
-        this.timelineEvents = rows.flatMap((row: EmployeeTimesheetRow) => {
+        // Map timesheets to timeline events
+        const timesheetEvents = timesheets.flatMap((row: EmployeeTimesheetRow) => {
           const events: EmployeeTimelineEvent[] = [];
 
           if (row.scheduledStart || row.scheduledEnd || row.taskDescription) {
@@ -493,12 +507,31 @@ export class EmpDashboard implements OnDestroy {
           return events;
         });
 
+        // Map time-off requests to timeline events (Approved/Active/Completed)
+        const timeoffEvents: EmployeeTimelineEvent[] = timeoffs
+          .filter(req => ['Approved', 'Active', 'Completed'].includes(req.status))
+          .map(req => {
+            let timeLabel = 'Full Day';
+            if (req.leave_type === 'Hourly' && req.start_time && req.end_time) {
+              timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
+            }
+            return {
+              date: req.date,
+              time: timeLabel,
+              title: `Time Off (${req.leave_type})`,
+              location: 'Remote',
+              type: 'time-off'
+            };
+          });
+
+        this.timelineEvents = [...timesheetEvents, ...timeoffEvents];
+
         this.calendarEvents = this.timelineEvents.map((event) => ({
           start: new Date(`${event.date}T00:00:00`),
           title: event.title,
           color: {
-            primary: event.type === 'schedule' ? '#2563eb' : '#16a34a',
-            secondary: event.type === 'schedule' ? '#dbeafe' : '#dcfce7'
+            primary: event.type === 'schedule' ? '#2563eb' : (event.type === 'time-off' ? '#9333ea' : '#16a34a'),
+            secondary: event.type === 'schedule' ? '#dbeafe' : (event.type === 'time-off' ? '#f3e8ff' : '#dcfce7')
           }
         }));
 
@@ -550,5 +583,13 @@ export class EmpDashboard implements OnDestroy {
     const hours = Math.floor(safeMinutes / 60);
     const mins = safeMinutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  }
+
+  private startClock(): void {
+    this.subscriptions.add(
+      interval(1000).subscribe(() => {
+        this.currentDate = new Date();
+      })
+    );
   }
 }
