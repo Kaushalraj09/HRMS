@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 
-import { Employee, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
+import { Employee, EmployeeCredentials, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
 
 interface BackendEmployee {
   id: number;
@@ -51,6 +51,17 @@ interface BackendEmployeePayload {
   status: 'Active' | 'Inactive';
 }
 
+interface BackendEmployeeCredentials {
+  employee_id: number;
+  employee_code: string;
+  employee_name: string;
+  username: string;
+  email: string;
+  password: string | null;
+  temporary_password_hint: string;
+  status: 'Active' | 'Inactive';
+}
+
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
   private readonly apiUrl = 'http://localhost:8000/api/v1/employees';
@@ -72,8 +83,18 @@ export class EmployeeService {
   }
 
   getEmployeeById(employeeId: string): Observable<EmployeeDetailView | null> {
-    return this.http.get<BackendEmployee>(`${this.apiUrl}/${employeeId}`).pipe(
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    console.log('EmployeeService.getEmployeeById request:', normalizedId);
+
+    return this.http.get<BackendEmployee>(`${this.apiUrl}/${normalizedId}`).pipe(
       map(row => {
+        console.log('EmployeeService.getEmployeeById response:', row);
+        if (!row || row.id == null) {
+          throw new Error('Employee detail response was empty or invalid.');
+        }
         const employee = this.mapEmployee(row);
         return {
           employee,
@@ -81,6 +102,42 @@ export class EmployeeService {
           loginEmail: employee.officialEmail,
           temporaryPasswordHint: 'Temp password set during account creation'
         };
+      }),
+      catchError(error => {
+        console.error('EmployeeService.getEmployeeById error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getEmployeeCredentials(employeeId: string): Observable<EmployeeCredentials> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    console.log('EmployeeService.getEmployeeCredentials request:', normalizedId);
+
+    return this.http.get<BackendEmployeeCredentials>(`${this.apiUrl}/${normalizedId}/credentials`).pipe(
+      map(row => {
+        console.log('EmployeeService.getEmployeeCredentials response:', row);
+        if (!row || row.employee_id == null) {
+          throw new Error('Credentials response was empty or invalid.');
+        }
+
+        return {
+          employeeId: String(row.employee_id),
+          employeeCode: row.employee_code || '',
+          employeeName: row.employee_name || '',
+          username: row.username || row.email || '',
+          email: row.email || '',
+          password: row.password || null,
+          temporaryPasswordHint: row.temporary_password_hint || 'No password information available',
+          status: row.status
+        };
+      }),
+      catchError(error => {
+        console.error('EmployeeService.getEmployeeCredentials error:', error);
+        return throwError(() => error);
       })
     );
   }
@@ -99,9 +156,26 @@ export class EmployeeService {
   }
 
   updateEmployee(employeeId: string, payload: EmployeePayload): Observable<{ success: boolean; message: string }> {
-    return this.http.put<BackendEmployee>(`${this.apiUrl}/${employeeId}`, this.toBackendPayload(payload)).pipe(
-      map(() => ({ success: true, message: 'Employee updated successfully' }))
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    console.log('EmployeeService.updateEmployee request:', normalizedId, payload);
+
+    return this.http.put<BackendEmployee>(`${this.apiUrl}/${normalizedId}`, this.toBackendPayload(payload)).pipe(
+      map(row => {
+        console.log('EmployeeService.updateEmployee response:', row);
+        return { success: true, message: 'Employee updated successfully' };
+      }),
+      catchError(error => {
+        console.error('EmployeeService.updateEmployee error:', error);
+        return throwError(() => error);
+      })
     );
+  }
+
+  private normalizeEmployeeId(employeeId: string): string {
+    return String(employeeId ?? '').trim();
   }
 
   private filterEmployees(rows: Employee[], search: string, department: string, type: string, status: string): Employee[] {

@@ -79,18 +79,37 @@ export class AttendanceService {
 
   connectWebSocket(userId: string | number) {
     if (this.socket) {
+      this.socket.onclose = () => {}; // Clear previous onclose
       this.socket.close();
     }
-    this.socket = new WebSocket(`ws://localhost:8000/ws/${userId}`);
+
+    const wsUrl = `ws://localhost:8000/ws/${userId}`;
+    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+    
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('WebSocket connection established successfully');
+    };
+
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'TIMEOFF_UPDATE') {
+        if (data.type === 'TIMEOFF_UPDATE' || data.type === 'TIMEOFF_REQUEST') {
           this.timeoffUpdateSubject.next(data);
         }
       } catch (e) {
         console.error('Error parsing WebSocket message', e);
       }
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('WebSocket Error:', error);
+    };
+
+    this.socket.onclose = (event) => {
+      console.warn(`WebSocket closed: ${event.code} ${event.reason}. Retrying in 5s...`);
+      setTimeout(() => this.connectWebSocket(userId), 5000);
     };
   }
 
@@ -172,6 +191,10 @@ export class AttendanceService {
     });
   }
 
+  getMyTimeOffRequests(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.timeoffApiUrl}/my-requests`);
+  }
+
   requestTimeOff(
     date: string,
     leaveType: string,
@@ -205,6 +228,10 @@ export class AttendanceService {
 
   getPendingTimeOffRequests(): Observable<any[]> {
     return this.http.get<any[]>(`${this.timeoffApiUrl}/pending`);
+  }
+
+  getProcessedTimeOffRequests(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.timeoffApiUrl}/history`);
   }
 
   approveTimeOffRequest(requestId: number, action: string, approvedHours?: number, comments?: string): Observable<any> {

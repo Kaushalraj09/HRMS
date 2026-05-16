@@ -14,12 +14,14 @@ class TimeOffRequestResponse(BaseModel):
 
     id: int
     employee_id: int
+    employee_code: Optional[str] = None
     date: date
     leave_type: str
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     duration_hours: float
     status: str
+    employee_name: Optional[str] = None
 
 
 class TimeOffApplyPayload(BaseModel):
@@ -36,6 +38,7 @@ class TimeOffApplyResponse(BaseModel):
 
     id: int
     employee_id: int
+    employee_code: Optional[str] = None
     date: date
     leave_type: str
     start_time: Optional[time] = None
@@ -46,3 +49,4 @@ class TimeOffApplyResponse(BaseModel):
     remaining_hours_today: float
     approved_seconds_today: int
     remaining_seconds_today: int
+    employee_name: Optional[str] = None

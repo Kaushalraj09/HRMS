@@ -265,12 +265,12 @@
 }
 
 .yes-btn {
-  background: #e74c3c;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   color: white;
 }
 
 .yes-btn:hover {
-  background: #c0392b;
+  background: linear-gradient(90deg,  #4c1d95 100%, #e11d48 0%,);
   transform: translateY(-2px);
 }
 

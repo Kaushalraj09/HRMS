@@ -1,7 +1,5 @@
 from datetime import date, time, timedelta
-
 from sqlalchemy.orm import Session
-
 from app.models.attendance import Attendance
 from app.models.employee import Employee
 

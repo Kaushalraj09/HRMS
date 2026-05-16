@@ -1,0 +1,56 @@
+<div class="modal-overlay" (click)="close()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-content">
+        <h2>Employee Details</h2>
+        <p *ngIf="employeeDetail$ | async as detail">
+          {{ detail.employee.employeeCode }} · {{ detail.employee.designation }} · {{ detail.employee.department }}
+        </p>
+      </div>
+      <button class="close-btn" (click)="close()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="employeeDetail$ | async as detail; else loading">
+      <div class="info-section">
+        <h3>Summary</h3>
+        <div class="info-grid">
+          <div class="info-item"><span class="label-text">Name</span><span>{{ detail.employee.name }}</span></div>
+          <div class="info-item"><span class="label-text">Status</span><span class="status-badge" [ngClass]="detail.employee.status.toLowerCase()">{{ detail.employee.status }}</span></div>
+          <div class="info-item"><span class="label-text">Work Mode</span><span>{{ detail.employee.workLocation }}</span></div>
+          <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shiftType }}</span></div>
+          <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj }}</span></div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>Contact & Account</h3>
+        <div class="info-grid">
+          <div class="info-item"><span class="label-text">Official Email</span><span>{{ detail.employee.officialEmail }}</span></div>
+          <div class="info-item"><span class="label-text">Login Email</span><span>{{ detail.loginEmail }}</span></div>
+          <div class="info-item"><span class="label-text">Mobile</span><span>{{ detail.employee.mobile }}</span></div>
+          <div class="info-item"><span class="label-text">Personal Email</span><span>{{ detail.employee.personalEmail || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Emergency Contact</span><span>{{ detail.employee.emergencyContactName }} ({{ detail.employee.emergencyContactNumber }})</span></div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>Personal Information</h3>
+        <div class="info-grid">
+          <div class="info-item"><span class="label-text">Gender</span><span>{{ detail.employee.gender || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Date of Birth</span><span>{{ detail.employee.dob || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Marital Status</span><span>{{ detail.employee.maritalStatus || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Blood Group</span><span>{{ detail.employee.bloodGroup || 'N/A' }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #loading>
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading employee data...</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

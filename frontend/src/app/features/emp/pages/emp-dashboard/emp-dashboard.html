@@ -117,6 +117,10 @@
                     Full day uses {{ requestedTimeDisplay }} of your shift balance.
                 </p>
                 <p class="punch-message" *ngIf="timeOffInlineError">{{ timeOffInlineError }}</p>
+                <div class="timeoff-success-container" *ngIf="timeOffInlineSuccess">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ timeOffInlineSuccess }}</span>
+                </div>
 
                 <div class="timeoff-inline__grid">
                     <div class="form-group">
@@ -172,7 +176,7 @@
                 <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
     
                 <div class="timeline-container">
-                    <div *ngFor="let event of selectedEvents" class="event-item">
+                    <div *ngFor="let event of selectedEvents" class="event-item" [ngClass]="event.type">
                         <div class="marker-section">
                             <div class="dot"></div>
                             <div class="line"></div>
@@ -194,42 +198,42 @@
                 Time Sheets
             </div>
             <div class="divider"></div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Day</th>
-                                <th>Entry</th>
-                                <th>Exit</th>
-                                <th>Total</th>
-                                <th>Overtime</th>
-                                <th>Break</th>
-                                <th>Grand Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngIf="timeSheets.length === 0">
-                                <td colspan="8" class="no-data">
-                                    No attendance records found
-                                </td>
-                            </tr>
-                            <tr *ngFor="let sheet of timeSheets">
-                                <td>{{ sheet.date }}</td>
-                                <td>{{ sheet.day }}</td>
-                                <td>{{ sheet.entry }}</td>
-                                <td>{{ sheet.exit }}</td>
-                                <td>{{ sheet.total }}</td>
-                                <td>{{ sheet.overtime }}</td>
-                                <td>{{ sheet.break }}</td>
-                                <td>{{ sheet.grandTotal }}</td>
-    
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Total</th>
+                            <th>Overtime</th>
+                            <th>Break</th>
+                            <th>Grand Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngIf="timeSheets.length === 0">
+                            <td colspan="8" class="no-data">
+                                No attendance records found
+                            </td>
+                        </tr>
+                        <tr *ngFor="let sheet of timeSheets">
+                            <td>{{ sheet.date }}</td>
+                            <td>{{ sheet.day }}</td>
+                            <td>{{ sheet.entry }}</td>
+                            <td>{{ sheet.exit }}</td>
+                            <td>{{ sheet.total }}</td>
+                            <td>{{ sheet.overtime }}</td>
+                            <td>{{ sheet.break }}</td>
+                            <td>{{ sheet.grandTotal }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
 <!-- attendence summary -->
     <div class="attendance_summary">
         <div class="card attendance_summary_card">
@@ -313,4 +317,3 @@
         </div>
     </div>
 </div>
-

@@ -210,6 +210,7 @@ export class Phase1StoreService {
       ],
       recentTimeSheets: todayRows.map(row => ({
         employee: row.name,
+        employeeCode: row.code,
         date: row.date,
         punchIn: row.checkIn || '-',
         punchOut: row.checkOut || '-',
