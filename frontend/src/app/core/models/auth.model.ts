@@ -13,14 +13,19 @@ export interface SessionUser {
   linkedEmployeeId?: string;
   linkedHrId?: string;
   status: 'Active' | 'Inactive';
+  accessibleDashboards?: string[];
+  activeDashboard?: 'HR' | 'EMPLOYEE' | 'MASTER';
 }
 
 export interface LoginResponse {
-  accessToken: string;
+  accessToken?: string;
   refreshToken?: string;
-  tokenType: 'bearer';
+  tokenType?: 'bearer';
   expiresIn?: number;
-  me: SessionUser;
+  me?: SessionUser;
+  requiresDashboardSelection?: boolean;
+  availableDashboards?: string[];
+  user?: SessionUser;
 }
 
 export interface ChangePasswordPayload {

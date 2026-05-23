@@ -1,4 +1,4 @@
-<div class="attendance-wrapper">
+  <div class="attendance-wrapper">
   <div class="attendance-container">
     
     <!-- Header Section -->
@@ -8,6 +8,50 @@
         <p>Monitor employee attendance by date and status</p>
       </div>
       <div class="header-right">
+        <!-- Attendance Rate Ring (same pattern as emp-dashboard punch-ring) -->
+        <div class="attendance-rate-dial">
+          <svg class="attendance-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#e11d48" />
+                <stop offset="50%"  stop-color="#7c3aed" />
+                <stop offset="100%" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <g transform="rotate(-90 110 110)">
+              <!-- Background track arc -->
+              <circle
+                class="ring-arc ring-arc--track"
+                cx="110" cy="110" r="100"
+                fill="none" stroke-width="14" stroke-linecap="round"
+                pathLength="100"
+                stroke-dasharray="100"
+                stroke-dashoffset="0"/>
+              <!-- Decorative red trailing segment (same as emp-dashboard ring-arc--red) -->
+              <circle
+                class="ring-arc ring-arc--red"
+                cx="110" cy="110" r="100"
+                fill="none" stroke-width="14" stroke-linecap="round"
+                pathLength="100"
+                stroke-dasharray="28 72"
+                stroke-dashoffset="0"/>
+              <!-- Animated progress arc -->
+              <circle
+                class="ring-arc ring-arc--progress"
+                cx="110" cy="110" r="100"
+                fill="none" stroke-width="14" stroke-linecap="round"
+                stroke="url(#ringGradient)"
+                pathLength="100"
+                stroke-dasharray="100"
+                [attr.stroke-dashoffset]="ringDashOffset"/>
+            </g>
+          </svg>
+          <!-- Centre label -->
+          <div class="ring-center">
+            <span class="ring-pct">{{ (attendanceRate * 100).toFixed(0) }}%</span>
+            <span class="ring-label">Marked</span>
+          </div>
+        </div>
         <span class="live-indicator"><span class="pulse"></span> Live Sync: {{ currentTime$ | async | date:'shortTime' }}</span>
       </div>
     </div>
@@ -43,6 +87,12 @@
         <div class="filter-group">
           <label>Status</label>
           <app-custom-select formControlName="status" [options]="statusOptions"></app-custom-select>
+        </div>
+
+        <!-- Location (Work Mode) -->
+        <div class="filter-group">
+          <label>Location</label>
+          <app-custom-select formControlName="location" [options]="locationOptions"></app-custom-select>
         </div>
       </div>
       
@@ -89,7 +139,7 @@
         <table>
           <thead>
             <tr>
-              <th>Code</th>
+              <th>Employee ID</th>
               <th>Name</th>
               <th>Department</th>
               <th>Date</th>
@@ -97,6 +147,8 @@
               <th>Check Out</th>
               <th>Hours</th>
               <th>Status</th>
+              <th>Location</th>
+              <th>Live Image</th>
             </tr>
           </thead>
           
@@ -111,6 +163,8 @@
               <td><div class="skeleton s-text"></div></td>
               <td><div class="skeleton s-text" style="width: 40%"></div></td>
               <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-text" style="width: 60%"></div></td>
+              <td><div class="skeleton s-badge" style="width: 36px; height: 36px; border-radius: 50%"></div></td>
             </tr>
           </tbody>
 
@@ -126,16 +180,49 @@
                 <td>{{ rec.checkOut || '-' }}</td>
                 <td>{{ rec.hours }}</td>
                 <td>
-                  <span class="status-badge" [ngClass]="
-                     rec.status === 'Present' ? 'green' :
-                     rec.status === 'Checked In' ? 'yellow' :
-                     rec.status === 'Checked Out' ? 'blue' : 'gray'
-                  ">{{ rec.status }}</span>
+                  <span class="status-badge" [ngClass]="{
+                    'present':    rec.status === 'Present',
+                    'checked-in': rec.status === 'Checked In' || rec.status === 'Working',
+                    'checked-out':rec.status === 'Checked Out',
+                    'not-marked': rec.status === 'Not Marked'
+                  }">{{ rec.status }}</span>
+                </td>
+
+                <!-- Location column: work-mode badge + truncated check-in address -->
+                <td>
+                  <div class="location-cell">
+                    <span *ngIf="rec.workMode" class="work-mode-badge"
+                          [ngClass]="rec.workMode === 'Office' ? 'office' : 'remote'">
+                      <i class="fas" [ngClass]="rec.workMode === 'Office' ? 'fa-building' : 'fa-home'" style="margin-right:4px;font-size:9px"></i>
+                      {{ rec.workMode }}
+                    </span>
+                    <span *ngIf="!rec.workMode" class="address-text" style="color:#d1d5db">—</span>
+                    <span *ngIf="rec.checkInAddress" class="address-text" [title]="rec.checkInAddress">
+                      {{ rec.checkInAddress }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Live Image column: avatar circle with verified badge when punched in -->
+                <td>
+                  <div class="live-image-cell">
+                    <div class="avatar-wrapper" *ngIf="rec.checkIn; else noImage">
+                      <div class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
+                        <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
+                      </div>
+                      <span class="verified-badge" title="Attendance recorded">
+                        <i class="fas fa-check" style="font-size:7px"></i>
+                      </span>
+                    </div>
+                    <ng-template #noImage>
+                      <span style="color:#d1d5db;font-size:13px">—</span>
+                    </ng-template>
+                  </div>
                 </td>
               </tr>
               
               <tr *ngIf="result.data.length === 0">
-                <td colspan="8" class="empty-state">
+                <td colspan="10" class="empty-state">
                   <div class="empty-content">
                     <i class="fas fa-calendar-times empty-icon"></i>
                     <p>No attendance records found</p>

@@ -1,6 +1,6 @@
 from datetime import date, time, timedelta
 from sqlalchemy.orm import Session
-from app.models.attendance import Attendance
+from app.models.attendance import Attendance, PunchLog, DailySummary
 from app.models.employee import Employee
 
 
@@ -10,7 +10,13 @@ def seed_attendance(db: Session):
         print("Demo employee not found. Skipping attendance seed.")
         return
 
-    base_date = date.today()
+    # Skip seeding if the employee already has attendance records to preserve their actual/testing history
+    existing_count = db.query(Attendance).filter(Attendance.employee_id == employee.id).count()
+    if existing_count > 0:
+        print("Demo employee already has attendance records. Skipping seeding to preserve history.")
+        return
+
+    base_date = date.today() - timedelta(days=1)
     demo_rows = [
         {
             "date": base_date,

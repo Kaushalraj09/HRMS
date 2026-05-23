@@ -26,7 +26,15 @@ def punch_in(
             detail="Only employees can punch attendance"
         )
     
-    return attendance_service.punch_in(db, employee.id, request.workMode)
+    return attendance_service.punch_in(
+        db,
+        employee.id,
+        request.workMode,
+        request.latitude,
+        request.longitude,
+        request.address,
+        request.image
+    )
 
 @router.post("/punch-out", response_model=AttendanceResponse)
 def punch_out(
@@ -44,7 +52,15 @@ def punch_out(
             detail="Only employees can punch attendance"
         )
     
-    return attendance_service.punch_out(db, employee.id, request.workMode)
+    return attendance_service.punch_out(
+        db,
+        employee.id,
+        request.workMode,
+        request.latitude,
+        request.longitude,
+        request.address,
+        request.image
+    )
 
 @router.post("/schedule", response_model=AttendanceResponse)
 def add_schedule(

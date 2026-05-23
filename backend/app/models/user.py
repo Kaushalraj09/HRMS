@@ -20,3 +20,15 @@ class User(Base):
     # Relationships
     role = relationship("Role")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def accessibleDashboards(self) -> list[str]:
+        if not self.role:
+            return ["EMPLOYEE"]
+        role_name = self.role.name.lower()
+        if role_name == "admin":
+            return ["MASTER"]
+        elif role_name == "hr":
+            return ["HR", "EMPLOYEE"]
+        else:
+            return ["EMPLOYEE"]

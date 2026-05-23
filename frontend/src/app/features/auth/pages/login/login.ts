@@ -17,6 +17,8 @@ export class Login {
   message: string = '';
   messageType: 'success' | 'error' | '' = 'success';
   showPopup: boolean = false;
+  showSelectionModal: boolean = false;
+  tempCredentials: { email: string; password: string } | null = null;
   timeoutRef: any;
 
   constructor(
@@ -45,17 +47,26 @@ export class Login {
 
     this.authService.login({ email, password }).subscribe({
       next: (response) => {
+        if (response.requiresDashboardSelection) {
+          this.tempCredentials = { email, password };
+          this.showSelectionModal = true;
+          this.cdr.detectChanges();
+          return;
+        }
+
         this.message = 'Login successful';
         this.messageType = 'success';
         this.showPopup = true;
 
         this.timeoutRef = setTimeout(() => {
           this.showPopup = false;
-          this.router.navigate([this.authService.getLandingRoute(response.me.role)]);
+          if (response.me) {
+            this.router.navigate([this.authService.getLandingRoute(response.me.role)]);
+          }
         }, 900);
       },
       error: (error) => {
-        this.message = error.message || 'Invalid email or password';
+        this.message = error.error?.detail || error.message || 'Invalid email or password';
         this.messageType = 'error';
         this.showPopup = true;
 
@@ -67,12 +78,41 @@ export class Login {
     });
   }
 
-  // closePopup() {
-  //   this.showPopup = false;
-  //   if (this.timeoutRef) {
-  //     clearTimeout(this.timeoutRef);
-  //   }
-  // }
+  selectDashboard(mode: 'HR' | 'EMPLOYEE') {
+    if (!this.tempCredentials) return;
+
+    const { email, password } = this.tempCredentials;
+
+    this.authService.login({ email, password, activeDashboard: mode }).subscribe({
+      next: (response) => {
+        this.showSelectionModal = false;
+        this.tempCredentials = null;
+        
+        this.message = 'Login successful';
+        this.messageType = 'success';
+        this.showPopup = true;
+
+        this.timeoutRef = setTimeout(() => {
+          this.showPopup = false;
+          if (response.me) {
+            this.router.navigate([this.authService.getLandingRoute(response.me.role)]);
+          }
+        }, 900);
+      },
+      error: (error) => {
+        this.message = error.error?.detail || error.message || 'Error completing dashboard selection';
+        this.messageType = 'error';
+        this.showPopup = true;
+        this.showSelectionModal = false;
+        this.tempCredentials = null;
+
+        this.timeoutRef = setTimeout(() => {
+          this.showPopup = false;
+          this.cdr.detectChanges();
+        }, 1600);
+      }
+    });
+  }
 
   get f() {
     return this.loginForm.controls;

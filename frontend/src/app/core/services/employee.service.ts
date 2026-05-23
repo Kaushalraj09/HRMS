@@ -68,11 +68,25 @@ export class EmployeeService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getEmployees(page: number, limit: number, search: string, department: string, type: string, status: string): Observable<PaginatedResult<Employee>> {
+  getEmployees(
+    page: number, 
+    limit: number, 
+    search: string, 
+    department: string, 
+    type: string, 
+    status: string,
+    excludeHr: boolean = false
+  ): Observable<PaginatedResult<Employee>> {
     return this.http.get<BackendEmployee[]>(this.apiUrl).pipe(
       map(rows => rows.map(row => this.mapEmployee(row))),
       map(rows => this.filterEmployees(rows, search, department, type, status)),
       map(rows => {
+        if (excludeHr) {
+          rows = rows.filter(emp => {
+            const isHr = emp.id.startsWith('hr') || (!isNaN(Number(emp.id)) && Number(emp.id) >= 10000);
+            return !isHr;
+          });
+        }
         const startIndex = (page - 1) * limit;
         return {
           data: rows.slice(startIndex, startIndex + limit),

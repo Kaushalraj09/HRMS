@@ -57,3 +57,29 @@
     <p>{{ message }}</p>
   </div>
 </div>
+
+<!-- DUAL DASHBOARD SELECTION MODAL -->
+<div *ngIf="showSelectionModal" class="dashboard-modal-overlay">
+  <div class="dashboard-modal-box">
+    <h3 class="dashboard-modal-title">Select Dashboard</h3>
+    <p class="dashboard-modal-message">Choose how you want to continue.</p>
+    
+    <div class="dashboard-options">
+      <button class="dashboard-option-btn hr-mode" (click)="selectDashboard('HR')">
+        <div class="option-icon-wrapper">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <span class="option-title">Continue as HR</span>
+        <i class="fas fa-chevron-right arrow-icon"></i>
+      </button>
+      
+      <button class="dashboard-option-btn emp-mode" (click)="selectDashboard('EMPLOYEE')">
+        <div class="option-icon-wrapper">
+          <i class="fas fa-user"></i>
+        </div>
+        <span class="option-title">Continue as Employee</span>
+        <i class="fas fa-chevron-right arrow-icon"></i>
+      </button>
+    </div>
+  </div>
+</div>

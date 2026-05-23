@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.user import User, Role
 from app.models.employee import Employee
+from app.models.hr_user import HrUser
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 from app.core.security import hash_password
 
@@ -44,12 +45,95 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     return new_employee
 
 def list_employees(db: Session, skip: int = 0, limit: int = 100):
-    return _employee_query(db).order_by(Employee.id.desc()).offset(skip).limit(limit).all()
+    # Filter out shadow employee records of HR users so they aren't duplicated in the list
+    employees = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name) != "hr")
+        .order_by(Employee.id.desc())
+        .all()
+    )
+    hrs = db.query(HrUser).order_by(HrUser.id.desc()).all()
+    
+    for hr in hrs:
+        name_parts = hr.full_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        emp_code = f"EMP-{hr.user_id:04d}"
+        
+        simulated_emp = Employee(
+            id=hr.id + 10000,
+            user_id=hr.user_id,
+            employee_code=emp_code,
+            first_name=first_name,
+            last_name=last_name,
+            gender="Other",
+            department=hr.department or "Human Resources",
+            designation=hr.designation or "HR Manager",
+            employee_type="Full-Time",
+            work_location="Main Office",
+            shift_type="General Shift",
+            official_email=hr.email,
+            mobile=hr.phone or "0000000000",
+            status=hr.status or "Active",
+            created_at=hr.created_at
+        )
+        employees.append(simulated_emp)
+        
+    employees.sort(key=lambda e: e.id, reverse=True)
+    return employees[skip : skip + limit]
 
 def get_employee_by_id(db: Session, employee_id: int):
+    if employee_id >= 10000:
+        hr_id = employee_id - 10000
+        hr = db.query(HrUser).filter(HrUser.id == hr_id).first()
+        if not hr:
+            return None
+        name_parts = hr.full_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        emp_code = f"EMP-{hr.user_id:04d}"
+        return Employee(
+            id=hr.id + 10000,
+            user_id=hr.user_id,
+            employee_code=emp_code,
+            first_name=first_name,
+            last_name=last_name,
+            gender="Other",
+            department=hr.department or "Human Resources",
+            designation=hr.designation or "HR Manager",
+            employee_type="Full-Time",
+            work_location="Main Office",
+            shift_type="General Shift",
+            official_email=hr.email,
+            mobile=hr.phone or "0000000000",
+            status=hr.status or "Active",
+            created_at=hr.created_at
+        )
     return _employee_query(db).filter(Employee.id == employee_id).first()
 
 def get_employee_credentials(db: Session, employee_id: int):
+    if employee_id >= 10000:
+        hr_id = employee_id - 10000
+        hr = db.query(HrUser).filter(HrUser.id == hr_id).first()
+        if not hr:
+            return None
+        user = db.query(User).filter(User.id == hr.user_id).first()
+        if not user:
+            return None
+        emp_code = f"EMP-{hr.user_id:04d}"
+        return {
+            "employee_id": employee_id,
+            "employee_code": emp_code,
+            "employee_name": hr.full_name,
+            "username": user.email,
+            "email": user.email,
+            "password": "hr1234" if user.email == "hr@hrms.com" else "Employee@123",
+            "temporary_password_hint": "Default temporary password for HR user.",
+            "status": user.status or hr.status or "Active",
+        }
+        
     employee = _employee_query(db).filter(Employee.id == employee_id).first()
     if not employee:
         return None
@@ -71,6 +155,60 @@ def get_employee_credentials(db: Session, employee_id: int):
     }
 
 def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
+    if employee_id >= 10000:
+        hr_id = employee_id - 10000
+        hr = db.query(HrUser).filter(HrUser.id == hr_id).first()
+        if not hr:
+            return None
+        updates = payload.model_dump(exclude_unset=True)
+        if "first_name" in updates or "last_name" in updates:
+            first_name = updates.get("first_name", hr.full_name.split(" ", 1)[0])
+            last_name = updates.get("last_name", hr.full_name.split(" ", 1)[1] if " " in hr.full_name else "")
+            hr.full_name = f"{first_name} {last_name}".strip()
+        if "department" in updates:
+            hr.department = updates["department"]
+        if "designation" in updates:
+            hr.designation = updates["designation"]
+        if "official_email" in updates:
+            hr.email = updates["official_email"]
+        if "mobile" in updates:
+            hr.phone = updates["mobile"]
+        if "status" in updates:
+            hr.status = updates["status"]
+            
+        user = db.query(User).filter(User.id == hr.user_id).first()
+        if user:
+            if "official_email" in updates:
+                user.email = updates["official_email"]
+            if "status" in updates:
+                user.status = updates["status"]
+            user.display_name = hr.full_name
+            
+        db.commit()
+        db.refresh(hr)
+        
+        name_parts = hr.full_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        emp_code = f"EMP-{hr.user_id:04d}"
+        return Employee(
+            id=hr.id + 10000,
+            user_id=hr.user_id,
+            employee_code=emp_code,
+            first_name=first_name,
+            last_name=last_name,
+            gender="Other",
+            department=hr.department or "Human Resources",
+            designation=hr.designation or "HR Manager",
+            employee_type="Full-Time",
+            work_location="Main Office",
+            shift_type="General Shift",
+            official_email=hr.email,
+            mobile=hr.phone or "0000000000",
+            status=hr.status or "Active",
+            created_at=hr.created_at
+        )
+
     employee = _employee_query(db).filter(Employee.id == employee_id).first()
     if not employee:
         return None

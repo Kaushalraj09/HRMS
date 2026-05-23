@@ -20,7 +20,8 @@ export class TimeEngineService implements OnDestroy {
       const currentState = this.stateSubject.value;
       if (!currentState) return;
 
-      const now = new Date();
+      // Construct Date object in Asia/Kolkata timezone to avoid client-side timezone mismatches
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
       const newState = { ...currentState };
 
       // 1. Update Shift Elapsed

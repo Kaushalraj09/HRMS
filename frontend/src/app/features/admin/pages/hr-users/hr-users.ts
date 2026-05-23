@@ -9,16 +9,24 @@ import { PaginatedResult } from '../../../../core/models/employee.model';
 import { HrUser } from '../../../../core/models/hr.model';
 import { HrService } from '../../../../core/services/hr.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+import { HrAddModalComponent } from './modals/hr-add-modal/hr-add-modal';
 
 @Component({
   selector: 'app-hr-users',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, CustomSelectComponent],
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule, 
+    RouterModule, 
+    CustomSelectComponent,
+    HrAddModalComponent
+  ],
   templateUrl: './hr-users.html',
   styleUrl: './hr-users.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HrUsersComponent implements OnInit {
+  activeModal: 'add' | null = null;
   searchControl = new FormControl('');
   statusControl = new FormControl('');
 
@@ -71,4 +79,16 @@ export class HrUsersComponent implements OnInit {
   trackById(_: number, hr: HrUser): string {
     return hr.id;
   }
+
+  openAddModal(): void {
+    this.activeModal = 'add';
+  }
+
+  onModalClose(refresh: boolean = false): void {
+    this.activeModal = null;
+    if (refresh) {
+      this.onSearch();
+    }
+  }
 }
+

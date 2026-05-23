@@ -77,8 +77,15 @@
 }
 
 .btn-primary {
-  background: linear-gradient(90deg, #ff4d4f, #6f42c1);
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   color: #fff;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(270deg, #e11d48 0%, #4c1d95 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
 }
 
 .btn-outline,

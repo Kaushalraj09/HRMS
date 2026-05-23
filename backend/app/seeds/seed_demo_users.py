@@ -90,8 +90,36 @@ def seed_users(db: Session):
                 db.delete(existing_hr)
         elif user_info["profile_type"] == "hr":
             hr_data = user_info["hr_data"]
-            if existing_employee:
-                db.delete(existing_employee)
+            
+            # Create/Update shadow employee record for the HR user to enable dual employee mode
+            name_parts = hr_data["full_name"].split(" ", 1)
+            first_name = name_parts[0]
+            last_name = name_parts[1] if len(name_parts) > 1 else ""
+            
+            emp_data = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "department": hr_data["department"],
+                "designation": hr_data["designation"],
+                "employee_type": "Full-Time",
+                "work_location": "Main Office",
+                "shift_type": "General Shift",
+                "mobile": hr_data["phone"],
+                "official_email": user_info["email"],
+                "status": "Active"
+            }
+            if not existing_employee:
+                existing_employee = Employee(
+                    user_id=existing_user.id,
+                    employee_code=f"EMP-{existing_user.id:04d}",
+                    **emp_data
+                )
+                db.add(existing_employee)
+            else:
+                for field, value in emp_data.items():
+                    setattr(existing_employee, field, value)
+                existing_employee.employee_code = f"EMP-{existing_user.id:04d}"
+                existing_employee.official_email = user_info["email"]
 
             if not existing_hr:
                 existing_hr = HrUser(

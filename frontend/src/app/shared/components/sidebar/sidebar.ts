@@ -39,13 +39,13 @@ export class Sidebar implements OnInit {
       groupName: 'Access Management',
       items: [
         { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' },
-        { label: 'Create HR', icon: 'fas fa-user-plus', route: '/master-dashboard/hr-users/add' }
       ]
     },
     {
       groupName: 'People',
       items: [
-        { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' }
+        { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
+        { label: 'Attendance', icon: 'far fa-clock', route: '/master-dashboard/attendance' }
       ]
     },
     {

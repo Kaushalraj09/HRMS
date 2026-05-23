@@ -24,7 +24,7 @@ def create_hr(db: Session, obj_in: HrCreate):
     db.flush() # Get the new_user.id without committing yet
     
     # 3. Create the HR Profile
-    hr_code = f"HR-{new_user.id:03d}" # Simple auto-code: HR-001, HR-002
+    hr_code = f"EMP-{new_user.id:04d}"
     new_hr = HrUser(
         user_id=new_user.id,
         hr_code=hr_code,
@@ -36,12 +36,37 @@ def create_hr(db: Session, obj_in: HrCreate):
         status=obj_in.status
     )
     db.add(new_hr)
+    
+    # 4. Create corresponding shadow Employee record
+    name_parts = obj_in.fullName.split(" ", 1)
+    first_name = name_parts[0] if obj_in.fullName else "HR"
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+    
+    shadow_emp = Employee(
+        user_id=new_user.id,
+        employee_code=hr_code,
+        first_name=first_name,
+        last_name=last_name,
+        official_email=obj_in.email,
+        mobile=obj_in.phone,
+        department=obj_in.department,
+        designation=obj_in.designation,
+        employee_type="Full-Time",
+        work_location="Main Office",
+        shift_type="General Shift",
+        status=obj_in.status
+    )
+    db.add(shadow_emp)
+    
     db.commit()
     db.refresh(new_hr)
     return new_hr
 
 def list_hrs(db: Session, skip: int = 0, limit: int = 100):
     hr_profiles = db.query(HrUser).order_by(HrUser.id.desc()).all()
+    for hr in hr_profiles:
+        hr.hr_code = f"EMP-{hr.user_id:04d}"
+        
     existing_user_ids = {hr.user_id for hr in hr_profiles}
 
     seeded_hr_users = (
@@ -60,7 +85,7 @@ def list_hrs(db: Session, skip: int = 0, limit: int = 100):
             {
                 "id": user.id,
                 "userId": user.id,
-                "hrCode": f"HR-{user.id:03d}",
+                "hrCode": f"EMP-{user.id:04d}",
                 "fullName": user.display_name,
                 "email": user.email,
                 "phone": employee.mobile if employee and employee.mobile else "",

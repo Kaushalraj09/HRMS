@@ -5,7 +5,7 @@
         <h1>HR Users</h1>
         <p>View and manage all active HR accounts created by Admin.</p>
       </div>
-      <button class="btn-primary" routerLink="/master-dashboard/hr-users/add">Create HR</button>
+      <button class="btn-primary" (click)="openAddModal()">Create HR</button>
     </div>
 
     <div class="filter-section">
@@ -32,7 +32,7 @@
           <table>
             <thead>
               <tr>
-                <th>HR Code</th>
+                <th>Employee ID</th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Department</th>
@@ -96,3 +96,9 @@
     </ng-container>
   </div>
 </div>
+
+<app-hr-add-modal 
+  *ngIf="activeModal === 'add'" 
+  (closed)="onModalClose($event)">
+</app-hr-add-modal>
+

@@ -14,7 +14,6 @@ import { EmployeeDetailComponent } from './features/hr/pages/employees/employee-
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { HrUsersComponent } from './features/admin/pages/hr-users/hr-users';
-import { AddHrComponent } from './features/admin/pages/add-hr/add-hr';
 import { AdminEmployeesComponent } from './features/admin/pages/admin-employees/admin-employees';
 
 export const routes: Routes = [
@@ -54,8 +53,8 @@ export const routes: Routes = [
     data: { roles: ['admin'] },
     children: [
       { path: 'hr-users', component: HrUsersComponent },
-      { path: 'hr-users/add', component: AddHrComponent },
-      { path: 'employees', component: AdminEmployeesComponent }
+      { path: 'employees', component: Employees },
+      { path: 'attendance', component: AttendanceComponent }
     ]
   },
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },

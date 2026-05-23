@@ -122,6 +122,17 @@ export class EmpDashboard implements OnDestroy {
     taskDescription: ''
   };
 
+  // ─── Camera / Photo Capture ───────────────────────────────────────
+  showCameraModal = false;
+  checkInImage: string | null = null;
+  checkOutImage: string | null = null;
+  capturedImage: string | null = null;
+  cameraStream: MediaStream | null = null;
+  private pendingPunchWorkMode: WorkMode = 'Office';
+  private pendingPunchLatitude: number | undefined;
+  private pendingPunchLongitude: number | undefined;
+  private pendingPunchAddress: string | undefined;
+
   latestNews_content = [
     {
       heading: 'Welcome to Aivan ERP System',
@@ -286,13 +297,115 @@ export class EmpDashboard implements OnDestroy {
     if (this.isPunchDisabled) {
       return;
     }
-
-    this.isPunchSaving = true;
     this.punchMessage = '';
+    this.pendingPunchWorkMode = this.status;
 
+    // Get location first, then open camera
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          this.pendingPunchLatitude = pos.coords.latitude;
+          this.pendingPunchLongitude = pos.coords.longitude;
+          this.attendanceService.reverseGeocode(pos.coords.latitude, pos.coords.longitude).subscribe({
+            next: (geo: any) => {
+              this.pendingPunchAddress = geo?.display_name || '';
+              this.openCameraModal();
+            },
+            error: () => { this.pendingPunchAddress = undefined; this.openCameraModal(); }
+          });
+        },
+        () => {
+          this.pendingPunchLatitude = undefined;
+          this.pendingPunchLongitude = undefined;
+          this.pendingPunchAddress = undefined;
+          this.openCameraModal();
+        },
+        { timeout: 6000, maximumAge: 30000 }
+      );
+    } else {
+      this.openCameraModal();
+    }
+  }
+
+  openCameraModal(): void {
+    this.capturedImage = null;
+    this.showCameraModal = true;
+    this.cdr.detectChanges();
+    setTimeout(() => this.startCamera(), 200);
+  }
+
+  private startCamera(): void {
+    const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
+    if (!video) return;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(stream => {
+        this.cameraStream = stream;
+        video.srcObject = stream;
+        video.play();
+      })
+      .catch(() => {
+        // Camera permission denied – punch without photo
+        this.confirmPhoto(null);
+      });
+  }
+
+  capturePhoto(): void {
+    const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 320;
+    canvas.height = video.videoHeight || 240;
+    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    this.capturedImage = canvas.toDataURL('image/jpeg', 0.75);
+    this.stopCamera();
+    this.cdr.detectChanges();
+  }
+
+  retakePhoto(): void {
+    this.capturedImage = null;
+    this.cdr.detectChanges();
+    setTimeout(() => this.startCamera(), 100);
+  }
+
+  confirmPhoto(image: string | null = this.capturedImage): void {
+    this.closeCameraModal();
+    this.executePunch(image);
+  }
+
+  skipPhoto(): void {
+    this.closeCameraModal();
+    this.executePunch(null);
+  }
+
+  closeCameraModal(): void {
+    this.stopCamera();
+    this.showCameraModal = false;
+    this.capturedImage = null;
+    this.cdr.detectChanges();
+  }
+
+  private stopCamera(): void {
+    this.cameraStream?.getTracks().forEach(t => t.stop());
+    this.cameraStream = null;
+  }
+
+  private executePunch(image: string | null): void {
+    this.isPunchSaving = true;
     const request$ = this.isPunchedIn
-      ? this.attendanceService.punchOut(this.status)
-      : this.attendanceService.punchIn(this.status);
+      ? this.attendanceService.punchOut(
+          this.pendingPunchWorkMode,
+          this.pendingPunchLatitude,
+          this.pendingPunchLongitude,
+          this.pendingPunchAddress,
+          image
+        )
+      : this.attendanceService.punchIn(
+          this.pendingPunchWorkMode,
+          this.pendingPunchLatitude,
+          this.pendingPunchLongitude,
+          this.pendingPunchAddress,
+          image
+        );
 
     this.subscriptions.add(
       request$
@@ -560,6 +673,9 @@ export class EmpDashboard implements OnDestroy {
     this.punchInTime = todayState.checkIn || null;
     this.punchOutTime = todayState.checkOut || null;
     this.liveTimerDisplay = this.timeEngine.formatHHMMSS(this.shiftElapsedSeconds);
+    // Preserve first image; only update if not already set
+    if (todayState.checkInImage) { this.checkInImage = todayState.checkInImage; }
+    if (todayState.checkOutImage) { this.checkOutImage = todayState.checkOutImage; }
   }
 
   private toIsoDate(date: Date): string {

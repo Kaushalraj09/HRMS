@@ -27,6 +27,18 @@ class Attendance(Base):
     status = Column(String(50), default="Not Marked") # Present, Late, Half-Day, Leave, Absent, Not Marked
     is_working = Column(Integer, default=0) # 0 = Not Working, 1 = Working
     
+    # Location tracking
+    check_in_latitude = Column(Float, nullable=True)
+    check_in_longitude = Column(Float, nullable=True)
+    check_in_address = Column(String(500), nullable=True)
+    check_out_latitude = Column(Float, nullable=True)
+    check_out_longitude = Column(Float, nullable=True)
+    check_out_address = Column(String(500), nullable=True)
+    
+    # Image tracking
+    check_in_image = Column(String, nullable=True)
+    check_out_image = Column(String, nullable=True)
+    
     # Relationships
     employee = relationship("Employee", backref="attendance_records")
     
@@ -46,6 +58,14 @@ class PunchLog(Base):
     punch_out = Column(DateTime(timezone=True))
     duration_seconds = Column(Integer, default=0)
     work_mode = Column(String(20), default="Office")
+    
+    # Location tracking
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    address = Column(String(500), nullable=True)
+    
+    # Image tracking
+    image = Column(String, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
