@@ -14,6 +14,9 @@ export interface AttendanceRecord {
   checkOut: string;
   hours: string;
   status: AttendanceStatus;
+  workMode?: string;
+  checkInAddress?: string;
+  checkOutAddress?: string;
 }
 
 export interface AttendanceMetrics {
@@ -37,6 +40,7 @@ export interface EmployeeTimesheetRow {
   taskDescription?: string;
   entry: string;
   exit: string;
+  late?: string;
   total: string;
   overtime: string;
   break: string;
@@ -72,4 +76,12 @@ export interface TodayAttendanceState {
   workMode: WorkMode;
   checkIn?: string | null;
   checkOut?: string | null;
+  checkInLatitude?: number | null;
+  checkInLongitude?: number | null;
+  checkInAddress?: string | null;
+  checkOutLatitude?: number | null;
+  checkOutLongitude?: number | null;
+  checkOutAddress?: string | null;
+  checkInImage?: string | null;
+  checkOutImage?: string | null;
 }

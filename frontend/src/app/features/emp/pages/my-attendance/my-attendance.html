@@ -33,7 +33,7 @@
     </div>
 
     <div class="time_sheet">
-        <div class="card recent_time">
+        <div class="card recent_time flat-timesheet">
             <div class="card-header">
                 Time Sheets
             </div>
@@ -42,20 +42,21 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Day</th>
-                                <th>Entry</th>
-                                <th>Exit</th>
-                                <th>Total</th>
-                                <th>Overtime</th>
-                                <th>Break</th>
-                                <th>Grand Total</th>
-                                <th>Status</th>
+                                <th>DATE</th>
+                                <th>DAY</th>
+                                <th>ENTRY</th>
+                                <th>EXIT</th>
+                                <th>LATE</th>
+                                <th>TOTAL</th>
+                                <th>OVERTIME</th>
+                                <th>BREAK</th>
+                                <th>GRAND TOTAL</th>
+                                <th>STATUS</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr *ngIf="timeSheets.length === 0">
-                                <td colspan="9" class="no-data">
+                                <td colspan="10" class="no-data">
                                     No attendance records found
                                 </td>
                             </tr>
@@ -64,6 +65,7 @@
                                 <td>{{ sheet.day }}</td>
                                 <td>{{ sheet.entry }}</td>
                                 <td>{{ sheet.exit }}</td>
+                                <td>{{ sheet.late || '-' }}</td>
                                 <td>{{ sheet.total }}</td>
                                 <td>{{ sheet.overtime }}</td>
                                 <td>{{ sheet.break }}</td>

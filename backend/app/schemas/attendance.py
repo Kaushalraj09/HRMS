@@ -5,6 +5,10 @@ from typing import Optional, List
 class PunchRequest(BaseModel):
     employee_id: Optional[int] = None
     workMode: str = "Office" # Office or Remote
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    image: Optional[str] = None  # base64 webcam snapshot
 
 class ScheduleRequest(BaseModel):
     date: date
@@ -29,6 +33,7 @@ class AttendanceResponse(BaseModel):
     overtime_minutes: int = Field(default=0, alias="overtimeMinutes")
     break_minutes: int = Field(default=0, alias="breakMinutes")
     grand_total_minutes: int = Field(default=0, alias="grandTotalMinutes")
+    late_minutes: int = Field(default=0, alias="lateMinutes")
 
 class TodayAttendanceState(BaseModel):
     isWorking: bool = Field(alias="isWorking")
@@ -43,6 +48,15 @@ class TodayAttendanceState(BaseModel):
     workMode: str = "Office"
     checkIn: Optional[time] = None
     checkOut: Optional[time] = None
+    
+    checkInLatitude: Optional[float] = Field(None, alias="checkInLatitude")
+    checkInLongitude: Optional[float] = Field(None, alias="checkInLongitude")
+    checkInAddress: Optional[str] = Field(None, alias="checkInAddress")
+    checkOutLatitude: Optional[float] = Field(None, alias="checkOutLatitude")
+    checkOutLongitude: Optional[float] = Field(None, alias="checkOutLongitude")
+    checkOutAddress: Optional[str] = Field(None, alias="checkOutAddress")
+    checkInImage: Optional[str] = Field(None, alias="checkInImage")
+    checkOutImage: Optional[str] = Field(None, alias="checkOutImage")
 
 class AttendanceRecord(BaseModel):
     id: int
@@ -60,6 +74,10 @@ class AttendanceRecord(BaseModel):
     overtimeMinutes: int = 0
     breakMinutes: int = 0
     grandTotalMinutes: int = 0
+    lateMinutes: int = 0
+    workMode: Optional[str] = Field(None, alias="workMode")
+    checkInAddress: Optional[str] = Field(None, alias="checkInAddress")
+    checkOutAddress: Optional[str] = Field(None, alias="checkOutAddress")
 
 class AttendanceListResponse(BaseModel):
     data: List[AttendanceRecord]

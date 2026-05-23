@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
@@ -60,7 +60,8 @@ export class Employees implements OnInit {
 
   constructor(
     private employeeService: EmployeeService, 
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -71,13 +72,15 @@ export class Employees implements OnInit {
     ]).pipe(
       tap(() => this.isLoading$.next(true)),
       switchMap(([_, page]) => {
+        const excludeHr = this.router.url.includes('/hr-dashboard');
         return this.employeeService.getEmployees(
              page, 
              this.pageSize, 
              this.searchControl.value || '', 
              this.departmentControl.value || '', 
              this.typeControl.value || '', 
-             this.statusControl.value || ''
+             this.statusControl.value || '',
+             excludeHr
         );
       }),
       tap(() => this.isLoading$.next(false)),

@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, map, Subject, switchMap } from 'rxjs';
 
 import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode } from '../models/attendance.model';
+import { formatMinutesToHours } from '../utils/attendance-calc.util';
 
 interface BackendAttendanceResponse {
   id: number;
@@ -18,6 +19,7 @@ interface BackendAttendanceResponse {
   overtimeMinutes: number;
   breakMinutes: number;
   grandTotalMinutes: number;
+  lateMinutes: number;
 }
 
 interface BackendAttendanceRecord {
@@ -30,6 +32,9 @@ interface BackendAttendanceRecord {
   checkOut: string | null;
   status: string;
   totalWorkingMinutes: number;
+  workMode?: string;
+  checkInAddress?: string;
+  checkOutAddress?: string;
 }
 
 interface BackendAttendanceListResponse {
@@ -50,6 +55,14 @@ interface BackendTodayAttendanceState {
   workMode: WorkMode;
   checkIn: string | null;
   checkOut: string | null;
+  checkInLatitude: number | null;
+  checkInLongitude: number | null;
+  checkInAddress: string | null;
+  checkOutLatitude: number | null;
+  checkOutLongitude: number | null;
+  checkOutAddress: string | null;
+  checkInImage: string | null;
+  checkOutImage: string | null;
 }
 
 export interface TimeOffApplyResponse {
@@ -113,6 +126,11 @@ export class AttendanceService {
     };
   }
 
+  reverseGeocode(lat: number, lon: number): Observable<any> {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+    return this.http.get(url);
+  }
+
   getAttendanceLogs(
     page: number,
     limit: number,
@@ -120,12 +138,27 @@ export class AttendanceService {
     toDate: string,
     search: string,
     department: string,
-    status: string
+    status: string,
+    location?: string
   ): Observable<PaginatedAttendance> {
     return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`).pipe(
       map(result => {
         let rows = result.data.map(row => this.mapAttendanceRecord(row));
-        rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status);
+        rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status, location);
+        
+        // Sort all rows: date descending first, then check-in time descending (latest first)
+        rows.sort((a, b) => {
+          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          
+          if (a.checkIn && b.checkIn) {
+            return b.checkIn.localeCompare(a.checkIn);
+          }
+          if (b.checkIn) return 1;
+          if (a.checkIn) return -1;
+          return 0;
+        });
+
         const metrics = this.buildMetrics(rows);
         const startIndex = (page - 1) * limit;
 
@@ -158,19 +191,39 @@ export class AttendanceService {
         shiftEnd: state.shiftEnd,
         workMode: state.workMode || 'Office',
         checkIn: state.checkIn,
-        checkOut: state.checkOut
+        checkOut: state.checkOut,
+        checkInLatitude: state.checkInLatitude,
+        checkInLongitude: state.checkInLongitude,
+        checkInAddress: state.checkInAddress,
+        checkOutLatitude: state.checkOutLatitude,
+        checkOutLongitude: state.checkOutLongitude,
+        checkOutAddress: state.checkOutAddress,
+        checkInImage: state.checkInImage,
+        checkOutImage: state.checkOutImage
       }))
     );
   }
 
-  punchIn(workMode: WorkMode): Observable<TodayAttendanceState> {
-    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-in`, { workMode }).pipe(
+  punchIn(workMode: WorkMode, latitude?: number, longitude?: number, address?: string, image?: string | null): Observable<TodayAttendanceState> {
+    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-in`, {
+      workMode,
+      latitude,
+      longitude,
+      address,
+      image: image || null
+    }).pipe(
       switchMap(() => this.getTodayAttendanceState())
     );
   }
 
-  punchOut(workMode: WorkMode): Observable<TodayAttendanceState> {
-    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-out`, { workMode }).pipe(
+  punchOut(workMode: WorkMode, latitude?: number, longitude?: number, address?: string, image?: string | null): Observable<TodayAttendanceState> {
+    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-out`, {
+      workMode,
+      latitude,
+      longitude,
+      address,
+      image: image || null
+    }).pipe(
       switchMap(() => this.getTodayAttendanceState())
     );
   }
@@ -262,8 +315,11 @@ export class AttendanceService {
       date: row.date,
       checkIn: this.toDisplayTime(row.checkIn),
       checkOut: this.toDisplayTime(row.checkOut),
-      hours: this.formatMinutes(row.totalWorkingMinutes ?? this.calculateMinutes(row.checkIn, row.checkOut)),
-      status: this.normalizeStatus(row.status)
+      hours: formatMinutesToHours(row.totalWorkingMinutes ?? this.calculateMinutes(row.checkIn, row.checkOut)),
+      status: this.normalizeStatus(row.status),
+      workMode: row.workMode,
+      checkInAddress: row.checkInAddress || '',
+      checkOutAddress: row.checkOutAddress || ''
     };
   }
 
@@ -280,13 +336,13 @@ export class AttendanceService {
       scheduledStart: displayScheduledStart || undefined,
       scheduledEnd: displayScheduledEnd || undefined,
       taskDescription: row.taskDescription || undefined,
-      // For schedule-only rows (future/pending), show scheduled times in the timesheet table.
       entry: displayCheckIn || displayScheduledStart || '-',
       exit: displayCheckOut || displayScheduledEnd || '-',
-      total: this.formatMinutes(workMinutes),
-      overtime: this.formatMinutes(row.overtimeMinutes ?? 0),
-      break: this.formatMinutes(row.breakMinutes ?? 0),
-      grandTotal: this.formatMinutes(row.grandTotalMinutes ?? workMinutes),
+      late: row.checkIn ? formatMinutesToHours(row.lateMinutes ?? 0) : '-',
+      total: row.checkOut ? formatMinutesToHours(workMinutes) : '-',
+      overtime: row.checkOut ? formatMinutesToHours(row.overtimeMinutes ?? 0) : '-',
+      break: row.checkOut ? formatMinutesToHours(row.breakMinutes ?? 0) : '-',
+      grandTotal: row.checkOut ? formatMinutesToHours(row.grandTotalMinutes ?? workMinutes) : '-',
       status: this.normalizeStatus(row.status)
     };
   }
@@ -297,7 +353,8 @@ export class AttendanceService {
     toDate: string,
     search: string,
     department: string,
-    status: string
+    status: string,
+    location?: string
   ): AttendanceRecord[] {
     const searchValue = search.trim().toLowerCase();
 
@@ -310,8 +367,9 @@ export class AttendanceService {
       const matchesDepartment = !department || row.department === department;
       const normalizedStatus = this.normalizeStatus(status || '');
       const matchesStatus = !status || row.status === normalizedStatus;
+      const matchesLocation = !location || row.workMode === location;
 
-      return matchesFrom && matchesTo && matchesSearch && matchesDepartment && matchesStatus;
+      return matchesFrom && matchesTo && matchesSearch && matchesDepartment && matchesStatus && matchesLocation;
     });
   }
 

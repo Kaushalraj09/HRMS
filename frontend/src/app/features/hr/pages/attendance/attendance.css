@@ -45,6 +45,81 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
+/* ── Header Right: ring + live badge stacked ───────────────────────── */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Attendance Rate Ring (mirrors emp-dashboard punch-ring-svg) ───── */
+.attendance-rate-dial {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attendance-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+}
+
+/* Shared arc base */
+.ring-arc {
+  fill: none;
+}
+
+/* Light grey background track (replaces ring-arc--bg from emp-dashboard) */
+.ring-arc--track {
+  stroke: #e2e8f0;
+}
+
+/* Decorative trailing red-to-crimson segment – identical to emp-dashboard ring-arc--red */
+.ring-arc--red {
+  stroke: #e11d48;
+  opacity: 0.35;
+}
+
+/* Animated gradient progress arc */
+.ring-arc--progress {
+  transition: stroke-dashoffset 0.9s ease;
+}
+
+/* Centre label inside the ring */
+.ring-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.ring-pct {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.ring-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .pulse {
   display: block;
   width: 8px;
@@ -307,3 +382,81 @@
   }
   .btn { width: 100%; }
 }
+
+/* Location Cell and Live Image Styling */
+.location-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.work-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.work-mode-badge.office {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.work-mode-badge.remote {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.address-text {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.live-image-cell {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 36px;
+  height: 36px;
+}
+
+.verified-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  object-fit: cover;
+  background-color: #f3f4f6;
+}
+
+.verified-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background-color: #10b981;
+  color: white;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  border: 1.5px solid white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+

@@ -22,15 +22,18 @@ export class AuthService {
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
 
-  login(data: LoginRequest): Observable<LoginResponse> {
+  login(data: LoginRequest & { activeDashboard?: string }): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, data).pipe(
       tap(response => {
+        if (response.requiresDashboardSelection) {
+          return;
+        }
         // Normalize role to lowercase for frontend consistency
         if (response.me && response.me.role) {
           response.me.role = response.me.role.toLowerCase() as UserRole;
         }
         this.store.saveBackendSession(response);
-        this.currentUserSubject.next(response.me);
+        this.currentUserSubject.next(response.me || null);
       })
     );
   }

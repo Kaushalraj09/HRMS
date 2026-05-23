@@ -4,6 +4,7 @@ from typing import Optional
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    activeDashboard: Optional[str] = None
 
 class UserSession(BaseModel):
     id: int
@@ -11,14 +12,19 @@ class UserSession(BaseModel):
     displayName: str
     role: str
     status: str
+    accessibleDashboards: list[str]
+    activeDashboard: Optional[str] = None
 
     class Config:
         from_attributes = True # This allows Pydantic to read SQLAlchemy models
 
 class LoginResponse(BaseModel):
-    accessToken: str
+    accessToken: Optional[str] = None
     tokenType: str = "bearer"
-    me: UserSession
+    me: Optional[UserSession] = None
+    requiresDashboardSelection: Optional[bool] = None
+    availableDashboards: Optional[list[str]] = None
+    user: Optional[UserSession] = None
 
 class ChangePasswordRequest(BaseModel):
     currentPassword: str

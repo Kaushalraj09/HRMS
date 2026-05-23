@@ -93,9 +93,13 @@ export class Phase1StoreService {
 
   saveBackendSession(response: LoginResponse): void {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(this.tokenKey, response.accessToken);
-      localStorage.setItem(this.userKey, JSON.stringify(response.me));
-      localStorage.setItem(this.sessionKey, String(response.me.id));
+      if (response.accessToken) {
+        localStorage.setItem(this.tokenKey, response.accessToken);
+      }
+      if (response.me) {
+        localStorage.setItem(this.userKey, JSON.stringify(response.me));
+        localStorage.setItem(this.sessionKey, String(response.me.id));
+      }
     }
   }
 
@@ -155,6 +159,10 @@ export class Phase1StoreService {
       return '/master-dashboard';
     }
     if (role === 'hr') {
+      const user = this.getCurrentUser();
+      if (user && user.activeDashboard === 'EMPLOYEE') {
+        return '/emp-dashboard';
+      }
       return '/hr-dashboard';
     }
     return '/emp-dashboard';
@@ -223,7 +231,44 @@ export class Phase1StoreService {
   }
 
   listEmployees(filters: EmployeeFilters): PaginatedResult<Employee> {
-    let filtered = [...this.state.employees];
+    const hrAsEmployees: Employee[] = this.state.hrs.map(hr => {
+      const parts = hr.fullName.split(' ');
+      const firstName = parts[0] || '';
+      const lastName = parts.slice(1).join(' ') || '';
+      
+      const idMatch = hr.userId.match(/\d+/);
+      const userNum = idMatch ? parseInt(idMatch[0]) : 2;
+      const empCode = `EMP-${String(userNum).padStart(4, '0')}`;
+      
+      return {
+        id: hr.id,
+        userId: hr.userId,
+        employeeCode: empCode,
+        name: hr.fullName,
+        firstName: firstName,
+        lastName: lastName,
+        department: hr.department,
+        designation: hr.designation,
+        employeeType: 'Full-Time',
+        status: hr.status,
+        login: hr.login,
+        officialEmail: hr.email,
+        personalEmail: '',
+        mobile: hr.phone,
+        alternateMobile: '',
+        emergencyContactName: '',
+        emergencyContactNumber: '',
+        gender: 'Other',
+        dob: '',
+        maritalStatus: '',
+        bloodGroup: '',
+        workLocation: 'Main Office',
+        shiftType: 'General Shift',
+        doj: hr.createdAt
+      };
+    });
+
+    let filtered = [...this.state.employees, ...hrAsEmployees];
 
     if (filters.search) {
       const searchValue = filters.search.toLowerCase();
@@ -279,17 +324,57 @@ export class Phase1StoreService {
   }
 
   getEmployeeById(employeeId: string): EmployeeDetailView | null {
-    const employee = this.state.employees.find(item => item.id === employeeId);
-    if (!employee) {
-      return null;
+    let employee = this.state.employees.find(item => item.id === employeeId);
+    let user: any = null;
+
+    if (employee) {
+      user = this.state.users.find(item => item.id === employee!.userId);
+    } else {
+      const hr = this.state.hrs.find(item => item.id === employeeId);
+      if (hr) {
+        const parts = hr.fullName.split(' ');
+        const firstName = parts[0] || '';
+        const lastName = parts.slice(1).join(' ') || '';
+        const idMatch = hr.userId.match(/\d+/);
+        const userNum = idMatch ? parseInt(idMatch[0]) : 2;
+        const empCode = `EMP-${String(userNum).padStart(4, '0')}`;
+
+        employee = {
+          id: hr.id,
+          userId: hr.userId,
+          employeeCode: empCode,
+          name: hr.fullName,
+          firstName: firstName,
+          lastName: lastName,
+          department: hr.department,
+          designation: hr.designation,
+          employeeType: 'Full-Time',
+          status: hr.status,
+          login: hr.login,
+          officialEmail: hr.email,
+          personalEmail: '',
+          mobile: hr.phone,
+          alternateMobile: '',
+          emergencyContactName: '',
+          emergencyContactNumber: '',
+          gender: 'Other',
+          dob: '',
+          maritalStatus: '',
+          bloodGroup: '',
+          workLocation: 'Main Office',
+          shiftType: 'General Shift',
+          doj: hr.createdAt
+        };
+        user = this.state.users.find(item => item.id === hr.userId);
+      } else {
+        return null;
+      }
     }
 
-    const user = this.state.users.find(item => item.id === employee.userId);
-
     return {
-      employee,
+      employee: employee!,
       managerName: 'Assigned HR Team',
-      loginEmail: user?.email ?? employee.officialEmail,
+      loginEmail: user?.email ?? employee!.officialEmail,
       temporaryPasswordHint: 'Temp password set during account creation'
     };
   }

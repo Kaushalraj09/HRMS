@@ -313,4 +313,135 @@ input.ng-invalid.ng-touched {
   border: 1px solid #ef4444;
 }
 
+/* DUAL DASHBOARD SELECTION MODAL CSS */
+.dashboard-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeInOverlay 0.3s ease;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dashboard-modal-box {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 44px 40px;
+  width: 90%;
+  max-width: 460px;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25);
+  text-align: center;
+  animation: modalScaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  border: 1px solid rgba(241, 245, 249, 0.8);
+}
+
+@keyframes modalScaleUp {
+  from { transform: scale(0.9) translateY(30px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.dashboard-modal-title {
+  font-size: 24px;
+  font-weight: 850;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.8px;
+}
+
+.dashboard-modal-message {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 32px 0;
+  letter-spacing: -0.2px;
+}
+
+.dashboard-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-option-btn {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  border-radius: 16px; /* perfectly matches login form inputs */
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+}
+
+.option-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  margin-right: 18px;
+  font-size: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.4s ease;
+}
+
+.dashboard-option-btn.hr-mode .option-icon-wrapper {
+  color: #e11d48; /* vibrant rose color matching login primary brand */
+}
+
+.dashboard-option-btn.emp-mode .option-icon-wrapper {
+  color: #4c1d95; /* deep purple color matching login primary brand */
+}
+
+.option-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  transition: color 0.4s ease;
+  letter-spacing: -0.3px;
+}
+
+.arrow-icon {
+  margin-left: auto;
+  font-size: 14px;
+  color: #94a3b8;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Elegant unified gradient hover matching the main login button */
+.dashboard-option-btn:hover {
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  border-color: transparent;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px -3px rgba(225, 29, 72, 0.25);
+}
+
+.dashboard-option-btn:hover .option-icon-wrapper {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.dashboard-option-btn:hover .option-title {
+  color: #ffffff;
+}
+
+.dashboard-option-btn:hover .arrow-icon {
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
 

@@ -20,9 +20,11 @@ export class AttendanceComponent implements OnInit {
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
   statuses = ['Present', 'Checked In', 'Not Marked', 'Checked Out'];
+  locations = ['Office', 'Remote'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }
   get statusOptions() { return [{label: 'All Statuses', value: ''}, ...this.statuses.map(s => ({label: s, value: s}))]; }
+  get locationOptions() { return [{label: 'All Locations', value: ''}, ...this.locations.map(l => ({label: l, value: l}))]; }
 
   // BehaviorSubjects to trigger explicit reload instead of debounce
   searchTrigger$ = new BehaviorSubject<boolean>(true);
@@ -33,7 +35,10 @@ export class AttendanceComponent implements OnInit {
   
   attendanceData$!: Observable<PaginatedAttendance>;
   paginationArray$!: Observable<number[]>;
-  
+
+  // Drives the SVG ring: last-loaded metrics snapshot
+  lastMetrics: { present: number; checkedIn: number; checkedOut: number; notMarked: number } | null = null;
+
   // Real time indicator bonus
   currentTime$ = timer(0, 60000).pipe(map(() => new Date()));
 
@@ -43,8 +48,23 @@ export class AttendanceComponent implements OnInit {
       toDate: [''],
       employeeSearch: [''],
       department: [''],
-      status: ['']
+      status: [''],
+      location: ['']
     });
+  }
+
+  /** Fraction 0–1 of employees who are present/working out of the total visible. */
+  get attendanceRate(): number {
+    if (!this.lastMetrics) return 0;
+    const { present, checkedIn, checkedOut, notMarked } = this.lastMetrics;
+    const total = present + checkedIn + checkedOut + notMarked;
+    if (total === 0) return 0;
+    return Math.min(1, (present + checkedIn + checkedOut) / total);
+  }
+
+  /** Maps attendanceRate → SVG stroke-dashoffset (pathLength=100 ring). */
+  get ringDashOffset(): number {
+    return 100 - Math.round(this.attendanceRate * 100);
   }
 
   ngOnInit(): void {
@@ -56,15 +76,32 @@ export class AttendanceComponent implements OnInit {
       tap(() => this.isLoading$.next(true)),
       switchMap(([_, page]) => {
         const filters = this.filterForm.value;
-        return this.attendanceService.getAttendanceLogs(
-            page, 
+       return this.attendanceService
+          .getAttendanceLogs(
+            page,
             this.pageSize,
             filters.fromDate || '',
             filters.toDate || '',
             filters.employeeSearch || '',
             filters.department || '',
-            filters.status || ''
-        );
+            filters.status || '',
+            filters.location || '',
+          )
+         .pipe(
+           map((res) => {
+             const sorted = [...res.data].sort((a, b) => {
+               const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+               if (dateDiff !== 0) return dateDiff;
+               if (a.checkIn && b.checkIn) return b.checkIn.localeCompare(a.checkIn);
+               if (b.checkIn) return 1;
+               if (a.checkIn) return -1;
+               return 0;
+             });
+             // Snapshot metrics for the ring
+             this.lastMetrics = res.metrics;
+             return { ...res, data: sorted };
+           }),
+         );
       }),
       tap(() => this.isLoading$.next(false)),
       shareReplay(1)
@@ -89,7 +126,8 @@ export class AttendanceComponent implements OnInit {
       toDate: '',
       employeeSearch: '',
       department: '',
-      status: ''
+      status: '',
+      location: ''
     });
     this.onSearch(); // Explicitly trigger the rebuild with empty flags
   }

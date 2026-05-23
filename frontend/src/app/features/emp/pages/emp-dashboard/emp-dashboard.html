@@ -87,8 +87,24 @@
             </div>
             <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
 
+            <!-- Punch photo strip: check-in image stays, check-out appears alongside -->
+            <div class="punch-photos" *ngIf="checkInImage || checkOutImage">
+                <div class="punch-photo-card" *ngIf="checkInImage">
+                    <div class="punch-photo-label">
+                        <i class="fas fa-sign-in-alt"></i> Check-In Photo
+                    </div>
+                    <img class="punch-photo-img" [src]="checkInImage" alt="Check-in photo" />
+                </div>
+                <div class="punch-photo-card" *ngIf="checkOutImage">
+                    <div class="punch-photo-label checkout">
+                        <i class="fas fa-sign-out-alt"></i> Check-Out Photo
+                    </div>
+                    <img class="punch-photo-img" [src]="checkOutImage" alt="Check-out photo" />
+                </div>
+            </div>
+
         </div>
-        <div class="card request_time_off">
+        <!-- <div class="card request_time_off">
             <div class="card-header">
                 Time Off Management
             </div>
@@ -160,7 +176,7 @@
                     {{ isTimeOffSubmitting ? 'Submitting…' : 'Request time off' }}
                 </button>
             </div>
-        </div>
+        </div> -->
     </div>
     <div class="calendar_body">
         <div class="card calender_container">
@@ -284,6 +300,58 @@
 </div>
 </div>
 </div>
+</div>
+
+<!-- Camera Capture Modal -->
+<div class="camera-modal-overlay" *ngIf="showCameraModal" (click)="closeCameraModal()">
+    <div class="camera-modal-box" (click)="$event.stopPropagation()">
+        <div class="camera-modal-header">
+            <div class="camera-modal-title">
+                <i class="fas fa-camera"></i>
+                <span>{{ isPunchedIn ? 'Check-Out' : 'Check-In' }} Photo</span>
+            </div>
+            <button class="close-btn" (click)="closeCameraModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="camera-modal-body">
+            <!-- Previous check-in photo shown during punch-out -->
+            <div class="prev-photo-row" *ngIf="isPunchedIn && checkInImage">
+                <span class="prev-photo-label"><i class="fas fa-history"></i> Your check-in photo</span>
+                <img class="prev-photo-thumb" [src]="checkInImage" alt="check-in" />
+            </div>
+
+            <!-- Live feed -->
+            <div class="video-wrapper" *ngIf="!capturedImage">
+                <video id="cameraFeed" class="camera-feed" autoplay playsinline muted></video>
+                <div class="face-guide-ring"></div>
+            </div>
+
+            <!-- Captured preview -->
+            <div class="preview-wrapper" *ngIf="capturedImage">
+                <img class="captured-preview" [src]="capturedImage" alt="captured" />
+                <div class="capture-success-badge">
+                    <i class="fas fa-check-circle"></i> Photo taken
+                </div>
+            </div>
+        </div>
+        <div class="camera-modal-footer">
+            <ng-container *ngIf="!capturedImage">
+                <button class="btn btn-secondary" (click)="skipPhoto()">
+                    <i class="fas fa-forward"></i> Skip
+                </button>
+                <button class="btn btn-primary" (click)="capturePhoto()">
+                    <i class="fas fa-camera"></i> Capture
+                </button>
+            </ng-container>
+            <ng-container *ngIf="capturedImage">
+                <button class="btn btn-secondary" (click)="retakePhoto()">
+                    <i class="fas fa-redo"></i> Retake
+                </button>
+                <button class="btn btn-primary" (click)="confirmPhoto()">
+                    <i class="fas fa-check"></i> Confirm &amp; Punch
+                </button>
+            </ng-container>
+        </div>
+    </div>
 </div>
 
 <!-- Schedule Modal -->

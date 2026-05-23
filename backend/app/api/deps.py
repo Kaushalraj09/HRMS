@@ -17,6 +17,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
+        active_dashboard: str = payload.get("activeDashboard")
         if email is None:
             raise credentials_exception
     except JWTError:
@@ -25,4 +26,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
+    
+    # Dynamically set the active dashboard on the user object
+    user.active_dashboard = active_dashboard
     return user

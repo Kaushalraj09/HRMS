@@ -7,6 +7,7 @@ from app.models.attendance import Attendance
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.models.user import Role, User
+from app.services.attendance_service import calculate_attendance_metrics
 
 
 def _employee_query(db: Session):
@@ -20,7 +21,14 @@ def _employee_query(db: Session):
 
 def get_admin_dashboard_data(db: Session):
     total_hrs = db.query(HrUser).count()
-    total_emps = _employee_query(db).count()
+    # Count both HRs and Employees together as the total workforce employees
+    total_emps = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name).in_(["employee", "hr"]))
+        .count()
+    )
     active_users = db.query(User).filter(User.status == "Active").count()
 
     today = date.today()
@@ -30,7 +38,16 @@ def get_admin_dashboard_data(db: Session):
     ).count()
 
     recent_hrs = db.query(HrUser).order_by(HrUser.created_at.desc()).limit(6).all()
-    recent_emps = _employee_query(db).order_by(Employee.created_at.desc()).limit(6).all()
+    # Fetch recent employees including both HRs and Employees for admin dashboard
+    recent_emps = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name).in_(["employee", "hr"]))
+        .order_by(Employee.created_at.desc())
+        .limit(6)
+        .all()
+    )
 
     return {
         "cards": [
@@ -73,7 +90,15 @@ def get_hr_dashboard_data(db: Session):
     male_count = _employee_query(db).filter(Employee.gender == "Male").count()
     female_count = _employee_query(db).filter(Employee.gender == "Female").count()
 
-    recent_records = db.query(Attendance).order_by(Attendance.date.desc()).limit(8).all()
+    recent_records = (
+        db.query(Attendance)
+        .filter(Attendance.date <= today)
+        .order_by(Attendance.date.desc(), Attendance.check_in.desc().nulls_last(), Attendance.id.desc())
+        .limit(8)
+        .all()
+    )
+    for record in recent_records:
+        calculate_attendance_metrics(record)
 
     return {
         "totalEmployees": total_emps,
@@ -95,9 +120,9 @@ def get_hr_dashboard_data(db: Session):
                 "date": record.date.strftime("%Y-%m-%d"),
                 "punchIn": record.check_in.strftime("%H:%M") if record.check_in else "-",
                 "punchOut": record.check_out.strftime("%H:%M") if record.check_out else "-",
-                "breakTime": f"{record.break_minutes} mins",
-                "overtime": f"{record.overtime_minutes} mins",
-                "totalHours": "8h 0m",
+                "breakTime": f"{record.break_minutes or 0} mins",
+                "overtime": f"{record.overtime_minutes or 0} mins",
+                "totalHours": f"{record.total_working_minutes // 60}h {record.total_working_minutes % 60}m" if record.total_working_minutes else "0h 0m",
                 "status": record.status
             } for record in recent_records
         ]
