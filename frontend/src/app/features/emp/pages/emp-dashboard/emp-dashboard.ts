@@ -124,14 +124,16 @@ export class EmpDashboard implements OnDestroy {
 
   // ─── Camera / Photo Capture ───────────────────────────────────────
   showCameraModal = false;
-  checkInImage: string | null = null;
-  checkOutImage: string | null = null;
-  capturedImage: string | null = null;
-  cameraStream: MediaStream | null = null;
-  private pendingPunchWorkMode: WorkMode = 'Office';
-  private pendingPunchLatitude: number | undefined;
-  private pendingPunchLongitude: number | undefined;
-  private pendingPunchAddress: string | undefined;
+  public checkInImage: string | null = null;
+  public checkOutImage: string | null = null;
+  public checkInAddress: string | null = null;
+  public checkOutAddress: string | null = null;
+  public capturedImage: string | null = null;
+  public cameraStream: MediaStream | null = null;
+  public pendingPunchWorkMode: WorkMode = 'Office';
+  public pendingPunchLatitude: number | undefined;
+  public pendingPunchLongitude: number | undefined;
+  public pendingPunchAddress: string | undefined;
 
   latestNews_content = [
     {
@@ -290,7 +292,8 @@ export class EmpDashboard implements OnDestroy {
   }
 
   get progressDashOffset(): number {
-    return 100 - Math.round(this.shiftProgress * 100);
+    const progress = Math.min(1, Math.max(0, this.shiftProgress));
+    return 100 - Math.round(progress * 100);
   }
 
   togglePunch(): void {
@@ -300,7 +303,15 @@ export class EmpDashboard implements OnDestroy {
     this.punchMessage = '';
     this.pendingPunchWorkMode = this.status;
 
-    // Get location first, then open camera
+    if (this.isPunchedIn) {
+      this.pendingPunchLatitude = undefined;
+      this.pendingPunchLongitude = undefined;
+      this.pendingPunchAddress = undefined;
+      this.openCameraModal();
+      return;
+    }
+
+    // Capture location in the background for punch-in, but keep the UI focused on camera verification.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -331,7 +342,9 @@ export class EmpDashboard implements OnDestroy {
     this.capturedImage = null;
     this.showCameraModal = true;
     this.cdr.detectChanges();
-    setTimeout(() => this.startCamera(), 200);
+    if (!this.isPunchedIn) {
+      setTimeout(() => this.startCamera(), 200);
+    }
   }
 
   private startCamera(): void {
@@ -344,37 +357,36 @@ export class EmpDashboard implements OnDestroy {
         video.play();
       })
       .catch(() => {
-        // Camera permission denied – punch without photo
-        this.confirmPhoto(null);
+        console.warn('Camera permission denied or camera unavailable');
+        this.capturedImage = null;
+        this.cdr.detectChanges();
       });
   }
 
-  capturePhoto(): void {
-    const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
-    if (!video) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 320;
-    canvas.height = video.videoHeight || 240;
-    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    this.capturedImage = canvas.toDataURL('image/jpeg', 0.75);
-    this.stopCamera();
-    this.cdr.detectChanges();
-  }
-
-  retakePhoto(): void {
-    this.capturedImage = null;
-    this.cdr.detectChanges();
-    setTimeout(() => this.startCamera(), 100);
+  private capturePhotoProgrammatically(video: HTMLVideoElement): string | null {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        this.capturedImage = canvas.toDataURL('image/jpeg', 0.75);
+        return this.capturedImage;
+      }
+    } catch (e) {
+      console.error('Error capturing background photo:', e);
+    }
+    return null;
   }
 
   confirmPhoto(image: string | null = this.capturedImage): void {
+    if (!this.isPunchedIn && !image) {
+      const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
+      image = video ? this.capturePhotoProgrammatically(video) : null;
+    }
     this.closeCameraModal();
-    this.executePunch(image);
-  }
-
-  skipPhoto(): void {
-    this.closeCameraModal();
-    this.executePunch(null);
+    this.executePunch(this.isPunchedIn ? null : image);
   }
 
   closeCameraModal(): void {
@@ -667,7 +679,9 @@ export class EmpDashboard implements OnDestroy {
     this.remainingSecondsToday = todayState.remainingSeconds;
     this.totalWorkedSecondsToday = todayState.totalWorkedSeconds;
     this.shiftElapsedSeconds = todayState.shiftElapsedSeconds;
-    this.shiftProgress = todayState.shiftTotalSeconds > 0 ? (todayState.shiftElapsedSeconds / todayState.shiftTotalSeconds) : 0;
+    this.shiftProgress = todayState.shiftTotalSeconds > 0
+      ? 1 - (todayState.remainingSeconds / todayState.shiftTotalSeconds)
+      : 0;
     this.attendanceStatusLabel = todayState.isWorking ? 'Working' : 'Not Working';
     this.status = todayState.workMode;
     this.punchInTime = todayState.checkIn || null;
@@ -676,6 +690,8 @@ export class EmpDashboard implements OnDestroy {
     // Preserve first image; only update if not already set
     if (todayState.checkInImage) { this.checkInImage = todayState.checkInImage; }
     if (todayState.checkOutImage) { this.checkOutImage = todayState.checkOutImage; }
+    if (todayState.checkInAddress) { this.checkInAddress = todayState.checkInAddress; }
+    if (todayState.checkOutAddress) { this.checkOutAddress = todayState.checkOutAddress; }
   }
 
   private toIsoDate(date: Date): string {

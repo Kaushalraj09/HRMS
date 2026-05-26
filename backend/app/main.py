@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app import models
-from app.seeds.seed_demo_attendance import seed_attendance
 from app.seeds.seed_demo_users import seed_users
 from app.seeds.seed_master_data import seed_roles
 from app.api.v1 import (
@@ -40,7 +39,6 @@ def startup():
     try:
         seed_roles(db)
         seed_users(db)
-        seed_attendance(db)
     finally:
         db.close()
     start_scheduler()

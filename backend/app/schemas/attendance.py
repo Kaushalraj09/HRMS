@@ -27,6 +27,8 @@ class AttendanceResponse(BaseModel):
     task_description: Optional[str] = Field(default=None, alias="taskDescription")
     check_in: Optional[time] = Field(default=None, alias="checkIn")
     check_out: Optional[time] = Field(default=None, alias="checkOut")
+    punch_in_time: Optional[time] = Field(default=None, alias="punchInTime")
+    punch_out_time: Optional[time] = Field(default=None, alias="punchOutTime")
     status: str
     work_mode: str = Field(alias="workMode")
     total_working_minutes: int = Field(default=0, alias="totalWorkingMinutes")
@@ -48,6 +50,8 @@ class TodayAttendanceState(BaseModel):
     workMode: str = "Office"
     checkIn: Optional[time] = None
     checkOut: Optional[time] = None
+    punchInTime: Optional[time] = None
+    punchOutTime: Optional[time] = None
     
     checkInLatitude: Optional[float] = Field(None, alias="checkInLatitude")
     checkInLongitude: Optional[float] = Field(None, alias="checkInLongitude")
@@ -78,6 +82,8 @@ class AttendanceRecord(BaseModel):
     workMode: Optional[str] = Field(None, alias="workMode")
     checkInAddress: Optional[str] = Field(None, alias="checkInAddress")
     checkOutAddress: Optional[str] = Field(None, alias="checkOutAddress")
+    checkInImage: Optional[str] = Field(None, alias="checkInImage")
+    checkOutImage: Optional[str] = Field(None, alias="checkOutImage")
 
 class AttendanceListResponse(BaseModel):
     data: List[AttendanceRecord]

@@ -17,6 +17,8 @@ export interface AttendanceRecord {
   workMode?: string;
   checkInAddress?: string;
   checkOutAddress?: string;
+  checkInImage?: string;
+  checkOutImage?: string;
 }
 
 export interface AttendanceMetrics {

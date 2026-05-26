@@ -42,18 +42,25 @@
             <div class="punch-container">
                 <div class="punch-dial" [class.punch-dial--busy]="isPunchSaving">
                     <svg class="punch-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="punchProgressGradient" x1="40" y1="180" x2="180" y2="40" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#e11d48"/>
+                                <stop offset="55%" stop-color="#c2185b"/>
+                                <stop offset="100%" stop-color="#5b21b6"/>
+                            </linearGradient>
+                        </defs>
                         <g transform="rotate(-90 110 110)">
                             <circle
-                                class="ring-arc ring-arc--red"
+                                class="ring-arc ring-arc--track"
                                 cx="110" cy="110" r="104"
-                                fill="none" stroke-width="12" stroke-linecap="round"
+                                fill="none" stroke-width="13" stroke-linecap="round"
                                 pathLength="100"
-                                stroke-dasharray="31 69"
+                                stroke-dasharray="100"
                                 stroke-dashoffset="0"/>
                             <circle
                                 class="ring-arc ring-arc--progress"
                                 cx="110" cy="110" r="104"
-                                fill="none" stroke-width="12" stroke-linecap="round"
+                                fill="none" stroke-width="13" stroke-linecap="round"
                                 pathLength="100"
                                 stroke-dasharray="100"
                                 [attr.stroke-dashoffset]="progressDashOffset"/>
@@ -79,6 +86,10 @@
                 <div class="attendance-live__status" [class.attendance-live__status--working]="isPunchedIn">
                     {{ attendanceStatusLabel }}
                 </div>
+                <div class="attendance-live__location" *ngIf="checkOutAddress || checkInAddress">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ checkOutAddress || checkInAddress }}</span>
+                </div>
                 <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
                 <div class="attendance-live__meta">
                     <span>Shift elapsed: {{ liveTimerDisplay }}</span>
@@ -86,22 +97,6 @@
                 </div>
             </div>
             <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
-
-            <!-- Punch photo strip: check-in image stays, check-out appears alongside -->
-            <div class="punch-photos" *ngIf="checkInImage || checkOutImage">
-                <div class="punch-photo-card" *ngIf="checkInImage">
-                    <div class="punch-photo-label">
-                        <i class="fas fa-sign-in-alt"></i> Check-In Photo
-                    </div>
-                    <img class="punch-photo-img" [src]="checkInImage" alt="Check-in photo" />
-                </div>
-                <div class="punch-photo-card" *ngIf="checkOutImage">
-                    <div class="punch-photo-label checkout">
-                        <i class="fas fa-sign-out-alt"></i> Check-Out Photo
-                    </div>
-                    <img class="punch-photo-img" [src]="checkOutImage" alt="Check-out photo" />
-                </div>
-            </div>
 
         </div>
         <!-- <div class="card request_time_off">
@@ -302,54 +297,55 @@
 </div>
 </div>
 
-<!-- Camera Capture Modal -->
+<!-- Punch Verification Modal -->
 <div class="camera-modal-overlay" *ngIf="showCameraModal" (click)="closeCameraModal()">
     <div class="camera-modal-box" (click)="$event.stopPropagation()">
         <div class="camera-modal-header">
             <div class="camera-modal-title">
-                <i class="fas fa-camera"></i>
-                <span>{{ isPunchedIn ? 'Check-Out' : 'Check-In' }} Photo</span>
+                <i [class]="isPunchedIn ? 'fas fa-sign-out-alt' : 'fas fa-camera'"></i>
+                <span>{{ isPunchedIn ? 'Confirm Punch Out' : 'Camera Verification' }}</span>
             </div>
             <button class="close-btn" (click)="closeCameraModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="camera-modal-body">
-            <!-- Previous check-in photo shown during punch-out -->
-            <div class="prev-photo-row" *ngIf="isPunchedIn && checkInImage">
-                <span class="prev-photo-label"><i class="fas fa-history"></i> Your check-in photo</span>
-                <img class="prev-photo-thumb" [src]="checkInImage" alt="check-in" />
-            </div>
-
-            <!-- Live feed -->
-            <div class="video-wrapper" *ngIf="!capturedImage">
-                <video id="cameraFeed" class="camera-feed" autoplay playsinline muted></video>
-                <div class="face-guide-ring"></div>
-            </div>
-
-            <!-- Captured preview -->
-            <div class="preview-wrapper" *ngIf="capturedImage">
-                <img class="captured-preview" [src]="capturedImage" alt="captured" />
-                <div class="capture-success-badge">
-                    <i class="fas fa-check-circle"></i> Photo taken
+            <ng-container *ngIf="!isPunchedIn; else punchOutConfirm">
+                <div class="camera-live-card">
+                    <div class="video-wrapper">
+                        <video id="cameraFeed" class="camera-feed" autoplay playsinline muted></video>
+                        <div class="face-guide-ring"></div>
+                        <div class="camera-live-badge">
+                            <span class="dot"></span>
+                            Live camera
+                        </div>
+                    </div>
+                    <div class="camera-helper">
+                        <strong>Ready to punch in</strong>
+                        <span>Keep your face visible and confirm to start your work session.</span>
+                    </div>
                 </div>
-            </div>
+            </ng-container>
+
+            <ng-template #punchOutConfirm>
+                <div class="punch-out-confirm">
+                    <div class="punch-out-confirm__icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Are you sure you want to punch out?</h3>
+                    <p>Your working session will be closed and today's timesheet will be calculated.</p>
+                    <div class="punch-out-confirm__meta">
+                        <span>Started: {{ punchInTime || '-' }}</span>
+                        <span>Worked: {{ totalWorkedTodayDisplay }}</span>
+                    </div>
+                </div>
+            </ng-template>
         </div>
         <div class="camera-modal-footer">
-            <ng-container *ngIf="!capturedImage">
-                <button class="btn btn-secondary" (click)="skipPhoto()">
-                    <i class="fas fa-forward"></i> Skip
-                </button>
-                <button class="btn btn-primary" (click)="capturePhoto()">
-                    <i class="fas fa-camera"></i> Capture
-                </button>
-            </ng-container>
-            <ng-container *ngIf="capturedImage">
-                <button class="btn btn-secondary" (click)="retakePhoto()">
-                    <i class="fas fa-redo"></i> Retake
-                </button>
-                <button class="btn btn-primary" (click)="confirmPhoto()">
-                    <i class="fas fa-check"></i> Confirm &amp; Punch
-                </button>
-            </ng-container>
+            <button class="btn btn-secondary" (click)="closeCameraModal()">
+                Cancel
+            </button>
+            <button class="btn btn-primary" (click)="confirmPhoto()">
+                <i class="fas fa-check-circle"></i> {{ isPunchedIn ? 'Yes, Punch Out' : 'Confirm & Punch In' }}
+            </button>
         </div>
     </div>
 </div>

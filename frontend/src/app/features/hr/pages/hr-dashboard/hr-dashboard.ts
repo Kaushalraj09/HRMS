@@ -30,6 +30,20 @@ export class HrDashboard implements OnInit {
   pendingRequests: any[] = [];
   processedRequests: any[] = [];
   recentTimeSheets: any[] = [];
+
+  // Photo viewer modal state
+  selectedPhotoUrl: string | null = null;
+  selectedPhotoEmployeeName: string = '';
+
+  openPhotoModal(url: string, employeeName: string): void {
+    this.selectedPhotoUrl = url;
+    this.selectedPhotoEmployeeName = employeeName;
+  }
+
+  closePhotoModal(): void {
+    this.selectedPhotoUrl = null;
+    this.selectedPhotoEmployeeName = '';
+  }
   
   constructor(
     private hrsidebarService: HrSidebarService,

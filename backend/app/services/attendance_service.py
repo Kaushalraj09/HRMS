@@ -10,7 +10,7 @@ from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
 
 TOTAL_SHIFT_WORKING_HOURS = 9.0  # 09:00–18:00
-FIXED_BREAK_MINUTES = 60
+FIXED_BREAK_MINUTES = 55
 REQUIRED_SHIFT_MINUTES = 540 # 9 hours including break
 
 SHIFT_START = time(9, 0)
@@ -28,10 +28,10 @@ def calculate_attendance_metrics(attendance: Attendance):
         total_duration_seconds = int((last_out - first_in).total_seconds())
         total_duration_minutes = total_duration_seconds // 60
         
-        # Calculate lunch break minutes (60 mins if check_in before 1 PM and check_out after 2 PM)
+        # Calculate fixed lunch break when the punch period spans lunch time.
         break_minutes = 0
         if attendance.check_in < time(13, 0) and attendance.check_out > time(14, 0):
-            break_minutes = 60
+            break_minutes = FIXED_BREAK_MINUTES
             
         attendance.break_minutes = break_minutes
         attendance.total_working_minutes = max(0, total_duration_minutes - break_minutes)
@@ -177,10 +177,31 @@ def punch_in(db: Session, employee_id: int, work_mode: str, latitude: float = No
     
     attendance = get_today_record(db, employee_id)
     if attendance and attendance.check_in is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You have already punched in for today. Multiple punches are not allowed."
-        )
+        open_log = db.query(PunchLog).filter(
+            PunchLog.attendance_id == attendance.id,
+            PunchLog.punch_out.is_(None)
+        ).order_by(PunchLog.id.desc()).first()
+        if open_log or attendance.is_working:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You have already punched in for today. Please punch out first."
+            )
+
+        attendance.check_in = None
+        attendance.check_out = None
+        attendance.total_worked_seconds = 0
+        attendance.break_minutes = 0
+        attendance.total_working_minutes = 0
+        attendance.overtime_minutes = 0
+        attendance.grand_total_minutes = 0
+        attendance.check_in_latitude = None
+        attendance.check_in_longitude = None
+        attendance.check_in_address = None
+        attendance.check_in_image = None
+        attendance.check_out_latitude = None
+        attendance.check_out_longitude = None
+        attendance.check_out_address = None
+        attendance.check_out_image = None
 
     if not attendance:
         attendance = Attendance(
@@ -311,6 +332,8 @@ def get_today_state(db: Session, employee_id: int):
         "workMode": attendance.work_mode if attendance else "Office",
         "checkIn": attendance.check_in if attendance else None,
         "checkOut": attendance.check_out if attendance else None,
+        "punchInTime": attendance.check_in if attendance else None,
+        "punchOutTime": attendance.check_out if attendance else None,
         "checkInLatitude": attendance.check_in_latitude if attendance else None,
         "checkInLongitude": attendance.check_in_longitude if attendance else None,
         "checkInAddress": attendance.check_in_address if attendance else None,
@@ -351,6 +374,8 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         task_description=record.task_description,
         check_in=record.check_in,
         check_out=record.check_out,
+        punch_in_time=record.check_in,
+        punch_out_time=record.check_out,
         status=record.status or "Not Marked",
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
@@ -436,7 +461,9 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000):
             "lateMinutes": late_minutes,
             "workMode": record.work_mode,
             "checkInAddress": record.check_in_address,
-            "checkOutAddress": record.check_out_address
+            "checkOutAddress": record.check_out_address,
+            "checkInImage": record.check_in_image,
+            "checkOutImage": record.check_out_image
         })
     
     return {"data": formatted_data, "total": total}

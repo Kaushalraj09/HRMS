@@ -123,7 +123,9 @@ def get_hr_dashboard_data(db: Session):
                 "breakTime": f"{record.break_minutes or 0} mins",
                 "overtime": f"{record.overtime_minutes or 0} mins",
                 "totalHours": f"{record.total_working_minutes // 60}h {record.total_working_minutes % 60}m" if record.total_working_minutes else "0h 0m",
-                "status": record.status
+                "status": record.status,
+                "checkInImage": record.check_in_image,
+                "checkOutImage": record.check_out_image
             } for record in recent_records
         ]
     }
