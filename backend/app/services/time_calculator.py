@@ -3,7 +3,7 @@ from app.models.attendance import Attendance
 
 OFFICE_START_TIME = time(9, 0)
 OFFICE_END_TIME = time(18, 0)
-LUNCH_BREAK_HOURS = 1.0
+FIXED_BREAK_MINUTES = 55
 
 def _time_to_minutes(t: time) -> int:
     if not t:
@@ -61,9 +61,8 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     # Gross minutes
     gross_minutes = out_minutes - in_minutes
     
-    # Deduct Lunch if the period spans lunch time (13:00 - 14:00)
-    # Simple rule: if total time > 4 hours, deduct 1 hour lunch
-    lunch_minutes = int(LUNCH_BREAK_HOURS * 60) if gross_minutes > (4 * 60) else 0
+    # Deduct fixed lunch if the period spans lunch time (13:00 - 14:00).
+    lunch_minutes = FIXED_BREAK_MINUTES if attendance_record.check_in < time(13, 0) and attendance_record.check_out > time(14, 0) else 0
     
     timeoff_minutes = int(timeoff_duration_hours * 60)
     

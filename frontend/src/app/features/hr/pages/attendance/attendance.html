@@ -7,53 +7,6 @@
         <h1>Attendance Management</h1>
         <p>Monitor employee attendance by date and status</p>
       </div>
-      <div class="header-right">
-        <!-- Attendance Rate Ring (same pattern as emp-dashboard punch-ring) -->
-        <div class="attendance-rate-dial">
-          <svg class="attendance-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stop-color="#e11d48" />
-                <stop offset="50%"  stop-color="#7c3aed" />
-                <stop offset="100%" stop-color="#2563eb" />
-              </linearGradient>
-            </defs>
-            <g transform="rotate(-90 110 110)">
-              <!-- Background track arc -->
-              <circle
-                class="ring-arc ring-arc--track"
-                cx="110" cy="110" r="100"
-                fill="none" stroke-width="14" stroke-linecap="round"
-                pathLength="100"
-                stroke-dasharray="100"
-                stroke-dashoffset="0"/>
-              <!-- Decorative red trailing segment (same as emp-dashboard ring-arc--red) -->
-              <circle
-                class="ring-arc ring-arc--red"
-                cx="110" cy="110" r="100"
-                fill="none" stroke-width="14" stroke-linecap="round"
-                pathLength="100"
-                stroke-dasharray="28 72"
-                stroke-dashoffset="0"/>
-              <!-- Animated progress arc -->
-              <circle
-                class="ring-arc ring-arc--progress"
-                cx="110" cy="110" r="100"
-                fill="none" stroke-width="14" stroke-linecap="round"
-                stroke="url(#ringGradient)"
-                pathLength="100"
-                stroke-dasharray="100"
-                [attr.stroke-dashoffset]="ringDashOffset"/>
-            </g>
-          </svg>
-          <!-- Centre label -->
-          <div class="ring-center">
-            <span class="ring-pct">{{ (attendanceRate * 100).toFixed(0) }}%</span>
-            <span class="ring-label">Marked</span>
-          </div>
-        </div>
-        <span class="live-indicator"><span class="pulse"></span> Live Sync: {{ currentTime$ | async | date:'shortTime' }}</span>
-      </div>
     </div>
 
     <!-- Filters Section -->
@@ -203,11 +156,12 @@
                   </div>
                 </td>
 
-                <!-- Live Image column: avatar circle with verified badge when punched in -->
+                <!-- Live Image column: actual photo or fallback user avatar when punched in -->
                 <td>
                   <div class="live-image-cell">
                     <div class="avatar-wrapper" *ngIf="rec.checkIn; else noImage">
-                      <div class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
+                      <img *ngIf="rec.checkInImage" [src]="rec.checkInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(rec.checkInImage, rec.name)" />
+                      <div *ngIf="!rec.checkInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
                         <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
                       </div>
                       <span class="verified-badge" title="Attendance recorded">
@@ -270,5 +224,18 @@
       </div>
     </div>
     
+  </div>
+</div>
+
+<!-- Click to enlarge photo viewer modal -->
+<div class="photo-modal-overlay" *ngIf="selectedPhotoUrl" (click)="closePhotoModal()">
+  <div class="photo-modal-box" (click)="$event.stopPropagation()">
+    <div class="photo-modal-header">
+      <h3>Captured Image - {{ selectedPhotoEmployeeName }}</h3>
+      <button class="close-btn" (click)="closePhotoModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="photo-modal-body">
+      <img [src]="selectedPhotoUrl" alt="Enlarged captured photo" class="enlarged-photo" />
+    </div>
   </div>
 </div>

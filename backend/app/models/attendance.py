@@ -45,6 +45,14 @@ class Attendance(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    @property
+    def punch_in_time(self):
+        return self.check_in
+
+    @property
+    def punch_out_time(self):
+        return self.check_out
+
 
 class PunchLog(Base):
     __tablename__ = "punch_logs"

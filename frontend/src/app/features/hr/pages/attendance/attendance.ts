@@ -42,6 +42,20 @@ export class AttendanceComponent implements OnInit {
   // Real time indicator bonus
   currentTime$ = timer(0, 60000).pipe(map(() => new Date()));
 
+  // Photo viewer modal state
+  selectedPhotoUrl: string | null = null;
+  selectedPhotoEmployeeName: string = '';
+
+  openPhotoModal(url: string, employeeName: string): void {
+    this.selectedPhotoUrl = url;
+    this.selectedPhotoEmployeeName = employeeName;
+  }
+
+  closePhotoModal(): void {
+    this.selectedPhotoUrl = null;
+    this.selectedPhotoEmployeeName = '';
+  }
+
   constructor(private fb: FormBuilder, private attendanceService: AttendanceService) {
     this.filterForm = this.fb.group({
       fromDate: [''],

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map, Subject, switchMap } from 'rxjs';
 
@@ -35,6 +35,8 @@ interface BackendAttendanceRecord {
   workMode?: string;
   checkInAddress?: string;
   checkOutAddress?: string;
+  checkInImage?: string;
+  checkOutImage?: string;
 }
 
 interface BackendAttendanceListResponse {
@@ -84,6 +86,10 @@ export interface TimeOffApplyResponse {
 export class AttendanceService {
   private readonly apiUrl = 'http://localhost:8000/api/v1/attendance';
   private readonly timeoffApiUrl = 'http://localhost:8000/api/v1/timeoff';
+  private readonly noCacheHeaders = new HttpHeaders({
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache'
+  });
   private socket: WebSocket | null = null;
   private timeoffUpdateSubject = new Subject<any>();
   public timeoffUpdate$ = this.timeoffUpdateSubject.asObservable();
@@ -141,7 +147,7 @@ export class AttendanceService {
     status: string,
     location?: string
   ): Observable<PaginatedAttendance> {
-    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`).pipe(
+    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, this.noCacheOptions()).pipe(
       map(result => {
         let rows = result.data.map(row => this.mapAttendanceRecord(row));
         rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status, location);
@@ -172,13 +178,13 @@ export class AttendanceService {
   }
 
   getMyTimesheets(): Observable<EmployeeTimesheetRow[]> {
-    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/my-history`).pipe(
+    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/my-history`, this.noCacheOptions()).pipe(
       map(rows => rows.map(row => this.mapTimesheet(row)))
     );
   }
 
   getTodayAttendanceState(): Observable<TodayAttendanceState> {
-    return this.http.get<BackendTodayAttendanceState>(`${this.apiUrl}/today`).pipe(
+    return this.http.get<BackendTodayAttendanceState>(`${this.apiUrl}/today`, this.noCacheOptions()).pipe(
       map(state => ({
         isWorking: state.isWorking,
         status: state.status,
@@ -319,7 +325,16 @@ export class AttendanceService {
       status: this.normalizeStatus(row.status),
       workMode: row.workMode,
       checkInAddress: row.checkInAddress || '',
-      checkOutAddress: row.checkOutAddress || ''
+      checkOutAddress: row.checkOutAddress || '',
+      checkInImage: row.checkInImage,
+      checkOutImage: row.checkOutImage
+    };
+  }
+
+  private noCacheOptions(): { headers: HttpHeaders; params: HttpParams } {
+    return {
+      headers: this.noCacheHeaders,
+      params: new HttpParams().set('_ts', Date.now().toString())
     };
   }
 
@@ -328,7 +343,10 @@ export class AttendanceService {
     const displayCheckOut = this.toDisplayTime(row.checkOut);
     const displayScheduledStart = this.toDisplayTime(row.scheduledStart);
     const displayScheduledEnd = this.toDisplayTime(row.scheduledEnd);
-    const workMinutes = row.totalWorkingMinutes ?? this.calculateMinutes(row.checkIn, row.checkOut);
+    const workMinutes = Number(row.totalWorkingMinutes) || 0;
+    const overtimeMinutes = Number(row.overtimeMinutes) || 0;
+    const breakMinutes = Number(row.breakMinutes) || 0;
+    const grandTotalMinutes = Number(row.grandTotalMinutes) || 0;
 
     return {
       date: row.date,
@@ -340,9 +358,9 @@ export class AttendanceService {
       exit: displayCheckOut || displayScheduledEnd || '-',
       late: row.checkIn ? formatMinutesToHours(row.lateMinutes ?? 0) : '-',
       total: row.checkOut ? formatMinutesToHours(workMinutes) : '-',
-      overtime: row.checkOut ? formatMinutesToHours(row.overtimeMinutes ?? 0) : '-',
-      break: row.checkOut ? formatMinutesToHours(row.breakMinutes ?? 0) : '-',
-      grandTotal: row.checkOut ? formatMinutesToHours(row.grandTotalMinutes ?? workMinutes) : '-',
+      overtime: row.checkOut ? formatMinutesToHours(overtimeMinutes) : '-',
+      break: row.checkOut ? formatMinutesToHours(breakMinutes) : '-',
+      grandTotal: row.checkOut ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
       status: this.normalizeStatus(row.status)
     };
   }
