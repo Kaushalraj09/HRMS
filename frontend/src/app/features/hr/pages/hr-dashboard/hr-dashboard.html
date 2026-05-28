@@ -13,7 +13,10 @@
     <div class="main-content" [class.expanded]="!(isHrSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
-        <ng-container *ngIf="isDashboardHome">
+    <ng-container *ngIf="isDashboardHome">
+      <div class="card" *ngIf="dashboardError">
+        {{ dashboardError }}
+      </div>
 
         <!-- Dashboard content -->
         <div class="dashboard-content-A">

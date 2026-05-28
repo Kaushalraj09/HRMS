@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Observable, BehaviorSubject, combineLatest, timer } from 'rxjs';
-import { switchMap, tap, map, shareReplay } from 'rxjs/operators';
+import { Observable, BehaviorSubject, combineLatest, of, timer } from 'rxjs';
+import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { AttendanceRecord, PaginatedAttendance } from '../../../../core/models/attendance.model';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
@@ -32,6 +32,7 @@ export class AttendanceComponent implements OnInit {
   pageSize = 10;
   
   isLoading$ = new BehaviorSubject<boolean>(true);
+  errorMessage$ = new BehaviorSubject<string>('');
   
   attendanceData$!: Observable<PaginatedAttendance>;
   paginationArray$!: Observable<number[]>;
@@ -87,7 +88,10 @@ export class AttendanceComponent implements OnInit {
       this.searchTrigger$,
       this.pageSubject.asObservable()
     ]).pipe(
-      tap(() => this.isLoading$.next(true)),
+      tap(() => {
+        this.errorMessage$.next('');
+        this.isLoading$.next(true);
+      }),
       switchMap(([_, page]) => {
         const filters = this.filterForm.value;
        return this.attendanceService
@@ -115,9 +119,19 @@ export class AttendanceComponent implements OnInit {
              this.lastMetrics = res.metrics;
              return { ...res, data: sorted };
            }),
+           catchError((error) => {
+             const detail = error?.error?.detail;
+             this.lastMetrics = { present: 0, checkedIn: 0, checkedOut: 0, notMarked: 0 };
+             this.errorMessage$.next(typeof detail === 'string' ? detail : 'Unable to load attendance records.');
+             return of({
+               data: [],
+               total: 0,
+               metrics: this.lastMetrics
+             });
+           }),
+           finalize(() => this.isLoading$.next(false)),
          );
       }),
-      tap(() => this.isLoading$.next(false)),
       shareReplay(1)
     );
 

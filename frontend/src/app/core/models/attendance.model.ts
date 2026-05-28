@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked' | 'Working' | 'Not working';
+export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked' | 'Working' | 'Not Working';
 export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
 
 export interface AttendanceRecord {

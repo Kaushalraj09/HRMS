@@ -60,7 +60,7 @@
                                     No attendance records found
                                 </td>
                             </tr>
-                            <tr *ngFor="let sheet of timeSheets">
+                            <tr *ngFor="let sheet of pagedTimeSheets">
                                 <td>{{ sheet.date }}</td>
                                 <td>{{ sheet.day }}</td>
                                 <td>{{ sheet.entry }}</td>
@@ -78,6 +78,40 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="timesheet-pagination" *ngIf="timeSheets.length > 0">
+                    <div class="timesheet-pagination__info">
+                        Showing <span>{{ timeSheetStartEntry }}</span> to
+                        <span>{{ timeSheetEndEntry }}</span> of
+                        <span>{{ timeSheets.length }}</span> entries
+                    </div>
+                    <div class="timesheet-pagination__controls" *ngIf="timeSheets.length > timeSheetPageSize">
+                        <button
+                            type="button"
+                            class="timesheet-page-btn"
+                            [disabled]="timeSheetPage === 1"
+                            (click)="setTimeSheetPage(timeSheetPage - 1)"
+                        >
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="timesheet-page-btn"
+                            *ngFor="let page of timeSheetPages"
+                            [class.active]="page === timeSheetPage"
+                            (click)="setTimeSheetPage(page)"
+                        >
+                            {{ page }}
+                        </button>
+                        <button
+                            type="button"
+                            class="timesheet-page-btn"
+                            [disabled]="timeSheetPage === timeSheetTotalPages"
+                            (click)="setTimeSheetPage(timeSheetPage + 1)"
+                        >
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
         </div>
     </div>
