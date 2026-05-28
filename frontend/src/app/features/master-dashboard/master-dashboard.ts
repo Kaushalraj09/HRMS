@@ -25,7 +25,6 @@ export class MasterDashboard implements OnInit {
   isSidebarOpen$!: import('rxjs').Observable<boolean>;
   dashboardData: AdminDashboardData | null = null;
   userName = 'Admin';
-  dashboardError = '';
 
   constructor(
     private sidebarService: SidebarService,
@@ -39,16 +38,9 @@ export class MasterDashboard implements OnInit {
   }
 
   ngOnInit() {
-    this.dashboardService.getAdminDashboard().subscribe({
-      next: (data) => {
-        this.dashboardError = '';
-        this.dashboardData = data;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.dashboardError = error?.error?.detail || 'Unable to load master dashboard data.';
-        this.cdr.detectChanges();
-      }
+    this.dashboardService.getAdminDashboard().subscribe(data => {
+      this.dashboardData = data;
+      this.cdr.detectChanges();
     });
   }
 

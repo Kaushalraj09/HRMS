@@ -1,13 +1,3 @@
-"""
-Attendance Service - Manages single punch session attendance tracking.
-
-This module implements a simplified single punch-in/punch-out system with:
-- Single attendance record per day per employee
-- Automatic break calculation for lunch spans
-- Daily summary generation
-- Location and image tracking (optional)
-"""
-
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date, time
@@ -15,14 +5,13 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
 from app.models.attendance import Attendance, DailySummary
 from app.models.timeoff import TimeOffRequest
+from app.utils.employee_code import normalize_employee_code
 from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
-from app.utils.employee_code import normalize_employee_code
 
-# Shift Configuration
-TOTAL_SHIFT_WORKING_HOURS = 9.0  # 09:00 – 18:00
-FIXED_BREAK_MINUTES = 60  # Fixed lunch break
-REQUIRED_SHIFT_MINUTES = 540  # 9 hours = 540 minutes
+TOTAL_SHIFT_WORKING_HOURS = 9.0  # 09:00–18:00
+FIXED_BREAK_MINUTES = 55
+REQUIRED_SHIFT_MINUTES = 540 # 9 hours including break
 
 SHIFT_START = time(9, 0)
 SHIFT_END = time(18, 0)
@@ -30,69 +19,53 @@ APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 SHIFT_TOTAL_SECONDS = int(TOTAL_SHIFT_WORKING_HOURS * 3600)
 
 
-def calculate_attendance_metrics(attendance: Attendance) -> None:
-    """
-    Calculate working minutes, break, and overtime based on check_in and check_out times.
-    
-    Logic:
-    - Total duration = check_out - check_in
-    - Break = 60 min if span crosses lunch (13:00-14:00)
-    - Working minutes = total duration - break
-    - Overtime = working minutes beyond 480 min (8 hours)
-    - Grand total = total duration (not working + overtime)
-    
-    Args:
-        attendance: Attendance record to calculate metrics for
-    """
+def calculate_attendance_metrics(attendance: Attendance):
+    """Dynamically calculates working minutes, overtime, break and grand total based on check_in/check_out."""
     if attendance.check_in and attendance.check_out:
         rec_date = attendance.date or date.today()
         first_in = datetime.combine(rec_date, attendance.check_in)
         last_out = datetime.combine(rec_date, attendance.check_out)
-        
-        # Total session duration in minutes
         total_duration_seconds = int((last_out - first_in).total_seconds())
         total_duration_minutes = total_duration_seconds // 60
         
-        # Calculate fixed lunch break when punch period spans lunch time
+        # Calculate fixed lunch break when the punch period spans lunch time.
         break_minutes = 0
         if attendance.check_in < time(13, 0) and attendance.check_out > time(14, 0):
             break_minutes = FIXED_BREAK_MINUTES
-        
-        # Working minutes = total duration minus break
-        working_minutes = max(0, total_duration_minutes - break_minutes)
-        
-        # Overtime = working minutes beyond 8 hours (480 minutes)
-        overtime_minutes = max(0, working_minutes - 480)
-        
-        # Grand total = total session duration (not working + overtime separately)
+            
         attendance.break_minutes = break_minutes
-        attendance.total_working_minutes = working_minutes
-        attendance.overtime_minutes = overtime_minutes
-        attendance.grand_total_minutes = total_duration_minutes
+        attendance.total_working_minutes = max(0, total_duration_minutes - break_minutes)
+        attendance.overtime_minutes = max(0, total_duration_minutes - REQUIRED_SHIFT_MINUTES)
+        attendance.grand_total_minutes = attendance.total_working_minutes + attendance.overtime_minutes
     else:
-        # No punch data available
         attendance.break_minutes = 0
         attendance.total_working_minutes = 0
         attendance.overtime_minutes = 0
         attendance.grand_total_minutes = 0
 
 
+def _now() -> datetime:
+    """Return the current business-local timestamp used for attendance rules."""
+    return datetime.now(APP_TIMEZONE)
+
+
+def _minutes_since_midnight(value: time | None) -> int:
+    if not value:
+        return 0
+    return value.hour * 60 + value.minute
+
+
+def _seconds_between(target_date: date, start: time, end: time) -> int:
+    start_dt = datetime.combine(target_date, start)
+    end_dt = datetime.combine(target_date, end)
+    return max(0, int((end_dt - start_dt).total_seconds()))
 
 
 def _shift_elapsed_seconds(now: datetime | None = None) -> int:
-    """
-    Calculate elapsed seconds in shift from start to current time.
-    
-    Args:
-        now: Current datetime (default: now in APP_TIMEZONE)
-        
-    Returns:
-        int: Seconds elapsed in shift, capped at shift total
-    """
-    current = now or datetime.now(APP_TIMEZONE)
+    current = now or _now()
     current_seconds = current.hour * 3600 + current.minute * 60 + current.second
-    shift_start_seconds = SHIFT_START.hour * 3600 + SHIFT_START.minute * 60
-    shift_end_seconds = SHIFT_END.hour * 3600 + SHIFT_END.minute * 60
+    shift_start_seconds = SHIFT_START.hour * 3600 + SHIFT_START.minute * 60 + SHIFT_START.second
+    shift_end_seconds = SHIFT_END.hour * 3600 + SHIFT_END.minute * 60 + SHIFT_END.second
 
     if current_seconds <= shift_start_seconds:
         return 0
@@ -101,18 +74,47 @@ def _shift_elapsed_seconds(now: datetime | None = None) -> int:
     return current_seconds - shift_start_seconds
 
 
+def _closed_session_seconds(records: list[Attendance]) -> int:
+    return sum(
+        _seconds_between(record.date, record.check_in, record.check_out)
+        for record in records
+        if record.check_in and record.check_out
+    )
+
+
+def _get_today_records(db: Session, employee_id: int) -> list[Attendance]:
+    today = _now().date()
+    return (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee_id, Attendance.date == today)
+        .order_by(Attendance.check_in.asc().nulls_last(), Attendance.id.asc())
+        .all()
+    )
+
+
+def _get_open_session(db: Session, employee_id: int) -> Attendance | None:
+    today = _now().date()
+    return (
+        db.query(Attendance)
+        .filter(
+            Attendance.employee_id == employee_id,
+            Attendance.date == today,
+            Attendance.check_in.isnot(None),
+            Attendance.check_out.is_(None),
+        )
+        .order_by(Attendance.id.desc())
+        .first()
+    )
+
+
+def get_today_record(db: Session, employee_id: int):
+    today = _now().date()
+    return db.query(Attendance).filter(
+        Attendance.employee_id == employee_id,
+        Attendance.date == today
+    ).first()
+
 def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: date) -> float:
-    """
-    Get approved time-off duration for a specific date.
-    
-    Args:
-        db: Database session
-        employee_id: Employee to check
-        target_date: Date to check
-        
-    Returns:
-        float: Approved time-off hours
-    """
     total = (
         db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
         .filter(
@@ -126,329 +128,200 @@ def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: da
 
 
 def get_timeoff_duration_today(db: Session, employee_id: int) -> float:
-    """
-    Get approved time-off duration for today.
-    
-    Args:
-        db: Database session
-        employee_id: Employee to check
-        
-    Returns:
-        float: Approved time-off hours for today
-    """
-    today = datetime.now(APP_TIMEZONE).date()
-    return get_timeoff_duration_for_date(db, employee_id, today)
+    return get_timeoff_duration_for_date(db, employee_id, _now().date())
 
 
 def upsert_daily_summary(db: Session, employee_id: int, target_date: date | None = None) -> DailySummary:
-    """
-    Generate or update daily summary for an employee.
-    
-    Calculates:
-    - Total worked hours
-    - Overtime minutes
-    - Late arrival minutes
-    - Early leave minutes
-    
-    Args:
-        db: Database session
-        employee_id: Employee to summarize
-        target_date: Date to summarize (default: today)
-        
-    Returns:
-        DailySummary: Generated summary record
-    """
-    summary_date = target_date or datetime.now(APP_TIMEZONE).date()
-    
-    # Get attendance record for the day
-    attendance = (
+    """Persist the daily attendance rollup for closed punch sessions."""
+    summary_date = target_date or _now().date()
+    records = (
         db.query(Attendance)
         .filter(Attendance.employee_id == employee_id, Attendance.date == summary_date)
-        .first()
+        .order_by(Attendance.check_in.asc().nulls_last(), Attendance.id.asc())
+        .all()
     )
-    
-    if not attendance or not attendance.check_in or not attendance.check_out:
-        # No complete punch data for the day
-        return None
-    
-    # Calculate duration from check_in to check_out
-    check_in_dt = datetime.combine(summary_date, attendance.check_in)
-    check_out_dt = datetime.combine(summary_date, attendance.check_out)
-    total_seconds = int((check_out_dt - check_in_dt).total_seconds())
+    total_seconds = _closed_session_seconds(records)
     total_minutes = total_seconds // 60
-    
-    # Calculate late arrival
+    first_check_in = next((record.check_in for record in records if record.check_in), None)
+    last_check_out = next((record.check_out for record in reversed(records) if record.check_out), None)
+
     late_minutes = 0
-    check_in_minutes = attendance.check_in.hour * 60 + attendance.check_in.minute
-    shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-    if check_in_minutes > shift_start_minutes:
-        late_minutes = check_in_minutes - shift_start_minutes
-    
-    # Calculate early leave
+    if first_check_in and _minutes_since_midnight(first_check_in) > _minutes_since_midnight(SHIFT_START):
+        late_minutes = _minutes_since_midnight(first_check_in) - _minutes_since_midnight(SHIFT_START)
+
     early_leave = 0
-    check_out_minutes = attendance.check_out.hour * 60 + attendance.check_out.minute
-    shift_end_minutes = SHIFT_END.hour * 60 + SHIFT_END.minute
-    if check_out_minutes < shift_end_minutes:
-        early_leave = shift_end_minutes - check_out_minutes
-    
-    # Calculate overtime
+    if last_check_out and _minutes_since_midnight(last_check_out) < _minutes_since_midnight(SHIFT_END):
+        early_leave = _minutes_since_midnight(SHIFT_END) - _minutes_since_midnight(last_check_out)
+
     overtime = max(0, total_minutes - int(TOTAL_SHIFT_WORKING_HOURS * 60))
-    
-    # Get or create summary record
     summary = (
         db.query(DailySummary)
         .filter(DailySummary.employee_id == employee_id, DailySummary.date == summary_date)
         .first()
     )
-    
     if not summary:
         summary = DailySummary(employee_id=employee_id, date=summary_date)
         db.add(summary)
-    
-    # Update summary fields
+
     summary.total_worked_hours = round(total_seconds / 3600, 4)
     summary.overtime = overtime
     summary.late_minutes = late_minutes
     summary.early_leave = early_leave
-    
-    db.commit()
-    db.refresh(summary)
-    
     return summary
 
+from app.models.attendance import Attendance, DailySummary, PunchLog
 
-def punch_in(
-    db: Session,
-    employee_id: int,
-    work_mode: str,
-    latitude: float = None,
-    longitude: float = None,
-    address: str = None,
-    image: str = None,
-    custom_time: datetime = None,
-) -> AttendanceResponse:
-    """
-    Punch in for the day. Single punch-in per day.
-    
-    Logic:
-    - Get or create attendance record for today
-    - If already punched in (is_working=1), raise error
-    - Set check_in time with optional location/image
-    - Mark as working
-    
-    Args:
-        db: Database session
-        employee_id: Employee to punch in
-        work_mode: Office/Remote/Hybrid
-        latitude: Optional check-in latitude
-        longitude: Optional check-in longitude
-        address: Optional check-in address
-        image: Optional base64 check-in image
-        custom_time: Optional custom time for testing
-        
-    Returns:
-        AttendanceResponse: Updated attendance record
-    """
-    # Determine current time
-    if custom_time:
-        if custom_time.tzinfo is None:
-            current = custom_time.replace(tzinfo=APP_TIMEZONE)
-        else:
-            current = custom_time.astimezone(APP_TIMEZONE)
-    else:
-        current = datetime.now(APP_TIMEZONE)
-    
+def punch_in(db: Session, employee_id: int, work_mode: str, latitude: float = None, longitude: float = None, address: str = None, image: str = None):
+    current = _now()
     today = current.date()
     
-    # Get or create attendance for today
-    attendance = (
-        db.query(Attendance)
-        .filter(Attendance.employee_id == employee_id, Attendance.date == today)
-        .first()
-    )
-    
-    # Prevent duplicate punch-in
-    if attendance and attendance.is_working:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Already punched in. Please punch out first.",
-        )
-    
-    # Create new attendance if doesn't exist
+    attendance = get_today_record(db, employee_id)
+    if attendance and attendance.check_in is not None:
+        open_log = db.query(PunchLog).filter(
+            PunchLog.attendance_id == attendance.id,
+            PunchLog.punch_out.is_(None)
+        ).order_by(PunchLog.id.desc()).first()
+        if open_log or attendance.is_working:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You have already punched in for today. Please punch out first."
+            )
+
+        attendance.check_in = None
+        attendance.check_out = None
+        attendance.total_worked_seconds = 0
+        attendance.break_minutes = 0
+        attendance.total_working_minutes = 0
+        attendance.overtime_minutes = 0
+        attendance.grand_total_minutes = 0
+        attendance.check_in_latitude = None
+        attendance.check_in_longitude = None
+        attendance.check_in_address = None
+        attendance.check_in_image = None
+        attendance.check_out_latitude = None
+        attendance.check_out_longitude = None
+        attendance.check_out_address = None
+        attendance.check_out_image = None
+
     if not attendance:
         attendance = Attendance(
-            employee_id=employee_id,
-            date=today,
+            employee_id=employee_id, 
+            date=today, 
             is_working=1,
             work_mode=work_mode,
-            status="Working",
+            status="Working"
         )
         db.add(attendance)
         db.flush()
     else:
-        # Update existing attendance record
+        if attendance.is_working:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Already marked as working."
+            )
         attendance.is_working = 1
         attendance.work_mode = work_mode
         attendance.status = "Working"
-    
-    # Set check-in with location and image (first check-in of the day)
-    attendance.check_in = current.time()
-    attendance.check_in_latitude = latitude
-    attendance.check_in_longitude = longitude
-    attendance.check_in_address = address
-    attendance.check_in_image = image
-    
-    db.commit()
-    db.refresh(attendance)
-    
-    return to_attendance_response(attendance)
 
-def punch_out(
-    db: Session,
-    employee_id: int,
-    work_mode: str,
-    latitude: float = None,
-    longitude: float = None,
-    address: str = None,
-    image: str = None,
-    custom_time: datetime = None,
-) -> AttendanceResponse:
-    """
-    Punch out for the day. Single punch-out per day.
-    
-    Logic:
-    - Get attendance for today
-    - If no attendance found, raise error
-    - If already punched out, raise error
-    - If not working, raise error
-    - Set check_out time with optional location/image
-    - Calculate attendance metrics
-    - Mark as not working
-    - Generate daily summary
-    
-    Args:
-        db: Database session
-        employee_id: Employee to punch out
-        work_mode: Office/Remote/Hybrid
-        latitude: Optional check-out latitude
-        longitude: Optional check-out longitude
-        address: Optional check-out address
-        image: Optional base64 check-out image
-        custom_time: Optional custom time for testing
-        
-    Returns:
-        AttendanceResponse: Updated attendance record
-    """
-    # Determine current time
-    if custom_time:
-        if custom_time.tzinfo is None:
-            current = custom_time.replace(tzinfo=APP_TIMEZONE)
-        else:
-            current = custom_time.astimezone(APP_TIMEZONE)
-    else:
-        current = datetime.now(APP_TIMEZONE)
-    
-    today = current.date()
-    
-    # Get attendance for today
-    attendance = (
-        db.query(Attendance)
-        .filter(Attendance.employee_id == employee_id, Attendance.date == today)
-        .first()
+    log = PunchLog(
+        employee_id=employee_id,
+        attendance_id=attendance.id,
+        date=today,
+        punch_in=current,
+        work_mode=work_mode,
+        latitude=latitude,
+        longitude=longitude,
+        address=address
     )
     
-    # Validate punch-out conditions
-    if not attendance:
+    # Set first check-in of the day
+    if attendance.check_in is None:
+        attendance.check_in = current.time()
+        attendance.check_in_latitude = latitude
+        attendance.check_in_longitude = longitude
+        attendance.check_in_address = address
+        attendance.check_in_image = image  # Stored once – never overwritten by punch-out
+
+    db.add(log)
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+def punch_out(db: Session, employee_id: int, work_mode: str, latitude: float = None, longitude: float = None, address: str = None, image: str = None):
+    current = _now()
+    today = current.date()
+    
+    attendance = get_today_record(db, employee_id)
+    if attendance and attendance.check_out is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No attendance found for today. Please punch in first.",
+            detail="You have already punched out for today. Multiple punches are not allowed."
         )
-    
-    if attendance.check_out is not None:
+
+    if not attendance or not attendance.is_working:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Already punched out. Multiple punch-outs not allowed.",
+            detail="Cannot punch out while not working."
         )
+
+    log = db.query(PunchLog).filter(
+        PunchLog.attendance_id == attendance.id,
+        PunchLog.punch_out.is_(None)
+    ).order_by(PunchLog.id.desc()).first()
     
-    if not attendance.is_working:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Not currently working. Please punch in first.",
-        )
-    
-    # Set check-out with location and image
+    if log:
+        log.punch_out = current
+        log.latitude = latitude
+        log.longitude = longitude
+        log.address = address
+        duration = int((log.punch_out - log.punch_in).total_seconds())
+        log.duration_seconds = duration
+        attendance.total_worked_seconds += duration
+
+    # Set/Update last check-out of the day (check_in_image is intentionally NOT touched)
     attendance.check_out = current.time()
     attendance.check_out_latitude = latitude
     attendance.check_out_longitude = longitude
     attendance.check_out_address = address
-    attendance.check_out_image = image
+    attendance.check_out_image = image  # Stored separately alongside check_in_image
     attendance.is_working = 0
     attendance.status = "Not Working"
-    
-    # Calculate metrics
+
+    # Calculate Attendance Metrics using shared helper
     calculate_attendance_metrics(attendance)
-    
+
     db.commit()
     db.refresh(attendance)
-    
-    # Generate daily summary
-    upsert_daily_summary(db, employee_id, today)
-    
-    return to_attendance_response(attendance)
+    return attendance
 
-def get_today_state(db: Session, employee_id: int) -> dict:
-    """
-    Get current attendance state for today.
-    
-    Calculates:
-    - Total worked seconds (including active session if still working)
-    - Approved/time-off seconds
-    - Remaining seconds = shift total - worked - approved
-    - Current shift elapsed time
-    
-    Args:
-        db: Database session
-        employee_id: Employee to get state for
-        
-    Returns:
-        dict: Attendance state with working metrics
-    """
-    current = datetime.now(APP_TIMEZONE)
+def get_today_state(db: Session, employee_id: int):
+    current = _now()
     today = current.date()
+    attendance = get_today_record(db, employee_id)
     
-    attendance = (
-        db.query(Attendance)
-        .filter(Attendance.employee_id == employee_id, Attendance.date == today)
-        .first()
-    )
+    worked_seconds = attendance.total_worked_seconds if attendance else 0
+    is_working = bool(attendance.is_working) if attendance else False
     
-    # Calculate total worked seconds
-    worked_seconds = 0
-    if attendance and attendance.check_in and attendance.check_out:
-        # Full session completed
-        check_in_dt = datetime.combine(today, attendance.check_in, tzinfo=APP_TIMEZONE)
-        check_out_dt = datetime.combine(today, attendance.check_out, tzinfo=APP_TIMEZONE)
-        worked_seconds = int((check_out_dt - check_in_dt).total_seconds())
-    elif attendance and attendance.check_in and attendance.is_working:
-        # Active session - calculate time from check_in to now
-        check_in_dt = datetime.combine(today, attendance.check_in, tzinfo=APP_TIMEZONE)
-        worked_seconds = int((current - check_in_dt).total_seconds())
-    
-    # Get approved time-off hours
+    if is_working:
+        log = db.query(PunchLog).filter(
+            PunchLog.attendance_id == attendance.id,
+            PunchLog.punch_out.is_(None)
+        ).order_by(PunchLog.id.desc()).first()
+        if log:
+            active_seconds = int((current - log.punch_in).total_seconds())
+            worked_seconds += active_seconds
+
     approved_hours = get_timeoff_duration_today(db, employee_id)
     approved_seconds = int(round(approved_hours * 3600))
     
-    # Calculate remaining seconds = shift total - worked - approved
-    remaining_seconds = max(0, SHIFT_TOTAL_SECONDS - worked_seconds - approved_seconds)
-    
-    # Calculate shift elapsed time
+    # Shift logic: Remaining = (Time until 6 PM) - Approved
     shift_elapsed_seconds = _shift_elapsed_seconds(current)
+    seconds_until_shift_end = max(0, SHIFT_TOTAL_SECONDS - shift_elapsed_seconds)
+    remaining_seconds = max(0, seconds_until_shift_end - approved_seconds)
     
-    # Prepare response
     return {
-        "employeeId": employee_id,
-        "isWorking": bool(attendance and attendance.is_working),
-        "status": "Working" if (attendance and attendance.is_working) else "Not Working",
+        "isWorking": is_working,
+        "status": "Working" if is_working else "Not Working",
         "totalWorkedSeconds": worked_seconds,
         "approvedSeconds": approved_seconds,
         "remainingSeconds": remaining_seconds,
@@ -457,35 +330,27 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "shiftStart": SHIFT_START.strftime("%I:%M %p"),
         "shiftEnd": SHIFT_END.strftime("%I:%M %p"),
         "workMode": attendance.work_mode if attendance else "Office",
-        "punchIn": attendance.check_in if attendance else None,
-        "punchOut": attendance.check_out if attendance else None,
-        "punchInLatitude": attendance.check_in_latitude if attendance else None,
-        "punchInLongitude": attendance.check_in_longitude if attendance else None,
-        "punchInAddress": attendance.check_in_address if attendance else None,
-        "punchOutLatitude": attendance.check_out_latitude if attendance else None,
-        "punchOutLongitude": attendance.check_out_longitude if attendance else None,
-        "punchOutAddress": attendance.check_out_address if attendance else None,
-        "punchInImage": attendance.check_in_image if attendance else None,
-        "punchOutImage": attendance.check_out_image if attendance else None,
+        "checkIn": attendance.check_in if attendance else None,
+        "checkOut": attendance.check_out if attendance else None,
+        "punchInTime": attendance.check_in if attendance else None,
+        "punchOutTime": attendance.check_out if attendance else None,
+        "checkInLatitude": attendance.check_in_latitude if attendance else None,
+        "checkInLongitude": attendance.check_in_longitude if attendance else None,
+        "checkInAddress": attendance.check_in_address if attendance else None,
+        "checkOutLatitude": attendance.check_out_latitude if attendance else None,
+        "checkOutLongitude": attendance.check_out_longitude if attendance else None,
+        "checkOutAddress": attendance.check_out_address if attendance else None,
+        "checkInImage": attendance.check_in_image if attendance else None,
+        "checkOutImage": attendance.check_out_image if attendance else None,
     }
 
-def get_my_history(db: Session, employee_id: int) -> list[Attendance]:
-    """
-    Get attendance history for employee up to today.
-    
-    Args:
-        db: Database session
-        employee_id: Employee to get history for
-        
-    Returns:
-        list[Attendance]: List of attendance records in descending date order
-    """
-    today = datetime.now(APP_TIMEZONE).date()
+def get_my_history(db: Session, employee_id: int):
+    today = _now().date()
     return (
         db.query(Attendance)
         .filter(
             Attendance.employee_id == employee_id,
-            Attendance.date <= today,
+            Attendance.date <= today
         )
         .order_by(Attendance.date.desc())
         .all()
@@ -493,92 +358,44 @@ def get_my_history(db: Session, employee_id: int) -> list[Attendance]:
 
 
 def to_attendance_response(record: Attendance) -> AttendanceResponse:
-    """
-    Convert attendance record to response schema.
-    
-    Automatically calculates all metrics and properly serializes
-    all fields including optional location and image data.
-    
-    Args:
-        record: Attendance database record
-        
-    Returns:
-        AttendanceResponse: Properly formatted API response
-    """
+    """Expose attendance rows."""
     calculate_attendance_metrics(record)
-    
-    # Calculate late minutes if checked in
     late_minutes = 0
     if record.check_in:
-        check_in_minutes = record.check_in.hour * 60 + record.check_in.minute
-        shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-        if check_in_minutes > shift_start_minutes:
-            late_minutes = check_in_minutes - shift_start_minutes
-    
+        check_in_min = record.check_in.hour * 60 + record.check_in.minute
+        if check_in_min > 540:  # 9:00 AM in minutes
+            late_minutes = check_in_min - 540
+
     return AttendanceResponse(
         id=record.id,
-        employee_id=record.employee_id,
         date=record.date,
         scheduled_start=record.scheduled_start,
         scheduled_end=record.scheduled_end,
         task_description=record.task_description,
         check_in=record.check_in,
         check_out=record.check_out,
+        punch_in_time=record.check_in,
+        punch_out_time=record.check_out,
         status=record.status or "Not Marked",
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
         overtime_minutes=record.overtime_minutes or 0,
         break_minutes=record.break_minutes or 0,
         grand_total_minutes=record.grand_total_minutes or 0,
-        late_minutes=late_minutes,
-        check_in_latitude=record.check_in_latitude,
-        check_in_longitude=record.check_in_longitude,
-        check_in_address=record.check_in_address,
-        check_in_image=record.check_in_image,
-        check_out_latitude=record.check_out_latitude,
-        check_out_longitude=record.check_out_longitude,
-        check_out_address=record.check_out_address,
-        check_out_image=record.check_out_image,
+        late_minutes=late_minutes
     )
 
-def add_schedule(
-    db: Session,
-    employee_id: int,
-    schedule_date: date,
-    start_time: time,
-    end_time: time,
-    work_mode: str,
-    task_description: str = None,
-) -> AttendanceResponse:
-    """
-    Schedule a future shift for employee.
-    
-    Args:
-        db: Database session
-        employee_id: Employee to schedule
-        schedule_date: Date to schedule
-        start_time: Scheduled start time
-        end_time: Scheduled end time
-        work_mode: Office/Remote/Hybrid
-        task_description: Optional task description
-        
-    Returns:
-        AttendanceResponse: Scheduled attendance record
-    """
+def add_schedule(db: Session, employee_id: int, schedule_date: date, start_time, end_time, work_mode: str, task_description: str = None):
     if schedule_date < date.today():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot schedule attendance for past dates.",
         )
-    
-    record = (
-        db.query(Attendance)
-        .filter(
-            Attendance.employee_id == employee_id,
-            Attendance.date == schedule_date,
-        )
-        .first()
-    )
+
+    record = db.query(Attendance).filter(
+        Attendance.employee_id == employee_id,
+        Attendance.date == schedule_date
+    ).first()
     
     if not record:
         record = Attendance(
@@ -588,7 +405,7 @@ def add_schedule(
             scheduled_end=end_time,
             work_mode=work_mode,
             task_description=task_description,
-            status="Not Marked",
+            status="Not Marked"
         )
         db.add(record)
     else:
@@ -598,25 +415,13 @@ def add_schedule(
             record.task_description = task_description
         if work_mode:
             record.work_mode = work_mode
-    
+            
     db.commit()
     db.refresh(record)
-    
-    return to_attendance_response(record)
+    return record
 
-def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
-    """
-    List all attendance records (HR/Admin only).
-    
-    Args:
-        db: Database session
-        skip: Records to skip (pagination)
-        limit: Records to return (pagination)
-        
-    Returns:
-        dict: Paginated list of attendance records with total count
-    """
-    today = datetime.now(APP_TIMEZONE).date()
+def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000):
+    today = _now().date()
     query = (
         db.query(Attendance)
         .join(Employee)
@@ -630,27 +435,24 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
     formatted_data = []
     for record in records:
         calculate_attendance_metrics(record)
-        employee_name = f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown Employee"
-        
-        # Calculate late minutes
+        employee_name = f"{record.employee.first_name} {record.employee.last_name}".strip()
         late_minutes = 0
         if record.check_in:
-            check_in_minutes = record.check_in.hour * 60 + record.check_in.minute
-            shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-            if check_in_minutes > shift_start_minutes:
-                late_minutes = check_in_minutes - shift_start_minutes
-        
+            check_in_min = record.check_in.hour * 60 + record.check_in.minute
+            if check_in_min > 540:  # 9:00 AM in minutes
+                late_minutes = check_in_min - 540
+
         formatted_data.append({
             "id": record.id,
             "employeeName": employee_name,
-            "employeeCode": normalize_employee_code(record.employee.employee_code) if record.employee else "N/A",
-            "department": (record.employee.department or "Unassigned") if record.employee else "Unassigned",
+            "employeeCode": normalize_employee_code(record.employee.employee_code),
+            "department": record.employee.department,
             "date": record.date,
             "scheduledStart": record.scheduled_start,
             "scheduledEnd": record.scheduled_end,
             "taskDescription": record.task_description,
-            "punchIn": record.check_in,
-            "punchOut": record.check_out,
+            "checkIn": record.check_in,
+            "checkOut": record.check_out,
             "status": record.status or "Not Marked",
             "totalWorkingMinutes": record.total_working_minutes or 0,
             "overtimeMinutes": record.overtime_minutes or 0,
@@ -658,10 +460,10 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "grandTotalMinutes": record.grand_total_minutes or 0,
             "lateMinutes": late_minutes,
             "workMode": record.work_mode,
-            "punchInAddress": record.check_in_address,
-            "punchOutAddress": record.check_out_address,
-            "punchInImage": record.check_in_image,
-            "punchOutImage": record.check_out_image,
+            "checkInAddress": record.check_in_address,
+            "checkOutAddress": record.check_out_address,
+            "checkInImage": record.check_in_image,
+            "checkOutImage": record.check_out_image
         })
     
     return {"data": formatted_data, "total": total}
