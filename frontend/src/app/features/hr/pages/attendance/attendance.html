@@ -88,12 +88,6 @@
 
     <!-- Table Section -->
     <div class="table-card">
-      <div class="empty-state" *ngIf="(errorMessage$ | async) as errorMessage">
-        <div class="empty-content" *ngIf="errorMessage">
-          <i class="fas fa-exclamation-circle empty-icon"></i>
-          <p>{{ errorMessage }}</p>
-        </div>
-      </div>
       <div class="table-responsive">
         <table>
           <thead>

@@ -30,7 +30,6 @@ export class HrDashboard implements OnInit {
   pendingRequests: any[] = [];
   processedRequests: any[] = [];
   recentTimeSheets: any[] = [];
-  dashboardError = '';
 
   // Photo viewer modal state
   selectedPhotoUrl: string | null = null;
@@ -65,33 +64,26 @@ export class HrDashboard implements OnInit {
   }
 
   ngOnInit() {
-    this.dashboardService.getHrDashboard().subscribe({
-      next: (data) => {
-        this.dashboardError = '';
-        this.workFromHome = data.workModeBreakdown[0];
-        this.workFromOffice = data.workModeBreakdown[1];
-        this.total = this.workFromHome + this.workFromOffice;
-        this.female = data.genderBreakdown[0];
-        this.male = data.genderBreakdown[1];
-        this.gendertotal = this.female + this.male;
-        this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
-        this.recentTimeSheets = data.recentTimeSheets;
-        this.kpis = [
-          { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
-          { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
-          { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
-          { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
-          { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
-          { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
-        ];
-        this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
-        this.pieChartData2.datasets[0].data = [this.female, this.male];
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.dashboardError = error?.error?.detail || 'Unable to load HR dashboard data.';
-        this.cdr.detectChanges();
-      }
+    this.dashboardService.getHrDashboard().subscribe(data => {
+      this.workFromHome = data.workModeBreakdown[0];
+      this.workFromOffice = data.workModeBreakdown[1];
+      this.total = this.workFromHome + this.workFromOffice;
+      this.female = data.genderBreakdown[0];
+      this.male = data.genderBreakdown[1];
+      this.gendertotal = this.female + this.male;
+      this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
+      this.recentTimeSheets = data.recentTimeSheets;
+      this.kpis = [
+        { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
+        { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
+        { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
+        { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
+        { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
+        { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
+      ];
+      this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
+      this.pieChartData2.datasets[0].data = [this.female, this.male];
+      this.cdr.detectChanges();
     });
     this.loadPendingRequests();
     this.loadProcessedRequests();
