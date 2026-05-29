@@ -17,6 +17,9 @@
                 <router-outlet></router-outlet>
 
                 <div class="Emp_dashboard" *ngIf="isMainDashboardRoute()">
+                    <div class="card" *ngIf="dashboardError">
+                        {{ dashboardError }}
+                    </div>
                     <div class="card ">
 
                         <div class="empname">

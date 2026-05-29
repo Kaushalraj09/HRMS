@@ -1,36 +1,111 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from datetime import date, time, datetime
 from typing import Optional, List
+from app.core.enums import WorkMode
+
 
 class PunchRequest(BaseModel):
-    employee_id: Optional[int] = None
-    workMode: str = "Office" # Office or Remote
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    address: Optional[str] = None
-    image: Optional[str] = None  # base64 webcam snapshot
+    """Request model for punch in/out operations with optional location/image data."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    employee_id: Optional[int] = Field(
+        default=None,
+        alias="employeeId",
+        validation_alias=AliasChoices("employeeId", "employee_id"),
+    )
+    work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
+    latitude: Optional[float] = Field(default=None, description="Optional check-in/out latitude")
+    longitude: Optional[float] = Field(default=None, description="Optional check-in/out longitude")
+    address: Optional[str] = Field(default=None, description="Optional check-in/out address")
+    image: Optional[str] = Field(default=None, description="Optional base64 encoded webcam snapshot")
+    custom_time: Optional[datetime] = Field(
+        default=None,
+        alias="customTime",
+        validation_alias=AliasChoices(
+            "customTime",
+            "punchInTime",
+            "punchOutTime",
+            "punch_in_time",
+            "punch_out_time",
+        ),
+    )
+
+    @field_validator("image")
+    @classmethod
+    def validate_image(cls, value: Optional[str]) -> Optional[str]:
+        """Validate image size - max 5MB for base64."""
+        if value and len(value) > 5_000_000:
+            raise ValueError("Image too large (max 5MB)")
+        return value
+
+    @field_validator("work_mode", mode="before")
+    @classmethod
+    def validate_work_mode(cls, value):
+        """Convert string work mode to enum."""
+        if isinstance(value, str):
+            try:
+                return WorkMode(value)
+            except ValueError:
+                raise ValueError(f"Invalid work mode. Must be one of: {', '.join([m.value for m in WorkMode])}")
+        return value
 
 class ScheduleRequest(BaseModel):
+    """Request model for scheduling shifts."""
+    model_config = ConfigDict(populate_by_name=True)
+
     date: date
-    startTime: Optional[time] = None
-    endTime: Optional[time] = None
-    workMode: str = "Office"
-    taskDescription: Optional[str] = None
+    start_time: Optional[time] = Field(default=None, alias="startTime")
+    end_time: Optional[time] = Field(default=None, alias="endTime")
+    work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
+    task_description: Optional[str] = Field(default=None, alias="taskDescription")
+
+    @field_validator("work_mode", mode="before")
+    @classmethod
+    def validate_work_mode(cls, value):
+        """Convert string work mode to enum."""
+        if isinstance(value, str):
+            try:
+                return WorkMode(value)
+            except ValueError:
+                raise ValueError(f"Invalid work mode. Must be one of: {', '.join([m.value for m in WorkMode])}")
+        return value
 
 class AttendanceResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    """Complete attendance record response with all calculated metrics."""
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders={
+            datetime: lambda v: v.isoformat() if v else None,
+            date: lambda v: v.isoformat() if v else None,
+            time: lambda v: v.isoformat() if v else None,
+        }
+    )
 
     id: int
+    employee_id: int = Field(alias="employeeId")
     date: date
     scheduled_start: Optional[time] = Field(default=None, alias="scheduledStart")
     scheduled_end: Optional[time] = Field(default=None, alias="scheduledEnd")
     task_description: Optional[str] = Field(default=None, alias="taskDescription")
-    check_in: Optional[time] = Field(default=None, alias="checkIn")
-    check_out: Optional[time] = Field(default=None, alias="checkOut")
-    punch_in_time: Optional[time] = Field(default=None, alias="punchInTime")
-    punch_out_time: Optional[time] = Field(default=None, alias="punchOutTime")
+    punch_in: Optional[time] = Field(default=None, alias="punchIn")
+    punch_out: Optional[time] = Field(default=None, alias="punchOut")
     status: str
-    work_mode: str = Field(alias="workMode")
+    work_mode: WorkMode = Field(alias="workMode")
+    
+    # Location fields - optional
+    punch_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
+    punch_in_longitude: Optional[float] = Field(default=None, alias="punchInLongitude")
+    punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
+    punch_out_latitude: Optional[float] = Field(default=None, alias="punchOutLatitude")
+    punch_out_longitude: Optional[float] = Field(default=None, alias="punchOutLongitude")
+    punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
+    
+    # Image fields - optional
+    punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
+    punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
+    
+    # Calculated metrics
     total_working_minutes: int = Field(default=0, alias="totalWorkingMinutes")
     overtime_minutes: int = Field(default=0, alias="overtimeMinutes")
     break_minutes: int = Field(default=0, alias="breakMinutes")
@@ -38,53 +113,69 @@ class AttendanceResponse(BaseModel):
     late_minutes: int = Field(default=0, alias="lateMinutes")
 
 class TodayAttendanceState(BaseModel):
-    isWorking: bool = Field(alias="isWorking")
+    """Current attendance state for today with working metrics and shift information."""
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={
+            datetime: lambda v: v.isoformat() if v else None,
+            time: lambda v: v.isoformat() if v else None,
+        }
+    )
+
+    employee_id: Optional[int] = Field(default=None, alias="employeeId")
+    is_working: bool = Field(alias="isWorking")
     status: str
-    totalWorkedSeconds: int = Field(alias="totalWorkedSeconds")
-    approvedSeconds: int = Field(alias="approvedSeconds")
-    remainingSeconds: int = Field(alias="remainingSeconds")
-    shiftTotalSeconds: int = Field(alias="shiftTotalSeconds")
-    shiftElapsedSeconds: int = Field(alias="shiftElapsedSeconds")
-    shiftStart: str = Field(alias="shiftStart")
-    shiftEnd: str = Field(alias="shiftEnd")
-    workMode: str = "Office"
-    checkIn: Optional[time] = None
-    checkOut: Optional[time] = None
-    punchInTime: Optional[time] = None
-    punchOutTime: Optional[time] = None
+    total_worked_seconds: int = Field(alias="totalWorkedSeconds")
+    approved_seconds: int = Field(alias="approvedSeconds")
+    remaining_seconds: int = Field(alias="remainingSeconds")
+    shift_total_seconds: int = Field(alias="shiftTotalSeconds")
+    shift_elapsed_seconds: int = Field(alias="shiftElapsedSeconds")
+    shift_start: str = Field(alias="shiftStart")
+    shift_end: str = Field(alias="shiftEnd")
+    work_mode: WorkMode = Field(default=WorkMode.office)
     
-    checkInLatitude: Optional[float] = Field(None, alias="checkInLatitude")
-    checkInLongitude: Optional[float] = Field(None, alias="checkInLongitude")
-    checkInAddress: Optional[str] = Field(None, alias="checkInAddress")
-    checkOutLatitude: Optional[float] = Field(None, alias="checkOutLatitude")
-    checkOutLongitude: Optional[float] = Field(None, alias="checkOutLongitude")
-    checkOutAddress: Optional[str] = Field(None, alias="checkOutAddress")
-    checkInImage: Optional[str] = Field(None, alias="checkInImage")
-    checkOutImage: Optional[str] = Field(None, alias="checkOutImage")
+    # Optional punch times and location
+    punch_in: Optional[time] = Field(default=None, alias="punchIn")
+    punch_out: Optional[time] = Field(default=None, alias="punchOut")
+    punch_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
+    punch_in_longitude: Optional[float] = Field(default=None, alias="punchInLongitude")
+    punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
+    punch_out_latitude: Optional[float] = Field(default=None, alias="punchOutLatitude")
+    punch_out_longitude: Optional[float] = Field(default=None, alias="punchOutLongitude")
+    punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
+    
+    # Optional images
+    punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
+    punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
 
 class AttendanceRecord(BaseModel):
+    """Attendance record for list responses."""
+    model_config = ConfigDict(populate_by_name=True)
+
     id: int
-    employeeName: str
-    employeeCode: str
+    employee_name: str = Field(alias="employeeName")
+    employee_code: str = Field(alias="employeeCode")
     department: str
     date: date
-    scheduledStart: Optional[time] = None
-    scheduledEnd: Optional[time] = None
-    taskDescription: Optional[str] = None
-    checkIn: Optional[time] = None
-    checkOut: Optional[time] = None
+    scheduled_start: Optional[time] = Field(default=None, alias="scheduledStart")
+    scheduled_end: Optional[time] = Field(default=None, alias="scheduledEnd")
+    task_description: Optional[str] = Field(default=None, alias="taskDescription")
+    punch_in: Optional[time] = Field(default=None, alias="punchIn")
+    punch_out: Optional[time] = Field(default=None, alias="punchOut")
     status: str
-    totalWorkingMinutes: int = 0
-    overtimeMinutes: int = 0
-    breakMinutes: int = 0
-    grandTotalMinutes: int = 0
-    lateMinutes: int = 0
-    workMode: Optional[str] = Field(None, alias="workMode")
-    checkInAddress: Optional[str] = Field(None, alias="checkInAddress")
-    checkOutAddress: Optional[str] = Field(None, alias="checkOutAddress")
-    checkInImage: Optional[str] = Field(None, alias="checkInImage")
-    checkOutImage: Optional[str] = Field(None, alias="checkOutImage")
+    total_working_minutes: int = Field(default=0, alias="totalWorkingMinutes")
+    overtime_minutes: int = Field(default=0, alias="overtimeMinutes")
+    break_minutes: int = Field(default=0, alias="breakMinutes")
+    grand_total_minutes: int = Field(default=0, alias="grandTotalMinutes")
+    late_minutes: int = Field(default=0, alias="lateMinutes")
+    work_mode: Optional[WorkMode] = Field(None, alias="workMode")
+    punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
+    punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
+    punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
+    punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
+
 
 class AttendanceListResponse(BaseModel):
+    """List response for all attendance records."""
     data: List[AttendanceRecord]
     total: int
