@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'Present' | 'Punched In' | 'Punched Out' | 'Not Marked' | 'Working' | 'Not Working';
+export type AttendanceStatus = 'Present' | 'Checked In' | 'Checked Out' | 'Not Marked' | 'Working' | 'Not working';
 export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
 
 export interface AttendanceRecord {
@@ -10,22 +10,22 @@ export interface AttendanceRecord {
   scheduledStart?: string;
   scheduledEnd?: string;
   taskDescription?: string;
-  punchIn: string;
-  punchOut: string;
+  checkIn: string;
+  checkOut: string;
   hours: string;
   status: AttendanceStatus;
   workMode?: string;
-  punchInAddress?: string;
-  punchOutAddress?: string;
-  punchInImage?: string;
-  punchOutImage?: string;
+  checkInAddress?: string;
+  checkOutAddress?: string;
+  checkInImage?: string;
+  checkOutImage?: string;
 }
 
 export interface AttendanceMetrics {
   present: number;
-  punchedIn: number;
+  checkedIn: number;
   notMarked: number;
-  punchedOut: number;
+  checkedOut: number;
 }
 
 export interface PaginatedAttendance {
@@ -76,14 +76,14 @@ export interface TodayAttendanceState {
   shiftStart: string;
   shiftEnd: string;
   workMode: WorkMode;
-  punchIn?: string | null;
-  punchOut?: string | null;
-  punchInLatitude?: number | null;
-  punchInLongitude?: number | null;
-  punchInAddress?: string | null;
-  punchOutLatitude?: number | null;
-  punchOutLongitude?: number | null;
-  punchOutAddress?: string | null;
-  punchInImage?: string | null;
-  punchOutImage?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  checkInLatitude?: number | null;
+  checkInLongitude?: number | null;
+  checkInAddress?: string | null;
+  checkOutLatitude?: number | null;
+  checkOutLongitude?: number | null;
+  checkOutAddress?: string | null;
+  checkInImage?: string | null;
+  checkOutImage?: string | null;
 }

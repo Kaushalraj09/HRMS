@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Observable, BehaviorSubject, combineLatest, of, timer } from 'rxjs';
-import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, combineLatest, timer } from 'rxjs';
+import { switchMap, tap, map, shareReplay } from 'rxjs/operators';
 import { AttendanceRecord, PaginatedAttendance } from '../../../../core/models/attendance.model';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
@@ -19,7 +19,7 @@ export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
-  statuses = ['Present', 'Punched In', 'Not Marked', 'Punched Out'];
+  statuses = ['Present', 'Checked In', 'Not Marked', 'Checked Out'];
   locations = ['Office', 'Remote'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }
@@ -32,13 +32,12 @@ export class AttendanceComponent implements OnInit {
   pageSize = 10;
   
   isLoading$ = new BehaviorSubject<boolean>(true);
-  errorMessage$ = new BehaviorSubject<string>('');
   
   attendanceData$!: Observable<PaginatedAttendance>;
   paginationArray$!: Observable<number[]>;
 
   // Drives the SVG ring: last-loaded metrics snapshot
-  lastMetrics: { present: number; punchedIn: number; punchedOut: number; notMarked: number } | null = null;
+  lastMetrics: { present: number; checkedIn: number; checkedOut: number; notMarked: number } | null = null;
 
   // Real time indicator bonus
   currentTime$ = timer(0, 60000).pipe(map(() => new Date()));
@@ -71,10 +70,10 @@ export class AttendanceComponent implements OnInit {
   /** Fraction 0–1 of employees who are present/working out of the total visible. */
   get attendanceRate(): number {
     if (!this.lastMetrics) return 0;
-    const { present, punchedIn, punchedOut, notMarked } = this.lastMetrics;
-    const total = present + punchedIn + punchedOut + notMarked;
+    const { present, checkedIn, checkedOut, notMarked } = this.lastMetrics;
+    const total = present + checkedIn + checkedOut + notMarked;
     if (total === 0) return 0;
-    return Math.min(1, (present + punchedIn + punchedOut) / total);
+    return Math.min(1, (present + checkedIn + checkedOut) / total);
   }
 
   /** Maps attendanceRate → SVG stroke-dashoffset (pathLength=100 ring). */
@@ -88,10 +87,7 @@ export class AttendanceComponent implements OnInit {
       this.searchTrigger$,
       this.pageSubject.asObservable()
     ]).pipe(
-      tap(() => {
-        this.errorMessage$.next('');
-        this.isLoading$.next(true);
-      }),
+      tap(() => this.isLoading$.next(true)),
       switchMap(([_, page]) => {
         const filters = this.filterForm.value;
        return this.attendanceService
@@ -110,28 +106,19 @@ export class AttendanceComponent implements OnInit {
              const sorted = [...res.data].sort((a, b) => {
                const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
                if (dateDiff !== 0) return dateDiff;
-               if (a.punchIn && b.punchIn) return b.punchIn.localeCompare(a.punchIn);
-               if (b.punchIn) return 1;
-               if (a.punchIn) return -1;
+               if (a.checkIn && b.checkIn) return b.checkIn.localeCompare(a.checkIn);
+               if (b.checkIn) return 1;
+               if (a.checkIn) return -1;
                return 0;
              });
              // Snapshot metrics for the ring
              this.lastMetrics = res.metrics;
              return { ...res, data: sorted };
            }),
-           catchError((error) => {
-             const detail = error?.error?.detail;
-             this.lastMetrics = { present: 0, punchedIn: 0, punchedOut: 0, notMarked: 0 };
-             this.errorMessage$.next(typeof detail === 'string' ? detail : 'Unable to load attendance records.');
-             return of({
-               data: [],
-               total: 0,
-               metrics: this.lastMetrics
-             });
-           }),
-           finalize(() => this.isLoading$.next(false)),
+
          );
       }),
+      tap(() => this.isLoading$.next(false)),
       shareReplay(1)
     );
 

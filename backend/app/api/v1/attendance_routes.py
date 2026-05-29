@@ -17,32 +17,23 @@ def punch_in(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Punch In for the current employee or specified employee.
+    Punch In for the current employee.
     """
-    if request.employee_id:
-        employee = db.query(Employee).filter(Employee.id == request.employee_id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee with ID {request.employee_id} not found"
-            )
-    else:
-        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only employees can punch attendance"
-            )
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Only employees can punch attendance"
+        )
     
     return attendance_service.punch_in(
         db,
         employee.id,
-        request.work_mode,
+        request.workMode,
         request.latitude,
         request.longitude,
         request.address,
-        request.image,
-        request.custom_time
+        request.image
     )
 
 @router.post("/punch-out", response_model=AttendanceResponse)
@@ -52,32 +43,23 @@ def punch_out(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Punch Out for the current employee or specified employee.
+    Punch Out for the current employee.
     """
-    if request.employee_id:
-        employee = db.query(Employee).filter(Employee.id == request.employee_id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee with ID {request.employee_id} not found"
-            )
-    else:
-        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only employees can punch attendance"
-            )
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Only employees can punch attendance"
+        )
     
     return attendance_service.punch_out(
         db,
         employee.id,
-        request.work_mode,
+        request.workMode,
         request.latitude,
         request.longitude,
         request.address,
-        request.image,
-        request.custom_time
+        request.image
     )
 
 @router.post("/schedule", response_model=AttendanceResponse)
@@ -100,10 +82,10 @@ def add_schedule(
         db=db,
         employee_id=employee.id,
         schedule_date=request.date,
-        start_time=request.start_time,
-        end_time=request.end_time,
-        work_mode=request.work_mode,
-        task_description=request.task_description
+        start_time=request.startTime,
+        end_time=request.endTime,
+        work_mode=request.workMode,
+        task_description=request.taskDescription
     )
 
 @router.get("/today", response_model=TodayAttendanceState)
