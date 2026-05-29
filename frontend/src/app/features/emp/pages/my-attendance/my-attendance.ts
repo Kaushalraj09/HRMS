@@ -14,6 +14,8 @@ import { EmployeeTimesheetRow } from '../../../../core/models/attendance.model';
 export class MyAttendance implements OnInit {
   allSheets: EmployeeTimesheetRow[] = [];
   timeSheets: EmployeeTimesheetRow[] = [];
+  timeSheetPage = 1;
+  readonly timeSheetPageSize = 10;
   filterForm;
 
   constructor(
@@ -41,10 +43,40 @@ export class MyAttendance implements OnInit {
           || !!row.taskDescription
         )
       );
-      this.allSheets = visibleRows;
-      this.timeSheets = visibleRows;
+      this.allSheets = this.sortLatestFirst(visibleRows);
+      this.timeSheets = this.allSheets;
+      this.timeSheetPage = 1;
       this.cdr.detectChanges();
     });
+  }
+
+  get pagedTimeSheets(): EmployeeTimesheetRow[] {
+    const start = (this.timeSheetPage - 1) * this.timeSheetPageSize;
+    return this.timeSheets.slice(start, start + this.timeSheetPageSize);
+  }
+
+  get timeSheetTotalPages(): number {
+    return Math.ceil(this.timeSheets.length / this.timeSheetPageSize);
+  }
+
+  get timeSheetPages(): number[] {
+    return Array.from({ length: this.timeSheetTotalPages }, (_, index) => index + 1);
+  }
+
+  get timeSheetStartEntry(): number {
+    return this.timeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
+  }
+
+  get timeSheetEndEntry(): number {
+    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.timeSheets.length);
+  }
+
+  setTimeSheetPage(page: number): void {
+    if (page < 1 || page > this.timeSheetTotalPages) {
+      return;
+    }
+
+    this.timeSheetPage = page;
   }
 
   onSearch(): void {
@@ -56,6 +88,7 @@ export class MyAttendance implements OnInit {
       const matchesStatus = !status || row.status.toLowerCase().includes(status.toLowerCase());
       return matchesFrom && matchesTo && matchesStatus;
     });
+    this.timeSheetPage = 1;
   }
 
   onReset(): void {
@@ -65,5 +98,26 @@ export class MyAttendance implements OnInit {
       status: ''
     });
     this.timeSheets = this.allSheets;
+    this.timeSheetPage = 1;
+  }
+
+  private sortLatestFirst(rows: EmployeeTimesheetRow[]): EmployeeTimesheetRow[] {
+    return [...rows].sort((left, right) => {
+      const dateDiff = new Date(right.date).getTime() - new Date(left.date).getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+
+      return this.timeSortValue(right.entry) - this.timeSortValue(left.entry);
+    });
+  }
+
+  private timeSortValue(time: string): number {
+    const match = time.match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return -1;
+    }
+
+    return Number(match[1]) * 60 + Number(match[2]);
   }
 }

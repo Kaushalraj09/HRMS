@@ -105,6 +105,8 @@ export class EmpDashboard implements OnDestroy {
   timeOffInlineSuccess = '';
 
   timeSheets: EmployeeTimesheetRow[] = [];
+  timeSheetPage = 1;
+  readonly timeSheetPageSize = 10;
   attendanceSummary: EmployeeAttendanceSummaryItem[] = [];
   viewDate = new Date();
   selectedDate = new Date();
@@ -301,6 +303,46 @@ export class EmpDashboard implements OnDestroy {
   get progressDashOffset(): number {
     const progress = Math.min(1, Math.max(0, this.shiftProgress));
     return 100 - Math.round(progress * 100);
+  }
+
+  get sortedTimeSheets(): EmployeeTimesheetRow[] {
+    return [...this.timeSheets].sort((left, right) => {
+      const dateDiff = new Date(right.date).getTime() - new Date(left.date).getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+
+      return this.timeSortValue(right.entry) - this.timeSortValue(left.entry);
+    });
+  }
+
+  get pagedTimeSheets(): EmployeeTimesheetRow[] {
+    const start = (this.timeSheetPage - 1) * this.timeSheetPageSize;
+    return this.sortedTimeSheets.slice(start, start + this.timeSheetPageSize);
+  }
+
+  get timeSheetTotalPages(): number {
+    return Math.ceil(this.timeSheets.length / this.timeSheetPageSize);
+  }
+
+  get timeSheetPages(): number[] {
+    return Array.from({ length: this.timeSheetTotalPages }, (_, index) => index + 1);
+  }
+
+  get timeSheetStartEntry(): number {
+    return this.timeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
+  }
+
+  get timeSheetEndEntry(): number {
+    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.timeSheets.length);
+  }
+
+  setTimeSheetPage(page: number): void {
+    if (page < 1 || page > this.timeSheetTotalPages) {
+      return;
+    }
+
+    this.timeSheetPage = page;
   }
 
   togglePunch(): void {
@@ -610,6 +652,7 @@ export class EmpDashboard implements OnDestroy {
             || !!row.taskDescription
           )
         );
+        this.ensureTimeSheetPageInRange();
 
         // Map timesheets to timeline events
         const timesheetEvents = timesheets.flatMap((row: EmployeeTimesheetRow) => {
@@ -696,13 +739,13 @@ export class EmpDashboard implements OnDestroy {
       : 0;
     this.attendanceStatusLabel = todayState.isWorking ? 'Working' : 'Not Working';
     this.status = todayState.workMode;
-    this.punchInTime = todayState.checkIn || null;
-    this.punchOutTime = todayState.checkOut || null;
+    this.punchInTime = todayState.punchIn || null;
+    this.punchOutTime = todayState.punchOut || null;
     // Preserve first image; only update if not already set
-    if (todayState.checkInImage) { this.punchInImage = todayState.checkInImage; }
-    if (todayState.checkOutImage) { this.punchOutImage = todayState.checkOutImage; }
-    if (todayState.checkInAddress) { this.punchInAddress = todayState.checkInAddress; }
-    if (todayState.checkOutAddress) { this.punchOutAddress = todayState.checkOutAddress; }
+    if (todayState.punchInImage) { this.punchInImage = todayState.punchInImage; }
+    if (todayState.punchOutImage) { this.punchOutImage = todayState.punchOutImage; }
+    if (todayState.punchInAddress) { this.punchInAddress = todayState.punchInAddress; }
+    if (todayState.punchOutAddress) { this.punchOutAddress = todayState.punchOutAddress; }
   }
 
   private toIsoDate(date: Date): string {
@@ -719,6 +762,27 @@ export class EmpDashboard implements OnDestroy {
     }
 
     return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  private timeSortValue(time: string): number {
+    const match = time.match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return -1;
+    }
+
+    return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  private ensureTimeSheetPageInRange(): void {
+    const totalPages = this.timeSheetTotalPages;
+    if (totalPages === 0) {
+      this.timeSheetPage = 1;
+      return;
+    }
+
+    if (this.timeSheetPage > totalPages) {
+      this.timeSheetPage = totalPages;
+    }
   }
 
   private formatMinutesCompact(minutes: number): string {

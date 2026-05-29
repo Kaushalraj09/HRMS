@@ -177,7 +177,7 @@ export class Phase1StoreService {
         { icon: 'fas fa-user-shield', label: 'Total HR Users', value: String(this.state.hrs.length) },
         { icon: 'fas fa-users', label: 'Total Employees', value: String(this.state.employees.length) },
         { icon: 'fas fa-user-check', label: 'Active Accounts', value: String(activeUsers) },
-        { icon: 'fas fa-calendar-check', label: 'Present Today', value: String(todayMetrics.present + todayMetrics.checkedOut + todayMetrics.checkedIn) }
+        { icon: 'fas fa-calendar-check', label: 'Present Today', value: String(todayMetrics.present + todayMetrics.punchedOut + todayMetrics.punchedIn) }
       ],
       hrUsers: this.state.hrs.slice(0, 6).map(hr => ({
         primary: hr.fullName,
@@ -205,8 +205,8 @@ export class Phase1StoreService {
     return {
       totalEmployees: this.state.employees.length,
       presentEmployees: metrics.present,
-      checkedInEmployees: metrics.checkedIn,
-      checkedOutEmployees: metrics.checkedOut,
+      checkedInEmployees: metrics.punchedIn,
+      checkedOutEmployees: metrics.punchedOut,
       notMarkedEmployees: metrics.notMarked,
       workModeBreakdown: [remoteCount, officeCount],
       genderBreakdown: [femaleCount, maleCount],
@@ -220,9 +220,8 @@ export class Phase1StoreService {
         employee: row.name,
         employeeCode: row.code,
         date: row.date,
-        checkIn: row.checkIn || '-',
-        checkOut: row.checkOut || '-',
-        checkInImage: row.checkInImage,
+        punchIn: row.punchIn || '-',
+        punchOut: row.punchOut || '-',
         breakTime: this.findAttendanceByCodeAndDate(row.code, row.date)?.breakMinutes ? `${this.findAttendanceByCodeAndDate(row.code, row.date)?.breakMinutes} mins` : '0 mins',
         overtime: this.findAttendanceByCodeAndDate(row.code, row.date)?.overtimeMinutes ? `${this.findAttendanceByCodeAndDate(row.code, row.date)?.overtimeMinutes} mins` : '0 mins',
         totalHours: row.hours,
@@ -556,8 +555,8 @@ export class Phase1StoreService {
         total: records.length,
         metrics: {
           present: records.filter(record => record.status === 'Present').length,
-          checkedIn: records.filter(record => record.status === 'Checked In').length,
-          checkedOut: records.filter(record => record.status === 'Checked Out').length,
+          punchedIn: records.filter(record => record.status === 'Punched In').length,
+          punchedOut: records.filter(record => record.status === 'Punched Out').length,
           notMarked: records.filter(record => record.status === 'Not Marked').length
         }
       }
@@ -608,8 +607,8 @@ export class Phase1StoreService {
       shiftElapsedSeconds: 0,
       shiftTotalSeconds: SHIFT_TOTAL_SECONDS,
       workMode: record.workMode,
-      checkIn: record.punchIn || null,
-      checkOut: record.punchOut || null
+      punchIn: record.punchIn || null,
+      punchOut: record.punchOut || null
     };
   }
 
@@ -627,10 +626,10 @@ export class Phase1StoreService {
 
     if (!existing.punchIn) {
       updated.punchIn = currentTime;
-      updated.status = 'Checked In';
+      updated.status = 'Punched In';
     } else if (!existing.punchOut) {
       updated.punchOut = currentTime;
-      updated.status = 'Checked Out';
+      updated.status = 'Punched Out';
       updated.breakMinutes = 45;
       updated.overtimeMinutes = 20;
     } else {
@@ -638,7 +637,7 @@ export class Phase1StoreService {
       updated.punchOut = '';
       updated.breakMinutes = 0;
       updated.overtimeMinutes = 0;
-      updated.status = 'Checked In';
+      updated.status = 'Punched In';
     }
 
     this.state = {
@@ -658,8 +657,8 @@ export class Phase1StoreService {
     return [
       { label: 'Total Days', value: rows.length, icon: 'fas fa-calendar total blue-icon' },
       { label: 'Worked Days', value: rows.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
-      { label: 'Present', value: rows.filter(row => row.status === 'Present' || row.status === 'Checked Out').length, icon: 'fas fa-check-circle blue-icon' },
-      { label: 'Checked In', value: rows.filter(row => row.status === 'Checked In').length, icon: 'fas fa-user-check blue-icon' },
+      { label: 'Present', value: rows.filter(row => row.status === 'Present' || row.status === 'Punched Out').length, icon: 'fas fa-check-circle blue-icon' },
+      { label: 'Punched In', value: rows.filter(row => row.status === 'Punched In').length, icon: 'fas fa-user-check blue-icon' },
       { label: 'Not Marked', value: rows.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved blue-icon' }
     ];
   }
@@ -834,8 +833,8 @@ export class Phase1StoreService {
           name: employee?.name ?? 'Unknown Employee',
           department: employee?.department ?? 'Unknown',
           date: record.date,
-          checkIn: record.punchIn,
-          checkOut: record.punchOut,
+          punchIn: record.punchIn,
+          punchOut: record.punchOut,
           hours: this.formatHours(this.calculateWorkMinutes(record)),
           status: record.status
         };
@@ -886,8 +885,8 @@ export class Phase1StoreService {
     const rows = this.toAttendanceRows(this.state.attendance.filter(record => record.date === date));
     return {
       present: rows.filter(row => row.status === 'Present').length,
-      checkedIn: rows.filter(row => row.status === 'Checked In').length,
-      checkedOut: rows.filter(row => row.status === 'Checked Out').length,
+      punchedIn: rows.filter(row => row.status === 'Punched In').length,
+      punchedOut: rows.filter(row => row.status === 'Punched Out').length,
       notMarked: rows.filter(row => row.status === 'Not Marked').length
     };
   }
@@ -1157,7 +1156,7 @@ export class Phase1StoreService {
         const checkedOut = dateIndex !== 0 || index !== 0;
         const punchIn = checkedIn ? `${String(9 + (index % 2)).padStart(2, '0')}:${String(5 + dateIndex).padStart(2, '0')}` : '';
         const punchOut = checkedOut && checkedIn ? `${String(18 + (index % 2)).padStart(2, '0')}:${String(10 + dateIndex).padStart(2, '0')}` : '';
-        const status: AttendanceStatus = !checkedIn ? 'Not Marked' : checkedOut ? 'Present' : 'Checked In';
+        const status: AttendanceStatus = !checkedIn ? 'Not Marked' : checkedOut ? 'Present' : 'Punched In';
 
         return {
           id: this.createId('att'),

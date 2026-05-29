@@ -65,12 +65,12 @@
         <div class="metric-value present">{{ result.metrics.present }}</div>
       </div>
       <div class="metrics-card">
-        <div class="metric-label">Checked In</div>
-        <div class="metric-value checked-in">{{ result.metrics.checkedIn }}</div>
+        <div class="metric-label">Punched In</div>
+        <div class="metric-value checked-in">{{ result.metrics.punchedIn }}</div>
       </div>
       <div class="metrics-card">
-        <div class="metric-label">Checked Out</div>
-        <div class="metric-value checked-out">{{ result.metrics.checkedOut }}</div>
+        <div class="metric-label">Punched Out</div>
+        <div class="metric-value checked-out">{{ result.metrics.punchedOut }}</div>
       </div>
       <div class="metrics-card">
         <div class="metric-label">Not Marked</div>
@@ -88,6 +88,12 @@
 
     <!-- Table Section -->
     <div class="table-card">
+      <div class="empty-state" *ngIf="(errorMessage$ | async) as errorMessage">
+        <div class="empty-content" *ngIf="errorMessage">
+          <i class="fas fa-exclamation-circle empty-icon"></i>
+          <p>{{ errorMessage }}</p>
+        </div>
+      </div>
       <div class="table-responsive">
         <table>
           <thead>
@@ -129,14 +135,14 @@
                 <td class="font-medium text-dark">{{ rec.name }}</td>
                 <td>{{ rec.department }}</td>
                 <td>{{ rec.date | date:'mediumDate' }}</td>
-                <td>{{ rec.checkIn || '-' }}</td>
-                <td>{{ rec.checkOut || '-' }}</td>
+                <td>{{ rec.punchIn || '-' }}</td>
+                <td>{{ rec.punchOut || '-' }}</td>
                 <td>{{ rec.hours }}</td>
                 <td>
                   <span class="status-badge" [ngClass]="{
                     'present':    rec.status === 'Present',
-                    'checked-in': rec.status === 'Checked In' || rec.status === 'Working',
-                    'checked-out':rec.status === 'Checked Out',
+                    'checked-in': rec.status === 'Punched In' || rec.status === 'Working',
+                    'checked-out':rec.status === 'Punched Out',
                     'not-marked': rec.status === 'Not Marked'
                   }">{{ rec.status }}</span>
                 </td>
@@ -150,8 +156,8 @@
                       {{ rec.workMode }}
                     </span>
                     <span *ngIf="!rec.workMode" class="address-text" style="color:#d1d5db">—</span>
-                    <span *ngIf="rec.checkInAddress" class="address-text" [title]="rec.checkInAddress">
-                      {{ rec.checkInAddress }}
+                    <span *ngIf="rec.punchInAddress" class="address-text" [title]="rec.punchInAddress">
+                      {{ rec.punchInAddress }}
                     </span>
                   </div>
                 </td>
@@ -159,9 +165,9 @@
                 <!-- Live Image column: actual photo or fallback user avatar when punched in -->
                 <td>
                   <div class="live-image-cell">
-                    <div class="avatar-wrapper" *ngIf="rec.checkIn; else noImage">
-                      <img *ngIf="rec.checkInImage" [src]="rec.checkInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(rec.checkInImage, rec.name)" />
-                      <div *ngIf="!rec.checkInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
+                    <div class="avatar-wrapper" *ngIf="rec.punchIn; else noImage">
+                      <img *ngIf="rec.punchInImage" [src]="rec.punchInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(rec.punchInImage, rec.name)" />
+                      <div *ngIf="!rec.punchInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
                         <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
                       </div>
                       <span class="verified-badge" title="Attendance recorded">
