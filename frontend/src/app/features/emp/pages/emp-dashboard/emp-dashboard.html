@@ -86,13 +86,13 @@
                 <div class="attendance-live__status" [class.attendance-live__status--working]="isPunchedIn">
                     {{ attendanceStatusLabel }}
                 </div>
-                <div class="attendance-live__location" *ngIf="checkOutAddress || checkInAddress">
+                <div class="attendance-live__location" *ngIf="punchOutAddress || punchInAddress">
                     <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ checkOutAddress || checkInAddress }}</span>
+                    <span>{{ punchOutAddress || punchInAddress }}</span>
                 </div>
                 <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
                 <div class="attendance-live__meta">
-                    <span>Shift elapsed: {{ liveTimerDisplay }}</span>
+                    <span>Shift elapsed: {{ shiftElapsedDisplay }}</span>
                     <span>Worked: {{ totalWorkedTodayDisplay }}</span>
                 </div>
             </div>
@@ -359,20 +359,20 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label>Date</label>
-                <input type="date" [(ngModel)]="scheduleForm.date" class="form-control" />
+                <label for="scheduleDate">Date</label>
+                <input type="date" id="scheduleDate" name="scheduleDate" [(ngModel)]="scheduleForm.date" class="form-control" />
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>Time</label>
-                    <input type="time" [(ngModel)]="scheduleForm.startTime" class="form-control" />
+                    <label for="scheduleTime">Time</label>
+                    <input type="time" id="scheduleTime" name="scheduleTime" [(ngModel)]="scheduleForm.startTime" class="form-control" />
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Task / Important Work</label>
-                <textarea [(ngModel)]="scheduleForm.taskDescription" class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
+                <label for="scheduleTask">Task / Important Work</label>
+                <textarea id="scheduleTask" name="scheduleTask" [(ngModel)]="scheduleForm.taskDescription" class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
             </div>
         </div>
         <div class="modal-footer">

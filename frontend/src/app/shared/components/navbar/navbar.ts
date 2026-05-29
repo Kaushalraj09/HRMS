@@ -1,16 +1,19 @@
-import { Component, HostListener, EventEmitter, Input, Output } from '@angular/core';
+import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { Dropdown } from '../dropdown/dropdown';
+import { AuthService } from '../../../core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
+  standalone: true,
   imports: [CommonModule, MatFormFieldModule, MatSelectModule, Dropdown],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
-export class Navbar {
+export class Navbar implements OnInit, OnDestroy {
   @Input() userName: string = 'User';
   @Input() notificationCount: number = 0;
   @Input() showSearch: boolean = true;
@@ -23,11 +26,36 @@ export class Navbar {
   selectedLang = 'en';
   isOpen = false;
   isProfileDropdownOpen = false;
+  profileImage: string | null = null;
+  userInitials: string = 'U';
+
+  private sub = new Subscription();
+
+  constructor(private readonly authService: AuthService) {}
+
+  ngOnInit(): void {
+    this.sub.add(
+      this.authService.currentUser$.subscribe(user => {
+        if (user) {
+          this.userName = user.displayName;
+          this.profileImage = user.profileImage || null;
+          
+          const names = user.displayName.split(' ');
+          const first = names[0]?.[0] || '';
+          const last = names[1]?.[0] || '';
+          this.userInitials = (first + last).toUpperCase() || 'U';
+        }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    // Close dropdown if click is outside of profile completely
     if (!target.closest('.profile') && !target.closest('app-dropdown')) {
       this.isProfileDropdownOpen = false;
     }
@@ -50,5 +78,4 @@ export class Navbar {
   onNotificationClick() {
     this.notificationClick.emit();
   }
-
 }

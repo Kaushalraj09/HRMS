@@ -30,7 +30,7 @@ def calculate_attendance_metrics(attendance: Attendance):
         
         # Calculate fixed lunch break when the punch period spans lunch time.
         break_minutes = 0
-        if attendance.check_in < time(13, 0) and attendance.check_out > time(14, 0):
+        if attendance.punch_in < time(13, 0) and attendance.punch_out > time(14, 0):
             break_minutes = FIXED_BREAK_MINUTES
             
         attendance.break_minutes = break_minutes
@@ -152,7 +152,6 @@ def upsert_daily_summary(db: Session, employee_id: int, target_date: date | None
     early_leave = 0
     if last_check_out and _minutes_since_midnight(last_check_out) < _minutes_since_midnight(SHIFT_END):
         early_leave = _minutes_since_midnight(SHIFT_END) - _minutes_since_midnight(last_check_out)
-
     overtime = max(0, total_minutes - int(TOTAL_SHIFT_WORKING_HOURS * 60))
     summary = (
         db.query(DailySummary)
@@ -202,7 +201,6 @@ def punch_in(db: Session, employee_id: int, work_mode: str, latitude: float = No
         attendance.check_out_longitude = None
         attendance.check_out_address = None
         attendance.check_out_image = None
-
     if not attendance:
         attendance = Attendance(
             employee_id=employee_id, 
@@ -222,6 +220,7 @@ def punch_in(db: Session, employee_id: int, work_mode: str, latitude: float = No
         attendance.is_working = 1
         attendance.work_mode = work_mode
         attendance.status = "Working"
+
 
     log = PunchLog(
         employee_id=employee_id,
@@ -310,7 +309,6 @@ def get_today_state(db: Session, employee_id: int):
         if log:
             active_seconds = int((current - log.punch_in).total_seconds())
             worked_seconds += active_seconds
-
     approved_hours = get_timeoff_duration_today(db, employee_id)
     approved_seconds = int(round(approved_hours * 3600))
     
@@ -365,7 +363,6 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         check_in_min = record.check_in.hour * 60 + record.check_in.minute
         if check_in_min > 540:  # 9:00 AM in minutes
             late_minutes = check_in_min - 540
-
     return AttendanceResponse(
         id=record.id,
         date=record.date,
@@ -426,7 +423,7 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000):
         db.query(Attendance)
         .join(Employee)
         .filter(Attendance.date <= today)
-        .order_by(Attendance.date.desc(), Attendance.check_in.desc().nulls_last(), Attendance.id.desc())
+        .order_by(Attendance.date.desc(), Attendance.punch_in.desc().nulls_last(), Attendance.id.desc())
     )
     
     total = query.count()
@@ -441,7 +438,6 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000):
             check_in_min = record.check_in.hour * 60 + record.check_in.minute
             if check_in_min > 540:  # 9:00 AM in minutes
                 late_minutes = check_in_min - 540
-
         formatted_data.append({
             "id": record.id,
             "employeeName": employee_name,

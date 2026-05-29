@@ -14,38 +14,38 @@
       <div class="filter-grid">
         <!-- From Date -->
         <div class="filter-group">
-          <label>From Date</label>
-          <input type="date" formControlName="fromDate" class="filter-input">
+          <label for="fromDate">From Date</label>
+          <input type="date" id="fromDate" name="fromDate" formControlName="fromDate" class="filter-input">
         </div>
         
         <!-- To Date -->
         <div class="filter-group">
-          <label>To Date</label>
-          <input type="date" formControlName="toDate" class="filter-input">
+          <label for="toDate">To Date</label>
+          <input type="date" id="toDate" name="toDate" formControlName="toDate" class="filter-input">
         </div>
 
         <!-- Employee Name -->
         <div class="filter-group">
-          <label>Employee Name/Code</label>
-          <input type="text" formControlName="employeeSearch" placeholder="Search..." class="filter-input">
+          <label for="employeeSearch">Employee Name/Code</label>
+          <input type="text" id="employeeSearch" name="employeeSearch" formControlName="employeeSearch" placeholder="Search..." class="filter-input">
         </div>
 
         <!-- Department -->
         <div class="filter-group">
-          <label>Department</label>
-          <app-custom-select formControlName="department" [options]="departmentsOptions"></app-custom-select>
+          <label for="departmentFilter">Department</label>
+          <app-custom-select id="departmentFilter" name="departmentFilter" inputId="departmentFilter" formControlName="department" [options]="departmentsOptions"></app-custom-select>
         </div>
 
         <!-- Status -->
         <div class="filter-group">
-          <label>Status</label>
-          <app-custom-select formControlName="status" [options]="statusOptions"></app-custom-select>
+          <label for="statusFilter">Status</label>
+          <app-custom-select id="statusFilter" name="statusFilter" inputId="statusFilter" formControlName="status" [options]="statusOptions"></app-custom-select>
         </div>
 
         <!-- Location (Work Mode) -->
         <div class="filter-group">
-          <label>Location</label>
-          <app-custom-select formControlName="location" [options]="locationOptions"></app-custom-select>
+          <label for="locationFilter">Location</label>
+          <app-custom-select id="locationFilter" name="locationFilter" inputId="locationFilter" formControlName="location" [options]="locationOptions"></app-custom-select>
         </div>
       </div>
       
@@ -96,8 +96,8 @@
               <th>Name</th>
               <th>Department</th>
               <th>Date</th>
-              <th>Check In</th>
-              <th>Check Out</th>
+              <th>Punch In</th>
+              <th>Punch Out</th>
               <th>Hours</th>
               <th>Status</th>
               <th>Location</th>

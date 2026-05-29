@@ -20,8 +20,8 @@ def seed_attendance(db: Session):
     demo_rows = [
         {
             "date": base_date,
-            "check_in": time(9, 30),
-            "check_out": time(18, 0),
+            "punch_in": time(9, 30),
+            "punch_out": time(18, 0),
             "break_minutes": 45,
             "overtime_minutes": 15,
             "work_mode": "Office",
@@ -29,8 +29,8 @@ def seed_attendance(db: Session):
         },
         {
             "date": base_date - timedelta(days=1),
-            "check_in": time(9, 35),
-            "check_out": time(18, 10),
+            "punch_in": time(9, 35),
+            "punch_out": time(18, 10),
             "break_minutes": 30,
             "overtime_minutes": 10,
             "work_mode": "Remote",
@@ -38,12 +38,12 @@ def seed_attendance(db: Session):
         },
         {
             "date": base_date - timedelta(days=2),
-            "check_in": time(9, 40),
-            "check_out": None,
+            "punch_in": time(9, 40),
+            "punch_out": None,
             "break_minutes": 0,
             "overtime_minutes": 0,
             "work_mode": "Office",
-            "status": "Checked In",
+            "status": "Punched In",
         },
     ]
 
@@ -61,8 +61,8 @@ def seed_attendance(db: Session):
             existing = Attendance(employee_id=employee.id, date=row["date"])
             db.add(existing)
 
-        existing.check_in = row["check_in"]
-        existing.check_out = row["check_out"]
+        existing.punch_in = row["punch_in"]
+        existing.punch_out = row["punch_out"]
         existing.break_minutes = row["break_minutes"]
         existing.overtime_minutes = row["overtime_minutes"]
         existing.work_mode = row["work_mode"]

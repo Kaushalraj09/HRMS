@@ -23,8 +23,8 @@ interface AttendanceDayState {
   id: string;
   employeeId: string;
   date: string;
-  checkIn: string;
-  checkOut: string;
+  punchIn: string;
+  punchOut: string;
   breakMinutes: number;
   overtimeMinutes: number;
   workMode: WorkMode;
@@ -220,8 +220,9 @@ export class Phase1StoreService {
         employee: row.name,
         employeeCode: row.code,
         date: row.date,
-        punchIn: row.checkIn || '-',
-        punchOut: row.checkOut || '-',
+        checkIn: row.checkIn || '-',
+        checkOut: row.checkOut || '-',
+        checkInImage: row.checkInImage,
         breakTime: this.findAttendanceByCodeAndDate(row.code, row.date)?.breakMinutes ? `${this.findAttendanceByCodeAndDate(row.code, row.date)?.breakMinutes} mins` : '0 mins',
         overtime: this.findAttendanceByCodeAndDate(row.code, row.date)?.overtimeMinutes ? `${this.findAttendanceByCodeAndDate(row.code, row.date)?.overtimeMinutes} mins` : '0 mins',
         totalHours: row.hours,
@@ -595,9 +596,9 @@ export class Phase1StoreService {
     }
 
     const record = this.getOrCreateTodayAttendance(employeeId);
-    const totalWorkedSeconds = this.minutesBetween(record.checkIn, record.checkOut) * 60;
+    const totalWorkedSeconds = this.minutesBetween(record.punchIn, record.punchOut) * 60;
     return {
-      isWorking: !!record.checkIn && !record.checkOut,
+      isWorking: !!record.punchIn && !record.punchOut,
       status: record.status,
       totalWorkedSeconds,
       approvedSeconds: 2 * 3600,
@@ -607,8 +608,8 @@ export class Phase1StoreService {
       shiftElapsedSeconds: 0,
       shiftTotalSeconds: SHIFT_TOTAL_SECONDS,
       workMode: record.workMode,
-      checkIn: record.checkIn || null,
-      checkOut: record.checkOut || null
+      checkIn: record.punchIn || null,
+      checkOut: record.punchOut || null
     };
   }
 
@@ -624,17 +625,17 @@ export class Phase1StoreService {
     const existing = this.getOrCreateTodayAttendance(employeeId);
     const updated = { ...existing, workMode };
 
-    if (!existing.checkIn) {
-      updated.checkIn = currentTime;
+    if (!existing.punchIn) {
+      updated.punchIn = currentTime;
       updated.status = 'Checked In';
-    } else if (!existing.checkOut) {
-      updated.checkOut = currentTime;
+    } else if (!existing.punchOut) {
+      updated.punchOut = currentTime;
       updated.status = 'Checked Out';
       updated.breakMinutes = 45;
       updated.overtimeMinutes = 20;
     } else {
-      updated.checkIn = currentTime;
-      updated.checkOut = '';
+      updated.punchIn = currentTime;
+      updated.punchOut = '';
       updated.breakMinutes = 0;
       updated.overtimeMinutes = 0;
       updated.status = 'Checked In';
@@ -833,8 +834,8 @@ export class Phase1StoreService {
           name: employee?.name ?? 'Unknown Employee',
           department: employee?.department ?? 'Unknown',
           date: record.date,
-          checkIn: record.checkIn,
-          checkOut: record.checkOut,
+          checkIn: record.punchIn,
+          checkOut: record.punchOut,
           hours: this.formatHours(this.calculateWorkMinutes(record)),
           status: record.status
         };
@@ -848,8 +849,8 @@ export class Phase1StoreService {
     return {
       date: record.date,
       day: new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' }),
-      entry: record.checkIn || '-',
-      exit: record.checkOut || '-',
+      entry: record.punchIn || '-',
+      exit: record.punchOut || '-',
       total: this.formatHours(totalMinutes),
       overtime: this.formatHours(record.overtimeMinutes),
       break: this.formatHours(record.breakMinutes),
@@ -859,12 +860,12 @@ export class Phase1StoreService {
   }
 
   private calculateWorkMinutes(record: AttendanceDayState): number {
-    if (!record.checkIn || !record.checkOut) {
+    if (!record.punchIn || !record.punchOut) {
       return 0;
     }
 
-    const [inHour, inMinute] = record.checkIn.split(':').map(value => Number(value));
-    const [outHour, outMinute] = record.checkOut.split(':').map(value => Number(value));
+    const [inHour, inMinute] = record.punchIn.split(':').map(value => Number(value));
+    const [outHour, outMinute] = record.punchOut.split(':').map(value => Number(value));
     const start = inHour * 60 + inMinute;
     const end = outHour * 60 + outMinute;
     const gross = Math.max(0, end - start);
@@ -913,8 +914,8 @@ export class Phase1StoreService {
       id: this.createId('att'),
       employeeId: employee.id,
       date: this.todayIsoDate(),
-      checkIn: '',
-      checkOut: '',
+      punchIn: '',
+      punchOut: '',
       breakMinutes: 0,
       overtimeMinutes: 0,
       workMode: employee.workLocation.toLowerCase().includes('remote') ? 'Remote' : 'Office',
@@ -1154,16 +1155,16 @@ export class Phase1StoreService {
       seedDates.map((date, dateIndex) => {
         const checkedIn = !(index === 1 && dateIndex === 0);
         const checkedOut = dateIndex !== 0 || index !== 0;
-        const checkIn = checkedIn ? `${String(9 + (index % 2)).padStart(2, '0')}:${String(5 + dateIndex).padStart(2, '0')}` : '';
-        const checkOut = checkedOut && checkedIn ? `${String(18 + (index % 2)).padStart(2, '0')}:${String(10 + dateIndex).padStart(2, '0')}` : '';
+        const punchIn = checkedIn ? `${String(9 + (index % 2)).padStart(2, '0')}:${String(5 + dateIndex).padStart(2, '0')}` : '';
+        const punchOut = checkedOut && checkedIn ? `${String(18 + (index % 2)).padStart(2, '0')}:${String(10 + dateIndex).padStart(2, '0')}` : '';
         const status: AttendanceStatus = !checkedIn ? 'Not Marked' : checkedOut ? 'Present' : 'Checked In';
 
         return {
           id: this.createId('att'),
           employeeId: employee.id,
           date,
-          checkIn,
-          checkOut,
+          punchIn,
+          punchOut,
           breakMinutes: checkedIn ? 45 : 0,
           overtimeMinutes: checkedOut ? 15 : 0,
           workMode: employee.workLocation.toLowerCase().includes('remote') ? 'Remote' : 'Office',

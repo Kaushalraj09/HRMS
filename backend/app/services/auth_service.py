@@ -57,7 +57,8 @@ def authenticate_user(db: Session, request: LoginRequest):
                     "role": user.role.name,
                     "status": user.status,
                     "accessibleDashboards": ["HR", "EMPLOYEE"],
-                    "activeDashboard": None
+                    "activeDashboard": None,
+                    "profileImage": user.profile_image
                 }
             }
 
@@ -76,7 +77,6 @@ def authenticate_user(db: Session, request: LoginRequest):
             additional_claims={"activeDashboard": active_dashboard}
         )
         
-        # 4. Format the response
         return {
             "accessToken": token,
             "me": {
@@ -86,7 +86,8 @@ def authenticate_user(db: Session, request: LoginRequest):
                 "role": user.role.name, # Accesses the relationship from Lesson 2
                 "status": user.status,
                 "accessibleDashboards": user.accessibleDashboards,
-                "activeDashboard": active_dashboard
+                "activeDashboard": active_dashboard,
+                "profileImage": user.profile_image
             }
         }
     
@@ -111,4 +112,71 @@ def change_user_password(db: Session, user_id: int, request: ChangePasswordReque
     db.commit()
     
     return {"success": True, "message": "Password updated successfully"}
+
+def generate_reset_token(user: User) -> str:
+    from datetime import datetime, timedelta
+    from jose import jwt
+    from app.core.config import settings
+    expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode = {
+        "exp": expire,
+        "sub": user.email,
+        "type": "reset"
+    }
+    secret = settings.SECRET_KEY + user.password_hash
+    token = jwt.encode(to_encode, secret, algorithm=settings.ALGORITHM)
+    return token
+
+def forgot_password(db: Session, request):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        return None
+    
+    from app.core.config import settings
+    token = generate_reset_token(user)
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    reset_link = f"{frontend_url}/auth/reset-password?token={token}"
+    
+    # Trigger real SMTP email send
+    from app.services.mail_service import send_reset_email
+    email_sent = send_reset_email(user.email, user.display_name, reset_link)
+    
+    print(f"\n==================================================")
+    print(f"PASSWORD RESET REQUEST FOR: {user.email}")
+    print(f"RESET LINK: {reset_link}")
+    print(f"SMTP Email Dispatched: {'YES' if email_sent else 'NO (Check SMTP config in .env)'}")
+    print(f"==================================================\n")
+    
+    return reset_link
+
+def reset_password(db: Session, request):
+    from jose import jwt, JWTError
+    from app.core.config import settings
+    if request.newPassword != request.confirmPassword:
+        return {"success": False, "message": "Passwords do not match"}
+    
+    try:
+        unverified = jwt.decode(request.token, "", options={"verify_signature": False})
+        email = unverified.get("sub")
+        token_type = unverified.get("type")
+        if not email or token_type != "reset":
+            return {"success": False, "message": "Invalid token"}
+    except JWTError:
+        return {"success": False, "message": "Invalid or expired token"}
+    
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"success": False, "message": "User not found"}
+    
+    secret = settings.SECRET_KEY + user.password_hash
+    try:
+        jwt.decode(request.token, secret, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        return {"success": False, "message": "Invalid or expired token"}
+    
+    user.password_hash = hash_password(request.newPassword)
+    db.commit()
+    
+    return {"success": True, "message": "Password reset successfully"}
+
 

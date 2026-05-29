@@ -31,8 +31,9 @@ export interface HrDashboardData {
     employee: string;
     employeeCode: string;
     date: string;
-    punchIn: string;
-    punchOut: string;
+    checkIn: string;
+    checkOut: string;
+    checkInImage?: string;
     breakTime: string;
     overtime: string;
     totalHours: string;

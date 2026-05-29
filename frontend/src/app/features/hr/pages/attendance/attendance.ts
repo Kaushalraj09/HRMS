@@ -115,6 +115,7 @@ export class AttendanceComponent implements OnInit {
              this.lastMetrics = res.metrics;
              return { ...res, data: sorted };
            }),
+
          );
       }),
       tap(() => this.isLoading$.next(false)),

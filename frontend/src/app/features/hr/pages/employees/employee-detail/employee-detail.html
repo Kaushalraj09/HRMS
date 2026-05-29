@@ -34,59 +34,59 @@
       <h2>Employee Details</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label>First Name</label>
-          <input type="text" formControlName="firstName" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" formControlName="firstName" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Last Name</label>
-          <input type="text" formControlName="lastName" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" formControlName="lastName" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Department</label>
+          <label for="department">Department</label>
           <ng-container *ngIf="isEditing$ | async; else departmentRead">
-            <app-custom-select formControlName="department" [options]="departmentOptions"></app-custom-select>
+            <app-custom-select id="department" name="department" inputId="department" formControlName="department" [options]="departmentOptions"></app-custom-select>
           </ng-container>
           <ng-template #departmentRead>
-            <input type="text" formControlName="department" class="form-input" readonly>
+            <input type="text" id="department" name="department" formControlName="department" class="form-input" readonly>
           </ng-template>
         </div>
         <div class="form-group">
-          <label>Employee Type</label>
+          <label for="employeeType">Employee Type</label>
           <ng-container *ngIf="isEditing$ | async; else typeRead">
-            <app-custom-select formControlName="employeeType" [options]="employeeTypeOptions"></app-custom-select>
+            <app-custom-select id="employeeType" name="employeeType" inputId="employeeType" formControlName="employeeType" [options]="employeeTypeOptions"></app-custom-select>
           </ng-container>
           <ng-template #typeRead>
-            <input type="text" formControlName="employeeType" class="form-input" readonly>
+            <input type="text" id="employeeType" name="employeeType" formControlName="employeeType" class="form-input" readonly>
           </ng-template>
         </div>
         <div class="form-group">
-          <label>Designation</label>
-          <input type="text" formControlName="designation" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="designation">Designation</label>
+          <input type="text" id="designation" name="designation" formControlName="designation" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Shift Type</label>
+          <label for="shiftType">Shift Type</label>
           <ng-container *ngIf="isEditing$ | async; else shiftRead">
-            <app-custom-select formControlName="shiftType" [options]="shiftOptions"></app-custom-select>
+            <app-custom-select id="shiftType" name="shiftType" inputId="shiftType" formControlName="shiftType" [options]="shiftOptions"></app-custom-select>
           </ng-container>
           <ng-template #shiftRead>
-            <input type="text" formControlName="shiftType" class="form-input" readonly>
+            <input type="text" id="shiftType" name="shiftType" formControlName="shiftType" class="form-input" readonly>
           </ng-template>
         </div>
         <div class="form-group">
-          <label>Official Email</label>
-          <input type="email" formControlName="officialEmail" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="officialEmail">Official Email</label>
+          <input type="email" id="officialEmail" name="officialEmail" formControlName="officialEmail" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Login Email</label>
-          <input type="email" formControlName="loginEmail" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="loginEmail">Login Email</label>
+          <input type="email" id="loginEmail" name="loginEmail" formControlName="loginEmail" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Mobile</label>
-          <input type="tel" formControlName="mobile" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="mobile">Mobile</label>
+          <input type="tel" id="mobile" name="mobile" formControlName="mobile" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
         <div class="form-group">
-          <label>Emergency Contact</label>
-          <input type="text" formControlName="emergencyContactName" class="form-input" [readonly]="!(isEditing$ | async)">
+          <label for="emergencyContactName">Emergency Contact</label>
+          <input type="text" id="emergencyContactName" name="emergencyContactName" formControlName="emergencyContactName" class="form-input" [readonly]="!(isEditing$ | async)">
         </div>
       </div>
     </form>

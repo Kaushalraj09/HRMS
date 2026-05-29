@@ -313,6 +313,7 @@ export class AttendanceService {
   }
 
   private mapAttendanceRecord(row: BackendAttendanceRecord): AttendanceRecord {
+
     return {
       id: String(row.id),
       code: row.employeeCode,

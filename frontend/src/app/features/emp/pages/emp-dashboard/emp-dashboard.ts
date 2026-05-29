@@ -88,7 +88,6 @@ export class EmpDashboard implements OnDestroy {
   totalWorkedSecondsToday = 0;
   shiftElapsedSeconds = 0;
   shiftProgress = 0;
-  liveTimerDisplay = formatSecondsToClock(0);
   lateMinutes = 0;
   earlyLeaveMinutes = 0;
   overtimeMinutes = 0;
@@ -124,10 +123,10 @@ export class EmpDashboard implements OnDestroy {
 
   // ─── Camera / Photo Capture ───────────────────────────────────────
   showCameraModal = false;
-  public checkInImage: string | null = null;
-  public checkOutImage: string | null = null;
-  public checkInAddress: string | null = null;
-  public checkOutAddress: string | null = null;
+  public punchInImage: string | null = null;
+  public punchOutImage: string | null = null;
+  public punchInAddress: string | null = null;
+  public punchOutAddress: string | null = null;
   public capturedImage: string | null = null;
   public cameraStream: MediaStream | null = null;
   public pendingPunchWorkMode: WorkMode = 'Office';
@@ -209,7 +208,15 @@ export class EmpDashboard implements OnDestroy {
   }
 
   get isPunchDisabled(): boolean {
-    return this.isPunchSaving;
+    return this.isPunchSaving || !!this.punchOutTime;
+  }
+
+  get liveTimerDisplay(): string {
+    return this.timeEngine.formatHHMMSS(this.totalWorkedSecondsToday);
+  }
+
+  get shiftElapsedDisplay(): string {
+    return this.timeEngine.formatHHMMSS(this.shiftElapsedSeconds);
   }
 
   get startTimeOptions(): TimeSlotOption[] {
@@ -428,7 +435,12 @@ export class EmpDashboard implements OnDestroy {
             this.loadDashboardData();
           },
           error: (error) => {
-            this.punchMessage = error?.error?.detail || 'Unable to update attendance right now.';
+            const detail = error?.error?.detail;
+            if (typeof detail === 'object' && detail !== null && detail.message) {
+              this.punchMessage = detail.message;
+            } else {
+              this.punchMessage = typeof detail === 'string' ? detail : 'Unable to update attendance right now.';
+            }
             this.cdr.detectChanges();
           }
         })
@@ -686,12 +698,11 @@ export class EmpDashboard implements OnDestroy {
     this.status = todayState.workMode;
     this.punchInTime = todayState.checkIn || null;
     this.punchOutTime = todayState.checkOut || null;
-    this.liveTimerDisplay = this.timeEngine.formatHHMMSS(this.shiftElapsedSeconds);
     // Preserve first image; only update if not already set
-    if (todayState.checkInImage) { this.checkInImage = todayState.checkInImage; }
-    if (todayState.checkOutImage) { this.checkOutImage = todayState.checkOutImage; }
-    if (todayState.checkInAddress) { this.checkInAddress = todayState.checkInAddress; }
-    if (todayState.checkOutAddress) { this.checkOutAddress = todayState.checkOutAddress; }
+    if (todayState.checkInImage) { this.punchInImage = todayState.checkInImage; }
+    if (todayState.checkOutImage) { this.punchOutImage = todayState.checkOutImage; }
+    if (todayState.checkInAddress) { this.punchInAddress = todayState.checkInAddress; }
+    if (todayState.checkOutAddress) { this.punchOutAddress = todayState.checkOutAddress; }
   }
 
   private toIsoDate(date: Date): string {

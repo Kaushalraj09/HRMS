@@ -14,8 +14,8 @@ class Attendance(Base):
     scheduled_end = Column(Time, nullable=True)
     task_description = Column(String(255), nullable=True)
     
-    check_in = Column(Time)
-    check_out = Column(Time)
+    punch_in = Column(Time)
+    punch_out = Column(Time)
     
     break_minutes = Column(Integer, default=0)
     total_working_minutes = Column(Integer, default=0)
@@ -28,16 +28,16 @@ class Attendance(Base):
     is_working = Column(Integer, default=0) # 0 = Not Working, 1 = Working
     
     # Location tracking
-    check_in_latitude = Column(Float, nullable=True)
-    check_in_longitude = Column(Float, nullable=True)
-    check_in_address = Column(String(500), nullable=True)
-    check_out_latitude = Column(Float, nullable=True)
-    check_out_longitude = Column(Float, nullable=True)
-    check_out_address = Column(String(500), nullable=True)
+    punch_in_latitude = Column(Float, nullable=True)
+    punch_in_longitude = Column(Float, nullable=True)
+    punch_in_address = Column(String(500), nullable=True)
+    punch_out_latitude = Column(Float, nullable=True)
+    punch_out_longitude = Column(Float, nullable=True)
+    punch_out_address = Column(String(500), nullable=True)
     
     # Image tracking
-    check_in_image = Column(String, nullable=True)
-    check_out_image = Column(String, nullable=True)
+    punch_in_image = Column(String, nullable=True)
+    punch_out_image = Column(String, nullable=True)
     
     # Relationships
     employee = relationship("Employee", backref="attendance_records")
@@ -47,11 +47,11 @@ class Attendance(Base):
 
     @property
     def punch_in_time(self):
-        return self.check_in
+        return self.punch_in
 
     @property
     def punch_out_time(self):
-        return self.check_out
+        return self.punch_out
 
 
 class PunchLog(Base):

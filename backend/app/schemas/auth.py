@@ -14,6 +14,7 @@ class UserSession(BaseModel):
     status: str
     accessibleDashboards: list[str]
     activeDashboard: Optional[str] = None
+    profileImage: Optional[str] = None
 
     class Config:
         from_attributes = True # This allows Pydantic to read SQLAlchemy models
