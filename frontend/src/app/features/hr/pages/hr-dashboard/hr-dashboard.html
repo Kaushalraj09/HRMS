@@ -223,8 +223,8 @@
                     <td>
                       <div class="live-image-cell">
                         <div class="avatar-wrapper" *ngIf="sheet.punchIn !== '-'; else noImage">
-                          <img *ngIf="sheet.checkInImage" [src]="sheet.checkInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(sheet.checkInImage, sheet.employee)" />
-                          <div *ngIf="!sheet.checkInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;width:36px;height:36px;border-radius:50%;">
+                          <img *ngIf="sheet.punchInImage" [src]="sheet.punchInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(sheet.punchInImage, sheet.employee)" />
+                          <div *ngIf="!sheet.punchInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;width:36px;height:36px;border-radius:50%;">
                             <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
                           </div>
                           <span class="verified-badge" title="Attendance recorded">

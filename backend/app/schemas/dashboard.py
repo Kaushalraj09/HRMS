@@ -31,8 +31,8 @@ class RecentTimeSheet(BaseModel):
     overtime: str
     totalHours: str
     status: str
-    checkInImage: Optional[str] = None
-    checkOutImage: Optional[str] = None
+    punchInImage: Optional[str] = None
+    punchOutImage: Optional[str] = None
 
 class HrDashboardData(BaseModel):
     totalEmployees: int

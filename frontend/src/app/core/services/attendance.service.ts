@@ -14,8 +14,6 @@ interface BackendAttendanceResponse {
   taskDescription: string | null;
   punchIn: string | null;
   punchOut: string | null;
-  checkIn?: string | null;
-  checkOut?: string | null;
   status: string;
   workMode: WorkMode;
   totalWorkingMinutes: number;
@@ -33,8 +31,6 @@ interface BackendAttendanceRecord {
   date: string;
   punchIn: string | null;
   punchOut: string | null;
-  checkIn?: string | null;
-  checkOut?: string | null;
   status: string;
   totalWorkingMinutes: number;
   workMode?: string;
@@ -63,13 +59,11 @@ interface BackendTodayAttendanceState {
   workMode: WorkMode;
   punchIn: string | null;
   punchOut: string | null;
-  checkIn?: string | null;
-  checkOut?: string | null;
   punchInLatitude: number | null;
   punchInLongitude: number | null;
   punchInAddress: string | null;
   punchOutLatitude: number | null;
-  punchOutLongitude: number | null;
+  punchOutLongitude: string | null; // Keep flexible type mapping
   punchOutAddress: string | null;
   punchInImage: string | null;
   punchOutImage: string | null;
@@ -160,16 +154,16 @@ export class AttendanceService {
         let rows = result.data.map(row => this.mapAttendanceRecord(row));
         rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status, location);
 
-        // Sort all rows: date descending first, then check-in time descending (latest first)
+        // Sort all rows: date descending first, then punch-in time descending (latest first)
         rows.sort((a, b) => {
           const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
           if (dateDiff !== 0) return dateDiff;
 
-          if (a.checkIn && b.checkIn) {
-            return b.checkIn.localeCompare(a.checkIn);
+          if (a.punchIn && b.punchIn) {
+            return b.punchIn.localeCompare(a.punchIn);
           }
-          if (b.checkIn) return 1;
-          if (a.checkIn) return -1;
+          if (b.punchIn) return 1;
+          if (a.punchIn) return -1;
           return 0;
         });
 
@@ -204,16 +198,16 @@ export class AttendanceService {
         shiftStart: state.shiftStart,
         shiftEnd: state.shiftEnd,
         workMode: state.workMode || 'Office',
-        checkIn: state.punchIn ?? state.checkIn ?? null,
-        checkOut: state.punchOut ?? state.checkOut ?? null,
-        checkInLatitude: state.punchInLatitude,
-        checkInLongitude: state.punchInLongitude,
-        checkInAddress: state.punchInAddress,
-        checkOutLatitude: state.punchOutLatitude,
-        checkOutLongitude: state.punchOutLongitude,
-        checkOutAddress: state.punchOutAddress,
-        checkInImage: state.punchInImage,
-        checkOutImage: state.punchOutImage
+        punchIn: state.punchIn ?? null,
+        punchOut: state.punchOut ?? null,
+        punchInLatitude: state.punchInLatitude,
+        punchInLongitude: state.punchInLongitude,
+        punchInAddress: state.punchInAddress,
+        punchOutLatitude: state.punchOutLatitude,
+        punchOutLongitude: typeof state.punchOutLongitude === 'string' ? null : state.punchOutLongitude, // Safeguard against DB migration types
+        punchOutAddress: state.punchOutAddress,
+        punchInImage: state.punchInImage,
+        punchOutImage: state.punchOutImage
       }))
     );
   }
@@ -313,16 +307,16 @@ export class AttendanceService {
       map(rows => [
         { label: 'Total Days', value: rows.length, icon: 'fas fa-calendar total blue-icon' },
         { label: 'Worked Days', value: rows.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
-        { label: 'Present', value: rows.filter(row => row.status === 'Present' || row.status === 'Checked Out').length, icon: 'fas fa-check-circle blue-icon' },
-        { label: 'Checked In', value: rows.filter(row => row.status === 'Checked In').length, icon: 'fas fa-user-check blue-icon' },
+        { label: 'Present', value: rows.filter(row => row.status === 'Present' || row.status === 'Punched Out').length, icon: 'fas fa-check-circle blue-icon' },
+        { label: 'Punched In', value: rows.filter(row => row.status === 'Punched In').length, icon: 'fas fa-user-check blue-icon' },
         { label: 'Not Marked', value: rows.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved blue-icon' }
       ])
     );
   }
 
   private mapAttendanceRecord(row: BackendAttendanceRecord): AttendanceRecord {
-    const punchIn = row.punchIn ?? row.checkIn ?? null;
-    const punchOut = row.punchOut ?? row.checkOut ?? null;
+    const punchIn = row.punchIn ?? null;
+    const punchOut = row.punchOut ?? null;
 
     return {
       id: String(row.id),
@@ -330,15 +324,15 @@ export class AttendanceService {
       name: row.employeeName,
       department: row.department || '',
       date: row.date,
-      checkIn: this.toDisplayTime(punchIn),
-      checkOut: this.toDisplayTime(punchOut),
+      punchIn: this.toDisplayTime(punchIn),
+      punchOut: this.toDisplayTime(punchOut),
       hours: formatMinutesToHours(row.totalWorkingMinutes ?? this.calculateMinutes(punchIn, punchOut)),
       status: this.normalizeStatus(row.status),
       workMode: row.workMode,
-      checkInAddress: row.punchInAddress || '',
-      checkOutAddress: row.punchOutAddress || '',
-      checkInImage: row.punchInImage,
-      checkOutImage: row.punchOutImage
+      punchInAddress: row.punchInAddress || '',
+      punchOutAddress: row.punchOutAddress || '',
+      punchInImage: row.punchInImage,
+      punchOutImage: row.punchOutImage
     };
   }
 
@@ -350,8 +344,8 @@ export class AttendanceService {
   }
 
   private mapTimesheet(row: BackendAttendanceResponse): EmployeeTimesheetRow {
-    const punchIn = row.punchIn ?? row.checkIn ?? null;
-    const punchOut = row.punchOut ?? row.checkOut ?? null;
+    const punchIn = row.punchIn ?? null;
+    const punchOut = row.punchOut ?? null;
     const displayPunchIn = this.toDisplayTime(punchIn);
     const displayPunchOut = this.toDisplayTime(punchOut);
     const displayScheduledStart = this.toDisplayTime(row.scheduledStart);
@@ -407,14 +401,14 @@ export class AttendanceService {
   private buildMetrics(rows: AttendanceRecord[]): AttendanceMetrics {
     return {
       present: rows.filter(row => row.status === 'Present').length,
-      checkedIn: rows.filter(row => row.status === 'Checked In').length,
-      checkedOut: rows.filter(row => row.status === 'Checked Out').length,
+      punchedIn: rows.filter(row => row.status === 'Punched In').length,
+      punchedOut: rows.filter(row => row.status === 'Punched Out').length,
       notMarked: rows.filter(row => row.status === 'Not Marked').length
     };
   }
 
   private normalizeStatus(status: string): AttendanceRecord['status'] {
-    const knownStatuses = ['Checked In', 'Checked Out', 'Not Marked', 'Present', 'Working', 'Not Working'];
+    const knownStatuses = ['Punched In', 'Punched Out', 'Not Marked', 'Present', 'Working', 'Not Working'];
     if (knownStatuses.includes(status)) {
       return status as AttendanceRecord['status'];
     }

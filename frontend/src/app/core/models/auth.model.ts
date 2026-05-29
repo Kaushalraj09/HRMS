@@ -15,6 +15,7 @@ export interface SessionUser {
   status: 'Active' | 'Inactive';
   accessibleDashboards?: string[];
   activeDashboard?: 'HR' | 'EMPLOYEE' | 'MASTER';
+  profileImage?: string;
 }
 
 export interface LoginResponse {

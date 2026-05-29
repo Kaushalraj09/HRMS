@@ -29,7 +29,9 @@ class EmployeeProfile(BaseModel):
     status: str
     personalDetails: PersonalDetails
     contactDetails: ContactDetails
+    profileImage: Optional[str] = None
 
 class ProfileUpdate(BaseModel):
     personalDetails: Optional[PersonalDetails] = None
     contactDetails: Optional[ContactDetails] = None
+    profileImage: Optional[str] = None

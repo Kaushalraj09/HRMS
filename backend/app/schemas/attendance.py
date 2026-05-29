@@ -88,22 +88,22 @@ class AttendanceResponse(BaseModel):
     scheduled_start: Optional[time] = Field(default=None, alias="scheduledStart")
     scheduled_end: Optional[time] = Field(default=None, alias="scheduledEnd")
     task_description: Optional[str] = Field(default=None, alias="taskDescription")
-    check_in: Optional[time] = Field(default=None, alias="punchIn")
-    check_out: Optional[time] = Field(default=None, alias="punchOut")
+    punch_in: Optional[time] = Field(default=None, alias="punchIn")
+    punch_out: Optional[time] = Field(default=None, alias="punchOut")
     status: str
     work_mode: WorkMode = Field(alias="workMode")
     
     # Location fields - optional
-    check_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
-    check_in_longitude: Optional[float] = Field(default=None, alias="punchInLongitude")
-    check_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
-    check_out_latitude: Optional[float] = Field(default=None, alias="punchOutLatitude")
-    check_out_longitude: Optional[float] = Field(default=None, alias="punchOutLongitude")
-    check_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
+    punch_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
+    punch_in_longitude: Optional[float] = Field(default=None, alias="punchInLongitude")
+    punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
+    punch_out_latitude: Optional[float] = Field(default=None, alias="punchOutLatitude")
+    punch_out_longitude: Optional[float] = Field(default=None, alias="punchOutLongitude")
+    punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
     
     # Image fields - optional
-    check_in_image: Optional[str] = Field(default=None, alias="punchInImage")
-    check_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
+    punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
+    punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
     
     # Calculated metrics
     total_working_minutes: int = Field(default=0, alias="totalWorkingMinutes")

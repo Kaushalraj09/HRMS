@@ -19,7 +19,8 @@ export class MyProfileService {
   updateProfile(profile: EmployeeProfile): Observable<{ success: boolean; message: string }> {
     return this.http.put<{ success: boolean; message: string }>(`${this.apiUrl}/update`, {
       personalDetails: profile.personalDetails,
-      contactDetails: profile.contactDetails
+      contactDetails: profile.contactDetails,
+      profileImage: profile.profileImage
     });
   }
 }

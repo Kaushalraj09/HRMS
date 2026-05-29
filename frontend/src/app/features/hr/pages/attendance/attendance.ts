@@ -19,7 +19,7 @@ export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
-  statuses = ['Present', 'Checked In', 'Not Marked', 'Checked Out'];
+  statuses = ['Present', 'Punched In', 'Not Marked', 'Punched Out'];
   locations = ['Office', 'Remote'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }
@@ -38,7 +38,7 @@ export class AttendanceComponent implements OnInit {
   paginationArray$!: Observable<number[]>;
 
   // Drives the SVG ring: last-loaded metrics snapshot
-  lastMetrics: { present: number; checkedIn: number; checkedOut: number; notMarked: number } | null = null;
+  lastMetrics: { present: number; punchedIn: number; punchedOut: number; notMarked: number } | null = null;
 
   // Real time indicator bonus
   currentTime$ = timer(0, 60000).pipe(map(() => new Date()));
@@ -71,10 +71,10 @@ export class AttendanceComponent implements OnInit {
   /** Fraction 0–1 of employees who are present/working out of the total visible. */
   get attendanceRate(): number {
     if (!this.lastMetrics) return 0;
-    const { present, checkedIn, checkedOut, notMarked } = this.lastMetrics;
-    const total = present + checkedIn + checkedOut + notMarked;
+    const { present, punchedIn, punchedOut, notMarked } = this.lastMetrics;
+    const total = present + punchedIn + punchedOut + notMarked;
     if (total === 0) return 0;
-    return Math.min(1, (present + checkedIn + checkedOut) / total);
+    return Math.min(1, (present + punchedIn + punchedOut) / total);
   }
 
   /** Maps attendanceRate → SVG stroke-dashoffset (pathLength=100 ring). */
@@ -110,9 +110,9 @@ export class AttendanceComponent implements OnInit {
              const sorted = [...res.data].sort((a, b) => {
                const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
                if (dateDiff !== 0) return dateDiff;
-               if (a.checkIn && b.checkIn) return b.checkIn.localeCompare(a.checkIn);
-               if (b.checkIn) return 1;
-               if (a.checkIn) return -1;
+               if (a.punchIn && b.punchIn) return b.punchIn.localeCompare(a.punchIn);
+               if (b.punchIn) return 1;
+               if (a.punchIn) return -1;
                return 0;
              });
              // Snapshot metrics for the ring
@@ -121,7 +121,7 @@ export class AttendanceComponent implements OnInit {
            }),
            catchError((error) => {
              const detail = error?.error?.detail;
-             this.lastMetrics = { present: 0, checkedIn: 0, checkedOut: 0, notMarked: 0 };
+             this.lastMetrics = { present: 0, punchedIn: 0, punchedOut: 0, notMarked: 0 };
              this.errorMessage$.next(typeof detail === 'string' ? detail : 'Unable to load attendance records.');
              return of({
                data: [],

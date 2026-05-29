@@ -16,6 +16,7 @@ class User(Base):
     display_name = Column(String(150), nullable=False)
     status = Column(String(20), default="Active")
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    profile_image = Column(String, nullable=True)
     
     # Relationships
     role = relationship("Role")
@@ -32,3 +33,7 @@ class User(Base):
             return ["HR", "EMPLOYEE"]
         else:
             return ["EMPLOYEE"]
+
+    @property
+    def profileImage(self) -> Optional[str]:
+        return self.profile_image

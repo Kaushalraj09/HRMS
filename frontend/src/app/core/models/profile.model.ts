@@ -27,4 +27,5 @@ export interface EmployeeProfile {
   status: 'Active' | 'Inactive';
   personalDetails: PersonalDetails;
   contactDetails: ContactDetails;
+  profileImage?: string;
 }

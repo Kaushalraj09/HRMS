@@ -34,13 +34,13 @@ def determine_status(punch_in: time, punch_out: time, timeoff_duration_hours: fl
         return "Late"
         
     if punch_in and not punch_out:
-        return "Checked In"
+        return "Punched In"
 
     return "Present"
 
 def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float = 0.0):
     """Calculates working hours, overtime, and updates the attendance record."""
-    if not attendance_record.check_in or not attendance_record.check_out:
+    if not attendance_record.punch_in or not attendance_record.punch_out:
         # Incomplete punches
         attendance_record.total_working_minutes = 0
         attendance_record.overtime_minutes = 0
@@ -48,8 +48,8 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
         attendance_record.break_minutes = int(timeoff_duration_hours * 60)
         return
 
-    in_minutes = _time_to_minutes(attendance_record.check_in)
-    out_minutes = _time_to_minutes(attendance_record.check_out)
+    in_minutes = _time_to_minutes(attendance_record.punch_in)
+    out_minutes = _time_to_minutes(attendance_record.punch_out)
     
     if out_minutes <= in_minutes:
         # Invalid entry or same time punch out
@@ -62,7 +62,7 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     gross_minutes = out_minutes - in_minutes
     
     # Deduct fixed lunch if the period spans lunch time (13:00 - 14:00).
-    lunch_minutes = FIXED_BREAK_MINUTES if attendance_record.check_in < time(13, 0) and attendance_record.check_out > time(14, 0) else 0
+    lunch_minutes = FIXED_BREAK_MINUTES if attendance_record.punch_in < time(13, 0) and attendance_record.punch_out > time(14, 0) else 0
     
     timeoff_minutes = int(timeoff_duration_hours * 60)
     
@@ -85,4 +85,4 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     attendance_record.break_minutes = lunch_minutes + timeoff_minutes
     
     # Update Status
-    attendance_record.status = determine_status(attendance_record.check_in, attendance_record.check_out, timeoff_duration_hours)
+    attendance_record.status = determine_status(attendance_record.punch_in, attendance_record.punch_out, timeoff_duration_hours)

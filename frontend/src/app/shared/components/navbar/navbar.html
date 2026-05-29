@@ -17,7 +17,7 @@
     <!-- right side -->
     <div class="rightnav">
         <div class="searchbar">
-            <input type="text" placeholder="Search here" (input)="onSearch($event.target.value)" />
+            <input type="text" id="navSearch" name="navSearch" aria-label="Search" placeholder="Search here" (input)="onSearch($event.target.value)" />
             <i class="fas fa-search search-icon"></i>
         </div>
 
@@ -48,7 +48,8 @@
 
         <div class="profile" (click)="onProfileClick()">
             <div class="avatar">
-                <i class="fas fa-user-circle"></i>
+                <img *ngIf="profileImage" [src]="profileImage" alt="Avatar" class="navbar-avatar-img" />
+                <div *ngIf="!profileImage" class="navbar-avatar-fallback">{{ userInitials }}</div>
                 <span class="online-dot"></span>
             </div>
             <span class="profilename">{{ userName }}</span>

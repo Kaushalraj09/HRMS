@@ -11,11 +11,11 @@
     <div class="filter-section">
       <div class="search-container">
         <i class="fas fa-search search-icon"></i>
-        <input type="text" [formControl]="searchControl" placeholder="Search HR name, email, code" class="filter-input search-input">
+        <input type="text" id="hrSearchQuery" name="hrSearchQuery" aria-label="Search HR users" [formControl]="searchControl" placeholder="Search HR name, email, code" class="filter-input search-input">
       </div>
       <div class="dropdown-filters">
         <div style="min-width: 160px;">
-          <app-custom-select [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
+          <app-custom-select id="statusFilter" name="statusFilter" inputId="statusFilter" [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
         </div>
       </div>
       <div class="filter-actions-row">

@@ -44,10 +44,10 @@ def calculate_attendance_metrics(attendance: Attendance) -> None:
     Args:
         attendance: Attendance record to calculate metrics for
     """
-    if attendance.check_in and attendance.check_out:
+    if attendance.punch_in and attendance.punch_out:
         rec_date = attendance.date or date.today()
-        first_in = datetime.combine(rec_date, attendance.check_in)
-        last_out = datetime.combine(rec_date, attendance.check_out)
+        first_in = datetime.combine(rec_date, attendance.punch_in)
+        last_out = datetime.combine(rec_date, attendance.punch_out)
         
         # Total session duration in minutes
         total_duration_seconds = int((last_out - first_in).total_seconds())
@@ -55,7 +55,7 @@ def calculate_attendance_metrics(attendance: Attendance) -> None:
         
         # Calculate fixed lunch break when punch period spans lunch time
         break_minutes = 0
-        if attendance.check_in < time(13, 0) and attendance.check_out > time(14, 0):
+        if attendance.punch_in < time(13, 0) and attendance.punch_out > time(14, 0):
             break_minutes = FIXED_BREAK_MINUTES
         
         # Working minutes = total duration minus break
@@ -167,26 +167,26 @@ def upsert_daily_summary(db: Session, employee_id: int, target_date: date | None
         .first()
     )
     
-    if not attendance or not attendance.check_in or not attendance.check_out:
+    if not attendance or not attendance.punch_in or not attendance.punch_out:
         # No complete punch data for the day
         return None
     
-    # Calculate duration from check_in to check_out
-    check_in_dt = datetime.combine(summary_date, attendance.check_in)
-    check_out_dt = datetime.combine(summary_date, attendance.check_out)
+    # Calculate duration from punch_in to punch_out
+    check_in_dt = datetime.combine(summary_date, attendance.punch_in)
+    check_out_dt = datetime.combine(summary_date, attendance.punch_out)
     total_seconds = int((check_out_dt - check_in_dt).total_seconds())
     total_minutes = total_seconds // 60
     
     # Calculate late arrival
     late_minutes = 0
-    check_in_minutes = attendance.check_in.hour * 60 + attendance.check_in.minute
+    check_in_minutes = attendance.punch_in.hour * 60 + attendance.punch_in.minute
     shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
     if check_in_minutes > shift_start_minutes:
         late_minutes = check_in_minutes - shift_start_minutes
     
     # Calculate early leave
     early_leave = 0
-    check_out_minutes = attendance.check_out.hour * 60 + attendance.check_out.minute
+    check_out_minutes = attendance.punch_out.hour * 60 + attendance.punch_out.minute
     shift_end_minutes = SHIFT_END.hour * 60 + SHIFT_END.minute
     if check_out_minutes < shift_end_minutes:
         early_leave = shift_end_minutes - check_out_minutes
@@ -268,11 +268,36 @@ def punch_in(
     )
     
     # Prevent duplicate punch-in
-    if attendance and attendance.is_working:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Already punched in. Please punch out first.",
-        )
+    if attendance:
+        # Fetch employee information for extra detail fields
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        emp_code = employee.employee_code if employee else f"EMP-{employee_id:04d}"
+        
+        if attendance.is_working:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "Already punched in. Please punch out first.",
+                    "code": "ALREADY_PUNCHED_IN",
+                    "employeeId": emp_code,
+                    "punchInTiming": attendance.punch_in.strftime("%I:%M %p") if attendance.punch_in else None,
+                    "punchInAddress": attendance.punch_in_address,
+                    "workMode": attendance.work_mode,
+                },
+            )
+        if attendance.punch_out is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "Already completed attendance for today. Multiple punches not allowed.",
+                    "code": "ALREADY_PUNCHED_OUT",
+                    "employeeId": emp_code,
+                    "punchInTiming": attendance.punch_in.strftime("%I:%M %p") if attendance.punch_in else None,
+                    "punchOutTiming": attendance.punch_out.strftime("%I:%M %p") if attendance.punch_out else None,
+                    "punchOutAddress": attendance.punch_out_address,
+                    "workMode": attendance.work_mode,
+                },
+            )
     
     # Create new attendance if doesn't exist
     if not attendance:
@@ -291,12 +316,12 @@ def punch_in(
         attendance.work_mode = work_mode
         attendance.status = "Working"
     
-    # Set check-in with location and image (first check-in of the day)
-    attendance.check_in = current.time()
-    attendance.check_in_latitude = latitude
-    attendance.check_in_longitude = longitude
-    attendance.check_in_address = address
-    attendance.check_in_image = image
+    # Set punch-in with location and image (first check-in of the day)
+    attendance.punch_in = current.time()
+    attendance.punch_in_latitude = latitude
+    attendance.punch_in_longitude = longitude
+    attendance.punch_in_address = address
+    attendance.punch_in_image = image
     
     db.commit()
     db.refresh(attendance)
@@ -361,27 +386,42 @@ def punch_out(
     if not attendance:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No attendance found for today. Please punch in first.",
+            detail={
+                "message": "No attendance found for today. Please punch in first.",
+                "code": "NO_ATTENDANCE_RECORD",
+            },
         )
     
-    if attendance.check_out is not None:
+    if attendance.punch_out is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Already punched out. Multiple punch-outs not allowed.",
+            detail={
+                "message": "Already punched out. Multiple punch-outs not allowed.",
+                "code": "ALREADY_PUNCHED_OUT",
+                "checkIn": attendance.punch_in.strftime("%I:%M %p") if attendance.punch_in else None,
+                "checkOut": attendance.punch_out.strftime("%I:%M %p") if attendance.punch_out else None,
+                "address": attendance.punch_out_address,
+                "workMode": attendance.work_mode,
+            },
         )
     
     if not attendance.is_working:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Not currently working. Please punch in first.",
+            detail={
+                "message": "Not working. Cannot punch out.",
+                "code": "NOT_WORKING",
+                "checkIn": attendance.punch_in.strftime("%I:%M %p") if attendance.punch_in else None,
+                "workMode": attendance.work_mode,
+            },
         )
     
-    # Set check-out with location and image
-    attendance.check_out = current.time()
-    attendance.check_out_latitude = latitude
-    attendance.check_out_longitude = longitude
-    attendance.check_out_address = address
-    attendance.check_out_image = image
+    # Set punch-out with location and image
+    attendance.punch_out = current.time()
+    attendance.punch_out_latitude = latitude
+    attendance.punch_out_longitude = longitude
+    attendance.punch_out_address = address
+    attendance.punch_out_image = image
     attendance.is_working = 0
     attendance.status = "Not Working"
     
@@ -424,14 +464,14 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     
     # Calculate total worked seconds
     worked_seconds = 0
-    if attendance and attendance.check_in and attendance.check_out:
+    if attendance and attendance.punch_in and attendance.punch_out:
         # Full session completed
-        check_in_dt = datetime.combine(today, attendance.check_in, tzinfo=APP_TIMEZONE)
-        check_out_dt = datetime.combine(today, attendance.check_out, tzinfo=APP_TIMEZONE)
+        check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
+        check_out_dt = datetime.combine(today, attendance.punch_out, tzinfo=APP_TIMEZONE)
         worked_seconds = int((check_out_dt - check_in_dt).total_seconds())
-    elif attendance and attendance.check_in and attendance.is_working:
+    elif attendance and attendance.punch_in and attendance.is_working:
         # Active session - calculate time from check_in to now
-        check_in_dt = datetime.combine(today, attendance.check_in, tzinfo=APP_TIMEZONE)
+        check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
         worked_seconds = int((current - check_in_dt).total_seconds())
     
     # Get approved time-off hours
@@ -457,16 +497,16 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "shiftStart": SHIFT_START.strftime("%I:%M %p"),
         "shiftEnd": SHIFT_END.strftime("%I:%M %p"),
         "workMode": attendance.work_mode if attendance else "Office",
-        "punchIn": attendance.check_in if attendance else None,
-        "punchOut": attendance.check_out if attendance else None,
-        "punchInLatitude": attendance.check_in_latitude if attendance else None,
-        "punchInLongitude": attendance.check_in_longitude if attendance else None,
-        "punchInAddress": attendance.check_in_address if attendance else None,
-        "punchOutLatitude": attendance.check_out_latitude if attendance else None,
-        "punchOutLongitude": attendance.check_out_longitude if attendance else None,
-        "punchOutAddress": attendance.check_out_address if attendance else None,
-        "punchInImage": attendance.check_in_image if attendance else None,
-        "punchOutImage": attendance.check_out_image if attendance else None,
+        "punchIn": attendance.punch_in if attendance else None,
+        "punchOut": attendance.punch_out if attendance else None,
+        "punchInLatitude": attendance.punch_in_latitude if attendance else None,
+        "punchInLongitude": attendance.punch_in_longitude if attendance else None,
+        "punchInAddress": attendance.punch_in_address if attendance else None,
+        "punchOutLatitude": attendance.punch_out_latitude if attendance else None,
+        "punchOutLongitude": attendance.punch_out_longitude if attendance else None,
+        "punchOutAddress": attendance.punch_out_address if attendance else None,
+        "punchInImage": attendance.punch_in_image if attendance else None,
+        "punchOutImage": attendance.punch_out_image if attendance else None,
     }
 
 def get_my_history(db: Session, employee_id: int) -> list[Attendance]:
@@ -507,10 +547,10 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
     """
     calculate_attendance_metrics(record)
     
-    # Calculate late minutes if checked in
+    # Calculate late minutes if punched in
     late_minutes = 0
-    if record.check_in:
-        check_in_minutes = record.check_in.hour * 60 + record.check_in.minute
+    if record.punch_in:
+        check_in_minutes = record.punch_in.hour * 60 + record.punch_in.minute
         shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
         if check_in_minutes > shift_start_minutes:
             late_minutes = check_in_minutes - shift_start_minutes
@@ -522,8 +562,8 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         scheduled_start=record.scheduled_start,
         scheduled_end=record.scheduled_end,
         task_description=record.task_description,
-        check_in=record.check_in,
-        check_out=record.check_out,
+        punch_in=record.punch_in,
+        punch_out=record.punch_out,
         status=record.status or "Not Marked",
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
@@ -531,14 +571,14 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         break_minutes=record.break_minutes or 0,
         grand_total_minutes=record.grand_total_minutes or 0,
         late_minutes=late_minutes,
-        check_in_latitude=record.check_in_latitude,
-        check_in_longitude=record.check_in_longitude,
-        check_in_address=record.check_in_address,
-        check_in_image=record.check_in_image,
-        check_out_latitude=record.check_out_latitude,
-        check_out_longitude=record.check_out_longitude,
-        check_out_address=record.check_out_address,
-        check_out_image=record.check_out_image,
+        punch_in_latitude=record.punch_in_latitude,
+        punch_in_longitude=record.punch_in_longitude,
+        punch_in_address=record.punch_in_address,
+        punch_in_image=record.punch_in_image,
+        punch_out_latitude=record.punch_out_latitude,
+        punch_out_longitude=record.punch_out_longitude,
+        punch_out_address=record.punch_out_address,
+        punch_out_image=record.punch_out_image,
     )
 
 def add_schedule(
@@ -621,7 +661,7 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
         db.query(Attendance)
         .join(Employee)
         .filter(Attendance.date <= today)
-        .order_by(Attendance.date.desc(), Attendance.check_in.desc().nulls_last(), Attendance.id.desc())
+        .order_by(Attendance.date.desc(), Attendance.punch_in.desc().nulls_last(), Attendance.id.desc())
     )
     
     total = query.count()
@@ -634,8 +674,8 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
         
         # Calculate late minutes
         late_minutes = 0
-        if record.check_in:
-            check_in_minutes = record.check_in.hour * 60 + record.check_in.minute
+        if record.punch_in:
+            check_in_minutes = record.punch_in.hour * 60 + record.punch_in.minute
             shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
             if check_in_minutes > shift_start_minutes:
                 late_minutes = check_in_minutes - shift_start_minutes
@@ -649,8 +689,8 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "scheduledStart": record.scheduled_start,
             "scheduledEnd": record.scheduled_end,
             "taskDescription": record.task_description,
-            "punchIn": record.check_in,
-            "punchOut": record.check_out,
+            "punchIn": record.punch_in,
+            "punchOut": record.punch_out,
             "status": record.status or "Not Marked",
             "totalWorkingMinutes": record.total_working_minutes or 0,
             "overtimeMinutes": record.overtime_minutes or 0,
@@ -658,10 +698,10 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "grandTotalMinutes": record.grand_total_minutes or 0,
             "lateMinutes": late_minutes,
             "workMode": record.work_mode,
-            "punchInAddress": record.check_in_address,
-            "punchOutAddress": record.check_out_address,
-            "punchInImage": record.check_in_image,
-            "punchOutImage": record.check_out_image,
+            "punchInAddress": record.punch_in_address,
+            "punchOutAddress": record.punch_out_address,
+            "punchInImage": record.punch_in_image,
+            "punchOutImage": record.punch_out_image,
         })
     
     return {"data": formatted_data, "total": total}

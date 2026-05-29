@@ -53,17 +53,15 @@
       <div class="profile-header-card">
         
         <div class="header-left">
-          <div class="avatar">
-            {{ profile.initials }}
+          <div class="avatar clickable" (click)="openAvatarModal()" title="Customize Avatar">
+            <img *ngIf="profile.profileImage" [src]="profile.profileImage" alt="Profile Picture" class="profile-avatar-img" />
+            <div *ngIf="!profile.profileImage" class="profile-avatar-initials">{{ profile.initials }}</div>
+            <div class="avatar-edit-overlay">
+              <i class="fas fa-camera"></i>
+            </div>
           </div>
           <div class="user-info">
-            <h1 *ngIf="!(isEditing$ | async); else nameEdit">{{ profile.firstName }} {{ profile.lastName }}</h1>
-            <ng-template #nameEdit>
-              <div class="name-edit-group" [formGroup]="profileForm">
-                <input type="text" formControlName="firstName" class="header-input" placeholder="First Name">
-                <input type="text" formControlName="lastName" class="header-input" placeholder="Last Name">
-              </div>
-            </ng-template>
+            <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
             <p class="subtext">
               {{ profile.employeeId }} &middot; {{ profile.role }} &middot; {{ profile.department }}
             </p>
@@ -78,23 +76,15 @@
             {{ profile.status }}
           </span>
           
-          <ng-container *ngIf="!(isEditing$ | async); else editActions">
-            <button class="edit-btn" (click)="toggleEdit()">
-              <i class="fas fa-pen"></i> Edit Profile
-            </button>
-          </ng-container>
-          <ng-template #editActions>
-            <div class="edit-actions">
-              <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
-              <button class="save-btn" (click)="saveChanges()">Save Changes</button>
-            </div>
-          </ng-template>
+          <button class="edit-btn" (click)="openEditModal()">
+            <i class="fas fa-pen"></i> Edit Profile
+          </button>
         </div>
 
       </div>
 
       <!-- 2. Main Content Section -->
-      <div class="main-content" [formGroup]="profileForm">
+      <div class="main-content">
         
         <!-- Left Card: Personal Details -->
         <div class="details-card">
@@ -103,38 +93,22 @@
           <div class="details-grid">
             <div class="detail-item">
               <label>Gender</label>
-              <span *ngIf="!(isEditing$ | async); else genderEdit">{{ profile.personalDetails.gender || 'Not Specified' }}</span>
-              <ng-template #genderEdit>
-                <select formControlName="gender" class="form-input-premium">
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </ng-template>
+              <span>{{ profile.personalDetails.gender || 'Not Specified' }}</span>
             </div>
             
             <div class="detail-item">
               <label>Date of Birth</label>
-              <span *ngIf="!(isEditing$ | async); else dobEdit">{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
-              <ng-template #dobEdit>
-                <input type="date" formControlName="dateOfBirth" class="form-input-premium">
-              </ng-template>
+              <span>{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
             </div>
 
             <div class="detail-item">
-                <label>Marital Status</label>
-                <span *ngIf="!(isEditing$ | async); else maritalEdit">{{ profile.personalDetails.maritalStatus || '—' }}</span>
-                <ng-template #maritalEdit>
-                  <input type="text" formControlName="maritalStatus" class="form-input-premium">
-                </ng-template>
+              <label>Marital Status</label>
+              <span>{{ profile.personalDetails.maritalStatus || '—' }}</span>
             </div>
 
             <div class="detail-item">
-                <label>Blood Group</label>
-                <span *ngIf="!(isEditing$ | async); else bloodEdit">{{ profile.personalDetails.bloodGroup || '—' }}</span>
-                <ng-template #bloodEdit>
-                  <input type="text" formControlName="bloodGroup" class="form-input-premium">
-                </ng-template>
+              <label>Blood Group</label>
+              <span>{{ profile.personalDetails.bloodGroup || '—' }}</span>
             </div>
           </div>
         </div>
@@ -160,12 +134,9 @@
                 <i class="fas fa-at"></i>
                 <label>Personal Email</label>
               </div>
-              <div class="row-right" *ngIf="!(isEditing$ | async); else emailEdit">
+              <div class="row-right">
                 {{ profile.contactDetails.personalEmail || 'Not Provided' }}
               </div>
-              <ng-template #emailEdit>
-                <input type="email" formControlName="personalEmail" class="form-input-premium" placeholder="Enter personal email">
-              </ng-template>
             </div>
 
             <div class="detail-row">
@@ -173,12 +144,9 @@
                 <i class="fas fa-phone-alt"></i>
                 <label>Mobile Number</label>
               </div>
-              <div class="row-right" *ngIf="!(isEditing$ | async); else mobileEdit">
+              <div class="row-right">
                 {{ profile.contactDetails.mobileNumber }}
               </div>
-              <ng-template #mobileEdit>
-                <input type="tel" formControlName="mobileNumber" class="form-input-premium">
-              </ng-template>
             </div>
 
             <div class="detail-row">
@@ -186,18 +154,152 @@
                 <i class="fas fa-map-marker-alt"></i>
                 <label>Location</label>
               </div>
-              <div class="row-right" *ngIf="!(isEditing$ | async); else locEdit">
-                {{ profile.contactDetails.location }}
+              <div class="row-right">
+                {{ profile.contactDetails.location || 'Not Provided' }}
               </div>
-              <ng-template #locEdit>
-                <input type="text" formControlName="location" class="form-input-premium">
-              </ng-template>
             </div>
             
           </div>
         </div>
 
       </div>
+
+      <!-- 3. Customize Avatar Modal -->
+      <div class="avatar-modal-backdrop" *ngIf="showAvatarModal" (click)="closeAvatarModal()">
+        <div class="avatar-modal-card" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Customize Profile Avatar</h2>
+            <button class="close-modal-btn" (click)="closeAvatarModal()">&times;</button>
+          </div>
+          
+          <div class="modal-body">
+            <!-- Left Side: Large Preview -->
+            <div class="preview-section">
+              <h3>Preview</h3>
+              <div class="large-avatar-preview">
+                <img *ngIf="tempAvatarImage" [src]="tempAvatarImage" alt="Preview Avatar" />
+                <div *ngIf="!tempAvatarImage" class="fallback-preview">{{ profile.initials }}</div>
+              </div>
+              <span class="preview-label">Live Preview</span>
+            </div>
+
+            <!-- Right Side: Gallery & Options -->
+            <div class="options-section">
+              <h3>Choose a Predefined Avatar</h3>
+              <div class="predefined-grid">
+                <div 
+                  *ngFor="let avatar of predefinedAvatars; let i = index" 
+                  class="predefined-item"
+                  [class.selected]="tempAvatarImage === avatar"
+                  (click)="selectPredefinedAvatar(avatar)">
+                  <img [src]="avatar" alt="Avatar option" />
+                </div>
+              </div>
+
+              <div class="upload-divider">
+                <span>OR</span>
+              </div>
+
+              <div class="upload-gallery-section">
+                <button class="gallery-upload-btn" (click)="fileInput.click()">
+                  <i class="fas fa-image"></i> Choose from Gallery
+                </button>
+                <input 
+                  type="file" 
+                  #fileInput 
+                  accept="image/*" 
+                  style="display: none" 
+                  (change)="onFileSelected($event)" />
+                <p class="upload-hint">Supports PNG, JPG, or GIF up to 2MB</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="modal-cancel-btn" (click)="closeAvatarModal()">Cancel</button>
+            <button class="modal-save-btn" (click)="saveAvatar(profile)">Save Avatar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Edit Profile Modal -->
+      <div class="edit-modal-backdrop" *ngIf="showEditModal" (click)="closeEditModal()">
+        <div class="edit-modal-card" (click)="$event.stopPropagation()" [formGroup]="profileForm">
+          <div class="modal-header">
+            <h2>Edit Profile Details</h2>
+            <button class="close-modal-btn" (click)="closeEditModal()">&times;</button>
+          </div>
+          
+          <div class="modal-body scrollable">
+            <!-- Section: Personal Information -->
+            <div class="form-section">
+              <h3 class="section-title">Personal Information</h3>
+              <div class="form-row-two">
+                <div class="form-group-premium">
+                  <label for="firstNameInput">First Name <span class="required">*</span></label>
+                  <input type="text" id="firstNameInput" name="firstName" formControlName="firstName" class="form-input-premium" placeholder="e.g. John">
+                </div>
+                <div class="form-group-premium">
+                  <label for="lastNameInput">Last Name <span class="required">*</span></label>
+                  <input type="text" id="lastNameInput" name="lastName" formControlName="lastName" class="form-input-premium" placeholder="e.g. Doe">
+                </div>
+              </div>
+              <div class="form-row-two" style="margin-top: 15px;">
+                <div class="form-group-premium">
+                  <label for="gender">Gender <span class="required">*</span></label>
+                  <select id="gender" name="gender" formControlName="gender" class="form-input-premium">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group-premium">
+                  <label for="dateOfBirth">Date of Birth <span class="required">*</span></label>
+                  <input type="date" id="dateOfBirth" name="dateOfBirth" formControlName="dateOfBirth" class="form-input-premium">
+                </div>
+              </div>
+              <div class="form-row-two" style="margin-top: 15px;">
+                <div class="form-group-premium">
+                  <label for="maritalStatus">Marital Status</label>
+                  <input type="text" id="maritalStatus" name="maritalStatus" formControlName="maritalStatus" class="form-input-premium" placeholder="e.g. Single">
+                </div>
+                <div class="form-group-premium">
+                  <label for="bloodGroup">Blood Group</label>
+                  <input type="text" id="bloodGroup" name="bloodGroup" formControlName="bloodGroup" class="form-input-premium" placeholder="e.g. A+">
+                </div>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <hr class="section-divider">
+
+            <!-- Section: Contact Details -->
+            <div class="form-section">
+              <h3 class="section-title">Contact Details</h3>
+              <div class="form-group-premium">
+                <label for="personalEmail">Personal Email <span class="required">*</span></label>
+                <input type="email" id="personalEmail" name="personalEmail" formControlName="personalEmail" class="form-input-premium" placeholder="employee@company.com">
+              </div>
+              <div class="form-row-two" style="margin-top: 15px;">
+                <div class="form-group-premium">
+                  <label for="mobileNumber">Mobile Number <span class="required">*</span></label>
+                  <input type="tel" id="mobileNumber" name="mobileNumber" formControlName="mobileNumber" class="form-input-premium" placeholder="e.g. 9876543210">
+                </div>
+                <div class="form-group-premium">
+                  <label for="location">Location</label>
+                  <input type="text" id="location" name="location" formControlName="location" class="form-input-premium" placeholder="e.g. New York">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="modal-cancel-btn" (click)="closeEditModal()">Cancel</button>
+            <button class="modal-save-btn" (click)="saveChanges()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
     </ng-container>
 
   </div>

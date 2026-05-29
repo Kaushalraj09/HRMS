@@ -62,4 +62,23 @@ export class AuthService {
   getDisplayName(): string {
     return this.getCurrentUser()?.displayName || 'User';
   }
+
+  updateProfileImage(imageUrl: string): void {
+    const user = this.getCurrentUser();
+    if (user) {
+      user.profileImage = imageUrl;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('aivan_hrms_phase1_user_v1', JSON.stringify(user));
+      }
+      this.currentUserSubject.next(user);
+    }
+  }
+
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/reset-password`, data);
+  }
 }
