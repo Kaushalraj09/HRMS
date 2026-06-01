@@ -113,16 +113,18 @@ def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: da
     Returns:
         float: Approved time-off hours
     """
-    total = (
-        db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
-        .filter(
-            TimeOffRequest.employee_id == employee_id,
-            TimeOffRequest.date == target_date,
-            TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-        )
-        .scalar()
-    )
-    return float(total or 0.0)
+    # Time-off queries are commented out for future work
+    # total = (
+    #     db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
+    #     .filter(
+    #         TimeOffRequest.employee_id == employee_id,
+    #         TimeOffRequest.date == target_date,
+    #         TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+    #     )
+    #     .scalar()
+    # )
+    # return float(total or 0.0)
+    return 0.0
 
 
 def get_timeoff_duration_today(db: Session, employee_id: int) -> float:
@@ -705,3 +707,42 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
         })
     
     return {"data": formatted_data, "total": total}
+
+
+def update_today_work_mode(
+    db: Session,
+    employee_id: int,
+    work_mode: str,
+) -> dict:
+    """
+    Update the work mode of today's attendance record.
+    If the record does not exist yet, a pre-punch record is created.
+    """
+    current = datetime.now(APP_TIMEZONE)
+    today = current.date()
+    
+    attendance = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee_id, Attendance.date == today)
+        .first()
+    )
+    
+    if not attendance:
+        # Create a pre-punch attendance record with the chosen work mode
+        attendance = Attendance(
+            employee_id=employee_id,
+            date=today,
+            is_working=0,
+            work_mode=work_mode,
+            status="Not Marked",
+        )
+        db.add(attendance)
+    else:
+        # Update the existing record's work mode
+        attendance.work_mode = work_mode
+        
+    db.commit()
+    db.refresh(attendance)
+    
+    return get_today_state(db, employee_id)
+

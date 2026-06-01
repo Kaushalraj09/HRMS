@@ -882,14 +882,16 @@ select.form-input-premium {
   padding: 0 24px;
   border: none;
   border-radius: 8px;
-  background: #7b92ad;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   color: #ffffff;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
 }
 
 .edit-modal-card .modal-save-btn:hover {
-  background: #647c98;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.3);
 }

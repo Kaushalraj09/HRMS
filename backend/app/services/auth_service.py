@@ -7,7 +7,7 @@ from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest
 
 def authenticate_user(db: Session, request: LoginRequest):
     # 1. Look for user in DB
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
     
     # 2. If user exists and password is correct
     if user and verify_password(request.password, user.password_hash):
@@ -128,7 +128,7 @@ def generate_reset_token(user: User) -> str:
     return token
 
 def forgot_password(db: Session, request):
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
     if not user:
         return None
     
@@ -164,7 +164,7 @@ def reset_password(db: Session, request):
     except JWTError:
         return {"success": False, "message": "Invalid or expired token"}
     
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email.ilike(email)).first()
     if not user:
         return {"success": False, "message": "User not found"}
     

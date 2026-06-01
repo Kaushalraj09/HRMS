@@ -30,10 +30,22 @@
             <div class="card-header">
                 <span>Mark Attendance</span>
                 <div class="status-buttons">
-                    <button class="status-btn work" [class.active]="status === 'Office'" (click)="status = 'Office'">
+                    <button 
+                        class="status-btn work" 
+                        [class.active]="status === 'Office'" 
+                        [disabled]="punchInTime !== null" 
+                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : 'Set to Office'"
+                        (click)="requestSwitchWorkMode('Office')"
+                    >
                     <span class="dot"></span> Office
                     </button>
-                    <button class="status-btn break" [class.active]="status === 'Remote'" (click)="status = 'Remote'">
+                    <button 
+                        class="status-btn break" 
+                        [class.active]="status === 'Remote'" 
+                        [disabled]="punchInTime !== null" 
+                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : 'Set to Remote'"
+                        (click)="requestSwitchWorkMode('Remote')"
+                    >
                     <span class="dot"></span> Remote
                     </button>
                 </div>
@@ -412,6 +424,36 @@
         <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeScheduleModal()">Cancel</button>
             <button class="btn btn-primary" (click)="saveSchedule()">Save Schedule</button>
+        </div>
+    </div>
+</div>
+
+<!-- Work Mode Switch Confirmation Modal -->
+<div class="camera-modal-overlay" *ngIf="showSwitchConfirmModal" (click)="closeSwitchConfirmModal()">
+    <div class="camera-modal-box" (click)="$event.stopPropagation()">
+        <div class="camera-modal-header" style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)">
+            <div class="camera-modal-title">
+                <i [class]="pendingWorkModeToSwitch === 'Office' ? 'fas fa-building' : 'fas fa-house-user'"></i>
+                <span>Confirm Work Mode Switch</span>
+            </div>
+            <button class="close-btn" (click)="closeSwitchConfirmModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="camera-modal-body">
+            <div class="punch-out-confirm">
+                <div class="punch-out-confirm__icon" [ngStyle]="{'background': pendingWorkModeToSwitch === 'Office' ? '#fff1f2' : '#f5f3ff', 'color': pendingWorkModeToSwitch === 'Office' ? '#e11d48' : '#4c1d95', 'box-shadow': '0 10px 24px rgba(225, 29, 72, 0.12)'}">
+                    <i [class]="pendingWorkModeToSwitch === 'Office' ? 'fas fa-building' : 'fas fa-house-user'"></i>
+                </div>
+                <h3>Are you switching to {{ pendingWorkModeToSwitch }}?</h3>
+                <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">Please confirm that you want to change your work mode from <strong>{{ status }}</strong> to <strong>{{ pendingWorkModeToSwitch }}</strong>.</p>
+            </div>
+        </div>
+        <div class="camera-modal-footer">
+            <button class="btn btn-secondary" (click)="closeSwitchConfirmModal()">
+                Cancel
+            </button>
+            <button class="btn btn-primary" style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); border: none; box-shadow: 0 8px 18px rgba(225, 29, 72, 0.22)" (click)="confirmSwitchWorkMode()">
+                Confirm Switch
+            </button>
         </div>
     </div>
 </div>

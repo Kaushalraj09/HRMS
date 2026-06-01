@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel, Field
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.employee import Employee
+from app.core.enums import WorkMode
 from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState
 from app.services import attendance_service
 
@@ -79,6 +81,27 @@ def punch_out(
         request.image,
         request.custom_time
     )
+
+class ChangeWorkModeRequest(BaseModel):
+    work_mode: WorkMode = Field(alias="workMode")
+
+@router.post("/work-mode", response_model=TodayAttendanceState)
+def change_work_mode(
+    request: ChangeWorkModeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update the work mode (Office/Remote) for today's active session or pre-punch state.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only employees can change work mode"
+        )
+    
+    return attendance_service.update_today_work_mode(db, employee.id, request.work_mode)
 
 @router.post("/schedule", response_model=AttendanceResponse)
 def add_schedule(

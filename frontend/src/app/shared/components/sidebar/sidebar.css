@@ -267,11 +267,10 @@
 .yes-btn {
   background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   color: white;
-  
 }
 
 .yes-btn:hover {
-  background: linear-gradient(90deg,  #4c1d95 100%, #e11d48 0%,);
+  background: linear-gradient(90deg, #4c1d95 0%, #e11d48 100%);
   transform: translateY(-2px);
 }
 

@@ -119,14 +119,23 @@
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   border: none;
   color: #fff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.15);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.25);
 }
 
 .btn-primary:disabled {
-  background: #94a3b8;
+  background: #cbd5e1;
+  color: #94a3b8;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .error-message {

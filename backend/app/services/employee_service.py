@@ -15,6 +15,11 @@ def _employee_query(db: Session):
     )
 
 def create_employee(db: Session, obj_in: EmployeeCreate):
+    # 1. Check if the email is already registered in the users table
+    existing_user = db.query(User).filter(User.email.ilike(obj_in.official_email)).first()
+    if existing_user:
+        raise ValueError(f"An account with the email '{obj_in.official_email}' is already registered.")
+
     # Support either "Employee" or "employee" naming in the roles table.
     emp_role = db.query(Role).filter(func.lower(Role.name) == "employee").first()
     if not emp_role:
