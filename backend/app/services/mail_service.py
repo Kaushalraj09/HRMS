@@ -106,7 +106,7 @@ def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
         <div style="background-color: #f8fafc; padding: 20px 0; width: 100%;">
             <div class="email-container">
                 <div class="logo-header">
-                    <img src="https://aivan360.com/wp-content/uploads/2023/07/AivanLogo.png" alt="AIVAN Logo" class="logo-img" />
+                    <img src="https://aivan360.com/NewTheme/assets/img/AivanLogo.png" alt="AIVAN Logo" class="logo-img" />
                     <h1 class="company-name">AIVAN ERP</h1>
                 </div>
                 

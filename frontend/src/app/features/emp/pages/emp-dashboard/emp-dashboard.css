@@ -170,6 +170,14 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }
 
+.status-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .dot {
   width: 8px;
   height: 8px;

@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, Injectable, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, Injectable, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
 import { CalendarEvent } from 'calendar-utils';
-import { finalize, Subscription, interval, forkJoin } from 'rxjs';
+import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -66,7 +66,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     },
   ],
 })
-export class EmpDashboard implements OnDestroy {
+export class EmpDashboard implements OnInit, OnDestroy {
   selectedLang = 'en';
   userName = 'Employee';
   currentDate = new Date();
@@ -125,6 +125,8 @@ export class EmpDashboard implements OnDestroy {
 
   // ─── Camera / Photo Capture ───────────────────────────────────────
   showCameraModal = false;
+  showSwitchConfirmModal = false;
+  pendingWorkModeToSwitch: WorkMode = 'Office';
   public punchInImage: string | null = null;
   public punchOutImage: string | null = null;
   public punchInAddress: string | null = null;
@@ -180,7 +182,9 @@ export class EmpDashboard implements OnDestroy {
         this.cdr.detectChanges();
       })
     );
+  }
 
+  ngOnInit(): void {
     this.initialize();
     this.startClock();
   }
@@ -345,6 +349,44 @@ export class EmpDashboard implements OnDestroy {
     this.timeSheetPage = page;
   }
 
+  requestSwitchWorkMode(newMode: WorkMode): void {
+    if (this.punchInTime !== null) {
+      this.punchMessage = 'Working mode is locked after you have punched in for the day.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (this.status === newMode) {
+      return;
+    }
+    this.pendingWorkModeToSwitch = newMode;
+    this.showSwitchConfirmModal = true;
+  }
+
+  confirmSwitchWorkMode(): void {
+    const targetMode = this.pendingWorkModeToSwitch;
+    this.showSwitchConfirmModal = false;
+    this.punchMessage = '';
+    
+    this.subscriptions.add(
+      this.attendanceService.updateWorkMode(targetMode).subscribe({
+        next: (todayState) => {
+          this.applyTodayState(todayState);
+          this.loadDashboardData();
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          const detail = error?.error?.detail;
+          this.punchMessage = typeof detail === 'string' ? detail : 'Unable to update work mode.';
+          this.cdr.detectChanges();
+        }
+      })
+    );
+  }
+
+  closeSwitchConfirmModal(): void {
+    this.showSwitchConfirmModal = false;
+  }
+
   togglePunch(): void {
     if (this.isPunchDisabled) {
       return;
@@ -352,15 +394,36 @@ export class EmpDashboard implements OnDestroy {
     this.punchMessage = '';
     this.pendingPunchWorkMode = this.status;
 
-    if (this.isPunchedIn) {
-      this.pendingPunchLatitude = undefined;
-      this.pendingPunchLongitude = undefined;
-      this.pendingPunchAddress = undefined;
-      this.openCameraModal();
-      return;
-    }
+    const fallbackToIp = () => {
+      this.subscriptions.add(
+        this.attendanceService.getIpLocation().subscribe({
+          next: (res: any) => {
+            if (res && res.latitude && res.longitude) {
+              this.pendingPunchLatitude = res.latitude;
+              this.pendingPunchLongitude = res.longitude;
+              
+              const city = res.cityName || '';
+              const region = res.regionName || '';
+              const country = res.countryName || '';
+              this.pendingPunchAddress = [city, region, country].filter(val => !!val).join(', ');
+            } else {
+              this.pendingPunchLatitude = undefined;
+              this.pendingPunchLongitude = undefined;
+              this.pendingPunchAddress = 'Location Unavailable';
+            }
+            this.openCameraModal();
+          },
+          error: () => {
+            this.pendingPunchLatitude = undefined;
+            this.pendingPunchLongitude = undefined;
+            this.pendingPunchAddress = 'Location Unavailable';
+            this.openCameraModal();
+          }
+        })
+      );
+    };
 
-    // Capture location in the background for punch-in, but keep the UI focused on camera verification.
+    // Capture location in the background for both punch-in and punch-out, keeping the UI focused on verification.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -371,19 +434,18 @@ export class EmpDashboard implements OnDestroy {
               this.pendingPunchAddress = geo?.display_name || '';
               this.openCameraModal();
             },
-            error: () => { this.pendingPunchAddress = undefined; this.openCameraModal(); }
+            error: () => {
+              fallbackToIp();
+            }
           });
         },
         () => {
-          this.pendingPunchLatitude = undefined;
-          this.pendingPunchLongitude = undefined;
-          this.pendingPunchAddress = undefined;
-          this.openCameraModal();
+          fallbackToIp();
         },
-        { timeout: 6000, maximumAge: 30000 }
+        { timeout: 3000, maximumAge: 30000 }
       );
     } else {
-      this.openCameraModal();
+      fallbackToIp();
     }
   }
 
@@ -604,12 +666,12 @@ export class EmpDashboard implements OnDestroy {
       this.attendanceService.connectWebSocket(user.id);
     }
 
-    this.subscriptions.add(
-      this.attendanceService.timeoffUpdate$.subscribe((data) => {
-        alert(data.message);
-        this.loadDashboardData();
-      })
-    );
+    // this.subscriptions.add(
+    //   this.attendanceService.timeoffUpdate$.subscribe((data) => {
+    //     alert(data.message);
+    //     this.loadDashboardData();
+    //   })
+    // );
   }
 
   private ensureTimeSelectionsValid(): void {
@@ -637,7 +699,7 @@ export class EmpDashboard implements OnDestroy {
     this.subscriptions.add(
       forkJoin({
         timesheets: this.attendanceService.getMyTimesheets(),
-        timeoffs: this.attendanceService.getMyTimeOffRequests()
+        timeoffs: of<any[]>([])
       }).subscribe(({ timesheets, timeoffs }) => {
         const todayIso = this.toIsoDate(new Date());
         
@@ -715,14 +777,16 @@ export class EmpDashboard implements OnDestroy {
           }
         }));
 
-        this.filterEvents(this.selectedDate);
-        this.cdr.detectChanges();
-      })
-    );
+        // Map attendance summary directly from timesheets to avoid duplicate API calls
+        this.attendanceSummary = [
+          { label: 'Total Days', value: timesheets.length, icon: 'fas fa-calendar total blue-icon' },
+          { label: 'Worked Days', value: timesheets.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
+          { label: 'Present', value: timesheets.filter(row => row.status === 'Present' || row.status === 'Punched Out').length, icon: 'fas fa-check-circle blue-icon' },
+          { label: 'Punched In', value: timesheets.filter(row => row.status === 'Punched In').length, icon: 'fas fa-user-check blue-icon' },
+          { label: 'Not Marked', value: timesheets.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved blue-icon' }
+        ];
 
-    this.subscriptions.add(
-      this.attendanceService.getMyAttendanceSummary().subscribe((summary: EmployeeAttendanceSummaryItem[]) => {
-        this.attendanceSummary = summary;
+        this.filterEvents(this.selectedDate);
         this.cdr.detectChanges();
       })
     );

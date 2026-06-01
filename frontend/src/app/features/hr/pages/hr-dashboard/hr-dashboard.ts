@@ -93,19 +93,19 @@ export class HrDashboard implements OnInit {
         this.cdr.detectChanges();
       }
     });
-    this.loadPendingRequests();
-    this.loadProcessedRequests();
+    // this.loadPendingRequests();
+    // this.loadProcessedRequests();
 
     const user = this.authService.getCurrentUser();
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
     }
 
-    this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
-      if (event?.type === 'TIMEOFF_REQUEST') {
-        this.loadPendingRequests();
-      }
-    });
+    // this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
+    //   if (event?.type === 'TIMEOFF_REQUEST') {
+    //     this.loadPendingRequests();
+    //   }
+    // });
   }
 
   loadPendingRequests() {

@@ -54,29 +54,6 @@ class Attendance(Base):
         return self.punch_out
 
 
-class PunchLog(Base):
-    __tablename__ = "punch_logs"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    attendance_id = Column(Integer, ForeignKey("attendance.id"), nullable=True)
-    date = Column(Date, nullable=False, server_default=func.current_date())
-    
-    punch_in = Column(DateTime(timezone=True))
-    punch_out = Column(DateTime(timezone=True))
-    duration_seconds = Column(Integer, default=0)
-    work_mode = Column(String(20), default="Office")
-    
-    # Location tracking
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    address = Column(String(500), nullable=True)
-    
-    # Image tracking
-    image = Column(String, nullable=True)
-    
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
 
 class DailySummary(Base):
     __tablename__ = "daily_summary"

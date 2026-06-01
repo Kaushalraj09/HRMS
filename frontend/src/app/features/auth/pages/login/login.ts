@@ -1,14 +1,14 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
 })
@@ -20,6 +20,73 @@ export class Login {
   showSelectionModal: boolean = false;
   tempCredentials: { email: string; password: string } | null = null;
   timeoutRef: any;
+  showPassword = false;
+
+  // Forgot Password Modal Fields
+  showForgotPasswordModal = false;
+  forgotPasswordForm: FormGroup;
+  forgotMessage: string = '';
+  forgotMessageType: 'success' | 'error' | '' = 'success';
+  showForgotPopup: boolean = false;
+  forgotToken: string = '';
+  forgotTimeoutRef: any;
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
+  openForgotPasswordModal() {
+    this.forgotPasswordForm.reset();
+    this.showForgotPasswordModal = true;
+  }
+
+  closeForgotPasswordModal() {
+    this.showForgotPasswordModal = false;
+  }
+
+  onForgotPassword() {
+    if (this.forgotTimeoutRef) {
+      clearTimeout(this.forgotTimeoutRef);
+    }
+
+    if (this.forgotPasswordForm.invalid) {
+      this.forgotPasswordForm.markAllAsTouched();
+      return;
+    }
+
+    const { email } = this.forgotPasswordForm.value;
+
+    this.authService.forgotPassword(email).subscribe({
+      next: (response) => {
+        const msg = response.message || '';
+        this.forgotMessage = 'Reset link generated successfully! ✅';
+        this.forgotMessageType = 'success';
+        
+        const match = msg.match(/token=([^\s&]+)/);
+        if (match) {
+          this.forgotToken = match[1];
+        }
+        
+        this.showForgotPopup = true;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.forgotMessage = error.error?.detail || error.message || 'Error requesting password reset ❌';
+        this.forgotMessageType = 'error';
+        this.showForgotPopup = true;
+        this.forgotToken = '';
+        
+        this.forgotTimeoutRef = setTimeout(() => {
+          this.showForgotPopup = false;
+          this.cdr.detectChanges();
+        }, 3000);
+      }
+    });
+  }
+
+  get forgotF() {
+    return this.forgotPasswordForm.controls;
+  }
 
   constructor(
     private readonly fb: FormBuilder,
@@ -30,6 +97,10 @@ export class Login {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
+    });
+
+    this.forgotPasswordForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
     });
   }
 

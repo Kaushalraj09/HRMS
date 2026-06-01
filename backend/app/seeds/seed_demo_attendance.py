@@ -1,6 +1,6 @@
 from datetime import date, time, timedelta
 from sqlalchemy.orm import Session
-from app.models.attendance import Attendance, PunchLog, DailySummary
+from app.models.attendance import Attendance, DailySummary
 from app.models.employee import Employee
 
 

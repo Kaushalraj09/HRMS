@@ -139,6 +139,10 @@ export class AttendanceService {
     return this.http.get(url);
   }
 
+  getIpLocation(): Observable<any> {
+    return this.http.get('https://freeipapi.com/api/json');
+  }
+
   getAttendanceLogs(
     page: number,
     limit: number,
@@ -234,6 +238,12 @@ export class AttendanceService {
     }).pipe(
       switchMap(() => this.getTodayAttendanceState())
     );
+  }
+
+  updateWorkMode(workMode: WorkMode): Observable<TodayAttendanceState> {
+    return this.http.post<TodayAttendanceState>(`${this.apiUrl}/work-mode`, {
+      workMode
+    });
   }
 
   addSchedule(

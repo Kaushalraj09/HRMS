@@ -45,7 +45,7 @@ def check_timeoff_status():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(check_timeoff_status, 'interval', minutes=1)
+# scheduler.add_job(check_timeoff_status, 'interval', minutes=1)
 
 def start_scheduler():
     if not scheduler.running:

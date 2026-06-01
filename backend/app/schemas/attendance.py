@@ -132,7 +132,7 @@ class TodayAttendanceState(BaseModel):
     shift_elapsed_seconds: int = Field(alias="shiftElapsedSeconds")
     shift_start: str = Field(alias="shiftStart")
     shift_end: str = Field(alias="shiftEnd")
-    work_mode: WorkMode = Field(default=WorkMode.office)
+    work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
     
     # Optional punch times and location
     punch_in: Optional[time] = Field(default=None, alias="punchIn")
