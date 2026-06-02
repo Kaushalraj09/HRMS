@@ -140,7 +140,7 @@ export class AttendanceService {
   }
 
   getIpLocation(): Observable<any> {
-    return this.http.get('https://freeipapi.com/api/json');
+    return this.http.get(`${this.apiUrl}/ip-location`, this.noCacheOptions());
   }
 
   getAttendanceLogs(
@@ -317,9 +317,10 @@ export class AttendanceService {
       map(rows => [
         { label: 'Total Days', value: rows.length, icon: 'fas fa-calendar total blue-icon' },
         { label: 'Worked Days', value: rows.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
-        { label: 'Present', value: rows.filter(row => row.status === 'Present' || row.status === 'Punched Out').length, icon: 'fas fa-check-circle blue-icon' },
-        { label: 'Punched In', value: rows.filter(row => row.status === 'Punched In').length, icon: 'fas fa-user-check blue-icon' },
-        { label: 'Not Marked', value: rows.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved blue-icon' }
+        { label: 'Present', value: rows.filter(row => row.status === 'Present').length, icon: 'fas fa-check-circle blue-icon' },
+        { label: 'Working', value: rows.filter(row => row.status === 'Working').length, icon: 'fas fa-user-check blue-icon' },
+        { label: 'Absent', value: rows.filter(row => row.status === 'Absent').length, icon: 'fas fa-times-circle red-icon' },
+        { label: 'Not Marked', value: rows.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved gold-icon' }
       ])
     );
   }
@@ -411,17 +412,19 @@ export class AttendanceService {
   private buildMetrics(rows: AttendanceRecord[]): AttendanceMetrics {
     return {
       present: rows.filter(row => row.status === 'Present').length,
-      punchedIn: rows.filter(row => row.status === 'Punched In').length,
-      punchedOut: rows.filter(row => row.status === 'Punched Out').length,
+      working: rows.filter(row => row.status === 'Working').length,
+      absent: rows.filter(row => row.status === 'Absent').length,
       notMarked: rows.filter(row => row.status === 'Not Marked').length
     };
   }
 
   private normalizeStatus(status: string): AttendanceRecord['status'] {
-    const knownStatuses = ['Punched In', 'Punched Out', 'Not Marked', 'Present', 'Working', 'Not Working'];
+    const knownStatuses = ['Present', 'Working', 'Absent', 'Not Marked'];
     if (knownStatuses.includes(status)) {
       return status as AttendanceRecord['status'];
     }
+    if (status === 'Punched In') return 'Working';
+    if (status === 'Punched Out' || status === 'Not Working') return 'Present';
     return 'Present';
   }
 

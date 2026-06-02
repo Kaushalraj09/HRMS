@@ -13,14 +13,10 @@ class WorkMode(str, Enum):
 
 class AttendanceStatus(str, Enum):
     """Valid attendance statuses."""
+    working = "Working"
     present = "Present"
-    late = "Late"
-    half_day = "Half-Day"
-    leave = "Leave"
     absent = "Absent"
     not_marked = "Not Marked"
-    working = "Working"
-    not_working = "Not Working"
 
     def __str__(self):
         return self.value

@@ -61,16 +61,16 @@
     <!-- Summary Cards Section -->
     <div class="summary-cards" *ngIf="(attendanceData$ | async) as result">
       <div class="metrics-card">
+        <div class="metric-label">Working</div>
+        <div class="metric-value checked-in">{{ result.metrics.working }}</div>
+      </div>
+      <div class="metrics-card">
         <div class="metric-label">Present</div>
         <div class="metric-value present">{{ result.metrics.present }}</div>
       </div>
       <div class="metrics-card">
-        <div class="metric-label">Punched In</div>
-        <div class="metric-value checked-in">{{ result.metrics.punchedIn }}</div>
-      </div>
-      <div class="metrics-card">
-        <div class="metric-label">Punched Out</div>
-        <div class="metric-value checked-out">{{ result.metrics.punchedOut }}</div>
+        <div class="metric-label">Absent</div>
+        <div class="metric-value absent">{{ result.metrics.absent }}</div>
       </div>
       <div class="metrics-card">
         <div class="metric-label">Not Marked</div>
@@ -141,8 +141,8 @@
                 <td>
                   <span class="status-badge" [ngClass]="{
                     'present':    rec.status === 'Present',
-                    'checked-in': rec.status === 'Punched In' || rec.status === 'Working',
-                    'checked-out':rec.status === 'Punched Out',
+                    'checked-in': rec.status === 'Working',
+                    'absent':     rec.status === 'Absent',
                     'not-marked': rec.status === 'Not Marked'
                   }">{{ rec.status }}</span>
                 </td>

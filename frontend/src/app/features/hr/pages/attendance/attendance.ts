@@ -19,7 +19,7 @@ export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
-  statuses = ['Present', 'Punched In', 'Not Marked', 'Punched Out'];
+  statuses = ['Working', 'Present', 'Absent', 'Not Marked'];
   locations = ['Office', 'Remote'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }
@@ -38,7 +38,7 @@ export class AttendanceComponent implements OnInit {
   paginationArray$!: Observable<number[]>;
 
   // Drives the SVG ring: last-loaded metrics snapshot
-  lastMetrics: { present: number; punchedIn: number; punchedOut: number; notMarked: number } | null = null;
+  lastMetrics: { present: number; working: number; absent: number; notMarked: number } | null = null;
 
   // Real time indicator bonus
   currentTime$ = timer(0, 60000).pipe(map(() => new Date()));
@@ -71,10 +71,10 @@ export class AttendanceComponent implements OnInit {
   /** Fraction 0–1 of employees who are present/working out of the total visible. */
   get attendanceRate(): number {
     if (!this.lastMetrics) return 0;
-    const { present, punchedIn, punchedOut, notMarked } = this.lastMetrics;
-    const total = present + punchedIn + punchedOut + notMarked;
+    const { present, working, absent, notMarked } = this.lastMetrics;
+    const total = present + working + absent + notMarked;
     if (total === 0) return 0;
-    return Math.min(1, (present + punchedIn + punchedOut) / total);
+    return Math.min(1, (present + working) / total);
   }
 
   /** Maps attendanceRate → SVG stroke-dashoffset (pathLength=100 ring). */
@@ -121,7 +121,7 @@ export class AttendanceComponent implements OnInit {
            }),
            catchError((error) => {
              const detail = error?.error?.detail;
-             this.lastMetrics = { present: 0, punchedIn: 0, punchedOut: 0, notMarked: 0 };
+             this.lastMetrics = { present: 0, working: 0, absent: 0, notMarked: 0 };
              this.errorMessage$.next(typeof detail === 'string' ? detail : 'Unable to load attendance records.');
              return of({
                data: [],

@@ -175,16 +175,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
       })
     );
 
+  }
+
+  ngOnInit(): void {
     this.subscriptions.add(
       this.timeEngine.state$.subscribe((state) => {
         if (!state) return;
         this.applyTodayState(state);
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       })
     );
-  }
 
-  ngOnInit(): void {
     this.initialize();
     this.startClock();
   }
@@ -781,9 +782,10 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.attendanceSummary = [
           { label: 'Total Days', value: timesheets.length, icon: 'fas fa-calendar total blue-icon' },
           { label: 'Worked Days', value: timesheets.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
-          { label: 'Present', value: timesheets.filter(row => row.status === 'Present' || row.status === 'Punched Out').length, icon: 'fas fa-check-circle blue-icon' },
-          { label: 'Punched In', value: timesheets.filter(row => row.status === 'Punched In').length, icon: 'fas fa-user-check blue-icon' },
-          { label: 'Not Marked', value: timesheets.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved blue-icon' }
+          { label: 'Present', value: timesheets.filter(row => row.status === 'Present').length, icon: 'fas fa-check-circle blue-icon' },
+          { label: 'Working', value: timesheets.filter(row => row.status === 'Working').length, icon: 'fas fa-user-check blue-icon' },
+          { label: 'Absent', value: timesheets.filter(row => row.status === 'Absent').length, icon: 'fas fa-times-circle red-icon' },
+          { label: 'Not Marked', value: timesheets.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved gold-icon' }
         ];
 
         this.filterEvents(this.selectedDate);

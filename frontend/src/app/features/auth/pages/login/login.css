@@ -52,27 +52,27 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.logo-area {
+.login-card .logo-area {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
-.logo-img {
-  width: 140px;
+.login-card .logo-img {
+  width: 170px;
   height: auto;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
 }
 
-.company-name {
-  font-size: 20px;
+.login-card .company-name {
+  font-size: 24px;
   font-weight: 800;
   color: #1e293b;
   margin: 0;
   letter-spacing: -0.5px;
 }
 
-.login-subtitle {
+.login-card .login-subtitle {
   font-size: 14px;
   font-weight: 600;
   color: #64748b;
@@ -545,19 +545,20 @@ input.ng-invalid.ng-touched {
   transform: rotate(90deg);
 }
 
-.logo-area {
+.modal-card .logo-area {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.logo-img {
-  height: 48px;
+.modal-card .logo-img {
+  width: 110px;
+  height: auto;
   margin-bottom: 12px;
 }
 
-.company-name {
+.modal-card .company-name {
   font-size: 18px;
   font-weight: 800;
   color: #1e293b;

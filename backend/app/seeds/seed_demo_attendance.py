@@ -43,7 +43,7 @@ def seed_attendance(db: Session):
             "break_minutes": 0,
             "overtime_minutes": 0,
             "work_mode": "Office",
-            "status": "Punched In",
+            "status": "Working",
         },
     ]
 

@@ -16,27 +16,44 @@ def normalize_punch_in(punch_in_time: time) -> time:
         return OFFICE_START_TIME
     return punch_in_time
 
-def determine_status(punch_in: time, punch_out: time, timeoff_duration_hours: float) -> str:
+from zoneinfo import ZoneInfo
+APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+def get_attendance_status(punch_in: time | None, punch_out: time | None, record_date, current_dt: datetime | None = None) -> str:
+    """
+    Centralized dynamic attendance status logic.
+    Priority order:
+    1. Present (Punch Out completed)
+    2. Working (Logged In + Punch In + No Punch Out)
+    3. Not Marked (Logged In + No Punch In and time <= 2:30 PM)
+    4. Absent (Not Logged In OR No Punch In after 2:30 PM)
+    """
+    if punch_in is not None and punch_out is not None:
+        return "Present"
+        
+    if punch_in is not None and punch_out is None:
+        return "Working"
+        
+    # Since punch_in is None, it's either Not Marked or Absent
+    if current_dt is None:
+        current_dt = datetime.now(APP_TIMEZONE)
+        
+    today = current_dt.date()
+    if record_date < today:
+        # Past day and no punch in => Absent
+        return "Absent"
+        
+    # It is today
+    limit_time = time(14, 30) # 2:30 PM
+    if current_dt.time() > limit_time:
+        return "Absent"
+        
+    return "Not Marked"
+
+def determine_status(punch_in: time, punch_out: time, timeoff_duration_hours: float = 0.0) -> str:
     """Determine the status of attendance."""
-    if not punch_in:
-        return "Not Marked"
-    
-    # If they took an 8-hour leave, it's a full day leave
-    if timeoff_duration_hours >= 8.0:
-        return "Leave"
-        
-    # If partial leave is taken, we might mark as Half-Day or Present depending on rules
-    if timeoff_duration_hours > 0 and timeoff_duration_hours < 8.0:
-        return "Half-Day"
-
-    # Late if punched in after 09:00 AM
-    if _time_to_minutes(punch_in) > _time_to_minutes(OFFICE_START_TIME):
-        return "Late"
-        
-    if punch_in and not punch_out:
-        return "Punched In"
-
-    return "Present"
+    from datetime import date
+    return get_attendance_status(punch_in, punch_out, date.today())
 
 def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float = 0.0):
     """Calculates working hours, overtime, and updates the attendance record."""

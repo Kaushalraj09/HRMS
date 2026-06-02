@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+import urllib.request
+import json
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel, Field
@@ -177,3 +179,29 @@ def get_all_attendance_records(
         )
         
     return attendance_service.list_all_attendance(db)
+
+@router.get("/ip-location")
+def get_ip_location(request: Request):
+    """
+    Proxy endpoint to fetch IP-based location, bypassing browser CORS issues.
+    """
+    client_host = request.client.host
+    url = "https://freeipapi.com/api/json"
+    if client_host and client_host not in ["127.0.0.1", "::1", "localhost"] and not client_host.startswith("192.168.") and not client_host.startswith("10."):
+        url = f"https://freeipapi.com/api/json/{client_host}"
+        
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            return json.loads(response.read().decode())
+    except Exception as e:
+        return {
+            "latitude": None,
+            "longitude": None,
+            "cityName": "",
+            "regionName": "",
+            "countryName": ""
+        }

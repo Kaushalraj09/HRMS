@@ -18,6 +18,7 @@ from app.models.timeoff import TimeOffRequest
 from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
 from app.utils.employee_code import normalize_employee_code
+from app.services.time_calculator import get_attendance_status
 
 # Shift Configuration
 TOTAL_SHIFT_WORKING_HOURS = 9.0  # 09:00 – 18:00
@@ -425,7 +426,7 @@ def punch_out(
     attendance.punch_out_address = address
     attendance.punch_out_image = image
     attendance.is_working = 0
-    attendance.status = "Not Working"
+    attendance.status = "Present"
     
     # Calculate metrics
     calculate_attendance_metrics(attendance)
@@ -464,6 +465,19 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         .first()
     )
     
+    if not attendance:
+        # Automatically register that the employee has logged in today by creating a pre-punch record
+        attendance = Attendance(
+            employee_id=employee_id,
+            date=today,
+            is_working=0,
+            work_mode="Office",
+            status=get_attendance_status(None, None, today, current),
+        )
+        db.add(attendance)
+        db.commit()
+        db.refresh(attendance)
+        
     # Calculate total worked seconds
     worked_seconds = 0
     if attendance and attendance.punch_in and attendance.punch_out:
@@ -490,7 +504,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     return {
         "employeeId": employee_id,
         "isWorking": bool(attendance and attendance.is_working),
-        "status": "Working" if (attendance and attendance.is_working) else "Not Working",
+        "status": get_attendance_status(attendance.punch_in, attendance.punch_out, attendance.date, current),
         "totalWorkedSeconds": worked_seconds,
         "approvedSeconds": approved_seconds,
         "remainingSeconds": remaining_seconds,
@@ -566,7 +580,7 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         task_description=record.task_description,
         punch_in=record.punch_in,
         punch_out=record.punch_out,
-        status=record.status or "Not Marked",
+        status=get_attendance_status(record.punch_in, record.punch_out, record.date),
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
         overtime_minutes=record.overtime_minutes or 0,
@@ -693,7 +707,7 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "taskDescription": record.task_description,
             "punchIn": record.punch_in,
             "punchOut": record.punch_out,
-            "status": record.status or "Not Marked",
+            "status": get_attendance_status(record.punch_in, record.punch_out, record.date),
             "totalWorkingMinutes": record.total_working_minutes or 0,
             "overtimeMinutes": record.overtime_minutes or 0,
             "breakMinutes": record.break_minutes or 0,
@@ -734,7 +748,7 @@ def update_today_work_mode(
             date=today,
             is_working=0,
             work_mode=work_mode,
-            status="Not Marked",
+            status=get_attendance_status(None, None, today, current),
         )
         db.add(attendance)
     else:
