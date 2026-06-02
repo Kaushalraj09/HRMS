@@ -34,7 +34,8 @@ export const routes: Routes = [
     data: { roles: ['admin', 'hr'] },
     children: [
       { path: 'attendance', component: AttendanceComponent },
-      { path: 'employees', component: Employees }
+      { path: 'employees', component: Employees },
+      { path: 'my-profile', component: MyProfile }
     ]
   },
   { 
@@ -56,7 +57,8 @@ export const routes: Routes = [
     children: [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
-      { path: 'attendance', component: AttendanceComponent }
+      { path: 'attendance', component: AttendanceComponent },
+      { path: 'my-profile', component: MyProfile }
     ]
   },
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },

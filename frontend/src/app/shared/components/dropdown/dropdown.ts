@@ -19,13 +19,23 @@ export class Dropdown {
   get profileRoute(): string {
     const user = this.authService.getCurrentUser();
 
+    if (user?.activeDashboard === 'EMPLOYEE') {
+      return '/emp-dashboard/my-profile';
+    }
+    if (user?.activeDashboard === 'HR') {
+      return '/hr-dashboard/my-profile';
+    }
+    if (user?.activeDashboard === 'MASTER') {
+      return '/master-dashboard/my-profile';
+    }
+
     if (user?.role === 'employee') {
       return '/emp-dashboard/my-profile';
     }
     if (user?.role === 'hr') {
-      return '/hr-dashboard/employees';
+      return '/hr-dashboard/my-profile';
     }
-    return '/master-dashboard';
+    return '/master-dashboard/my-profile';
   }
 
   openLogoutConfirm(event: MouseEvent) {

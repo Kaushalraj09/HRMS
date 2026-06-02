@@ -8,7 +8,44 @@ from app.utils.employee_code import normalize_employee_code
 def get_employee_profile(db: Session, user_id: int) -> Optional[EmployeeProfile]:
     employee = db.query(Employee).filter(Employee.user_id == user_id).first()
     if not employee:
-        return None
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return None
+        
+        display_name = user.display_name or "System Admin"
+        name_parts = display_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+        role_name = user.role.name if user.role else "Admin"
+        
+        return {
+            "id": user.id,
+            "employeeId": f"ADM-{user.id:04d}",
+            "firstName": first_name,
+            "lastName": last_name,
+            "initials": initials,
+            "role": role_name,
+            "department": "Administration",
+            "shift": "General Shift",
+            "status": "Active",
+            "profileImage": user.profile_image,
+            "personalDetails": {
+                "firstName": first_name,
+                "lastName": last_name,
+                "gender": "Other",
+                "dateOfBirth": None,
+                "maritalStatus": "Single",
+                "bloodGroup": "Unknown"
+            },
+            "contactDetails": {
+                "officialEmail": user.email,
+                "personalEmail": user.email,
+                "mobileNumber": "0000000000",
+                "alternateMobile": "",
+                "location": "Main Office"
+            }
+        }
     
     # Get profile image from users table
     user = db.query(User).filter(User.id == user_id).first()
@@ -47,10 +84,21 @@ def get_employee_profile(db: Session, user_id: int) -> Optional[EmployeeProfile]
 
 def update_employee_profile(db: Session, user_id: int, payload: ProfileUpdate):
     employee = db.query(Employee).filter(Employee.user_id == user_id).first()
-    if not employee:
-        return None
-    
     user = db.query(User).filter(User.id == user_id).first()
+    
+    if not employee:
+        if not user:
+            return None
+        
+        if payload.personalDetails:
+            p = payload.personalDetails
+            user.display_name = f"{p.firstName} {p.lastName}".strip()
+            
+        if payload.profileImage is not None:
+            user.profile_image = payload.profileImage
+            
+        db.commit()
+        return {"success": True, "message": "Profile updated successfully"}
     
     if payload.personalDetails:
         p = payload.personalDetails

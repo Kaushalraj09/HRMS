@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'Present' | 'Punched In' | 'Punched Out' | 'Not Marked' | 'Working' | 'Not Working';
+export type AttendanceStatus = 'Present' | 'Working' | 'Absent' | 'Not Marked';
 export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
 
 export interface AttendanceRecord {
@@ -23,9 +23,9 @@ export interface AttendanceRecord {
 
 export interface AttendanceMetrics {
   present: number;
-  punchedIn: number;
+  working: number;
+  absent: number;
   notMarked: number;
-  punchedOut: number;
 }
 
 export interface PaginatedAttendance {

@@ -24,6 +24,7 @@ export interface HrDashboardData {
   checkedInEmployees: number;
   checkedOutEmployees: number;
   notMarkedEmployees: number;
+  absentEmployees?: number;
   workModeBreakdown: number[];
   genderBreakdown: number[];
   quickStats: Array<{ total: number; name: string }>;
@@ -37,5 +38,10 @@ export interface HrDashboardData {
     overtime: string;
     totalHours: string;
     status: string;
+  }>;
+  upcomingEvents: Array<{
+    name: string;
+    note: string;
+    role: string;
   }>;
 }

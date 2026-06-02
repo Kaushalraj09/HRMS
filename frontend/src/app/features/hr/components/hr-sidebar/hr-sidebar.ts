@@ -35,6 +35,7 @@ export class HrSidebar {
               { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
               { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
               { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
+              { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
               { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }

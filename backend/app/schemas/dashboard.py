@@ -34,6 +34,11 @@ class RecentTimeSheet(BaseModel):
     punchInImage: Optional[str] = None
     punchOutImage: Optional[str] = None
 
+class UpcomingEvent(BaseModel):
+    name: str
+    note: str
+    role: str
+
 class HrDashboardData(BaseModel):
     totalEmployees: int
     presentEmployees: int
@@ -44,3 +49,5 @@ class HrDashboardData(BaseModel):
     genderBreakdown: List[int]  
     quickStats: List[QuickStat]
     recentTimeSheets: List[RecentTimeSheet]
+    upcomingEvents: List[UpcomingEvent]
+

@@ -76,16 +76,35 @@ export class HrDashboard implements OnInit {
         this.gendertotal = this.female + this.male;
         this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
         this.recentTimeSheets = data.recentTimeSheets;
+        this.events = data.upcomingEvents;
         this.kpis = [
-          { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'green' as const },
-          { label: 'PRESENT EMPLOYEES', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
-          { label: 'CHECKED IN', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
-          { label: 'CHECKED OUT', value: data.checkedOutEmployees, icon: 'userCheck', accent: 'gold' as const },
-          { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'userX', accent: 'red' as const },
+          { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'blue' as const },
+          { label: 'WORKING', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
+          { label: 'PRESENT', value: data.presentEmployees, icon: 'userCheck', accent: 'green' as const },
+          { label: 'ABSENT', value: data.absentEmployees || 0, icon: 'userX', accent: 'red' as const },
+          { label: 'NOT MARKED', value: data.notMarkedEmployees, icon: 'minus', accent: 'gold' as const },
           { label: 'HR USERS', value: Number(this.stats[0]?.total || 0), icon: 'building', accent: 'blue' as const },
         ];
-        this.pieChartData.datasets[0].data = [this.workFromHome, this.workFromOffice];
-        this.pieChartData2.datasets[0].data = [this.female, this.male];
+        this.pieChartData = {
+          labels: ['Remote', 'Office'],
+          datasets: [
+            {
+              data: [this.workFromHome, this.workFromOffice],
+              backgroundColor: ['#ff4d6d', '#3a86ff'],
+              borderWidth: 2,
+            }
+          ]
+        };
+        this.pieChartData2 = {
+          labels: ['Female', 'Male'],
+          datasets: [
+            {
+              data: [this.female, this.male],
+              backgroundColor: ['#db2777', '#4cc9f0'],
+              borderWidth: 2,
+            }
+          ]
+        };
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -173,11 +192,7 @@ export class HrDashboard implements OnInit {
   kpis: any[] = [];
 
 
-  events = [
-    { name: 'Kaushal Raj', note: 'Birthday: Mar 22', role: 'Full Stack Developer' },
-    { name: 'Sachin', note: 'Birthday: Apr 02', role: 'Full Stack Developer' },
-    { name: 'Rishu', note: 'Birthday: Sep 15', role: 'Dev' },
-  ];
+  events: any[] = [];
 
 
   // charts
@@ -190,11 +205,11 @@ export class HrDashboard implements OnInit {
   pieChartType: 'doughnut' = 'doughnut';
 
   pieChartData: ChartConfiguration<'doughnut'>['data'] = {
-    labels: ['Work from Home', 'Work from Office'],
+    labels: ['Remote', 'Office'],
     datasets: [
       {
         data: [this.workFromHome, this.workFromOffice],
-        backgroundColor: ['#4e73df', '#1cc88a'],
+        backgroundColor: ['#ff4d6d', '#3a86ff'],
         borderWidth: 2,
       },
     ],
@@ -222,9 +237,10 @@ export class HrDashboard implements OnInit {
           size: 12,
         },
         formatter: (value: number, context: any) => {
-          const total = context.chart._metasets[0].total;
+          const dataset = context.chart.data.datasets[context.datasetIndex];
+          const total = dataset.data.reduce((sum: number, val: number) => sum + (val || 0), 0);
+          if (total === 0) return '0%';
           const percentage = ((value / total) * 100).toFixed(0);
-          const label = context.chart.data.labels[context.dataIndex];
           return `${percentage}%`;
         },
         anchor: 'center',
@@ -247,8 +263,8 @@ export class HrDashboard implements OnInit {
     labels: ['Female', 'Male'],
     datasets: [
       {
-        data: [this.male, this.female],
-        backgroundColor: ['#da1387', '#8ccdfc'],
+        data: [this.female, this.male],
+        backgroundColor: ['#db2777', '#4cc9f0'],
         borderWidth: 2,
       },
     ],
@@ -277,9 +293,10 @@ export class HrDashboard implements OnInit {
           size: 12,
         },
         formatter: (value: number, context: any) => {
-          const total = context.chart._metasets[0].total;
+          const dataset = context.chart.data.datasets[context.datasetIndex];
+          const total = dataset.data.reduce((sum: number, val: number) => sum + (val || 0), 0);
+          if (total === 0) return '0%';
           const percentage = ((value / total) * 100).toFixed(0);
-          const label = context.chart.data.labels[context.dataIndex];
           return `${percentage}%`;
         },
         anchor: 'center',
@@ -308,7 +325,7 @@ export class HrDashboard implements OnInit {
           const startY = y + Math.sin(angle) * outerRadius;
 
 
-          const lineLength = 20;
+          const lineLength = 12;
           const midX = startX + Math.cos(angle) * lineLength;
           const midY = startY + Math.sin(angle) * lineLength;
 
