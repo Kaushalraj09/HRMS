@@ -15,7 +15,7 @@ from app.services import attendance_service
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
 @router.post("/punch-in", response_model=AttendanceResponse)
-def punch_in(
+async def punch_in(
     request: PunchRequest, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
@@ -38,7 +38,7 @@ def punch_in(
                 detail="Only employees can punch attendance"
             )
     
-    return attendance_service.punch_in(
+    res = attendance_service.punch_in(
         db,
         employee.id,
         request.work_mode,
@@ -49,8 +49,29 @@ def punch_in(
         request.custom_time
     )
 
+    # Trigger unread notification
+    from app.services.notification_service import create_notification
+    from datetime import datetime
+    time_str = datetime.now().strftime("%I:%M %p")
+    # Determine the target user's id (if specified employee, notify them, else notify current_user)
+    target_user_id = employee.user_id if employee else current_user.id
+    try:
+        attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
+        await create_notification(
+            db=db,
+            user_id=target_user_id,
+            type="ATTENDANCE",
+            title="Attendance Marked",
+            message=f"You punched in at {time_str}.",
+            reference_id=attendance_id
+        )
+    except Exception as e:
+        print(f"Failed to auto create punch-in notification: {e}")
+
+    return res
+
 @router.post("/punch-out", response_model=AttendanceResponse)
-def punch_out(
+async def punch_out(
     request: PunchRequest, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
@@ -73,7 +94,7 @@ def punch_out(
                 detail="Only employees can punch attendance"
             )
     
-    return attendance_service.punch_out(
+    res = attendance_service.punch_out(
         db,
         employee.id,
         request.work_mode,
@@ -83,6 +104,26 @@ def punch_out(
         request.image,
         request.custom_time
     )
+
+    # Trigger unread notification
+    from app.services.notification_service import create_notification
+    from datetime import datetime
+    time_str = datetime.now().strftime("%I:%M %p")
+    target_user_id = employee.user_id if employee else current_user.id
+    try:
+        attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
+        await create_notification(
+            db=db,
+            user_id=target_user_id,
+            type="ATTENDANCE",
+            title="Attendance Completed",
+            message=f"You punched out at {time_str}.",
+            reference_id=attendance_id
+        )
+    except Exception as e:
+        print(f"Failed to auto create punch-out notification: {e}")
+
+    return res
 
 class ChangeWorkModeRequest(BaseModel):
     work_mode: WorkMode = Field(alias="workMode")

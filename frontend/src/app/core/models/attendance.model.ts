@@ -19,6 +19,9 @@ export interface AttendanceRecord {
   punchOutAddress?: string;
   punchInImage?: string;
   punchOutImage?: string;
+  isWorking?: boolean;
+  attendanceStatus?: string;
+  badgeColor?: string;
 }
 
 export interface AttendanceMetrics {
@@ -86,4 +89,6 @@ export interface TodayAttendanceState {
   punchOutAddress?: string | null;
   punchInImage?: string | null;
   punchOutImage?: string | null;
+  attendanceStatus?: string;
+  badgeColor?: string;
 }

@@ -1,0 +1,101 @@
+<div class="activity-wrapper">
+  <div class="activity-container">
+    
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-text">
+        <h1>Login Activity Log</h1>
+        <p>Monitor system sign-in attempts and security events</p>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-section">
+      <div class="filter-group">
+        <button type="button" class="filter-btn" [class.active]="filterType === 'Today'" (click)="setFilter('Today')">Today</button>
+        <button type="button" class="filter-btn" [class.active]="filterType === 'This Week'" (click)="setFilter('This Week')">This Week</button>
+        <button type="button" class="filter-btn" [class.active]="filterType === 'This Month'" (click)="setFilter('This Month')">This Month</button>
+        <button type="button" class="filter-btn" [class.active]="filterType === 'Custom'" (click)="setFilter('Custom')">Custom Date Range</button>
+      </div>
+
+      <!-- Custom Date Pickers -->
+      <div class="custom-dates" *ngIf="filterType === 'Custom'">
+        <div class="date-input-group">
+          <label for="startDate">From:</label>
+          <input type="date" id="startDate" name="startDate" [(ngModel)]="startDate" (change)="onCustomDateChange()">
+        </div>
+        <div class="date-input-group">
+          <label for="endDate">To:</label>
+          <input type="date" id="endDate" name="endDate" [(ngModel)]="endDate" (change)="onCustomDateChange()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th *ngIf="isAdminOrHR">Employee</th>
+              <th *ngIf="isAdminOrHR">Emp Code</th>
+              <th>Date & Time</th>
+              <th>Browser</th>
+              <th>OS / Device</th>
+              <th>IP Address</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          
+          <tbody *ngIf="isLoading">
+            <tr *ngFor="let i of [1,2,3,4,5]">
+              <td *ngIf="isAdminOrHR"><div class="skeleton s-text" style="width: 80%"></div></td>
+              <td *ngIf="isAdminOrHR"><div class="skeleton s-text" style="width: 50%"></div></td>
+              <td><div class="skeleton s-text" style="width: 70%"></div></td>
+              <td><div class="skeleton s-text" style="width: 60%"></div></td>
+              <td><div class="skeleton s-text" style="width: 80%"></div></td>
+              <td><div class="skeleton s-text" style="width: 60%"></div></td>
+              <td><div class="skeleton s-text" style="width: 50%"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-text" style="width: 50px"></div></td>
+            </tr>
+          </tbody>
+
+          <tbody *ngIf="!isLoading">
+            <tr *ngFor="let act of activities">
+              <td *ngIf="isAdminOrHR" class="font-medium text-dark">{{ act.employee_name }}</td>
+              <td *ngIf="isAdminOrHR">{{ act.employee_code }}</td>
+              <td class="font-medium text-dark">{{ act.login_time | date:'dd MMM yyyy, hh:mm a' }}</td>
+              <td>{{ act.browser }}</td>
+              <td>{{ act.operating_system }} ({{ act.device }})</td>
+              <td>{{ act.ip_address }}</td>
+              <td>{{ act.location }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="act.status.toLowerCase()">
+                  {{ act.status }}
+                </span>
+              </td>
+              <td class="actions-col">
+                <button type="button" class="action-btn-link" (click)="viewDetails(act.id)">
+                  View
+                </button>
+              </td>
+            </tr>
+            
+            <tr *ngIf="activities.length === 0">
+              <td [attr.colspan]="isAdminOrHR ? 9 : 7" class="empty-state">
+                <div class="empty-content">
+                  <i class="fas fa-shield-alt empty-icon"></i>
+                  <p>No login activity logs found</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>

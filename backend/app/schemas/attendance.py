@@ -1,4 +1,4 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, computed_field
 from datetime import date, time, datetime
 from typing import Optional, List
 from app.core.enums import WorkMode
@@ -112,6 +112,21 @@ class AttendanceResponse(BaseModel):
     grand_total_minutes: int = Field(default=0, alias="grandTotalMinutes")
     late_minutes: int = Field(default=0, alias="lateMinutes")
 
+    @computed_field(alias="isWorking")
+    @property
+    def is_working(self) -> bool:
+        return self.status.lower() == "working"
+
+    @computed_field(alias="attendanceStatus")
+    @property
+    def attendance_status(self) -> str:
+        return self.status.lower()
+
+    @computed_field(alias="badgeColor")
+    @property
+    def badge_color(self) -> str:
+        return "green" if self.status.lower() == "working" else "gray"
+
 class TodayAttendanceState(BaseModel):
     """Current attendance state for today with working metrics and shift information."""
     model_config = ConfigDict(
@@ -148,6 +163,16 @@ class TodayAttendanceState(BaseModel):
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
 
+    @computed_field(alias="attendanceStatus")
+    @property
+    def attendance_status(self) -> str:
+        return self.status.lower()
+
+    @computed_field(alias="badgeColor")
+    @property
+    def badge_color(self) -> str:
+        return "green" if self.status.lower() == "working" else "gray"
+
 class AttendanceRecord(BaseModel):
     """Attendance record for list responses."""
     model_config = ConfigDict(populate_by_name=True)
@@ -173,6 +198,21 @@ class AttendanceRecord(BaseModel):
     punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
+
+    @computed_field(alias="isWorking")
+    @property
+    def is_working(self) -> bool:
+        return self.status.lower() == "working"
+
+    @computed_field(alias="attendanceStatus")
+    @property
+    def attendance_status(self) -> str:
+        return self.status.lower()
+
+    @computed_field(alias="badgeColor")
+    @property
+    def badge_color(self) -> str:
+        return "green" if self.status.lower() == "working" else "gray"
 
 
 class AttendanceListResponse(BaseModel):

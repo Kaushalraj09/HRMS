@@ -803,7 +803,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.shiftProgress = todayState.shiftTotalSeconds > 0
       ? 1 - (todayState.remainingSeconds / todayState.shiftTotalSeconds)
       : 0;
-    this.attendanceStatusLabel = todayState.isWorking ? 'Working' : 'Not Working';
+    this.attendanceStatusLabel = todayState.status;
     this.status = todayState.workMode;
     this.punchInTime = todayState.punchIn || null;
     this.punchOutTime = todayState.punchOut || null;

@@ -959,29 +959,15 @@
   color: #166534;
 }
 
-.status-badge.checked-out {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-badge.checked-in {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.status-badge.present {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.not-marked {
+.status-badge.present,
+.status-badge.checked-out,
+.status-badge.checked-in,
+.status-badge.not-marked,
+.status-badge.not-working,
+.status-badge.absent,
+.status-badge.gray {
   background: #f1f5f9;
   color: #64748b;
-}
-
-.status-badge.not-working {
-  background: #fee2e2;
-  color: #991b1b;
 }
 
 

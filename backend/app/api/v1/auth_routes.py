@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -6,19 +6,47 @@ from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse
 from app.schemas.forgot_password import ForgotPasswordRequest, ResetPasswordRequest
 from app.services import auth_service
+from app.services.login_activity_service import log_login_activity
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=LoginResponse)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    result = auth_service.authenticate_user(db, request)
+async def login(
+    request: Request,
+    payload: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    result = auth_service.authenticate_user(db, payload)
+    
+    ip_address = request.client.host if request.client else "0.0.0.0"
+    user_agent = request.headers.get("user-agent", "Unknown Agent")
     
     if not result:
+        # Attempt to log failed activity if email is valid user
+        user = db.query(User).filter(User.email.ilike(payload.email)).first()
+        if user:
+            await log_login_activity(
+                db=db,
+                user_id=user.id,
+                ip_address=ip_address,
+                user_agent_string=user_agent,
+                status="Failed"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
     
+    user_id = result.get("me", {}).get("id")
+    if user_id and "accessToken" in result:
+        await log_login_activity(
+            db=db,
+            user_id=user_id,
+            ip_address=ip_address,
+            user_agent_string=user_agent,
+            status="Success"
+        )
+        
     return result
 
 @router.post("/change-password", response_model=StandardResponse)

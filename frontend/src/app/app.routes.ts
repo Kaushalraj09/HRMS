@@ -16,6 +16,9 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { HrUsersComponent } from './features/admin/pages/hr-users/hr-users';
 import { AdminEmployeesComponent } from './features/admin/pages/admin-employees/admin-employees';
+import { LoginActivityList } from './features/login-activity/login-activity-list';
+import { LoginActivityDetail } from './features/login-activity/login-activity-detail';
+import { LoginActivityRedirect } from './features/login-activity/login-activity-redirect';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -35,7 +38,9 @@ export const routes: Routes = [
     children: [
       { path: 'attendance', component: AttendanceComponent },
       { path: 'employees', component: Employees },
-      { path: 'my-profile', component: MyProfile }
+      { path: 'my-profile', component: MyProfile },
+      { path: 'login-activity', component: LoginActivityList },
+      { path: 'login-activity/:id', component: LoginActivityDetail }
     ]
   },
   { 
@@ -46,7 +51,9 @@ export const routes: Routes = [
     children: [
       { path: 'my-attendance', component: MyAttendance },
       { path: 'my-profile', component: MyProfile },
-      { path: 'change-password', component: ChangePasswordComponent }
+      { path: 'change-password', component: ChangePasswordComponent },
+      { path: 'login-activity', component: LoginActivityList },
+      { path: 'login-activity/:id', component: LoginActivityDetail }
     ]
   },
   {
@@ -58,9 +65,13 @@ export const routes: Routes = [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
       { path: 'attendance', component: AttendanceComponent },
-      { path: 'my-profile', component: MyProfile }
+      { path: 'my-profile', component: MyProfile },
+      { path: 'login-activity', component: LoginActivityList },
+      { path: 'login-activity/:id', component: LoginActivityDetail }
     ]
   },
+  { path: 'login-activity', component: LoginActivityRedirect, canActivate: [authGuard] },
+  { path: 'notifications/login-activity/:id', component: LoginActivityRedirect, canActivate: [authGuard] },
   { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },
   { path: '**', redirectTo: 'auth/login' },
 ];

@@ -33,7 +33,8 @@ export class Sidebar implements OnInit {
       groupName: 'Main',
       items: [
         { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' },
-        { label: 'My Profile', icon: 'far fa-user', route: '/master-dashboard/my-profile' }
+        { label: 'My Profile', icon: 'far fa-user', route: '/master-dashboard/my-profile' },
+        { label: 'Login Activity', icon: 'fas fa-history', route: '/login-activity' }
       ]
     },
     {

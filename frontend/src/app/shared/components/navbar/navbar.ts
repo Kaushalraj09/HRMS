@@ -1,9 +1,12 @@
 import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { Dropdown } from '../dropdown/dropdown';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService, Notification } from '../../../core/services/notification.service';
+import { AttendanceService } from '../../../core/services/attendance.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -15,7 +18,6 @@ import { Subscription } from 'rxjs';
 })
 export class Navbar implements OnInit, OnDestroy {
   @Input() userName: string = 'User';
-  @Input() notificationCount: number = 0;
   @Input() showSearch: boolean = true;
 
   @Output() hamburgerClick = new EventEmitter<void>();
@@ -26,12 +28,22 @@ export class Navbar implements OnInit, OnDestroy {
   selectedLang = 'en';
   isOpen = false;
   isProfileDropdownOpen = false;
+  isNotificationDropdownOpen = false;
   profileImage: string | null = null;
   userInitials: string = 'U';
 
+  notifications: Notification[] = [];
+  unreadCount = 0;
+  private connectedUserId: string | number | null = null;
+
   private sub = new Subscription();
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly notificationService: NotificationService,
+    private readonly attendanceService: AttendanceService,
+    private readonly router: Router
+  ) {}
 
   ngOnInit(): void {
     this.sub.add(
@@ -44,9 +56,39 @@ export class Navbar implements OnInit, OnDestroy {
           const first = names[0]?.[0] || '';
           const last = names[1]?.[0] || '';
           this.userInitials = (first + last).toUpperCase() || 'U';
+
+          // Connect WebSocket if not connected for this user
+          if (this.connectedUserId !== user.id) {
+            this.connectedUserId = user.id;
+            this.attendanceService.connectWebSocket(user.id);
+          }
+
+          // Initial load of notifications
+          this.loadNotifications();
+        } else {
+          this.connectedUserId = null;
+          this.attendanceService.disconnectWebSocket();
         }
       })
     );
+
+    // Subscribe to notification service updates (BehaviorSubjects)
+    this.sub.add(
+      this.notificationService.notifications$.subscribe(notifs => {
+        this.notifications = notifs;
+      })
+    );
+
+    this.sub.add(
+      this.notificationService.unreadCount$.subscribe(count => {
+        this.unreadCount = count;
+      })
+    );
+  }
+
+  loadNotifications(): void {
+    this.notificationService.fetchNotifications().subscribe();
+    this.notificationService.fetchUnreadCount().subscribe();
   }
 
   ngOnDestroy(): void {
@@ -58,6 +100,9 @@ export class Navbar implements OnInit, OnDestroy {
     const target = event.target as HTMLElement;
     if (!target.closest('.profile') && !target.closest('app-dropdown')) {
       this.isProfileDropdownOpen = false;
+    }
+    if (!target.closest('.notification-container')) {
+      this.isNotificationDropdownOpen = false;
     }
   }
 
@@ -75,7 +120,48 @@ export class Navbar implements OnInit, OnDestroy {
     this.profileClick.emit();
   }
 
-  onNotificationClick() {
+  toggleNotificationDropdown(event: MouseEvent) {
+    event.stopPropagation();
+    this.isNotificationDropdownOpen = !this.isNotificationDropdownOpen;
+    if (this.isNotificationDropdownOpen) {
+      // Reload on open
+      this.loadNotifications();
+    }
     this.notificationClick.emit();
+  }
+
+  markAllAsRead(event: MouseEvent) {
+    event.stopPropagation();
+    const unreadNotifs = this.notifications.filter(n => !n.is_read);
+    unreadNotifs.forEach(n => {
+      this.notificationService.markAsRead(n.id).subscribe();
+    });
+  }
+
+  onNotificationItemClick(notif: Notification) {
+    this.isNotificationDropdownOpen = false;
+    
+    // Mark as read
+    if (!notif.is_read) {
+      this.notificationService.markAsRead(notif.id).subscribe();
+    }
+
+    // Redirect based on type
+    if (notif.type === 'LOGIN_ACTIVITY' && notif.reference_id) {
+      this.router.navigate(['/notifications/login-activity', notif.reference_id]);
+    }
+  }
+
+  getIconClass(type: string): string {
+    switch (type) {
+      case 'LOGIN_ACTIVITY':
+        return 'fas fa-shield-alt';
+      case 'ATTENDANCE':
+        return 'fas fa-clock';
+      case 'LEAVE':
+        return 'fas fa-calendar-alt';
+      default:
+        return 'fas fa-bell';
+    }
   }
 }

@@ -14,20 +14,20 @@
     <div class="filter-section">
       <div class="search-container">
         <i class="fas fa-search search-icon"></i>
-        <input type="text" id="searchQuery" name="searchQuery" aria-label="Search employees" [formControl]="searchControl" placeholder="Search employee name, email, code" class="filter-input search-input">
+        <input type="text" id="searchQuery" name="searchQuery" autocomplete="off" aria-label="Search employees" [formControl]="searchControl" placeholder="Search employee name, email, code" class="filter-input search-input">
       </div>
       
       <div class="dropdown-filters">
         <div style="min-width: 160px;">
-          <app-custom-select id="departmentFilter" name="departmentFilter" inputId="departmentFilter" [formControl]="departmentControl" [options]="departmentsOptions"></app-custom-select>
+          <app-custom-select name="departmentFilter" inputId="departmentFilter" [formControl]="departmentControl" [options]="departmentsOptions"></app-custom-select>
         </div>
 
         <div style="min-width: 160px;">
-          <app-custom-select id="typeFilter" name="typeFilter" inputId="typeFilter" [formControl]="typeControl" [options]="typesOptions"></app-custom-select>
+          <app-custom-select name="typeFilter" inputId="typeFilter" [formControl]="typeControl" [options]="typesOptions"></app-custom-select>
         </div>
 
         <div style="min-width: 160px;">
-          <app-custom-select id="statusFilter" name="statusFilter" inputId="statusFilter" [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
+          <app-custom-select name="statusFilter" inputId="statusFilter" [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
         </div>
       </div>
       

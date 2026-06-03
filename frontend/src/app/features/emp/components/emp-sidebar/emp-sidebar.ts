@@ -35,6 +35,7 @@ export class EmpSidebar {
               { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/emp-dashboard/my-attendance' },
               { label: 'My Profile', icon: 'far fa-user', route: '/emp-dashboard/my-profile' },
               { label: 'Change Password', icon: 'fas fa-key', route: '/emp-dashboard/change-password' },
+              { label: 'Login Activity', icon: 'fas fa-history', route: '/login-activity' },
               { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }

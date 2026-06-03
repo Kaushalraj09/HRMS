@@ -95,16 +95,29 @@ export class AttendanceService {
   private socket: WebSocket | null = null;
   private timeoffUpdateSubject = new Subject<any>();
   public timeoffUpdate$ = this.timeoffUpdateSubject.asObservable();
+  private wsMessageSubject = new Subject<any>();
+  public wsMessage$ = this.wsMessageSubject.asObservable();
 
   constructor(private readonly http: HttpClient) { }
 
   connectWebSocket(userId: string | number) {
-    if (this.socket) {
-      this.socket.onclose = () => { }; // Clear previous onclose
-      this.socket.close();
+    const wsUrl = `ws://localhost:8000/ws/${userId}`;
+    
+    // If we already have a socket connection to this exact URL, don't reconnect
+    if (this.socket && (this.socket.url === wsUrl || this.socket.url.endsWith(`/ws/${userId}`))) {
+      if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
+        return;
+      }
     }
 
-    const wsUrl = `ws://localhost:8000/ws/${userId}`;
+    if (this.socket) {
+      this.socket.onclose = () => { };
+      this.socket.onerror = () => { };
+      try {
+        this.socket.close();
+      } catch (e) {}
+    }
+
     console.log(`Attempting WebSocket connection to: ${wsUrl}`);
 
     this.socket = new WebSocket(wsUrl);
@@ -116,6 +129,7 @@ export class AttendanceService {
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        this.wsMessageSubject.next(data);
         if (data.type === 'TIMEOFF_UPDATE' || data.type === 'TIMEOFF_REQUEST') {
           this.timeoffUpdateSubject.next(data);
         }
@@ -132,6 +146,17 @@ export class AttendanceService {
       console.warn(`WebSocket closed: ${event.code} ${event.reason}. Retrying in 5s...`);
       setTimeout(() => this.connectWebSocket(userId), 5000);
     };
+  }
+
+  disconnectWebSocket() {
+    if (this.socket) {
+      this.socket.onclose = () => { };
+      this.socket.onerror = () => { };
+      try {
+        this.socket.close();
+      } catch (e) {}
+      this.socket = null;
+    }
   }
 
   reverseGeocode(lat: number, lon: number): Observable<any> {

@@ -1,7 +1,6 @@
 <div class="Hr_dashboard">
   <app-navbar 
     [userName]="userName" 
-    [notificationCount]="5" 
     (hamburgerClick)="toggleSidebar()"
     (searchChange)="onSearch($event)" 
     (profileClick)="openProfile()" 
@@ -216,7 +215,7 @@
                     <td>{{ sheet.breakTime }}</td>
                     <td>{{ sheet.overtime }}</td>
                     <td>{{ sheet.totalHours }}</td>
-                    <td><span class="status-badge" [ngClass]="sheet.status?.toLowerCase() || ''">
+                    <td><span class="status-badge" [title]="sheet.status" [ngClass]="sheet.status?.toLowerCase() || ''">
                         {{ sheet.status }}
                       </span>
                     </td>

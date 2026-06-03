@@ -1,0 +1,111 @@
+<div class="detail-wrapper">
+  <div class="detail-container">
+    
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <button type="button" class="btn-back" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> Back to Log
+      </button>
+    </div>
+
+    <!-- Main Detail Card -->
+    <div class="detail-card" *ngIf="!isLoading && activity">
+      
+      <!-- Card Header -->
+      <div class="card-header" [class.failed]="activity.status === 'Failed'">
+        <div class="header-icon">
+          <i class="fas" [ngClass]="activity.status === 'Failed' ? 'fa-exclamation-triangle' : 'fa-shield-alt'"></i>
+        </div>
+        <div class="header-titles">
+          <h2>{{ activity.status === 'Failed' ? 'Sign-in Attempt Failed' : 'Successful Sign-in' }}</h2>
+          <p>{{ activity.login_time | date:'dd MMMM yyyy, hh:mm:ss a' }}</p>
+        </div>
+        <div class="header-status">
+          <span class="status-badge" [ngClass]="activity.status.toLowerCase()">
+            {{ activity.status }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Card Body -->
+      <div class="card-body">
+        
+        <!-- Employee Details Section (HR/Admin only) -->
+        <div class="detail-section" *ngIf="isAdminOrHR">
+          <h3>User Identification</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="label">Employee Name</span>
+              <span class="value text-dark">{{ activity.employee_name || activity.user_display_name || 'N/A' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Employee Code</span>
+              <span class="value">{{ activity.employee_code || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Details Section -->
+        <div class="detail-section">
+          <h3>Connection Details</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="label">IP Address</span>
+              <span class="value">{{ activity.ip_address }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Geographic Location</span>
+              <span class="value">{{ activity.location || 'Unknown / Not Detected' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Client Metadata Section -->
+        <div class="detail-section">
+          <h3>Client Metadata</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="label">Web Browser</span>
+              <span class="value text-dark">{{ activity.browser || 'Unknown' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Operating System</span>
+              <span class="value">{{ activity.operating_system || 'Unknown' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Device Category</span>
+              <span class="value">{{ activity.device || 'Unknown' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Created Date</span>
+              <span class="value">{{ activity.created_at | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Skeleton Loading -->
+    <div class="detail-card" *ngIf="isLoading">
+      <div class="card-header skeleton-header">
+        <div class="skeleton s-circle"></div>
+        <div class="header-titles">
+          <div class="skeleton s-text" style="width: 150px; height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton s-text" style="width: 250px;"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="skeleton s-text" style="width: 120px; height: 16px; margin-bottom: 20px;"></div>
+        <div class="detail-grid" style="margin-bottom: 30px;">
+          <div class="grid-item" *ngFor="let i of [1,2,3,4]">
+            <div class="skeleton s-text" style="width: 80px; margin-bottom: 8px;"></div>
+            <div class="skeleton s-text" style="width: 160px; height: 18px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

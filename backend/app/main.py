@@ -12,6 +12,8 @@ from app.api.v1 import (
     attendance_routes,
     hr_routes,
     dashboard_routes,
+    notification_routes,
+    login_activity_routes,
     # timeoff_routes,
 )
 
@@ -65,5 +67,7 @@ app.include_router(employee_routes.router, prefix="/api/v1")
 app.include_router(attendance_routes.router, prefix="/api/v1")
 app.include_router(hr_routes.router, prefix="/api/v1")
 app.include_router(dashboard_routes.router, prefix="/api/v1")
+app.include_router(notification_routes.router, prefix="/api/v1")
+app.include_router(login_activity_routes.router, prefix="/api/v1")
 # app.include_router(timeoff_routes.router, prefix="/api/v1")
 

@@ -38,12 +38,41 @@
             </mat-form-field>
         </div>
 
-        <div class="notification" (click)="onNotificationClick()">
-            <svg viewBox="0 0 24 24">
-                <path d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z" />
-                <path d="M9 19C9.5 20 10.5 21 12 21C13.5 21 14.5 20 15 19" />
-            </svg>
-            <span class="badge">{{ notificationCount }}</span>
+        <div class="notification-container">
+            <div class="notification" (click)="toggleNotificationDropdown($event)">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 8C18 5.79086 16.2091 4 14 4H10C7.79086 4 6 5.79086 6 8V12L4 14V15H20V14L18 12V8Z" />
+                    <path d="M9 19C9.5 20 10.5 21 12 21C13.5 21 14.5 20 15 19" />
+                </svg>
+                <span class="badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+            </div>
+
+            <!-- Notifications Dropdown -->
+            <div class="notification-dropdown" *ngIf="isNotificationDropdownOpen">
+                <div class="dropdown-header">
+                    <h3>Notifications</h3>
+                    <span class="mark-all-read" *ngIf="unreadCount > 0" (click)="markAllAsRead($event)">Mark all as read</span>
+                </div>
+                <div class="notification-list">
+                    <div class="no-notifications" *ngIf="notifications.length === 0">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>No notifications yet</p>
+                    </div>
+                    <div class="notification-item" 
+                         *ngFor="let notif of notifications" 
+                         [class.unread]="!notif.is_read"
+                         (click)="onNotificationItemClick(notif)">
+                        <div class="notif-icon" [ngClass]="notif.type.toLowerCase()">
+                            <i [ngClass]="getIconClass(notif.type)"></i>
+                        </div>
+                        <div class="notif-content">
+                            <h4 class="notif-title">{{ notif.title }}</h4>
+                            <span class="notif-time">{{ notif.created_at | date:'hh:mm a - dd MMM yyyy' }}</span>
+                        </div>
+                        <span class="unread-dot" *ngIf="!notif.is_read"></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="profile" (click)="onProfileClick()">

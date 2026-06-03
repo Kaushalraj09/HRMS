@@ -71,7 +71,7 @@
                                 <td>{{ sheet.break }}</td>
                                 <td>{{ sheet.grandTotal }}</td>
                                 <td>
-                                    <span *ngIf="sheet.status" class="status-badge" [ngClass]="sheet.status.toLowerCase()">
+                                    <span *ngIf="sheet.status" class="status-badge" [title]="sheet.status" [ngClass]="sheet.status.toLowerCase()">
                                         {{ sheet.status }}
                                     </span>
                                 </td>

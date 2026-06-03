@@ -1,7 +1,6 @@
 <div class="Emp_dashboard">
     <app-navbar 
         [userName]="userName" 
-        [notificationCount]="5" 
         (hamburgerClick)="toggleSidebar()"
         (searchChange)="onSearch($event)" 
         (profileClick)="openProfile()" 
@@ -95,7 +94,7 @@
                 </div>
             </div>
             <div class="attendance-live">
-                <div class="attendance-live__status" [class.attendance-live__status--working]="isPunchedIn">
+                <div class="attendance-live__status" [title]="attendanceStatusLabel" [class.attendance-live__status--working]="isPunchedIn">
                     {{ attendanceStatusLabel }}
                 </div>
                 <div class="attendance-live__location" *ngIf="punchOutAddress || punchInAddress">

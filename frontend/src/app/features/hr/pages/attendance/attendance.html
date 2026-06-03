@@ -33,19 +33,19 @@
         <!-- Department -->
         <div class="filter-group">
           <label for="departmentFilter">Department</label>
-          <app-custom-select id="departmentFilter" name="departmentFilter" inputId="departmentFilter" formControlName="department" [options]="departmentsOptions"></app-custom-select>
+          <app-custom-select name="departmentFilter" inputId="departmentFilter" formControlName="department" [options]="departmentsOptions"></app-custom-select>
         </div>
 
         <!-- Status -->
         <div class="filter-group">
           <label for="statusFilter">Status</label>
-          <app-custom-select id="statusFilter" name="statusFilter" inputId="statusFilter" formControlName="status" [options]="statusOptions"></app-custom-select>
+          <app-custom-select name="statusFilter" inputId="statusFilter" formControlName="status" [options]="statusOptions"></app-custom-select>
         </div>
 
         <!-- Location (Work Mode) -->
         <div class="filter-group">
           <label for="locationFilter">Location</label>
-          <app-custom-select id="locationFilter" name="locationFilter" inputId="locationFilter" formControlName="location" [options]="locationOptions"></app-custom-select>
+          <app-custom-select name="locationFilter" inputId="locationFilter" formControlName="location" [options]="locationOptions"></app-custom-select>
         </div>
       </div>
       
@@ -139,8 +139,9 @@
                 <td>{{ rec.punchOut || '-' }}</td>
                 <td>{{ rec.hours }}</td>
                 <td>
-                  <span class="status-badge" [ngClass]="{
+                  <span class="status-badge" [title]="rec.status" [ngClass]="{
                     'present':    rec.status === 'Present',
+                    'working':    rec.status === 'Working',
                     'checked-in': rec.status === 'Working',
                     'absent':     rec.status === 'Absent',
                     'not-marked': rec.status === 'Not Marked'

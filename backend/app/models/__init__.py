@@ -5,6 +5,8 @@ from app.models.master_data import *
 from app.models.user import Role, User
 from app.models.timeoff import TimeOffRequest
 from app.models.approval_log import ApprovalLog
+from app.models.login_activity import LoginActivity
+from app.models.notification import Notification
 
 __all__ = [
     "Attendance",
@@ -15,4 +17,6 @@ __all__ = [
     "User",
     "TimeOffRequest",
     "ApprovalLog",
+    "LoginActivity",
+    "Notification",
 ]

@@ -44,7 +44,7 @@
         <div class="form-group">
           <label for="department">Department</label>
           <ng-container *ngIf="isEditing$ | async; else departmentRead">
-            <app-custom-select id="department" name="department" inputId="department" formControlName="department" [options]="departmentOptions"></app-custom-select>
+            <app-custom-select name="department" inputId="department" formControlName="department" [options]="departmentOptions"></app-custom-select>
           </ng-container>
           <ng-template #departmentRead>
             <input type="text" id="department" name="department" formControlName="department" class="form-input" readonly>
@@ -53,7 +53,7 @@
         <div class="form-group">
           <label for="employeeType">Employee Type</label>
           <ng-container *ngIf="isEditing$ | async; else typeRead">
-            <app-custom-select id="employeeType" name="employeeType" inputId="employeeType" formControlName="employeeType" [options]="employeeTypeOptions"></app-custom-select>
+            <app-custom-select name="employeeType" inputId="employeeType" formControlName="employeeType" [options]="employeeTypeOptions"></app-custom-select>
           </ng-container>
           <ng-template #typeRead>
             <input type="text" id="employeeType" name="employeeType" formControlName="employeeType" class="form-input" readonly>
@@ -66,7 +66,7 @@
         <div class="form-group">
           <label for="shiftType">Shift Type</label>
           <ng-container *ngIf="isEditing$ | async; else shiftRead">
-            <app-custom-select id="shiftType" name="shiftType" inputId="shiftType" formControlName="shiftType" [options]="shiftOptions"></app-custom-select>
+            <app-custom-select name="shiftType" inputId="shiftType" formControlName="shiftType" [options]="shiftOptions"></app-custom-select>
           </ng-container>
           <ng-template #shiftRead>
             <input type="text" id="shiftType" name="shiftType" formControlName="shiftType" class="form-input" readonly>
