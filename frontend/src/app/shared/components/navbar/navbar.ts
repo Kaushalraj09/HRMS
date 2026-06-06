@@ -149,10 +149,7 @@ export class Navbar implements OnInit, OnDestroy {
 
   markAllAsRead(event: MouseEvent) {
     event.stopPropagation();
-    const unreadNotifs = this.notifications.filter(n => !n.is_read);
-    unreadNotifs.forEach(n => {
-      this.notificationService.markAsRead(n.id).subscribe();
-    });
+    this.notificationService.markAllAsRead().subscribe();
   }
 
   onNotificationItemClick(notif: Notification) {

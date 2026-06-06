@@ -68,6 +68,22 @@ export class NotificationService implements OnDestroy {
         
         const currentCount = this.unreadCountSubject.value;
         this.unreadCountSubject.next(Math.max(0, currentCount - 1));
+        
+        // Fetch fresh unread count from backend in the background to ensure consistency
+        this.fetchUnreadCount().subscribe();
+      })
+    );
+  }
+
+  markAllAsRead(): Observable<{ unread_count: number }> {
+    return this.http.put<{ unread_count: number }>(`${this.apiUrl}/mark-all-read`, {}).pipe(
+      tap(res => {
+        const updatedList = this.notificationsSubject.value.map(n => ({
+          ...n,
+          is_read: true
+        }));
+        this.notificationsSubject.next(updatedList);
+        this.unreadCountSubject.next(res.unread_count);
       })
     );
   }
