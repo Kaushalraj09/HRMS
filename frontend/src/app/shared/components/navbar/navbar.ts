@@ -1,8 +1,6 @@
 import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { Dropdown } from '../dropdown/dropdown';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService, Notification } from '../../../core/services/notification.service';
@@ -12,7 +10,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, MatFormFieldModule, MatSelectModule, Dropdown],
+  imports: [CommonModule, Dropdown],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
@@ -29,6 +27,7 @@ export class Navbar implements OnInit, OnDestroy {
   isOpen = false;
   isProfileDropdownOpen = false;
   isNotificationDropdownOpen = false;
+  isLanguageDropdownOpen = false;
   profileImage: string | null = null;
   userInitials: string = 'U';
 
@@ -104,6 +103,9 @@ export class Navbar implements OnInit, OnDestroy {
     if (!target.closest('.notification-container')) {
       this.isNotificationDropdownOpen = false;
     }
+    if (!target.closest('.language-selector')) {
+      this.isLanguageDropdownOpen = false;
+    }
   }
 
   onHamburgerClick() {
@@ -117,7 +119,22 @@ export class Navbar implements OnInit, OnDestroy {
 
   onProfileClick() {
     this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
+    this.isNotificationDropdownOpen = false;
+    this.isLanguageDropdownOpen = false;
     this.profileClick.emit();
+  }
+
+  toggleLanguageDropdown(event: MouseEvent) {
+    event.stopPropagation();
+    this.isLanguageDropdownOpen = !this.isLanguageDropdownOpen;
+    this.isProfileDropdownOpen = false;
+    this.isNotificationDropdownOpen = false;
+  }
+
+  selectLanguage(lang: string, event: MouseEvent) {
+    event.stopPropagation();
+    this.selectedLang = lang;
+    this.isLanguageDropdownOpen = false;
   }
 
   toggleNotificationDropdown(event: MouseEvent) {

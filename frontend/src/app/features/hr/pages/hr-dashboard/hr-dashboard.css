@@ -160,8 +160,9 @@
 
 .chart-workContainers {
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: 100%;
+  max-width: 320px;
+  height: 320px;
   margin: auto;
   display: flex;
   justify-content: center;
@@ -200,15 +201,15 @@
 
 .chart-genderContainers {
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: 100%;
+  max-width: 320px;
+  height: 320px;
   margin: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 10px;
   overflow: visible !important;
-
 }
 
 canvas {
@@ -286,7 +287,8 @@ canvas {
 
   .chart-workContainers,
   .chart-genderContainers {
-    height: 220px;
+    max-width: 240px;
+    height: 240px;
   }
 }
 
@@ -563,4 +565,35 @@ canvas {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   border: 3px solid rgba(255, 255, 255, 0.1);
   display: block;
+}
+
+/* View-Only Banner Styling */
+.view-only-banner {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.15);
+  margin: 15px 20px 0;
+  border-radius: 8px;
+  animation: slideDownFade 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.view-only-banner i {
+  font-size: 16px;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -13,6 +13,9 @@
       <div class="page-content">
         <router-outlet></router-outlet>
     <ng-container *ngIf="isDashboardHome">
+      <div class="view-only-banner" *ngIf="isAdmin">
+        <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
+      </div>
       <div class="card" *ngIf="dashboardError">
         {{ dashboardError }}
       </div>
@@ -280,10 +283,10 @@
                     <td>{{ req.duration_hours }} hrs</td>
                     <td>
                       <div style="display: flex; gap: 8px;">
-                        <button class="status-btn work" style="background: #10b981; color: white; border: none;" (click)="processRequest(req.id, 'APPROVE', 'Full')">
+                        <button class="status-btn work" [disabled]="isAdmin" style="background: #10b981; color: white; border: none;" (click)="processRequest(req.id, 'APPROVE', 'Full')">
                           Accept
                         </button>
-                        <button class="status-btn absent" (click)="processRequest(req.id, 'REJECT')" style="background: #ef4444; color: white; border: none;">
+                        <button class="status-btn absent" [disabled]="isAdmin" (click)="processRequest(req.id, 'REJECT')" style="background: #ef4444; color: white; border: none;">
                           Reject
                         </button>
                       </div>

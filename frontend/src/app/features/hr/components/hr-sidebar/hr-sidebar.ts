@@ -1,4 +1,4 @@
-import { Component, Input, OnInit} from '@angular/core';
+import { Component, Input, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -25,9 +25,13 @@ export interface MenuGroup {
   imports: [CommonModule, RouterModule],
   templateUrl: './hr-sidebar.html',
   styleUrl: './hr-sidebar.css',
+  host: {
+    '[class.collapsed]': 'collapsed'
+  }
 })
-export class HrSidebar {
+export class HrSidebar implements OnInit {
      isLogoutPopupOpen = false;
+     collapsed = false;
      @Input() menuConfig: MenuGroup[] = [
       { 
         groupName: 'Hr Dashboard',
@@ -36,7 +40,7 @@ export class HrSidebar {
               { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
               { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
               { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
-              { label: 'Login Activity', icon: 'fas fa-history', route: '/login-activity' },
+              { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },
               { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }
@@ -45,6 +49,17 @@ export class HrSidebar {
     
       constructor( private router: Router, private hrSidebarService: HrSidebarService, private readonly authService: AuthService) {
         this.isHrSidebarOpen$ = this.hrSidebarService.isHrSidebarOpen$;
+      }
+
+      @HostListener('window:resize', ['$event'])
+      onResize(event: any) {
+        this.checkMobileCollapse();
+      }
+
+      private checkMobileCollapse() {
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          this.hrSidebarService.setSidebarState(false);
+        }
       }
 
       handleLogout(item: MenuItem) {
@@ -64,11 +79,30 @@ export class HrSidebar {
 
     
       ngOnInit(): void {
+        const user = this.authService.getCurrentUser();
+        if (user?.role === 'admin') {
+          this.menuConfig = [
+            {
+              groupName: 'HR View (View Only)',
+              items: [
+                { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' },
+                { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' }
+              ]
+            }
+          ];
+        }
+
+        this.checkMobileCollapse();
+        this.isHrSidebarOpen$.subscribe(open => {
+          this.collapsed = !open;
+        });
+
         // Optionally auto-expand menu based on current route
         this.router.events.pipe(
           filter(event => event instanceof NavigationEnd)
         ).subscribe(() => {
           this.checkActiveRoutes();
+          this.checkMobileCollapse();
         });
         
         // Initial check

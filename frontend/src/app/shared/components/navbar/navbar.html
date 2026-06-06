@@ -21,21 +21,28 @@
             <i class="fas fa-search search-icon"></i>
         </div>
 
-        <div class="globeicon">
-            <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z" />
+        <div class="language-selector" (click)="toggleLanguageDropdown($event)">
+            <div class="globeicon">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M2 12H22M12 2C14.5 5 16 8 16 12C16 16 14.5 19 12 22C9.5 19 8 16 8 12C8 8 9.5 5 12 2Z" />
+                </svg>
+            </div>
+            <span class="languagename">{{ selectedLang === 'en' ? 'English' : selectedLang === 'hi' ? 'Hindi' : 'Spanish' }}</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24">
+                <path d="M6 9L12 15L18 9" />
             </svg>
-        </div>
 
-        <div class="language">
-            <mat-form-field appearance="outline">
-                <mat-select [(value)]="selectedLang">
-                    <mat-option value="en">English</mat-option>
-                    <mat-option value="hi">Hindi</mat-option>
-                    <mat-option value="es">Spanish</mat-option>
-                </mat-select>
-            </mat-form-field>
+            <!-- Language Dropdown Menu -->
+            <div class="lang-dropdown-menu" *ngIf="isLanguageDropdownOpen" (click)="$event.stopPropagation()">
+                <ul>
+                    <li><a style="cursor: pointer;" (click)="selectLanguage('en', $event)">English</a></li>
+                    <li class="divider"></li>
+                    <li><a style="cursor: pointer;" (click)="selectLanguage('hi', $event)">Hindi</a></li>
+                    <li class="divider"></li>
+                    <li><a style="cursor: pointer;" (click)="selectLanguage('es', $event)">Spanish</a></li>
+                </ul>
+            </div>
         </div>
 
         <div class="notification-container">

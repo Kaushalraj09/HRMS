@@ -124,7 +124,7 @@ def seed_users(db: Session):
             if not existing_hr:
                 existing_hr = HrUser(
                     user_id=existing_user.id,
-                    hr_code=f"HR-{existing_user.id:03d}",
+                    hr_code=f"EMP-{existing_user.id:04d}",
                     email=user_info["email"],
                     status="Active",
                     **hr_data
@@ -132,7 +132,7 @@ def seed_users(db: Session):
                 db.add(existing_hr)
                 print(f"Added demo HR profile: {user_info['email']}")
             else:
-                existing_hr.hr_code = f"HR-{existing_user.id:03d}"
+                existing_hr.hr_code = f"EMP-{existing_user.id:04d}"
                 existing_hr.full_name = hr_data["full_name"]
                 existing_hr.email = user_info["email"]
                 existing_hr.phone = hr_data["phone"]

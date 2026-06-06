@@ -28,7 +28,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: R
 
   // Protect Employee Dashboard
   if (url.includes('/emp-dashboard')) {
-    const isEmployeeMode = currentUser.role === 'employee' || currentUser.activeDashboard === 'EMPLOYEE';
+    const isEmployeeMode = currentUser.role === 'employee' || currentUser.role === 'admin' || currentUser.activeDashboard === 'EMPLOYEE';
     if (isEmployeeMode) {
       return true;
     }

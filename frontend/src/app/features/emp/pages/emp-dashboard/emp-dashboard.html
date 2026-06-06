@@ -13,7 +13,10 @@
       <div class="page-content">
         <router-outlet></router-outlet>
         <ng-container *ngIf="isDashboardHome">
-    <div class="card timezone">
+            <div class="view-only-banner" *ngIf="isAdmin">
+                <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
+            </div>
+            <div class="card timezone">
 
         <div class="empname">
             Welcome, {{ userName }}
@@ -32,8 +35,8 @@
                     <button 
                         class="status-btn work" 
                         [class.active]="status === 'Office'" 
-                        [disabled]="punchInTime !== null" 
-                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : 'Set to Office'"
+                        [disabled]="punchInTime !== null || isAdmin" 
+                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Office'"
                         (click)="requestSwitchWorkMode('Office')"
                     >
                     <span class="dot"></span> Office
@@ -41,8 +44,8 @@
                     <button 
                         class="status-btn break" 
                         [class.active]="status === 'Remote'" 
-                        [disabled]="punchInTime !== null" 
-                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : 'Set to Remote'"
+                        [disabled]="punchInTime !== null || isAdmin" 
+                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Remote'"
                         (click)="requestSwitchWorkMode('Remote')"
                     >
                     <span class="dot"></span> Remote
@@ -97,7 +100,7 @@
                 <div class="attendance-live__status" [title]="attendanceStatusLabel" [class.attendance-live__status--working]="isPunchedIn">
                     {{ attendanceStatusLabel }}
                 </div>
-                <div class="attendance-live__location" *ngIf="punchOutAddress || punchInAddress">
+                <div class="attendance-live__location" *ngIf="punchInTime && (punchOutAddress || punchInAddress)">
                     <i class="fas fa-map-marker-alt"></i>
                     <span>{{ punchOutAddress || punchInAddress }}</span>
                 </div>
@@ -191,7 +194,7 @@
                     <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
                     <p>Week {{ weekNumber }}</p>
                 </div>
-                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents" (dayClicked)="onDayClick($event.day)">
+                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents" (dayClicked)="isAdmin ? null : onDayClick($event.day)">
                 </mwl-calendar-month-view>
             </div>
             <div class="calendar-right">

@@ -45,6 +45,8 @@
   font-size: 24px;
   font-weight: 600;
   letter-spacing: 1px;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .profile-header-card .header-left .user-info h1 {
@@ -161,8 +163,15 @@
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .name-edit-group {
@@ -325,17 +334,52 @@
   border-radius: 4px;
 }
 
-.skeleton-wrapper .s-avatar { width: 72px; height: 72px; border-radius: 50%; }
-.skeleton-wrapper .s-line { height: 16px; margin-bottom: 8px; width: 100%; }
-.skeleton-wrapper .s-title { height: 24px; width: 40%; margin-bottom: 24px; }
-.skeleton-wrapper .s-text { height: 20px; width: 70%; }
+.skeleton-wrapper .s-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+}
 
-.skeleton-wrapper .s-badge { height: 32px; width: 80px; border-radius: 20px; display: inline-block; }
-.skeleton-wrapper .s-button { height: 36px; width: 120px; border-radius: 8px; display: inline-block; margin-left: 10px; }
+.skeleton-wrapper .s-line {
+  height: 16px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.skeleton-wrapper .s-title {
+  height: 24px;
+  width: 40%;
+  margin-bottom: 24px;
+}
+
+.skeleton-wrapper .s-text {
+  height: 20px;
+  width: 70%;
+}
+
+.skeleton-wrapper .s-badge {
+  height: 32px;
+  width: 80px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.skeleton-wrapper .s-button {
+  height: 36px;
+  width: 120px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-left: 10px;
+}
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @media (max-width: 768px) {
@@ -344,7 +388,7 @@
     align-items: flex-start;
     gap: 20px;
   }
-  
+
   .profile-header-card .header-right {
     width: 100%;
     flex-wrap: wrap;
@@ -426,13 +470,25 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.9) translateY(20px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
+  from {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 .avatar-modal-card .modal-header {
@@ -449,6 +505,7 @@
   margin: 0;
   background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -491,7 +548,8 @@
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
-.preview-section h3, .options-section h3 {
+.preview-section h3,
+.options-section h3 {
   font-size: 14px;
   color: #475569;
   font-weight: 600;
@@ -577,7 +635,8 @@
   margin: 16px 0;
 }
 
-.upload-divider::before, .upload-divider::after {
+.upload-divider::before,
+.upload-divider::after {
   content: '';
   flex: 1;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -746,13 +805,16 @@
 .edit-modal-card .modal-body::-webkit-scrollbar {
   width: 8px;
 }
+
 .edit-modal-card .modal-body::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .edit-modal-card .modal-body::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
 }
+
 .edit-modal-card .modal-body::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.15);
 }
@@ -894,4 +956,26 @@ select.form-input-premium {
 .edit-modal-card .modal-save-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(225, 29, 72, 0.3);
+}
+
+@media (max-width: 768px) {
+  .profile-wrapper {
+    padding: 16px 12px;
+  }
+  .profile-header-card {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .profile-header-card .header-left {
+    gap: 16px;
+  }
+  .profile-header-card .header-left .avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+  }
+  .profile-avatar-img {
+    width: 60px;
+    height: 60px;
+  }
 }

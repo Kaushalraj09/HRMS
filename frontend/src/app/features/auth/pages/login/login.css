@@ -454,10 +454,18 @@ input.ng-invalid.ng-touched {
   color: #4c1d95; /* deep purple color matching login primary brand */
 }
 
+.dashboard-option-btn.hr-mode .option-icon-wrapper i {
+  color: #e11d48 !important;
+}
+
+.dashboard-option-btn.emp-mode .option-icon-wrapper i {
+  color: #4c1d95 !important;
+}
+
 .option-title {
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1e293b !important;
   transition: color 0.4s ease;
   letter-spacing: -0.3px;
 }
@@ -465,7 +473,7 @@ input.ng-invalid.ng-touched {
 .arrow-icon {
   margin-left: auto;
   font-size: 14px;
-  color: #94a3b8;
+  color: #94a3b8 !important;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -483,12 +491,16 @@ input.ng-invalid.ng-touched {
   box-shadow: none;
 }
 
+.dashboard-option-btn:hover .option-icon-wrapper i {
+  color: #ffffff !important;
+}
+
 .dashboard-option-btn:hover .option-title {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .dashboard-option-btn:hover .arrow-icon {
-  color: #ffffff;
+  color: #ffffff !important;
   transform: translateX(4px);
 }
 

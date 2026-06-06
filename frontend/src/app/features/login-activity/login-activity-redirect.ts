@@ -19,20 +19,23 @@ export class LoginActivityRedirect implements OnInit {
       if (user) {
         const role = user.role.toLowerCase();
         const id = this.route.snapshot.paramMap.get('id');
-        let basePath = '';
         
         if (role === 'admin') {
-          basePath = '/master-dashboard';
+          const basePath = '/master-dashboard';
+          if (id) {
+            this.router.navigate([basePath, 'login-activity', id]);
+          } else {
+            this.router.navigate([basePath, 'login-activity']);
+          }
         } else if (role === 'hr') {
-          basePath = user.activeDashboard === 'EMPLOYEE' ? '/emp-dashboard' : '/hr-dashboard';
+          const basePath = '/hr-dashboard';
+          if (id) {
+            this.router.navigate([basePath, 'login-activity', id]);
+          } else {
+            this.router.navigate([basePath, 'login-activity']);
+          }
         } else {
-          basePath = '/emp-dashboard';
-        }
-        
-        if (id) {
-          this.router.navigate([basePath, 'login-activity', id]);
-        } else {
-          this.router.navigate([basePath, 'login-activity']);
+          this.router.navigate(['/emp-dashboard']);
         }
       } else {
         this.router.navigate(['/login']);

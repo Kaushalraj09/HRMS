@@ -1,12 +1,14 @@
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
 def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print("\n[WARNING] SMTP credentials are not defined in .env file!")
-        print(f"Skipping SMTP transmission for {to_email}. Reset link: {reset_link}\n")
+        logger.warning(f"SMTP credentials are not defined in .env file! Skipping SMTP transmission for {to_email}. Reset link: {reset_link}")
         return False
 
     # Create message container
@@ -121,7 +123,7 @@ def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
                 
                 <p class="content">If you are having trouble with the button, copy and paste the following URL directly into your web browser's address bar:</p>
                 <p class="content" style="word-break: break-all; font-size: 13px; background-color: #f8fafc; padding: 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: monospace; color: #64748b;">
-                    {reset_link}
+                     {reset_link}
                 </p>
                 
                 <div class="divider"></div>
@@ -153,8 +155,9 @@ def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(settings.SMTP_FROM or settings.SMTP_USER, to_email, msg.as_string())
         server.quit()
-        print(f"[SUCCESS] Real password reset email dispatched successfully to {to_email}")
+        logger.info(f"Real password reset email dispatched successfully to {to_email}")
         return True
     except Exception as e:
-        print(f"[ERROR] Failed to send SMTP email to {to_email}: {str(e)}")
+        logger.error(f"Failed to send SMTP email to {to_email}: {str(e)}")
         return False
+

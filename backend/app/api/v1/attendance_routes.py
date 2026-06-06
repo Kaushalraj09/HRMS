@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.employee import Employee
 from app.core.enums import WorkMode
-from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState
+from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics
 from app.services import attendance_service
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -180,6 +180,31 @@ def get_today_attendance_state(
 ):
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
     if not employee:
+        if current_user.role and current_user.role.name.lower() == "admin":
+            from datetime import time
+            return {
+                "employeeId": None,
+                "isWorking": False,
+                "status": "Not Marked",
+                "totalWorkedSeconds": 0,
+                "approvedSeconds": 0,
+                "remainingSeconds": 9 * 3600,
+                "shiftTotalSeconds": 9 * 3600,
+                "shiftElapsedSeconds": 0,
+                "shiftStart": "09:00 AM",
+                "shiftEnd": "06:00 PM",
+                "workMode": "Office",
+                "punchIn": None,
+                "punchOut": None,
+                "punchInLatitude": None,
+                "punchInLongitude": None,
+                "punchInAddress": None,
+                "punchOutLatitude": None,
+                "punchOutLongitude": None,
+                "punchOutAddress": None,
+                "punchInImage": None,
+                "punchOutImage": None
+            }
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only employees can view attendance state"
@@ -198,6 +223,8 @@ def get_my_history(
     """
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
     if not employee:
+        if current_user.role and current_user.role.name.lower() == "admin":
+            return []
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Only employees have attendance history"
@@ -246,3 +273,19 @@ def get_ip_location(request: Request):
             "regionName": "",
             "countryName": ""
         }
+
+@router.get("/employee-analytics", response_model=List[EmployeeAnalytics])
+def get_employee_analytics_dashboard(
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get dynamic today's and monthly attendance analytics for each employee (HR and Admin only).
+    """
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not authorized to view analytics"
+        )
+        
+    return attendance_service.get_employee_analytics(db)

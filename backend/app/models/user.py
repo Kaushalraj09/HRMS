@@ -1,7 +1,10 @@
+from typing import Optional
 from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.core.enums import UserRole
+
 
 class Role(Base):
     __tablename__ = "roles"
@@ -27,9 +30,9 @@ class User(Base):
         if not self.role:
             return ["EMPLOYEE"]
         role_name = self.role.name.lower()
-        if role_name == "admin":
+        if role_name == UserRole.ADMIN:
             return ["MASTER"]
-        elif role_name == "hr":
+        elif role_name == UserRole.HR:
             return ["HR", "EMPLOYEE"]
         else:
             return ["EMPLOYEE"]

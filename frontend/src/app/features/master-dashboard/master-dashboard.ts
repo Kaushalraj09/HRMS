@@ -5,7 +5,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { Sidebar } from '../../shared/components/sidebar/sidebar';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
 
 import { DashboardService } from '../../core/services/dashboard.service';
@@ -26,6 +27,7 @@ export class MasterDashboard implements OnInit {
   dashboardData: AdminDashboardData | null = null;
   userName = 'Admin';
   dashboardError = '';
+  isMainRoute = false;
 
   constructor(
     private sidebarService: SidebarService,
@@ -39,6 +41,24 @@ export class MasterDashboard implements OnInit {
   }
 
   ngOnInit() {
+    this.updateMainRouteState();
+
+    // Subscribe to router events to update route state dynamically
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.updateMainRouteState();
+      this.cdr.detectChanges();
+    });
+
+    // Subscribe to current user details dynamically
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.userName = user.displayName || 'System Admin';
+        this.cdr.detectChanges();
+      }
+    });
+
     this.dashboardService.getAdminDashboard().subscribe({
       next: (data) => {
         this.dashboardError = '';
@@ -56,8 +76,13 @@ export class MasterDashboard implements OnInit {
     this.sidebarService.toggleSidebar();
   }
 
+  private updateMainRouteState() {
+    const cleanUrl = this.router.url.split('?')[0].split('#')[0].replace(/\/$/, '');
+    this.isMainRoute = cleanUrl === '/master-dashboard' || cleanUrl === '/master-dashboard/main';
+  }
+
   isMainDashboardRoute(): boolean {
-    return this.router.url === '/master-dashboard' || this.router.url === '/master-dashboard/main';
+    return this.isMainRoute;
   }
   onSearch(event: any) {
     console.log('Search:', event);

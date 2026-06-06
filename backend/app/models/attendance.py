@@ -55,21 +55,4 @@ class Attendance(Base):
 
 
 
-class DailySummary(Base):
-    __tablename__ = "daily_summary"
-    __table_args__ = (
-        UniqueConstraint("employee_id", "date", name="uq_daily_summary_employee_date"),
-    )
 
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    date = Column(Date, nullable=False, server_default=func.current_date())
-    total_worked_hours = Column(Float, default=0.0, nullable=False)
-    overtime = Column(Integer, default=0, nullable=False)
-    late_minutes = Column(Integer, default=0, nullable=False)
-    early_leave = Column(Integer, default=0, nullable=False)
-
-    employee = relationship("Employee", backref="daily_summaries")
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

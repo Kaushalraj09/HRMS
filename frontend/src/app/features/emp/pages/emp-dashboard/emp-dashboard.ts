@@ -73,6 +73,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   status: WorkMode = 'Office';
   isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome = true;
+  isAdmin = false;
 
   isPunchedIn = false;
   punchInTime: string | null = null;
@@ -164,13 +165,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
-    this.isDashboardHome = this.router.url === '/emp-dashboard';
+    this.isDashboardHome = this.router.url.split('?')[0] === '/emp-dashboard';
     this.userName = this.authService.getDisplayName();
 
     this.subscriptions.add(
       this.router.events.subscribe((event) => {
         if (event instanceof NavigationEnd) {
-          this.isDashboardHome = event.urlAfterRedirects === '/emp-dashboard';
+          this.isDashboardHome = event.urlAfterRedirects.split('?')[0] === '/emp-dashboard';
+          this.cdr.markForCheck();
         }
       })
     );
@@ -178,6 +180,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const user = this.authService.getCurrentUser();
+    this.isAdmin = user?.role === 'admin';
+
     this.subscriptions.add(
       this.timeEngine.state$.subscribe((state) => {
         if (!state) return;
@@ -215,7 +220,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   get isPunchDisabled(): boolean {
-    return this.isPunchSaving || !!this.punchOutTime;
+    return this.isPunchSaving || !!this.punchOutTime || this.isAdmin;
   }
 
   get liveTimerDisplay(): string {

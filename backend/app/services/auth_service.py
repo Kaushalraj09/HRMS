@@ -1,4 +1,8 @@
+import logging
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
 from app.models.user import User
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
@@ -141,11 +145,7 @@ def forgot_password(db: Session, request):
     from app.services.mail_service import send_reset_email
     email_sent = send_reset_email(user.email, user.display_name, reset_link)
     
-    print(f"\n==================================================")
-    print(f"PASSWORD RESET REQUEST FOR: {user.email}")
-    print(f"RESET LINK: {reset_link}")
-    print(f"SMTP Email Dispatched: {'YES' if email_sent else 'NO (Check SMTP config in .env)'}")
-    print(f"==================================================\n")
+    logger.info(f"PASSWORD RESET REQUEST FOR: {user.email} | RESET LINK: {reset_link} | SMTP Email Dispatched: {'YES' if email_sent else 'NO (Check SMTP config in .env)'}")
     
     return reset_link
 

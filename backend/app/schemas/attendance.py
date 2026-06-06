@@ -111,6 +111,7 @@ class AttendanceResponse(BaseModel):
     break_minutes: int = Field(default=0, alias="breakMinutes")
     grand_total_minutes: int = Field(default=0, alias="grandTotalMinutes")
     late_minutes: int = Field(default=0, alias="lateMinutes")
+    early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
 
     @computed_field(alias="isWorking")
     @property
@@ -193,6 +194,7 @@ class AttendanceRecord(BaseModel):
     break_minutes: int = Field(default=0, alias="breakMinutes")
     grand_total_minutes: int = Field(default=0, alias="grandTotalMinutes")
     late_minutes: int = Field(default=0, alias="lateMinutes")
+    early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
     work_mode: Optional[WorkMode] = Field(None, alias="workMode")
     punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
     punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
@@ -219,3 +221,26 @@ class AttendanceListResponse(BaseModel):
     """List response for all attendance records."""
     data: List[AttendanceRecord]
     total: int
+
+class TodayAnalytics(BaseModel):
+    punch_in: Optional[str] = Field(default=None, alias="punchIn")
+    punch_out: Optional[str] = Field(default=None, alias="punchOut")
+    status: str
+    working_hours: str = Field(alias="workingHours")
+
+class MonthlyAnalytics(BaseModel):
+    present_days: int = Field(alias="presentDays")
+    absent_days: int = Field(alias="absentDays")
+    half_days: int = Field(alias="halfDays")
+    late_count: int = Field(alias="lateCount")
+    total_working_hours: str = Field(alias="totalWorkingHours")
+    total_overtime: str = Field(alias="totalOvertime")
+    attendance_percentage: float = Field(alias="attendancePercentage")
+
+class EmployeeAnalytics(BaseModel):
+    employee_id: int = Field(alias="employeeId")
+    employee_name: str = Field(alias="employeeName")
+    employee_code: str = Field(alias="employeeCode")
+    department: str
+    today: TodayAnalytics
+    monthly: MonthlyAnalytics

@@ -13,7 +13,7 @@ from sqlalchemy import func
 from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
-from app.models.attendance import Attendance, DailySummary
+from app.models.attendance import Attendance
 from app.models.timeoff import TimeOffRequest
 from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
@@ -33,49 +33,11 @@ SHIFT_TOTAL_SECONDS = int(TOTAL_SHIFT_WORKING_HOURS * 3600)
 
 def calculate_attendance_metrics(attendance: Attendance) -> None:
     """
-    Calculate working minutes, break, and overtime based on check_in and check_out times.
-    
-    Logic:
-    - Total duration = check_out - check_in
-    - Break = 60 min if span crosses lunch (13:00-14:00)
-    - Working minutes = total duration - break
-    - Overtime = working minutes beyond 480 min (8 hours)
-    - Grand total = total duration (not working + overtime)
-    
-    Args:
-        attendance: Attendance record to calculate metrics for
+    Calculate working minutes, break, overtime, and grand total based on check_in and check_out times.
+    Uses the new enterprise rules from time_calculator.
     """
-    if attendance.punch_in and attendance.punch_out:
-        rec_date = attendance.date or date.today()
-        first_in = datetime.combine(rec_date, attendance.punch_in)
-        last_out = datetime.combine(rec_date, attendance.punch_out)
-        
-        # Total session duration in minutes
-        total_duration_seconds = int((last_out - first_in).total_seconds())
-        total_duration_minutes = total_duration_seconds // 60
-        
-        # Calculate fixed lunch break when punch period spans lunch time
-        break_minutes = 0
-        if attendance.punch_in < time(13, 0) and attendance.punch_out > time(14, 0):
-            break_minutes = FIXED_BREAK_MINUTES
-        
-        # Working minutes = total duration minus break
-        working_minutes = max(0, total_duration_minutes - break_minutes)
-        
-        # Overtime = working minutes beyond 8 hours (480 minutes)
-        overtime_minutes = max(0, working_minutes - 480)
-        
-        # Grand total = total session duration (not working + overtime separately)
-        attendance.break_minutes = break_minutes
-        attendance.total_working_minutes = working_minutes
-        attendance.overtime_minutes = overtime_minutes
-        attendance.grand_total_minutes = total_duration_minutes
-    else:
-        # No punch data available
-        attendance.break_minutes = 0
-        attendance.total_working_minutes = 0
-        attendance.overtime_minutes = 0
-        attendance.grand_total_minutes = 0
+    from app.services.time_calculator import calculate_times
+    calculate_times(attendance)
 
 
 
@@ -143,81 +105,7 @@ def get_timeoff_duration_today(db: Session, employee_id: int) -> float:
     return get_timeoff_duration_for_date(db, employee_id, today)
 
 
-def upsert_daily_summary(db: Session, employee_id: int, target_date: date | None = None) -> DailySummary:
-    """
-    Generate or update daily summary for an employee.
-    
-    Calculates:
-    - Total worked hours
-    - Overtime minutes
-    - Late arrival minutes
-    - Early leave minutes
-    
-    Args:
-        db: Database session
-        employee_id: Employee to summarize
-        target_date: Date to summarize (default: today)
-        
-    Returns:
-        DailySummary: Generated summary record
-    """
-    summary_date = target_date or datetime.now(APP_TIMEZONE).date()
-    
-    # Get attendance record for the day
-    attendance = (
-        db.query(Attendance)
-        .filter(Attendance.employee_id == employee_id, Attendance.date == summary_date)
-        .first()
-    )
-    
-    if not attendance or not attendance.punch_in or not attendance.punch_out:
-        # No complete punch data for the day
-        return None
-    
-    # Calculate duration from punch_in to punch_out
-    check_in_dt = datetime.combine(summary_date, attendance.punch_in)
-    check_out_dt = datetime.combine(summary_date, attendance.punch_out)
-    total_seconds = int((check_out_dt - check_in_dt).total_seconds())
-    total_minutes = total_seconds // 60
-    
-    # Calculate late arrival
-    late_minutes = 0
-    check_in_minutes = attendance.punch_in.hour * 60 + attendance.punch_in.minute
-    shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-    if check_in_minutes > shift_start_minutes:
-        late_minutes = check_in_minutes - shift_start_minutes
-    
-    # Calculate early leave
-    early_leave = 0
-    check_out_minutes = attendance.punch_out.hour * 60 + attendance.punch_out.minute
-    shift_end_minutes = SHIFT_END.hour * 60 + SHIFT_END.minute
-    if check_out_minutes < shift_end_minutes:
-        early_leave = shift_end_minutes - check_out_minutes
-    
-    # Calculate overtime
-    overtime = max(0, total_minutes - int(TOTAL_SHIFT_WORKING_HOURS * 60))
-    
-    # Get or create summary record
-    summary = (
-        db.query(DailySummary)
-        .filter(DailySummary.employee_id == employee_id, DailySummary.date == summary_date)
-        .first()
-    )
-    
-    if not summary:
-        summary = DailySummary(employee_id=employee_id, date=summary_date)
-        db.add(summary)
-    
-    # Update summary fields
-    summary.total_worked_hours = round(total_seconds / 3600, 4)
-    summary.overtime = overtime
-    summary.late_minutes = late_minutes
-    summary.early_leave = early_leave
-    
-    db.commit()
-    db.refresh(summary)
-    
-    return summary
+
 
 
 def punch_in(
@@ -434,9 +322,6 @@ def punch_out(
     db.commit()
     db.refresh(attendance)
     
-    # Generate daily summary
-    upsert_daily_summary(db, employee_id, today)
-    
     return to_attendance_response(attendance)
 
 def get_today_state(db: Session, employee_id: int) -> dict:
@@ -563,13 +448,10 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
     """
     calculate_attendance_metrics(record)
     
-    # Calculate late minutes if punched in
-    late_minutes = 0
-    if record.punch_in:
-        check_in_minutes = record.punch_in.hour * 60 + record.punch_in.minute
-        shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-        if check_in_minutes > shift_start_minutes:
-            late_minutes = check_in_minutes - shift_start_minutes
+    # Calculate late minutes and early exit minutes
+    from app.services.time_calculator import calculate_late_minutes, calculate_early_exit_minutes
+    late_minutes = calculate_late_minutes(record.punch_in)
+    early_exit_minutes = calculate_early_exit_minutes(record.punch_out)
     
     return AttendanceResponse(
         id=record.id,
@@ -587,6 +469,7 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         break_minutes=record.break_minutes or 0,
         grand_total_minutes=record.grand_total_minutes or 0,
         late_minutes=late_minutes,
+        early_exit_minutes=early_exit_minutes,
         punch_in_latitude=record.punch_in_latitude,
         punch_in_longitude=record.punch_in_longitude,
         punch_in_address=record.punch_in_address,
@@ -688,13 +571,10 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
         calculate_attendance_metrics(record)
         employee_name = f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown Employee"
         
-        # Calculate late minutes
-        late_minutes = 0
-        if record.punch_in:
-            check_in_minutes = record.punch_in.hour * 60 + record.punch_in.minute
-            shift_start_minutes = SHIFT_START.hour * 60 + SHIFT_START.minute
-            if check_in_minutes > shift_start_minutes:
-                late_minutes = check_in_minutes - shift_start_minutes
+        # Calculate late minutes and early exit minutes
+        from app.services.time_calculator import calculate_late_minutes, calculate_early_exit_minutes
+        late_minutes = calculate_late_minutes(record.punch_in)
+        early_exit_minutes = calculate_early_exit_minutes(record.punch_out)
         
         formatted_data.append({
             "id": record.id,
@@ -713,6 +593,7 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "breakMinutes": record.break_minutes or 0,
             "grandTotalMinutes": record.grand_total_minutes or 0,
             "lateMinutes": late_minutes,
+            "earlyExitMinutes": early_exit_minutes,
             "workMode": record.work_mode,
             "punchInAddress": record.punch_in_address,
             "punchOutAddress": record.punch_out_address,
@@ -759,4 +640,141 @@ def update_today_work_mode(
     db.refresh(attendance)
     
     return get_today_state(db, employee_id)
+
+
+def get_employee_analytics(db: Session) -> list[dict]:
+    """
+    Calculate Today's and Monthly attendance analytics for each employee dynamically.
+    """
+    from app.services.time_calculator import (
+        get_attendance_status, 
+        calculate_late_minutes, 
+        calculate_early_exit_minutes
+    )
+    from app.models.employee import Employee
+    from app.models.user import User, Role
+    from datetime import timedelta
+    
+    # Get all active workforce employees (both employee and hr roles)
+    employees = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name).in_(["employee", "hr"]))
+        .all()
+    )
+    
+    today = datetime.now(APP_TIMEZONE).date()
+    start_date = date(today.year, today.month, 1)
+    
+    # Build calendar list of days from start_date to today
+    current_day = start_date
+    calendar_days = []
+    while current_day <= today:
+        calendar_days.append(current_day)
+        current_day += timedelta(days=1)
+        
+    analytics_data = []
+    
+    for emp in employees:
+        # Fetch all attendance records for this employee in the current month
+        records = (
+            db.query(Attendance)
+            .filter(Attendance.employee_id == emp.id, Attendance.date >= start_date, Attendance.date <= today)
+            .all()
+        )
+        record_map = {r.date: r for r in records}
+        
+        # Today's status
+        today_rec = record_map.get(today)
+        if today_rec:
+            calculate_attendance_metrics(today_rec)
+            today_punch_in = today_rec.punch_in
+            today_punch_out = today_rec.punch_out
+            today_status = get_attendance_status(today_punch_in, today_punch_out, today)
+            today_working_mins = today_rec.total_working_minutes or 0
+            today_working_hours = f"{today_working_mins // 60}h {today_working_mins % 60}m"
+        else:
+            today_punch_in = None
+            today_punch_out = None
+            today_status = get_attendance_status(None, None, today)
+            today_working_hours = "0h 0m"
+            
+        # Monthly aggregates
+        present_days = 0
+        absent_days = 0
+        half_days = 0
+        late_count = 0
+        total_working_minutes = 0
+        total_overtime_minutes = 0
+        
+        for d in calendar_days:
+            rec = record_map.get(d)
+            is_weekend = d.weekday() in (5, 6) # Sat, Sun
+            
+            if rec:
+                calculate_attendance_metrics(rec)
+                status = get_attendance_status(rec.punch_in, rec.punch_out, d)
+                
+                # Metrics
+                if status == "Present":
+                    present_days += 1
+                elif status == "Half Day":
+                    half_days += 1
+                elif status == "Absent":
+                    absent_days += 1
+                elif status == "Working":
+                    # Currently working today, let's treat it as present / working
+                    pass
+                
+                # Late arrival
+                late_mins = calculate_late_minutes(rec.punch_in)
+                if late_mins > 0:
+                    late_count += 1
+                    
+                total_working_minutes += (rec.total_working_minutes or 0)
+                total_overtime_minutes += (rec.overtime_minutes or 0)
+            else:
+                # No record
+                if is_weekend:
+                    # Skip weekends if no punch
+                    continue
+                
+                # Weekday with no punch
+                status = get_attendance_status(None, None, d)
+                if status == "Absent":
+                    absent_days += 1
+                    
+        # Attendance % = (Present + 0.5 * Half Day) / (Present + Half Day + Absent) * 100
+        total_work_days = present_days + half_days + absent_days
+        attendance_percentage = 100.0
+        if total_work_days > 0:
+            attendance_percentage = round(((present_days + 0.5 * half_days) / total_work_days) * 100, 2)
+            
+        total_working_hours_str = f"{total_working_minutes // 60}h {total_working_minutes % 60}m"
+        total_overtime_str = f"{total_overtime_minutes // 60}h {total_overtime_minutes % 60}m"
+        
+        analytics_data.append({
+            "employeeId": emp.id,
+            "employeeName": f"{emp.first_name} {emp.last_name}".strip(),
+            "employeeCode": normalize_employee_code(emp.employee_code) if emp.employee_code else f"EMP-{emp.id:04d}",
+            "department": emp.department or "Unassigned",
+            "today": {
+                "punchIn": today_punch_in.strftime("%H:%M") if today_punch_in else None,
+                "punchOut": today_punch_out.strftime("%H:%M") if today_punch_out else None,
+                "status": today_status,
+                "workingHours": today_working_hours
+            },
+            "monthly": {
+                "presentDays": present_days,
+                "absentDays": absent_days,
+                "halfDays": half_days,
+                "lateCount": late_count,
+                "totalWorkingHours": total_working_hours_str,
+                "totalOvertime": total_overtime_str,
+                "attendancePercentage": attendance_percentage
+            }
+        })
+        
+    return analytics_data
 

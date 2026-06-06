@@ -1,9 +1,12 @@
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from typing import List, Optional
 from datetime import datetime
 from app.models.notification import Notification
 from app.core.websocket_manager import manager
+
+logger = logging.getLogger(__name__)
 
 async def create_notification(
     db: Session,
@@ -43,14 +46,23 @@ async def create_notification(
             user_id
         )
     except Exception as e:
-        print(f"Error sending websocket notification: {e}")
+        logger.error(f"Error sending websocket notification: {e}")
+
 
     return notification
 
 def get_user_notifications(db: Session, user_id: int, limit: int = 50) -> List[Notification]:
+    from datetime import datetime, timedelta, time
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+    
+    current = datetime.now(APP_TIMEZONE)
+    yesterday_date = current.date() - timedelta(days=1)
+    cutoff = datetime.combine(yesterday_date, time.min, tzinfo=APP_TIMEZONE)
+    
     return (
         db.query(Notification)
-        .filter(Notification.user_id == user_id)
+        .filter(Notification.user_id == user_id, Notification.created_at >= cutoff)
         .order_by(Notification.created_at.desc())
         .limit(limit)
         .all()

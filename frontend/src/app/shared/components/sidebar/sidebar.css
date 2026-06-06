@@ -1,24 +1,26 @@
 :host {
   display: block;
   height: 100%;
+  width: 250px;
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+}
+
+:host.collapsed {
+  width: 70px;
 }
 
 .sidebar {
-  width: 250px;
+  width: 100%;
   height: 100%;
   background-color: #2a3542;
   color: #aeb2b7;
-  transition: width 0.3s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1000;
   box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-}
-
-.sidebar.collapsed {
-  width: 70px;
 }
 
 .menu-container {
@@ -287,4 +289,27 @@
 @keyframes fadeInEffect {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  :host {
+    width: 0 !important;
+    position: absolute;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 50px; /* aligned with 50px navbar height */
+    bottom: 0;
+    height: calc(100vh - 50px);
+    z-index: 1001;
+    width: 250px;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+  }
+  
+  :host.collapsed .sidebar {
+    width: 250px; /* Keep same width when sliding out */
+    transform: translateX(-100%);
+  }
 }

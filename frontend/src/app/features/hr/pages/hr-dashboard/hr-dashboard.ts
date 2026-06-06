@@ -27,6 +27,7 @@ export class HrDashboard implements OnInit {
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
   userName = 'HR User';
+  isAdmin = false;
   pendingRequests: any[] = [];
   processedRequests: any[] = [];
   recentTimeSheets: any[] = [];
@@ -55,16 +56,20 @@ export class HrDashboard implements OnInit {
     private readonly cdr: ChangeDetectorRef
   ) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
-      this.isDashboardHome = this.router.url === '/hr-dashboard';
+      this.isDashboardHome = this.router.url.split('?')[0] === '/hr-dashboard';
       this.userName = this.authService.getDisplayName();
       this.router.events.subscribe((event) => {
         if (event instanceof NavigationEnd) {
-          this.isDashboardHome = event.urlAfterRedirects === '/hr-dashboard';
+          this.isDashboardHome = event.urlAfterRedirects.split('?')[0] === '/hr-dashboard';
+          this.cdr.detectChanges();
         }
       });
   }
 
   ngOnInit() {
+    const user = this.authService.getCurrentUser();
+    this.isAdmin = user?.role === 'admin';
+
     this.dashboardService.getHrDashboard().subscribe({
       next: (data) => {
         this.dashboardError = '';
@@ -115,7 +120,6 @@ export class HrDashboard implements OnInit {
     // this.loadPendingRequests();
     // this.loadProcessedRequests();
 
-    const user = this.authService.getCurrentUser();
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
     }
@@ -219,10 +223,10 @@ export class HrDashboard implements OnInit {
 
     layout: {
       padding: {
-        top: 50,
-        bottom: 40,
-        left: 50,
-        right: 50,
+        top: 20,
+        bottom: 20,
+        left: 45,
+        right: 45,
       },
     },
 
@@ -275,10 +279,10 @@ export class HrDashboard implements OnInit {
 
     layout: {
       padding: {
-        top: 50,
-        bottom: 40,
-        left: 50,
-        right: 50,
+        top: 20,
+        bottom: 20,
+        left: 45,
+        right: 45,
       },
     },
 
@@ -325,12 +329,12 @@ export class HrDashboard implements OnInit {
           const startY = y + Math.sin(angle) * outerRadius;
 
 
-          const lineLength = 12;
+          const lineLength = 8;
           const midX = startX + Math.cos(angle) * lineLength;
           const midY = startY + Math.sin(angle) * lineLength;
 
 
-          const horizontalLength = 5;
+          const horizontalLength = 4;
           const endX = midX + (Math.cos(angle) >= 0 ? horizontalLength : -horizontalLength);
           const endY = midY;
 
@@ -350,9 +354,8 @@ export class HrDashboard implements OnInit {
           ctx.stroke();
           ctx.restore();
           const label = chart.data.labels[index];
-          ctx.fillStyle = '#000';
-          ctx.font = '12px Arial';
-          ctx.weight = 'bold';
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 11px Arial';
           ctx.textAlign = Math.cos(angle) >= 0 ? 'left' : 'right';
           ctx.textBaseline = 'middle';
 

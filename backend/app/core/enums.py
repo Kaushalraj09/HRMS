@@ -20,3 +20,11 @@ class AttendanceStatus(str, Enum):
 
     def __str__(self):
         return self.value
+
+
+class UserRole(str, Enum):
+    """Valid user roles in the system."""
+    ADMIN = "admin"
+    HR = "hr"
+    EMPLOYEE = "employee"
+

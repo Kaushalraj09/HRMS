@@ -19,13 +19,10 @@
                     <div class="card" *ngIf="dashboardError">
                         {{ dashboardError }}
                     </div>
-                    <div class="card ">
-
-                        <div class="empname">
-                            Welcome, {{ userName }}
-                        </div>
-                        <div class="dashboard">
-                            Master Dashboard
+                    <div class="card welcome-card">
+                        <div class="welcome-text">
+                            <h2 class="empname">Welcome, {{ userName }}</h2>
+                            <p class="dashboard-subtitle">Master Dashboard &bull; Admin Control Center</p>
                         </div>
                     </div>
 
@@ -49,40 +46,42 @@
                             <h3 class="project_title">HR Users</h3>
                             <div class="divider"></div>
 
-                            <table class="client-table">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Department</th>
-                                        <th>Status</th>
-                                        <th class="text-center">Details</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let client of hrUsers">
-                                        <td class="name-cell">
-                                            <div class="avatar_client">
-                                                <i class="fas fa-user-shield"></i>
-                                            </div>
-                                            <div>
-                                                <div class="name">{{ client.primary }}</div>
-                                                <div class="role">{{ client.secondary }}</div>
-                                            </div>
-                                        </td>
+                            <div class="table-responsive">
+                                <table class="client-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Department</th>
+                                            <th>Status</th>
+                                            <th class="text-center">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let client of hrUsers">
+                                            <td class="name-cell">
+                                                <div class="avatar_client">
+                                                    <i class="fas fa-user-shield"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="name">{{ client.primary }}</div>
+                                                    <div class="role">{{ client.secondary }}</div>
+                                                </div>
+                                            </td>
 
-                                        <td>{{ client.tertiary }}</td>
+                                            <td>{{ client.tertiary }}</td>
 
-                                        <td>
-                                            <span class="status">{{ client.status }}</span>
-                                        </td>
+                                            <td>
+                                                <span class="status">{{ client.status }}</span>
+                                            </td>
 
-                                        <td class="text-center">
-                                            <a routerLink="/master-dashboard/hr-users" class="action-icon">View list</a>
-                                        </td>
+                                            <td class="text-center">
+                                                <a routerLink="/master-dashboard/hr-users" class="action-icon">View list</a>
+                                            </td>
 
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                             <div class="footer">
                                 <a routerLink="/master-dashboard/hr-users">View all HR users</a>
                             </div>

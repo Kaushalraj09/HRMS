@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { SidebarService } from './sidebar.service';
@@ -24,17 +24,21 @@ export interface MenuGroup {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './sidebar.html',
-  styleUrls: ['./sidebar.css']
+  styleUrls: ['./sidebar.css'],
+  host: {
+    '[class.collapsed]': 'collapsed'
+  }
 })
 export class Sidebar implements OnInit {
   isLogoutPopupOpen = false;
+  collapsed = false;
   @Input() menuConfig: MenuGroup[] = [
     {
       groupName: 'Main',
       items: [
         { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' },
         { label: 'My Profile', icon: 'far fa-user', route: '/master-dashboard/my-profile' },
-        { label: 'Login Activity', icon: 'fas fa-history', route: '/login-activity' }
+        { label: 'Login Activity', icon: 'fas fa-history', route: '/master-dashboard/login-activity' }
       ]
     },
     {
@@ -72,6 +76,17 @@ export class Sidebar implements OnInit {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
   }
 
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.checkMobileCollapse();
+  }
+
+  private checkMobileCollapse() {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      this.sidebarService.setSidebarState(false);
+    }
+  }
+
   handleLogout(item: MenuItem) {
     if (item.isLogout) {
       this.isLogoutPopupOpen = true;
@@ -89,11 +104,16 @@ export class Sidebar implements OnInit {
 
 
   ngOnInit(): void {
+    this.checkMobileCollapse();
+    this.isSidebarOpen$.subscribe(open => {
+      this.collapsed = !open;
+    });
     // Optionally auto-expand menu based on current route
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.checkActiveRoutes();
+      this.checkMobileCollapse();
     });
     
     // Initial check

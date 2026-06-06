@@ -51,9 +51,7 @@ export const routes: Routes = [
     children: [
       { path: 'my-attendance', component: MyAttendance },
       { path: 'my-profile', component: MyProfile },
-      { path: 'change-password', component: ChangePasswordComponent },
-      { path: 'login-activity', component: LoginActivityList },
-      { path: 'login-activity/:id', component: LoginActivityDetail }
+      { path: 'change-password', component: ChangePasswordComponent }
     ]
   },
   {
