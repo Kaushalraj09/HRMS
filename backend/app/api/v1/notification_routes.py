@@ -24,6 +24,14 @@ def get_unread_count(
     count = notification_service.get_unread_count(db, current_user.id)
     return {"unread_count": count}
 
+@router.put("/mark-all-read", response_model=NotificationUnreadCount)
+def mark_all_read(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    unread_count = notification_service.mark_all_notifications_read(db, current_user.id)
+    return {"unread_count": unread_count}
+
 @router.put("/{id}/mark-read", response_model=NotificationResponse)
 def mark_read(
     id: int,

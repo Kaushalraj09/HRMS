@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy import or_
 from app.models.notification import Notification
 from app.core.websocket_manager import manager
 
@@ -62,13 +63,31 @@ def get_user_notifications(db: Session, user_id: int, limit: int = 50) -> List[N
     
     return (
         db.query(Notification)
-        .filter(Notification.user_id == user_id, Notification.created_at >= cutoff)
+        .filter(
+            Notification.user_id == user_id,
+            or_(Notification.created_at >= cutoff, Notification.is_read == False)
+        )
         .order_by(Notification.created_at.desc())
         .limit(limit)
         .all()
     )
 
 def get_unread_count(db: Session, user_id: int) -> int:
+    return (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.is_read == False)
+        .count()
+    )
+
+def mark_all_notifications_read(db: Session, user_id: int):
+    db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False
+    ).update(
+        {Notification.is_read: True, Notification.read_at: func.now()},
+        synchronize_session=False
+    )
+    db.commit()
     return (
         db.query(Notification)
         .filter(Notification.user_id == user_id, Notification.is_read == False)

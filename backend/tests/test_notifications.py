@@ -21,8 +21,8 @@ def test_get_user_notifications_two_days():
     n1 = Notification(user_id=user_id, type="TEST", title="Today", message="test", created_at=now)
     # 2. Yesterday's notification (still within 2-day window)
     n2 = Notification(user_id=user_id, type="TEST", title="Yesterday", message="test", created_at=now - timedelta(days=1))
-    # 3. Two days ago (before cutoff) notification
-    n3 = Notification(user_id=user_id, type="TEST", title="3 Days Ago", message="test", created_at=now - timedelta(days=2))
+    # 3. Two days ago (before cutoff) notification, marked read
+    n3 = Notification(user_id=user_id, type="TEST", title="3 Days Ago", message="test", created_at=now - timedelta(days=2), is_read=True)
     
     db.add_all([n1, n2, n3])
     db.commit()
@@ -32,5 +32,31 @@ def test_get_user_notifications_two_days():
     assert len(notifications) == 2
     assert notifications[0].title == "Today"
     assert notifications[1].title == "Yesterday"
+    
+    db.close()
+
+def test_get_user_notifications_old_unread():
+    # Setup in-memory SQLite DB
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = TestingSessionLocal()
+    
+    user_id = 1
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+    now = datetime.now(APP_TIMEZONE)
+    
+    # 1. Today's notification
+    n1 = Notification(user_id=user_id, type="TEST", title="Today", message="test", created_at=now)
+    # 2. Old but unread notification
+    n2 = Notification(user_id=user_id, type="TEST", title="Old Unread", message="test", created_at=now - timedelta(days=5), is_read=False)
+    
+    db.add_all([n1, n2])
+    db.commit()
+    
+    notifications = get_user_notifications(db, user_id=user_id)
+    
+    assert len(notifications) == 2
+    assert any(n.title == "Old Unread" for n in notifications)
     
     db.close()
