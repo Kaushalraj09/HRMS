@@ -254,6 +254,7 @@
   display: flex;
   justify-content: center;
   gap: 20px;
+  
 }
 
 .yes-btn, .no-btn {
