@@ -1,0 +1,2940 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 21 /Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R 25 0 R 27 0 R 29 0 R 31 0 R 33 0 R 35 0 R 37 0 R 39 0 R 41 0 R 43 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1967 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Phase 2 Backend Implementation Guide) Tj
+T*
+() Tj
+T*
+(1. What This Document Is For) Tj
+T*
+() Tj
+T*
+(This is the **detailed Phase 2 backend implementation guide** for the Aivan HRMS Portal.) Tj
+T*
+() Tj
+T*
+(It is written for a developer who may still be building confidence with backend work and needs) Tj
+T*
+(a practical roadmap.) Tj
+T*
+() Tj
+T*
+(This guide explains:) Tj
+T*
+() Tj
+T*
+(- what Phase 2 backend should add) Tj
+T*
+(- what existing backend code can be reused) Tj
+T*
+(- which modules should be completed first) Tj
+T*
+(- what database tables should be added or extended) Tj
+T*
+(- which APIs frontend will need) Tj
+T*
+(- how to implement the workflows safely) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(2. Current Backend Baseline) Tj
+T*
+() Tj
+T*
+(The backend already contains these important pieces:) Tj
+T*
+() Tj
+T*
+(- FastAPI app) Tj
+T*
+(- auth routes) Tj
+T*
+(- employee routes) Tj
+T*
+(- HR routes) Tj
+T*
+(- attendance routes) Tj
+T*
+(- dashboard routes) Tj
+T*
+(- profile routes) Tj
+T*
+(- notification routes) Tj
+T*
+(- login activity routes) Tj
+T*
+(- partial time off implementation) Tj
+T*
+(- migrations) Tj
+T*
+(- services and repository-style structure) Tj
+T*
+() Tj
+T*
+(This means Phase 2 backend should be approached as:) Tj
+T*
+() Tj
+T*
+(- complete existing partial modules) Tj
+T*
+(- normalize contracts) Tj
+T*
+(- extend schema cleanly) Tj
+T*
+(- improve workflow integrity) Tj
+T*
+() Tj
+T*
+(It should **not** be treated as a brand-new backend project.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(3. Phase 2 Backend Goal) Tj
+T*
+() Tj
+T*
+(Phase 2 backend should make the product operationally stronger by introducing:) Tj
+T*
+() Tj
+T*
+(- request and approval workflows) Tj
+T*
+(- admin-managed master data) Tj
+T*
+(- audit-friendly state changes) Tj
+T*
+(- reporting endpoints) Tj
+T*
+(- cleaner ownership of filtering, pagination, and aggregates) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(4. Phase 2 Backend Scope) Tj
+T*
+() Tj
+T*
+(Must Build) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 1662 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(1. complete time off module) Tj
+T*
+(2. approval center APIs) Tj
+T*
+(3. attendance regularization workflow) Tj
+T*
+(4. master data CRUD APIs) Tj
+T*
+(5. report and export APIs) Tj
+T*
+(6. stronger notification integration) Tj
+T*
+(7. refined login activity and security flows) Tj
+T*
+() Tj
+T*
+(Must Improve) Tj
+T*
+() Tj
+T*
+(1. server-side filtering) Tj
+T*
+(2. server-side pagination) Tj
+T*
+(3. response consistency) Tj
+T*
+(4. role-based authorization clarity) Tj
+T*
+(5. migration discipline) Tj
+T*
+() Tj
+T*
+(Not Required In Phase 2) Tj
+T*
+() Tj
+T*
+(- payroll engine) Tj
+T*
+(- payslip generation) Tj
+T*
+(- reimbursement accounting) Tj
+T*
+(- appraisal engine) Tj
+T*
+(- recruitment workflow) Tj
+T*
+(- multi-company architecture) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(5. First Important Rule) Tj
+T*
+() Tj
+T*
+(Do not build Phase 2 as one giant module.) Tj
+T*
+() Tj
+T*
+(Build by workflow.) Tj
+T*
+() Tj
+T*
+(Recommended order:) Tj
+T*
+() Tj
+T*
+(1. cleanup and shared infrastructure) Tj
+T*
+(2. time off) Tj
+T*
+(3. approval center) Tj
+T*
+(4. attendance regularization) Tj
+T*
+(5. master data) Tj
+T*
+(6. reports) Tj
+T*
+(7. security refinements) Tj
+T*
+() Tj
+T*
+(This is important because later modules depend on earlier ones.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6. Recommended Backend Architecture For Phase 2) Tj
+T*
+() Tj
+T*
+(Keep the existing modular monolith structure.) Tj
+T*
+() Tj
+T*
+(Recommended layer pattern:) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(Route -> Schema -> Service -> Repository/Model -> Database) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Route Layer) Tj
+T*
+() Tj
+T*
+(Only HTTP details should live here:) Tj
+T*
+() Tj
+T*
+(- path params) Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 1740 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- query params) Tj
+T*
+(- auth dependencies) Tj
+T*
+(- response models) Tj
+T*
+() Tj
+T*
+(Service Layer) Tj
+T*
+() Tj
+T*
+(Business rules should live here:) Tj
+T*
+() Tj
+T*
+(- request validation) Tj
+T*
+(- approval rules) Tj
+T*
+(- balance calculations) Tj
+T*
+(- status transitions) Tj
+T*
+(- notification triggering) Tj
+T*
+() Tj
+T*
+(Repository Layer) Tj
+T*
+() Tj
+T*
+(DB query patterns should live here when queries become complex:) Tj
+T*
+() Tj
+T*
+(- filtered lists) Tj
+T*
+(- summary aggregates) Tj
+T*
+(- export queries) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(7. Backend Folder Expansion) Tj
+T*
+() Tj
+T*
+(Suggested expansion of the current backend:) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(backend/app/) Tj
+T*
+(??? api/v1/) Tj
+T*
+(?   ??? approval_routes.py) Tj
+T*
+(?   ??? master_data_routes.py) Tj
+T*
+(?   ??? regularization_routes.py) Tj
+T*
+(?   ??? report_routes.py) Tj
+T*
+(?   ??? timeoff_routes.py) Tj
+T*
+(??? models/) Tj
+T*
+(?   ??? attendance_regularization.py) Tj
+T*
+(?   ??? approval_task.py) Tj
+T*
+(?   ??? department.py) Tj
+T*
+(?   ??? designation.py) Tj
+T*
+(?   ??? shift.py) Tj
+T*
+(?   ??? work_location.py) Tj
+T*
+(?   ??? leave_type.py) Tj
+T*
+(?   ??? holiday_calendar.py) Tj
+T*
+(??? schemas/) Tj
+T*
+(?   ??? approval.py) Tj
+T*
+(?   ??? regularization.py) Tj
+T*
+(?   ??? master_data.py) Tj
+T*
+(?   ??? report.py) Tj
+T*
+(??? services/) Tj
+T*
+(?   ??? approval_service.py) Tj
+T*
+(?   ??? regularization_service.py) Tj
+T*
+(?   ??? master_data_service.py) Tj
+T*
+(?   ??? report_service.py) Tj
+T*
+(??? repositories/) Tj
+T*
+(    ??? approval_repository.py) Tj
+T*
+(    ??? regularization_repository.py) Tj
+T*
+(    ??? master_data_repository.py) Tj
+T*
+(    ??? report_repository.py) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 1502 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(8. Core Workflow Design) Tj
+T*
+() Tj
+T*
+(Phase 2 backend revolves around three important workflow types:) Tj
+T*
+() Tj
+T*
+(1. request workflows) Tj
+T*
+(2. approval workflows) Tj
+T*
+(3. audit workflows) Tj
+T*
+() Tj
+T*
+(Request Workflow) Tj
+T*
+() Tj
+T*
+(Example:) Tj
+T*
+() Tj
+T*
+(- employee submits time off) Tj
+T*
+(- employee submits attendance correction) Tj
+T*
+() Tj
+T*
+(Approval Workflow) Tj
+T*
+() Tj
+T*
+(Example:) Tj
+T*
+() Tj
+T*
+(- HR reviews request) Tj
+T*
+(- HR approves or rejects) Tj
+T*
+(- admin may review escalated items) Tj
+T*
+() Tj
+T*
+(Audit Workflow) Tj
+T*
+() Tj
+T*
+(Every important action should leave a trace:) Tj
+T*
+() Tj
+T*
+(- who submitted) Tj
+T*
+(- who approved or rejected) Tj
+T*
+(- when it happened) Tj
+T*
+(- what changed) Tj
+T*
+(- comment or reason if relevant) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9. Phase 2 Master Data Design) Tj
+T*
+() Tj
+T*
+(Phase 1 forms already need stable dropdown values.) Tj
+T*
+() Tj
+T*
+(Phase 2 should move these into database-managed master tables.) Tj
+T*
+() Tj
+T*
+(Required Master Tables) Tj
+T*
+() Tj
+T*
+(1. `departments`) Tj
+T*
+(2. `designations`) Tj
+T*
+(3. `shifts`) Tj
+T*
+(4. `work_locations`) Tj
+T*
+(5. `leave_types`) Tj
+T*
+(6. `holidays`) Tj
+T*
+() Tj
+T*
+(Suggested Common Columns) Tj
+T*
+() Tj
+T*
+(Each master table should have:) Tj
+T*
+() Tj
+T*
+(- `id`) Tj
+T*
+(- `name`) Tj
+T*
+(- `code`) Tj
+T*
+(- `description`) Tj
+T*
+(- `is_active`) Tj
+T*
+(- `created_at`) Tj
+T*
+(- `updated_at`) Tj
+T*
+(- `created_by`) Tj
+T*
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 1898 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- `updated_by`) Tj
+T*
+() Tj
+T*
+(This keeps behavior consistent across admin-managed reference data.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(10. Exact Database Schema Additions) Tj
+T*
+() Tj
+T*
+(10.1 `leave_types`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- stores allowed leave categories) Tj
+T*
+() Tj
+T*
+(Columns:) Tj
+T*
+() Tj
+T*
+(- `id` bigint primary key) Tj
+T*
+(- `name` varchar\(100\) not null unique) Tj
+T*
+(- `code` varchar\(30\) not null unique) Tj
+T*
+(- `unit_type` varchar\(20\) not null) Tj
+T*
+(- `default_balance_hours` numeric\(10,2\) not null default 0) Tj
+T*
+(- `requires_approval` boolean not null default true) Tj
+T*
+(- `is_active` boolean not null default true) Tj
+T*
+(- `created_at` timestamptz not null default now\(\)) Tj
+T*
+(- `updated_at` timestamptz not null default now\(\)) Tj
+T*
+() Tj
+T*
+(Examples:) Tj
+T*
+() Tj
+T*
+(- Casual Leave) Tj
+T*
+(- Sick Leave) Tj
+T*
+(- Work From Home) Tj
+T*
+(- Comp Off) Tj
+T*
+() Tj
+T*
+(10.2 `holidays`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- stores holiday calendar) Tj
+T*
+() Tj
+T*
+(Columns:) Tj
+T*
+() Tj
+T*
+(- `id` bigint primary key) Tj
+T*
+(- `holiday_date` date not null unique) Tj
+T*
+(- `name` varchar\(120\) not null) Tj
+T*
+(- `description` text null) Tj
+T*
+(- `is_optional` boolean not null default false) Tj
+T*
+(- `is_active` boolean not null default true) Tj
+T*
+(- `created_at` timestamptz not null default now\(\)) Tj
+T*
+(- `updated_at` timestamptz not null default now\(\)) Tj
+T*
+() Tj
+T*
+(10.3 `attendance_regularization_requests`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- employee asks HR to correct missed or wrong attendance) Tj
+T*
+() Tj
+T*
+(Columns:) Tj
+T*
+() Tj
+T*
+(- `id` bigint primary key) Tj
+T*
+(- `employee_id` bigint not null references employees\(id\)) Tj
+T*
+(- `attendance_date` date not null) Tj
+T*
+(- `requested_punch_in` time null) Tj
+T*
+(- `requested_punch_out` time null) Tj
+T*
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 2347 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- `reason_type` varchar\(50\) not null) Tj
+T*
+(- `reason_text` text not null) Tj
+T*
+(- `status` varchar\(20\) not null default 'pending') Tj
+T*
+(- `reviewed_by` bigint null references users\(id\)) Tj
+T*
+(- `reviewed_at` timestamptz null) Tj
+T*
+(- `review_comment` text null) Tj
+T*
+(- `created_at` timestamptz not null default now\(\)) Tj
+T*
+(- `updated_at` timestamptz not null default now\(\)) Tj
+T*
+() Tj
+T*
+(Important unique rule:) Tj
+T*
+() Tj
+T*
+(- one active pending request per employee per attendance date) Tj
+T*
+() Tj
+T*
+(10.4 `approval_tasks`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- creates one central queue for requests needing approval) Tj
+T*
+() Tj
+T*
+(Columns:) Tj
+T*
+() Tj
+T*
+(- `id` bigint primary key) Tj
+T*
+(- `request_type` varchar\(30\) not null) Tj
+T*
+(- `request_id` bigint not null) Tj
+T*
+(- `employee_id` bigint not null references employees\(id\)) Tj
+T*
+(- `assigned_role` varchar\(20\) not null default 'hr') Tj
+T*
+(- `status` varchar\(20\) not null default 'pending') Tj
+T*
+(- `priority` varchar\(20\) not null default 'normal') Tj
+T*
+(- `submitted_by` bigint not null references users\(id\)) Tj
+T*
+(- `reviewed_by` bigint null references users\(id\)) Tj
+T*
+(- `reviewed_at` timestamptz null) Tj
+T*
+(- `decision_comment` text null) Tj
+T*
+(- `created_at` timestamptz not null default now\(\)) Tj
+T*
+(- `updated_at` timestamptz not null default now\(\)) Tj
+T*
+() Tj
+T*
+(Important note:) Tj
+T*
+() Tj
+T*
+(This table lets frontend show one single approval center instead of reading separate tables) Tj
+T*
+(directly.) Tj
+T*
+() Tj
+T*
+(10.5 Extend `timeoff_requests`) Tj
+T*
+() Tj
+T*
+(Current table already exists.) Tj
+T*
+() Tj
+T*
+(Add or confirm these fields:) Tj
+T*
+() Tj
+T*
+(- `leave_type_id` bigint null references leave_types\(id\)) Tj
+T*
+(- `status` varchar\(20\) not null default 'pending') Tj
+T*
+(- `reviewed_by` bigint null references users\(id\)) Tj
+T*
+(- `reviewed_at` timestamptz null) Tj
+T*
+(- `review_comment` text null) Tj
+T*
+(- `requested_hours` numeric\(10,2\) not null default 0) Tj
+T*
+(- `approved_hours` numeric\(10,2\) null) Tj
+T*
+(- `is_cancelled` boolean not null default false) Tj
+T*
+() Tj
+T*
+(10.6 Extend `employees`) Tj
+T*
+() Tj
+T*
+(Add or confirm:) Tj
+T*
+() Tj
+T*
+(- `department_id`) Tj
+T*
+(- `designation_id`) Tj
+T*
+(- `shift_id`) Tj
+T*
+(- `work_location_id`) Tj
+T*
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 2150 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- `reporting_manager_id` optional) Tj
+T*
+(- `employment_status`) Tj
+T*
+(- `join_date`) Tj
+T*
+(- `timeoff_balance_hours`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(10.7 Exact SQLAlchemy And Pydantic Type Direction) Tj
+T*
+() Tj
+T*
+(This section is important for a fresher developer.) Tj
+T*
+() Tj
+T*
+(It clearly says which backend type to use.) Tj
+T*
+() Tj
+T*
+(SQLAlchemy Type Mapping) Tj
+T*
+() Tj
+T*
+(Use these standard mappings:) Tj
+T*
+() Tj
+T*
+(- `id`: `Mapped[int]` with `BigInteger` or `Integer`) Tj
+T*
+(- text name fields: `Mapped[str]` with `String\(length\)`) Tj
+T*
+(- long notes: `Mapped[str | None]` with `Text`) Tj
+T*
+(- flags: `Mapped[bool]` with `Boolean`) Tj
+T*
+(- decimal hours: `Mapped[Decimal]` or `Mapped[float]` with `Numeric\(10, 2\)`) Tj
+T*
+(- timestamps: `Mapped[datetime]` with `DateTime\(timezone=True\)`) Tj
+T*
+(- pure dates: `Mapped[date]` with `Date`) Tj
+T*
+(- pure time values: `Mapped[time | None]` with `Time`) Tj
+T*
+() Tj
+T*
+(Pydantic Field Type Mapping) Tj
+T*
+() Tj
+T*
+(Use these field types in request and response schemas:) Tj
+T*
+() Tj
+T*
+(- `id`: `int`) Tj
+T*
+(- `name`: `str`) Tj
+T*
+(- `description`: `str | None`) Tj
+T*
+(- `is_active`: `bool`) Tj
+T*
+(- `date`: `date`) Tj
+T*
+(- `timestamp`: `datetime`) Tj
+T*
+(- `requested_hours`: `float`) Tj
+T*
+(- `approved_hours`: `float | None`) Tj
+T*
+(- arrays: `list[SomeSchema]`) Tj
+T*
+(- string maps: `dict[str, list[str]]`) Tj
+T*
+() Tj
+T*
+(Enum Values To Standardize) Tj
+T*
+() Tj
+T*
+(Do not allow free text everywhere.) Tj
+T*
+() Tj
+T*
+(Use fixed values like:) Tj
+T*
+() Tj
+T*
+(- `request_type`: `'timeoff' | 'regularization'`) Tj
+T*
+(- `status`: `'pending' | 'approved' | 'rejected' | 'cancelled'`) Tj
+T*
+(- `duration_type`: `'full_day' | 'half_day' | 'hourly'`) Tj
+T*
+(- `assigned_role`: `'hr' | 'admin'`) Tj
+T*
+(- `employment_status`: `'active' | 'inactive' | 'notice_period' | 'relieved'`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(10.8 Suggested Pydantic Schemas) Tj
+T*
+() Tj
+T*
+(These should be written as dedicated schema classes.) Tj
+T*
+() Tj
+T*
+(`schemas/timeoff.py`) Tj
+T*
+() Tj
+T*
+(```py) Tj
+T*
+(class TimeOffCreateRequest\(BaseModel\):) Tj
+T*
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 1956 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(    leaveTypeId: int) Tj
+T*
+(    dateFrom: date) Tj
+T*
+(    dateTo: date) Tj
+T*
+(    durationType: Literal['full_day', 'half_day', 'hourly']) Tj
+T*
+(    startTime: time | None = None) Tj
+T*
+(    endTime: time | None = None) Tj
+T*
+(    reason: str) Tj
+T*
+() Tj
+T*
+(class TimeOffDecisionRequest\(BaseModel\):) Tj
+T*
+(    decision: Literal['approved', 'rejected']) Tj
+T*
+(    comment: str) Tj
+T*
+(    approvedHours: float | None = None) Tj
+T*
+() Tj
+T*
+(class TimeOffRequestResponse\(BaseModel\):) Tj
+T*
+(    id: int) Tj
+T*
+(    employeeId: int) Tj
+T*
+(    leaveTypeId: int) Tj
+T*
+(    leaveTypeName: str) Tj
+T*
+(    dateFrom: date) Tj
+T*
+(    dateTo: date) Tj
+T*
+(    durationType: str) Tj
+T*
+(    requestedHours: float) Tj
+T*
+(    approvedHours: float | None) Tj
+T*
+(    reason: str) Tj
+T*
+(    status: str) Tj
+T*
+(    reviewComment: str | None) Tj
+T*
+(    createdAt: datetime) Tj
+T*
+(    reviewedAt: datetime | None) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`schemas/regularization.py`) Tj
+T*
+() Tj
+T*
+(```py) Tj
+T*
+(class RegularizationCreateRequest\(BaseModel\):) Tj
+T*
+(    attendanceDate: date) Tj
+T*
+(    requestedPunchIn: time | None = None) Tj
+T*
+(    requestedPunchOut: time | None = None) Tj
+T*
+(    reasonType: Literal[) Tj
+T*
+(        'missed_punch',) Tj
+T*
+(        'late_sync',) Tj
+T*
+(        'forgot_punch_out',) Tj
+T*
+(        'forgot_punch_in',) Tj
+T*
+(        'system_issue',) Tj
+T*
+(        'other') Tj
+T*
+(    ]) Tj
+T*
+(    reasonText: str) Tj
+T*
+() Tj
+T*
+(class RegularizationDecisionRequest\(BaseModel\):) Tj
+T*
+(    decision: Literal['approved', 'rejected']) Tj
+T*
+(    comment: str) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`schemas/master_data.py`) Tj
+T*
+() Tj
+T*
+(```py) Tj
+T*
+(class DepartmentCreateRequest\(BaseModel\):) Tj
+T*
+(    name: str) Tj
+T*
+(    code: str) Tj
+T*
+(    description: str | None = None) Tj
+T*
+(    isActive: bool = True) Tj
+T*
+() Tj
+T*
+(class DepartmentResponse\(BaseModel\):) Tj
+T*
+(    id: int) Tj
+T*
+ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 20 0 R >>
+endobj
+20 0 obj
+<< /Length 1304 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(    name: str) Tj
+T*
+(    code: str) Tj
+T*
+(    description: str | None) Tj
+T*
+(    isActive: bool) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(10.9 Common API Response Contract) Tj
+T*
+() Tj
+T*
+(Backend should return a predictable structure so frontend stays simple.) Tj
+T*
+() Tj
+T*
+(Success Response) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "success": true,) Tj
+T*
+(  "message": "Record created successfully.",) Tj
+T*
+(  "data": {}) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Validation Error Response) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "success": false,) Tj
+T*
+(  "message": "Validation failed.",) Tj
+T*
+(  "errors": {) Tj
+T*
+(    "leaveTypeId": ["This field is required."],) Tj
+T*
+(    "dateFrom": ["Invalid date."]) Tj
+T*
+(  }) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Paginated List Response) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "items": [],) Tj
+T*
+(  "page": 1,) Tj
+T*
+(  "pageSize": 20,) Tj
+T*
+(  "totalItems": 0,) Tj
+T*
+(  "totalPages": 0) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11. API Modules To Build) Tj
+T*
+() Tj
+T*
+(11.1 Time Off APIs) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/timeoff/bootstrap`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- load request form data) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 22 0 R >>
+endobj
+22 0 obj
+<< /Length 1355 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(  "leaveTypes": [) Tj
+T*
+(    {) Tj
+T*
+(      "id": 1,) Tj
+T*
+(      "name": "Casual Leave",) Tj
+T*
+(      "code": "CL",) Tj
+T*
+(      "unitType": "full_day") Tj
+T*
+(    }) Tj
+T*
+(  ],) Tj
+T*
+(  "balance": {) Tj
+T*
+(    "totalHours": 80,) Tj
+T*
+(    "usedHours": 12,) Tj
+T*
+(    "remainingHours": 68) Tj
+T*
+(  },) Tj
+T*
+(  "holidays": [) Tj
+T*
+(    {) Tj
+T*
+(      "date": "2026-08-15",) Tj
+T*
+(      "name": "Independence Day") Tj
+T*
+(    }) Tj
+T*
+(  ]) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`POST /api/v1/timeoff/requests`) Tj
+T*
+() Tj
+T*
+(Request:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "leaveTypeId": 1,) Tj
+T*
+(  "dateFrom": "2026-06-15",) Tj
+T*
+(  "dateTo": "2026-06-15",) Tj
+T*
+(  "durationType": "hourly",) Tj
+T*
+(  "startTime": "14:00",) Tj
+T*
+(  "endTime": "16:00",) Tj
+T*
+(  "reason": "Doctor appointment") Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "id": 101,) Tj
+T*
+(  "status": "pending",) Tj
+T*
+(  "message": "Time off request submitted successfully.") Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/timeoff/requests/my`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- employee history) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/timeoff/requests`) Tj
+T*
+() Tj
+T*
+(Role:) Tj
+T*
+() Tj
+T*
+(- hr, admin) Tj
+T*
+() Tj
+T*
+(Query params:) Tj
+T*
+() Tj
+T*
+(- `status`) Tj
+T*
+ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 24 0 R >>
+endobj
+24 0 obj
+<< /Length 1404 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- `employeeId`) Tj
+T*
+(- `dateFrom`) Tj
+T*
+(- `dateTo`) Tj
+T*
+(- `page`) Tj
+T*
+(- `pageSize`) Tj
+T*
+() Tj
+T*
+(Query param types:) Tj
+T*
+() Tj
+T*
+(- `status`: `string`) Tj
+T*
+(- `employeeId`: `number`) Tj
+T*
+(- `dateFrom`: `YYYY-MM-DD`) Tj
+T*
+(- `dateTo`: `YYYY-MM-DD`) Tj
+T*
+(- `page`: `number`) Tj
+T*
+(- `pageSize`: `number`) Tj
+T*
+() Tj
+T*
+(`POST /api/v1/timeoff/requests/{requestId}/decision`) Tj
+T*
+() Tj
+T*
+(Request:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "decision": "approved",) Tj
+T*
+(  "comment": "Approved",) Tj
+T*
+(  "approvedHours": 2) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "requestId": 101,) Tj
+T*
+(  "status": "approved",) Tj
+T*
+(  "approvalTaskStatus": "resolved") Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11.2 Approval Center APIs) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/approvals/pending`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- single queue for HR/admin) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "items": [) Tj
+T*
+(    {) Tj
+T*
+(      "id": 501,) Tj
+T*
+(      "requestType": "timeoff",) Tj
+T*
+(      "requestId": 101,) Tj
+T*
+(      "employeeId": 8,) Tj
+T*
+(      "employeeName": "Kaushal Raj",) Tj
+T*
+(      "status": "pending",) Tj
+T*
+(      "submittedAt": "2026-06-08T10:15:00Z",) Tj
+T*
+(      "priority": "normal") Tj
+T*
+(    }) Tj
+T*
+(  ],) Tj
+T*
+ET
+endstream
+endobj
+25 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 26 0 R >>
+endobj
+26 0 obj
+<< /Length 1558 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(  "counts": {) Tj
+T*
+(    "timeoff": 4,) Tj
+T*
+(    "regularization": 2,) Tj
+T*
+(    "total": 6) Tj
+T*
+(  }) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/approvals/history`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- processed approval items) Tj
+T*
+() Tj
+T*
+(Query params:) Tj
+T*
+() Tj
+T*
+(- `requestType: string | optional`) Tj
+T*
+(- `employeeId: number | optional`) Tj
+T*
+(- `dateFrom: string | optional`) Tj
+T*
+(- `dateTo: string | optional`) Tj
+T*
+(- `page: number`) Tj
+T*
+(- `pageSize: number`) Tj
+T*
+() Tj
+T*
+(`POST /api/v1/approvals/{approvalTaskId}/decision`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- generic approval endpoint if frontend wants a single action route) Tj
+T*
+() Tj
+T*
+(Recommended note:) Tj
+T*
+() Tj
+T*
+(Keep both patterns possible:) Tj
+T*
+() Tj
+T*
+(- module-specific endpoints) Tj
+T*
+(- generic approval endpoint) Tj
+T*
+() Tj
+T*
+(Start with module-specific if easier.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11.3 Attendance Regularization APIs) Tj
+T*
+() Tj
+T*
+(`POST /api/v1/regularizations`) Tj
+T*
+() Tj
+T*
+(Request:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "attendanceDate": "2026-06-04",) Tj
+T*
+(  "requestedPunchIn": "09:12",) Tj
+T*
+(  "requestedPunchOut": "18:22",) Tj
+T*
+(  "reasonType": "missed_punch",) Tj
+T*
+(  "reasonText": "Mobile battery was dead during punch-out.") Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "id": 301,) Tj
+T*
+(  "status": "pending",) Tj
+T*
+(  "message": "Regularization request submitted successfully.") Tj
+T*
+ET
+endstream
+endobj
+27 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 28 0 R >>
+endobj
+28 0 obj
+<< /Length 1360 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/regularizations/my`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- employee own request history) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/regularizations`) Tj
+T*
+() Tj
+T*
+(Role:) Tj
+T*
+() Tj
+T*
+(- hr, admin) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- HR review queue) Tj
+T*
+() Tj
+T*
+(Query params:) Tj
+T*
+() Tj
+T*
+(- `status`) Tj
+T*
+(- `employeeId`) Tj
+T*
+(- `attendanceDate`) Tj
+T*
+(- `page`) Tj
+T*
+(- `pageSize`) Tj
+T*
+() Tj
+T*
+(`POST /api/v1/regularizations/{id}/decision`) Tj
+T*
+() Tj
+T*
+(Request:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "decision": "approved",) Tj
+T*
+(  "comment": "Approved after review.") Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Backend rule:) Tj
+T*
+() Tj
+T*
+(If approved, update the attendance record and rebuild summary values for that date.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11.4 Master Data APIs) Tj
+T*
+() Tj
+T*
+(Each master data module should support:) Tj
+T*
+() Tj
+T*
+(- list) Tj
+T*
+(- create) Tj
+T*
+(- update) Tj
+T*
+(- deactivate) Tj
+T*
+(- bootstrap read) Tj
+T*
+() Tj
+T*
+(Example Endpoints) Tj
+T*
+() Tj
+T*
+(- `GET /api/v1/master-data/departments`) Tj
+T*
+(- `POST /api/v1/master-data/departments`) Tj
+T*
+(- `PUT /api/v1/master-data/departments/{id}`) Tj
+T*
+(- `PATCH /api/v1/master-data/departments/{id}/status`) Tj
+T*
+() Tj
+T*
+(Do the same for:) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+29 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 30 0 R >>
+endobj
+30 0 obj
+<< /Length 1361 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- designations) Tj
+T*
+(- shifts) Tj
+T*
+(- work locations) Tj
+T*
+(- leave types) Tj
+T*
+(- holidays) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/master-data/bootstrap`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- one-call dropdown source for forms) Tj
+T*
+() Tj
+T*
+(Response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "departments": [],) Tj
+T*
+(  "designations": [],) Tj
+T*
+(  "shifts": [],) Tj
+T*
+(  "workLocations": [],) Tj
+T*
+(  "leaveTypes": []) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Each key type:) Tj
+T*
+() Tj
+T*
+(- `departments`: `DepartmentResponse[]`) Tj
+T*
+(- `designations`: `DesignationResponse[]`) Tj
+T*
+(- `shifts`: `ShiftResponse[]`) Tj
+T*
+(- `workLocations`: `WorkLocationResponse[]`) Tj
+T*
+(- `leaveTypes`: `LeaveTypeResponse[]`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11.5 Report APIs) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/reports/attendance`) Tj
+T*
+() Tj
+T*
+(Query params:) Tj
+T*
+() Tj
+T*
+(- `employeeId`) Tj
+T*
+(- `departmentId`) Tj
+T*
+(- `dateFrom`) Tj
+T*
+(- `dateTo`) Tj
+T*
+(- `status`) Tj
+T*
+(- `page`) Tj
+T*
+(- `pageSize`) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/reports/attendance/export`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- CSV download) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/reports/timeoff`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+() Tj
+T*
+(- leave usage report) Tj
+T*
+() Tj
+T*
+(`GET /api/v1/reports/exceptions`) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+ET
+endstream
+endobj
+31 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 32 0 R >>
+endobj
+32 0 obj
+<< /Length 2276 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(- late arrivals) Tj
+T*
+(- missing punches) Tj
+T*
+(- unresolved regularizations) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(12. Business Rules To Enforce) Tj
+T*
+() Tj
+T*
+(12.1 Time Off Rules) Tj
+T*
+() Tj
+T*
+(- cannot request leave for inactive employee) Tj
+T*
+(- cannot approve beyond available balance if balance-controlled leave type) Tj
+T*
+(- cannot create overlapping pending full-day leave for same date) Tj
+T*
+(- hourly leave must stay inside shift window rules if policy requires) Tj
+T*
+(- only HR/admin can approve or reject) Tj
+T*
+() Tj
+T*
+(12.2 Regularization Rules) Tj
+T*
+() Tj
+T*
+(- employee can only request for allowed past date window) Tj
+T*
+(- duplicate pending request should be blocked) Tj
+T*
+(- approved correction must update final attendance summary) Tj
+T*
+(- rejected request must remain visible in history) Tj
+T*
+() Tj
+T*
+(12.3 Master Data Rules) Tj
+T*
+() Tj
+T*
+(- inactive master records should not appear in new form dropdowns) Tj
+T*
+(- old employee records should still remain readable even if master record later becomes) Tj
+T*
+(  inactive) Tj
+T*
+() Tj
+T*
+(12.4 Notification Rules) Tj
+T*
+() Tj
+T*
+(Create notifications for:) Tj
+T*
+() Tj
+T*
+(- new time off request submitted) Tj
+T*
+(- time off request approved/rejected) Tj
+T*
+(- new regularization request submitted) Tj
+T*
+(- regularization approved/rejected) Tj
+T*
+(- suspicious login or login activity event if product keeps that behavior) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(12.5 Validation Rules The Backend Must Enforce) Tj
+T*
+() Tj
+T*
+(Never trust frontend validation alone.) Tj
+T*
+() Tj
+T*
+(Time Off Validation) Tj
+T*
+() Tj
+T*
+(- `leaveTypeId` must exist) Tj
+T*
+(- `dateFrom` cannot be after `dateTo`) Tj
+T*
+(- `reason` cannot be blank) Tj
+T*
+(- if `durationType = hourly`, then `startTime` and `endTime` are required) Tj
+T*
+(- `approvedHours` cannot be greater than `requestedHours`) Tj
+T*
+() Tj
+T*
+(Regularization Validation) Tj
+T*
+() Tj
+T*
+(- at least one of `requestedPunchIn` or `requestedPunchOut` should be present) Tj
+T*
+(- request date should belong to employee attendance-access window) Tj
+T*
+(- employee must exist and be active) Tj
+T*
+(- duplicate pending request for same date should fail) Tj
+T*
+() Tj
+T*
+(Master Data Validation) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+33 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 34 0 R >>
+endobj
+34 0 obj
+<< /Length 2296 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- `code` should be unique) Tj
+T*
+(- `name` should not be blank) Tj
+T*
+(- inactive master data should not be hard-deleted if already mapped to employees) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(12.6 Service Function Checklist) Tj
+T*
+() Tj
+T*
+(This is how fresher backend developer should think.) Tj
+T*
+() Tj
+T*
+(`timeoff_service.py`) Tj
+T*
+() Tj
+T*
+(Required functions:) Tj
+T*
+() Tj
+T*
+(- `get_timeoff_bootstrap\(db, employee_id\) -> dict`) Tj
+T*
+(- `create_timeoff_request\(db, employee_id, payload\) -> TimeOffRequest`) Tj
+T*
+(- `list_my_timeoff_requests\(db, employee_id, filters\) -> paginated result`) Tj
+T*
+(- `list_timeoff_requests_for_hr\(db, filters\) -> paginated result`) Tj
+T*
+(- `decide_timeoff_request\(db, request_id, reviewer_id, payload\) -> TimeOffRequest`) Tj
+T*
+() Tj
+T*
+(`regularization_service.py`) Tj
+T*
+() Tj
+T*
+(Required functions:) Tj
+T*
+() Tj
+T*
+(- `create_regularization_request\(db, employee_id, payload\)`) Tj
+T*
+(- `list_my_regularizations\(db, employee_id, filters\)`) Tj
+T*
+(- `list_regularizations_for_hr\(db, filters\)`) Tj
+T*
+(- `decide_regularization_request\(db, request_id, reviewer_id, payload\)`) Tj
+T*
+(- `apply_regularization_to_attendance\(db, request_row\)`) Tj
+T*
+() Tj
+T*
+(`master_data_service.py`) Tj
+T*
+() Tj
+T*
+(Required functions:) Tj
+T*
+() Tj
+T*
+(- `list_departments\(db, filters\)`) Tj
+T*
+(- `create_department\(db, payload, actor_id\)`) Tj
+T*
+(- `update_department\(db, id, payload, actor_id\)`) Tj
+T*
+(- `change_department_status\(db, id, is_active, actor_id\)`) Tj
+T*
+(- same pattern for all other master data tables) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(12.7 Repository Query Responsibility) Tj
+T*
+() Tj
+T*
+(Move these heavy tasks into repository layer:) Tj
+T*
+() Tj
+T*
+(- paginated list queries) Tj
+T*
+(- filtered report queries) Tj
+T*
+(- count aggregations) Tj
+T*
+(- dashboard summaries) Tj
+T*
+(- joins across employee, attendance, department, and request tables) Tj
+T*
+() Tj
+T*
+(This helps the fresher developer keep service files readable.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(13. How Notifications Should Be Wired) Tj
+T*
+() Tj
+T*
+(Every important workflow event should call one notification helper.) Tj
+T*
+() Tj
+T*
+(Recommended approach:) Tj
+T*
+() Tj
+T*
+(1. service updates the main business record) Tj
+T*
+ET
+endstream
+endobj
+35 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 36 0 R >>
+endobj
+36 0 obj
+<< /Length 1585 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(2. service updates approval task) Tj
+T*
+(3. service writes audit log) Tj
+T*
+(4. service triggers notification) Tj
+T*
+(5. optional websocket push for live UI) Tj
+T*
+() Tj
+T*
+(This order helps keep system behavior consistent.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(14. Audit Logging Plan) Tj
+T*
+() Tj
+T*
+(For Phase 2, auditability becomes more important.) Tj
+T*
+() Tj
+T*
+(For every approval decision, store:) Tj
+T*
+() Tj
+T*
+(- request type) Tj
+T*
+(- request id) Tj
+T*
+(- old status) Tj
+T*
+(- new status) Tj
+T*
+(- actor user id) Tj
+T*
+(- actor role) Tj
+T*
+(- comment) Tj
+T*
+(- timestamp) Tj
+T*
+() Tj
+T*
+(You can use:) Tj
+T*
+() Tj
+T*
+(- a generic `approval_logs` table) Tj
+T*
+(- or expand existing audit structures) Tj
+T*
+() Tj
+T*
+(If the current `approval_log` model is already present, extend and reuse it rather than) Tj
+T*
+(duplicating the idea.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(15. Pagination and Filtering Standard) Tj
+T*
+() Tj
+T*
+(All list APIs in Phase 2 should follow one standard contract.) Tj
+T*
+() Tj
+T*
+(Recommended response:) Tj
+T*
+() Tj
+T*
+(```json) Tj
+T*
+({) Tj
+T*
+(  "items": [],) Tj
+T*
+(  "page": 1,) Tj
+T*
+(  "pageSize": 20,) Tj
+T*
+(  "totalItems": 128,) Tj
+T*
+(  "totalPages": 7) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Use this for:) Tj
+T*
+() Tj
+T*
+(- employee lists) Tj
+T*
+(- HR lists) Tj
+T*
+(- leave requests) Tj
+T*
+(- regularization requests) Tj
+T*
+(- reports) Tj
+T*
+(- login activity) Tj
+T*
+() Tj
+T*
+(This is important because Phase 1 currently has too much list handling on the frontend side.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+37 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 38 0 R >>
+endobj
+38 0 obj
+<< /Length 1604 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(16. Step-By-Step Backend Build Order) Tj
+T*
+() Tj
+T*
+(Step 1. Cleanup Existing Contracts) Tj
+T*
+() Tj
+T*
+(Before adding new modules:) Tj
+T*
+() Tj
+T*
+(- review current auth responses) Tj
+T*
+(- review attendance list response shapes) Tj
+T*
+(- review notification route consistency) Tj
+T*
+(- confirm role dependency helpers) Tj
+T*
+() Tj
+T*
+(Step 2. Finish Time Off Schema and Routes) Tj
+T*
+() Tj
+T*
+(Do this first because some backend parts already exist.) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+() Tj
+T*
+(- activate router in `main.py`) Tj
+T*
+(- normalize schemas) Tj
+T*
+(- finish service rules) Tj
+T*
+(- add approval integration) Tj
+T*
+(- seed leave types) Tj
+T*
+() Tj
+T*
+(Step 3. Add Approval Center Layer) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+() Tj
+T*
+(- create `approval_tasks`) Tj
+T*
+(- create approval list APIs) Tj
+T*
+(- centralize approval status transitions) Tj
+T*
+() Tj
+T*
+(Step 4. Add Attendance Regularization) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+() Tj
+T*
+(- create model and migration) Tj
+T*
+(- create employee submit API) Tj
+T*
+(- create HR review API) Tj
+T*
+(- update attendance rebuild logic) Tj
+T*
+() Tj
+T*
+(Step 5. Build Master Data CRUD) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+() Tj
+T*
+(- departments) Tj
+T*
+(- designations) Tj
+T*
+(- shifts) Tj
+T*
+(- work locations) Tj
+T*
+(- leave types) Tj
+T*
+(- holidays) Tj
+T*
+() Tj
+T*
+(Step 6. Build Reports) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+() Tj
+T*
+(- aggregated attendance queries) Tj
+T*
+(- exception queries) Tj
+T*
+(- time off summaries) Tj
+T*
+(- CSV export) Tj
+T*
+() Tj
+T*
+(Step 7. Refine Notifications and Security) Tj
+T*
+() Tj
+T*
+(Tasks:) Tj
+T*
+ET
+endstream
+endobj
+39 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 40 0 R >>
+endobj
+40 0 obj
+<< /Length 1391 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(- make workflow notifications consistent) Tj
+T*
+(- improve login activity filters) Tj
+T*
+(- confirm reset-password and forgot-password production behavior) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(17. Seed Data For Phase 2) Tj
+T*
+() Tj
+T*
+(Add seed data for:) Tj
+T*
+() Tj
+T*
+(- default leave types) Tj
+T*
+(- departments) Tj
+T*
+(- designations) Tj
+T*
+(- shifts) Tj
+T*
+(- office locations) Tj
+T*
+(- current year holiday list) Tj
+T*
+() Tj
+T*
+(Example leave types:) Tj
+T*
+() Tj
+T*
+(- Casual Leave) Tj
+T*
+(- Sick Leave) Tj
+T*
+(- Half Day) Tj
+T*
+(- Work From Home) Tj
+T*
+(- Comp Off) Tj
+T*
+() Tj
+T*
+(Example departments:) Tj
+T*
+() Tj
+T*
+(- Engineering) Tj
+T*
+(- HR) Tj
+T*
+(- Finance) Tj
+T*
+(- Operations) Tj
+T*
+() Tj
+T*
+(Example shifts:) Tj
+T*
+() Tj
+T*
+(- General Shift 9 to 6) Tj
+T*
+(- Morning Shift 8 to 5) Tj
+T*
+(- Flexible Shift) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(18. Testing Checklist) Tj
+T*
+() Tj
+T*
+(For each module, test:) Tj
+T*
+() Tj
+T*
+(Time Off) Tj
+T*
+() Tj
+T*
+(- employee submits request) Tj
+T*
+(- HR approves) Tj
+T*
+(- HR rejects) Tj
+T*
+(- balance updates correctly) Tj
+T*
+(- duplicate or invalid requests fail) Tj
+T*
+() Tj
+T*
+(Regularization) Tj
+T*
+() Tj
+T*
+(- employee submits request) Tj
+T*
+(- duplicate request blocked) Tj
+T*
+(- HR approves) Tj
+T*
+(- attendance recalculated) Tj
+T*
+(- HR rejects) Tj
+T*
+() Tj
+T*
+(Master Data) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+41 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 42 0 R >>
+endobj
+42 0 obj
+<< /Length 1992 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- create record) Tj
+T*
+(- update record) Tj
+T*
+(- deactivate record) Tj
+T*
+(- bootstrap excludes inactive records) Tj
+T*
+() Tj
+T*
+(Reports) Tj
+T*
+() Tj
+T*
+(- filters work) Tj
+T*
+(- pagination works) Tj
+T*
+(- export works) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(19. Definition Of Done For Phase 2 Backend) Tj
+T*
+() Tj
+T*
+(Phase 2 backend is done when:) Tj
+T*
+() Tj
+T*
+(- all new workflows are backed by DB tables and migrations) Tj
+T*
+(- list APIs support filtering and pagination) Tj
+T*
+(- approval actions update both business records and audit records) Tj
+T*
+(- frontend no longer has to simulate backend-heavy list logic) Tj
+T*
+(- notifications are triggered from workflow events) Tj
+T*
+(- time off router is fully live) Tj
+T*
+(- regularization flows are complete) Tj
+T*
+(- master data is controlled by admin APIs) Tj
+T*
+(- report APIs return usable data for tables and export) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(20. Advice For The Developer) Tj
+T*
+() Tj
+T*
+(If one fresher developer is handling both frontend and backend:) Tj
+T*
+() Tj
+T*
+(- do backend data models first) Tj
+T*
+(- do not start with report screens) Tj
+T*
+(- finish one workflow completely before opening the next) Tj
+T*
+() Tj
+T*
+(Best order:) Tj
+T*
+() Tj
+T*
+(1. time off full backend) Tj
+T*
+(2. time off frontend) Tj
+T*
+(3. approval center backend) Tj
+T*
+(4. approval center frontend) Tj
+T*
+(5. regularization backend) Tj
+T*
+(6. regularization frontend) Tj
+T*
+(7. master data backend) Tj
+T*
+(8. master data frontend) Tj
+T*
+(9. reports backend) Tj
+T*
+(10. reports frontend) Tj
+T*
+() Tj
+T*
+(That path is the safest and easiest to reason about.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(21. Fresher Backend Start Plan) Tj
+T*
+() Tj
+T*
+(If the developer is new to backend, tell him to start exactly like this:) Tj
+T*
+() Tj
+T*
+(Day 1) Tj
+T*
+() Tj
+T*
+(- read current route files) Tj
+T*
+(- understand how `auth_routes.py`, `employee_routes.py`, and `attendance_routes.py` are) Tj
+T*
+(  structured) Tj
+T*
+ET
+endstream
+endobj
+43 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 45 0 R >> >> /Contents 44 0 R >>
+endobj
+44 0 obj
+<< /Length 1024 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- run the backend locally) Tj
+T*
+(- confirm DB connection and migrations) Tj
+T*
+() Tj
+T*
+(Day 2) Tj
+T*
+() Tj
+T*
+(- write only schemas for one module first) Tj
+T*
+(- for example start with `timeoff`) Tj
+T*
+(- define request schema) Tj
+T*
+(- define response schema) Tj
+T*
+(- define success/error structure) Tj
+T*
+() Tj
+T*
+(Day 3) Tj
+T*
+() Tj
+T*
+(- create or update model and migration) Tj
+T*
+(- check table columns carefully) Tj
+T*
+(- do not build route first) Tj
+T*
+() Tj
+T*
+(Day 4) Tj
+T*
+() Tj
+T*
+(- build service methods) Tj
+T*
+(- add validations) Tj
+T*
+(- test with Swagger or Postman) Tj
+T*
+() Tj
+T*
+(Day 5) Tj
+T*
+() Tj
+T*
+(- build route file) Tj
+T*
+(- connect route to service) Tj
+T*
+(- test full flow) Tj
+T*
+() Tj
+T*
+(Important rule:) Tj
+T*
+() Tj
+T*
+(Always build in this order:) Tj
+T*
+() Tj
+T*
+(1. schema) Tj
+T*
+(2. model) Tj
+T*
+(3. migration) Tj
+T*
+(4. service) Tj
+T*
+(5. route) Tj
+T*
+(6. manual API test) Tj
+T*
+() Tj
+T*
+(This avoids confusion and reduces rework a lot.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+45 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 46
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000253 00000 n 
+0000000380 00000 n 
+0000002399 00000 n 
+0000002526 00000 n 
+0000004240 00000 n 
+0000004367 00000 n 
+0000006159 00000 n 
+0000006287 00000 n 
+0000007842 00000 n 
+0000007971 00000 n 
+0000009922 00000 n 
+0000010051 00000 n 
+0000012451 00000 n 
+0000012580 00000 n 
+0000014783 00000 n 
+0000014912 00000 n 
+0000016921 00000 n 
+0000017050 00000 n 
+0000018407 00000 n 
+0000018536 00000 n 
+0000019944 00000 n 
+0000020073 00000 n 
+0000021530 00000 n 
+0000021659 00000 n 
+0000023270 00000 n 
+0000023399 00000 n 
+0000024812 00000 n 
+0000024941 00000 n 
+0000026355 00000 n 
+0000026484 00000 n 
+0000028813 00000 n 
+0000028942 00000 n 
+0000031291 00000 n 
+0000031420 00000 n 
+0000033058 00000 n 
+0000033187 00000 n 
+0000034844 00000 n 
+0000034973 00000 n 
+0000036417 00000 n 
+0000036546 00000 n 
+0000038591 00000 n 
+0000038720 00000 n 
+0000039797 00000 n 
+trailer
+<< /Size 46 /Root 1 0 R >>
+startxref
+39866
+%%EOF

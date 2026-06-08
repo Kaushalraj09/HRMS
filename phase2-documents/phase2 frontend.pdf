@@ -1,0 +1,2235 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 16 /Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R 25 0 R 27 0 R 29 0 R 31 0 R 33 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2617 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Phase 2 Frontend Implementation Guide) Tj
+T*
+() Tj
+T*
+(1. What This Document Is For) Tj
+T*
+() Tj
+T*
+(This is the **detailed Phase 2 frontend implementation guide** for the Aivan HRMS Portal.) Tj
+T*
+() Tj
+T*
+(It is written so a developer can understand:) Tj
+T*
+() Tj
+T*
+(- what Phase 2 should include on the frontend) Tj
+T*
+(- which new screens should be built) Tj
+T*
+(- which current screens should be updated) Tj
+T*
+(- how routing should expand) Tj
+T*
+(- what services and models are required) Tj
+T*
+(- how frontend should consume backend APIs) Tj
+T*
+() Tj
+T*
+(This document assumes:) Tj
+T*
+() Tj
+T*
+(- Phase 1 corrections are being completed first) Tj
+T*
+(- the current Angular app structure remains the base) Tj
+T*
+(- backend APIs will become the source of truth) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(2. Current Frontend Baseline) Tj
+T*
+() Tj
+T*
+(The current Angular frontend already contains:) Tj
+T*
+() Tj
+T*
+(- login) Tj
+T*
+(- forgot password) Tj
+T*
+(- reset password) Tj
+T*
+(- admin dashboard) Tj
+T*
+(- HR dashboard) Tj
+T*
+(- employee dashboard) Tj
+T*
+(- employee management) Tj
+T*
+(- attendance screens) Tj
+T*
+(- profile) Tj
+T*
+(- change password) Tj
+T*
+(- login activity) Tj
+T*
+(- navbar notifications) Tj
+T*
+() Tj
+T*
+(This means Phase 2 should be built as **extension and cleanup**, not as a restart.) Tj
+T*
+() Tj
+T*
+(Relevant existing files:) Tj
+T*
+() Tj
+T*
+(- [app.routes.ts]\(/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/app.routes.ts\)) Tj
+T*
+(- [attendance.service.ts]\(/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/attendance.service.ts\)) Tj
+T*
+(- [notification.service.ts]\(/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/core/services/notification.service.ts\)) Tj
+T*
+(- [emp-dashboard.ts]\(/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/emp/pages/emp-dashboard/emp-dashboard.ts\)) Tj
+T*
+(- [hr-dashboard.ts]\(/Users/vivekmehta/Development/Vivek/AIVan/Aivan-HRMS-Portal/frontend/src/app/features/hr/pages/hr-dashboard/hr-dashboard.ts\)) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(3. Phase 2 Frontend Goals) Tj
+T*
+() Tj
+T*
+(Phase 2 frontend should achieve 5 things:) Tj
+T*
+() Tj
+T*
+(1. complete the partially visible operational modules already hinted in the UI) Tj
+T*
+(2. move page behavior from demo-style to API-driven behavior) Tj
+T*
+(3. make approval workflows easy to use) Tj
+T*
+(4. make admin and HR operations more structured) Tj
+T*
+(5. keep role experience clean inside the same shared portal) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 1965 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(4. Phase 2 Frontend Scope) Tj
+T*
+() Tj
+T*
+(New Functional Areas) Tj
+T*
+() Tj
+T*
+(1. `Time Off Module`) Tj
+T*
+(2. `Approval Center`) Tj
+T*
+(3. `Attendance Regularization`) Tj
+T*
+(4. `Master Data Management`) Tj
+T*
+(5. `Reports and Exports`) Tj
+T*
+(6. `Security and Login Activity Improvements`) Tj
+T*
+() Tj
+T*
+(Existing Areas To Update) Tj
+T*
+() Tj
+T*
+(1. employee dashboard) Tj
+T*
+(2. HR dashboard) Tj
+T*
+(3. admin dashboard) Tj
+T*
+(4. employee attendance page) Tj
+T*
+(5. navbar notification handling) Tj
+T*
+(6. employee and HR list pages) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(5. Recommended Frontend Folder Expansion) Tj
+T*
+() Tj
+T*
+(Keep the current Phase 1 structure, and add these areas:) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(frontend/src/app/) Tj
+T*
+(??? core/) Tj
+T*
+(?   ??? models/) Tj
+T*
+(?   ?   ??? timeoff.model.ts) Tj
+T*
+(?   ?   ??? approval.model.ts) Tj
+T*
+(?   ?   ??? regularization.model.ts) Tj
+T*
+(?   ?   ??? master-data.model.ts) Tj
+T*
+(?   ?   ??? report.model.ts) Tj
+T*
+(?   ??? services/) Tj
+T*
+(?       ??? timeoff.service.ts) Tj
+T*
+(?       ??? approval.service.ts) Tj
+T*
+(?       ??? regularization.service.ts) Tj
+T*
+(?       ??? master-data.service.ts) Tj
+T*
+(?       ??? report.service.ts) Tj
+T*
+(??? features/) Tj
+T*
+(?   ??? admin/) Tj
+T*
+(?   ?   ??? pages/) Tj
+T*
+(?   ?       ??? master-data/) Tj
+T*
+(?   ?       ??? holiday-calendar/) Tj
+T*
+(?   ?       ??? reports/) Tj
+T*
+(?   ??? hr/) Tj
+T*
+(?   ?   ??? pages/) Tj
+T*
+(?   ?       ??? approval-center/) Tj
+T*
+(?   ?       ??? regularization-requests/) Tj
+T*
+(?   ?       ??? leave-requests/) Tj
+T*
+(?   ?       ??? reports/) Tj
+T*
+(?   ??? emp/) Tj
+T*
+(?   ?   ??? pages/) Tj
+T*
+(?   ?       ??? time-off/) Tj
+T*
+(?   ?       ??? regularization/) Tj
+T*
+(?   ?       ??? notifications/) Tj
+T*
+(?   ??? shared-workflows/) Tj
+T*
+(?       ??? approval-status-chip/) Tj
+T*
+(?       ??? request-timeline/) Tj
+T*
+(?       ??? export-toolbar/) Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 1809 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6. Frontend Module Plan) Tj
+T*
+() Tj
+T*
+(6.1 Time Off Module) Tj
+T*
+() Tj
+T*
+(Employee Screens) Tj
+T*
+() Tj
+T*
+(1. `Time Off Request Page`) Tj
+T*
+(   - request form) Tj
+T*
+(   - leave type dropdown) Tj
+T*
+(   - date picker) Tj
+T*
+(   - half-day or hourly controls) Tj
+T*
+(   - reason textarea) Tj
+T*
+(   - leave balance summary) Tj
+T*
+(   - holidays or blackout warnings) Tj
+T*
+() Tj
+T*
+(2. `My Time Off Requests`) Tj
+T*
+(   - pending, approved, rejected tabs) Tj
+T*
+(   - request history list) Tj
+T*
+(   - request detail drawer or modal) Tj
+T*
+(   - cancel option only for allowed states) Tj
+T*
+() Tj
+T*
+(HR/Admin Screens) Tj
+T*
+() Tj
+T*
+(1. `Leave Requests List`) Tj
+T*
+(   - pending filter by default) Tj
+T*
+(   - employee name) Tj
+T*
+(   - date range) Tj
+T*
+(   - leave type) Tj
+T*
+(   - reason preview) Tj
+T*
+(   - action buttons) Tj
+T*
+() Tj
+T*
+(2. `Leave Request Decision Modal`) Tj
+T*
+(   - approve) Tj
+T*
+(   - reject) Tj
+T*
+(   - approval comment) Tj
+T*
+(   - approved duration override if allowed) Tj
+T*
+() Tj
+T*
+(Existing Screen Update) Tj
+T*
+() Tj
+T*
+(The employee dashboard currently shows a time off block.) Tj
+T*
+() Tj
+T*
+(In Phase 2, decide one of these approaches and apply consistently:) Tj
+T*
+() Tj
+T*
+(- keep dashboard quick-apply and link to full page) Tj
+T*
+(- or simplify dashboard and move full workflow into dedicated page) Tj
+T*
+() Tj
+T*
+(Recommended approach:) Tj
+T*
+() Tj
+T*
+(- dashboard should keep a small quick-entry widget) Tj
+T*
+(- full request history and advanced controls should move to `/emp-dashboard/time-off`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6.2 Approval Center) Tj
+T*
+() Tj
+T*
+(HR Approval Center Screen) Tj
+T*
+() Tj
+T*
+(This should become the main operations page for HR.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 1712 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Sections:) Tj
+T*
+() Tj
+T*
+(- pending time off approvals) Tj
+T*
+(- pending attendance regularization approvals) Tj
+T*
+(- recently processed approvals) Tj
+T*
+(- approval counters by type) Tj
+T*
+() Tj
+T*
+(Actions:) Tj
+T*
+() Tj
+T*
+(- approve) Tj
+T*
+(- reject) Tj
+T*
+(- view request details) Tj
+T*
+(- view employee context) Tj
+T*
+() Tj
+T*
+(Admin Approval Oversight Screen) Tj
+T*
+() Tj
+T*
+(Admin does not need to process every request by default, but should be able to:) Tj
+T*
+() Tj
+T*
+(- monitor pending approval volume) Tj
+T*
+(- view decision logs) Tj
+T*
+(- step in if HR escalation is needed) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6.3 Attendance Regularization) Tj
+T*
+() Tj
+T*
+(Employee Screens) Tj
+T*
+() Tj
+T*
+(1. `Request Attendance Correction`) Tj
+T*
+(   - select date) Tj
+T*
+(   - choose reason type) Tj
+T*
+(   - enter expected punch-in) Tj
+T*
+(   - enter expected punch-out) Tj
+T*
+(   - enter explanation) Tj
+T*
+(   - upload proof later if Phase 3 or above, not required now) Tj
+T*
+() Tj
+T*
+(2. `My Regularization Requests`) Tj
+T*
+(   - list by status) Tj
+T*
+(   - show submitted dates) Tj
+T*
+(   - show HR comments) Tj
+T*
+() Tj
+T*
+(HR Screens) Tj
+T*
+() Tj
+T*
+(1. `Regularization Requests`) Tj
+T*
+(   - employee) Tj
+T*
+(   - requested date) Tj
+T*
+(   - current recorded values) Tj
+T*
+(   - requested corrected values) Tj
+T*
+(   - reason) Tj
+T*
+(   - approve/reject action) Tj
+T*
+() Tj
+T*
+(Existing Screen Update) Tj
+T*
+() Tj
+T*
+(Update employee attendance page so the user can raise a correction request directly from a) Tj
+T*
+(problematic row.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6.4 Master Data Management) Tj
+T*
+() Tj
+T*
+(Admin Pages) Tj
+T*
+() Tj
+T*
+(1. `Departments`) Tj
+T*
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 1569 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(2. `Designations`) Tj
+T*
+(3. `Shifts`) Tj
+T*
+(4. `Work Locations`) Tj
+T*
+(5. `Leave Types`) Tj
+T*
+(6. `Holiday Calendar`) Tj
+T*
+() Tj
+T*
+(Each page should support:) Tj
+T*
+() Tj
+T*
+(- list) Tj
+T*
+(- search) Tj
+T*
+(- add) Tj
+T*
+(- edit) Tj
+T*
+(- activate/deactivate) Tj
+T*
+() Tj
+T*
+(Why This Matters) Tj
+T*
+() Tj
+T*
+(Right now many forms depend on dropdown values that are either hardcoded or loosely) Tj
+T*
+(controlled.) Tj
+T*
+() Tj
+T*
+(Phase 2 should make these values admin-managed and backend-driven.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6.5 Reports and Exports) Tj
+T*
+() Tj
+T*
+(HR Reports) Tj
+T*
+() Tj
+T*
+(1. attendance summary report) Tj
+T*
+(2. employee late arrival report) Tj
+T*
+(3. missing punch report) Tj
+T*
+(4. leave usage report) Tj
+T*
+() Tj
+T*
+(Admin Reports) Tj
+T*
+() Tj
+T*
+(1. HR workload report) Tj
+T*
+(2. employee status summary) Tj
+T*
+(3. login activity summary) Tj
+T*
+() Tj
+T*
+(UI Requirements) Tj
+T*
+() Tj
+T*
+(- filter panel) Tj
+T*
+(- export buttons) Tj
+T*
+(- empty-state handling) Tj
+T*
+(- table pagination) Tj
+T*
+(- date range support) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(6.6 Security and Login Activity Improvements) Tj
+T*
+() Tj
+T*
+(The login activity area already exists.) Tj
+T*
+() Tj
+T*
+(Phase 2 should make it more complete:) Tj
+T*
+() Tj
+T*
+(- add stronger filters) Tj
+T*
+(- show status badges clearly) Tj
+T*
+(- support role-based visibility rules) Tj
+T*
+(- connect notifications to login activity records reliably) Tj
+T*
+() Tj
+T*
+(Also align:) Tj
+T*
+() Tj
+T*
+(- forgot password) Tj
+T*
+(- reset password) Tj
+T*
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 2306 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- change password) Tj
+T*
+() Tj
+T*
+(so they look like one connected user security flow, not separate isolated pages.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(7. Recommended Phase 2 Route Map) Tj
+T*
+() Tj
+T*
+(Suggested route additions:) Tj
+T*
+() Tj
+T*
+(| Path | Role Access | Purpose |) Tj
+T*
+(|---|---|---|) Tj
+T*
+(| `/emp-dashboard/time-off` | employee, admin | employee time off page |) Tj
+T*
+(| `/emp-dashboard/regularization` | employee, admin | employee attendance correction page |) Tj
+T*
+(| `/hr-dashboard/approval-center` | hr, admin | all pending approvals |) Tj
+T*
+(| `/hr-dashboard/leave-requests` | hr, admin | leave request management |) Tj
+T*
+(| `/hr-dashboard/regularization-requests` | hr, admin | attendance correction approvals |) Tj
+T*
+(| `/master-dashboard/master-data/departments` | admin | manage departments |) Tj
+T*
+(| `/master-dashboard/master-data/designations` | admin | manage designations |) Tj
+T*
+(| `/master-dashboard/master-data/shifts` | admin | manage shifts |) Tj
+T*
+(| `/master-dashboard/master-data/locations` | admin | manage locations |) Tj
+T*
+(| `/master-dashboard/master-data/leave-types` | admin | manage leave types |) Tj
+T*
+(| `/master-dashboard/master-data/holidays` | admin | manage holidays |) Tj
+T*
+(| `/hr-dashboard/reports` | hr, admin | HR operational reports |) Tj
+T*
+(| `/master-dashboard/reports` | admin | admin reports |) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(8. Frontend Service Layer Plan) Tj
+T*
+() Tj
+T*
+(Create or refactor these services:) Tj
+T*
+() Tj
+T*
+(`timeoff.service.ts`) Tj
+T*
+() Tj
+T*
+(Responsibilities:) Tj
+T*
+() Tj
+T*
+(- fetch leave balance) Tj
+T*
+(- fetch leave request list) Tj
+T*
+(- submit request) Tj
+T*
+(- cancel request) Tj
+T*
+(- fetch HR leave approval list) Tj
+T*
+(- approve or reject request) Tj
+T*
+() Tj
+T*
+(`approval.service.ts`) Tj
+T*
+() Tj
+T*
+(Responsibilities:) Tj
+T*
+() Tj
+T*
+(- fetch all pending approvals) Tj
+T*
+(- fetch processed approvals) Tj
+T*
+(- approval counts by type) Tj
+T*
+(- unified approval actions) Tj
+T*
+() Tj
+T*
+(`regularization.service.ts`) Tj
+T*
+() Tj
+T*
+(Responsibilities:) Tj
+T*
+() Tj
+T*
+(- submit attendance correction) Tj
+T*
+(- fetch own requests) Tj
+T*
+(- fetch HR review queue) Tj
+T*
+(- approve or reject request) Tj
+T*
+() Tj
+T*
+(`master-data.service.ts`) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 1572 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Responsibilities:) Tj
+T*
+() Tj
+T*
+(- load dropdown bootstrap data) Tj
+T*
+(- CRUD for departments, designations, shifts, locations, leave types, holidays) Tj
+T*
+() Tj
+T*
+(`report.service.ts`) Tj
+T*
+() Tj
+T*
+(Responsibilities:) Tj
+T*
+() Tj
+T*
+(- fetch report tables) Tj
+T*
+(- export CSV links or blobs) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9. Frontend Model Additions) Tj
+T*
+() Tj
+T*
+(Suggested models:) Tj
+T*
+() Tj
+T*
+(`timeoff.model.ts`) Tj
+T*
+() Tj
+T*
+(- `TimeOffRequest`) Tj
+T*
+(- `TimeOffBalance`) Tj
+T*
+(- `TimeOffDecisionPayload`) Tj
+T*
+(- `TimeOffBootstrap`) Tj
+T*
+() Tj
+T*
+(`approval.model.ts`) Tj
+T*
+() Tj
+T*
+(- `ApprovalQueueItem`) Tj
+T*
+(- `ApprovalDecisionPayload`) Tj
+T*
+(- `ApprovalSummary`) Tj
+T*
+() Tj
+T*
+(`regularization.model.ts`) Tj
+T*
+() Tj
+T*
+(- `AttendanceRegularizationRequest`) Tj
+T*
+(- `AttendanceRegularizationDecision`) Tj
+T*
+(- `AttendanceRegularizationListItem`) Tj
+T*
+() Tj
+T*
+(`master-data.model.ts`) Tj
+T*
+() Tj
+T*
+(- `Department`) Tj
+T*
+(- `Designation`) Tj
+T*
+(- `Shift`) Tj
+T*
+(- `WorkLocation`) Tj
+T*
+(- `LeaveType`) Tj
+T*
+(- `Holiday`) Tj
+T*
+() Tj
+T*
+(`report.model.ts`) Tj
+T*
+() Tj
+T*
+(- `AttendanceReportRow`) Tj
+T*
+(- `LeaveReportRow`) Tj
+T*
+(- `ExceptionReportRow`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9.1 Exact Frontend Type Definitions) Tj
+T*
+() Tj
+T*
+(Below is the recommended detail level for frontend model files.) Tj
+T*
+() Tj
+T*
+(These are not random examples.) Tj
+T*
+() Tj
+T*
+(These should be treated as the working contract for Angular development.) Tj
+T*
+() Tj
+T*
+(`timeoff.model.ts`) Tj
+T*
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 1855 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(```ts) Tj
+T*
+(export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';) Tj
+T*
+(export type DurationType = 'full_day' | 'half_day' | 'hourly';) Tj
+T*
+() Tj
+T*
+(export interface TimeOffLeaveType {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  unitType: DurationType;) Tj
+T*
+(  requiresApproval: boolean;) Tj
+T*
+(  defaultBalanceHours: number;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface TimeOffBalance {) Tj
+T*
+(  totalHours: number;) Tj
+T*
+(  usedHours: number;) Tj
+T*
+(  remainingHours: number;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface HolidayItem {) Tj
+T*
+(  id: number;) Tj
+T*
+(  date: string;) Tj
+T*
+(  name: string;) Tj
+T*
+(  description?: string | null;) Tj
+T*
+(  isOptional: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface TimeOffBootstrap {) Tj
+T*
+(  leaveTypes: TimeOffLeaveType[];) Tj
+T*
+(  balance: TimeOffBalance;) Tj
+T*
+(  holidays: HolidayItem[];) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface TimeOffCreatePayload {) Tj
+T*
+(  leaveTypeId: number;) Tj
+T*
+(  dateFrom: string;) Tj
+T*
+(  dateTo: string;) Tj
+T*
+(  durationType: DurationType;) Tj
+T*
+(  startTime?: string | null;) Tj
+T*
+(  endTime?: string | null;) Tj
+T*
+(  reason: string;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface TimeOffRequestItem {) Tj
+T*
+(  id: number;) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeName?: string;) Tj
+T*
+(  leaveTypeId: number;) Tj
+T*
+(  leaveTypeName: string;) Tj
+T*
+(  dateFrom: string;) Tj
+T*
+(  dateTo: string;) Tj
+T*
+(  durationType: DurationType;) Tj
+T*
+(  requestedHours: number;) Tj
+T*
+(  approvedHours?: number | null;) Tj
+T*
+(  reason: string;) Tj
+T*
+(  status: RequestStatus;) Tj
+T*
+(  reviewComment?: string | null;) Tj
+T*
+(  createdAt: string;) Tj
+T*
+(  reviewedAt?: string | null;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 20 0 R >>
+endobj
+20 0 obj
+<< /Length 1890 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(export interface TimeOffDecisionPayload {) Tj
+T*
+(  decision: 'approved' | 'rejected';) Tj
+T*
+(  comment: string;) Tj
+T*
+(  approvedHours?: number | null;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`approval.model.ts`) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(export type ApprovalRequestType = 'timeoff' | 'regularization';) Tj
+T*
+(export type ApprovalPriority = 'low' | 'normal' | 'high';) Tj
+T*
+() Tj
+T*
+(export interface ApprovalQueueItem {) Tj
+T*
+(  id: number;) Tj
+T*
+(  requestType: ApprovalRequestType;) Tj
+T*
+(  requestId: number;) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeName: string;) Tj
+T*
+(  submittedAt: string;) Tj
+T*
+(  submittedBy: number;) Tj
+T*
+(  status: 'pending' | 'approved' | 'rejected';) Tj
+T*
+(  priority: ApprovalPriority;) Tj
+T*
+(  summaryText: string;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface ApprovalCounts {) Tj
+T*
+(  timeoff: number;) Tj
+T*
+(  regularization: number;) Tj
+T*
+(  total: number;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface ApprovalQueueResponse {) Tj
+T*
+(  items: ApprovalQueueItem[];) Tj
+T*
+(  counts: ApprovalCounts;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`regularization.model.ts`) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(export type RegularizationReasonType =) Tj
+T*
+(  | 'missed_punch') Tj
+T*
+(  | 'late_sync') Tj
+T*
+(  | 'forgot_punch_out') Tj
+T*
+(  | 'forgot_punch_in') Tj
+T*
+(  | 'system_issue') Tj
+T*
+(  | 'other';) Tj
+T*
+() Tj
+T*
+(export interface RegularizationCreatePayload {) Tj
+T*
+(  attendanceDate: string;) Tj
+T*
+(  requestedPunchIn?: string | null;) Tj
+T*
+(  requestedPunchOut?: string | null;) Tj
+T*
+(  reasonType: RegularizationReasonType;) Tj
+T*
+(  reasonText: string;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface RegularizationRequestItem {) Tj
+T*
+(  id: number;) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeName?: string;) Tj
+T*
+(  attendanceDate: string;) Tj
+T*
+(  currentPunchIn?: string | null;) Tj
+T*
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 22 0 R >>
+endobj
+22 0 obj
+<< /Length 1727 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(  currentPunchOut?: string | null;) Tj
+T*
+(  requestedPunchIn?: string | null;) Tj
+T*
+(  requestedPunchOut?: string | null;) Tj
+T*
+(  reasonType: RegularizationReasonType;) Tj
+T*
+(  reasonText: string;) Tj
+T*
+(  status: 'pending' | 'approved' | 'rejected';) Tj
+T*
+(  reviewComment?: string | null;) Tj
+T*
+(  createdAt: string;) Tj
+T*
+(  reviewedAt?: string | null;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`master-data.model.ts`) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(export interface Department {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  description?: string | null;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface Designation {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  description?: string | null;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface Shift {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  startTime: string;) Tj
+T*
+(  endTime: string;) Tj
+T*
+(  weeklyOffDays: string[];) Tj
+T*
+(  graceInMinutes: number;) Tj
+T*
+(  graceOutMinutes: number;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface WorkLocation {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  address?: string | null;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface LeaveType {) Tj
+T*
+(  id: number;) Tj
+T*
+(  name: string;) Tj
+T*
+(  code: string;) Tj
+T*
+(  unitType: 'full_day' | 'half_day' | 'hourly';) Tj
+T*
+(  defaultBalanceHours: number;) Tj
+T*
+(  requiresApproval: boolean;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface Holiday {) Tj
+T*
+(  id: number;) Tj
+T*
+ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 24 0 R >>
+endobj
+24 0 obj
+<< /Length 1673 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(  holidayDate: string;) Tj
+T*
+(  name: string;) Tj
+T*
+(  description?: string | null;) Tj
+T*
+(  isOptional: boolean;) Tj
+T*
+(  isActive: boolean;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(`report.model.ts`) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(export interface AttendanceReportRow {) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeCode: string;) Tj
+T*
+(  employeeName: string;) Tj
+T*
+(  departmentName: string;) Tj
+T*
+(  attendanceDate: string;) Tj
+T*
+(  punchIn?: string | null;) Tj
+T*
+(  punchOut?: string | null;) Tj
+T*
+(  workingHours: number;) Tj
+T*
+(  attendanceStatus: string;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface LeaveReportRow {) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeName: string;) Tj
+T*
+(  leaveTypeName: string;) Tj
+T*
+(  requestedHours: number;) Tj
+T*
+(  approvedHours: number;) Tj
+T*
+(  status: string;) Tj
+T*
+(  requestDate: string;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface ExceptionReportRow {) Tj
+T*
+(  employeeId: number;) Tj
+T*
+(  employeeName: string;) Tj
+T*
+(  exceptionType: string;) Tj
+T*
+(  attendanceDate: string;) Tj
+T*
+(  remarks: string;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9.2 Shared Response Wrappers) Tj
+T*
+() Tj
+T*
+(Use common wrappers so the fresher developer knows what every API result should look like.) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(export interface ApiSuccessResponse<T> {) Tj
+T*
+(  success: true;) Tj
+T*
+(  message: string;) Tj
+T*
+(  data: T;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+(export interface PaginatedResponse<T> {) Tj
+T*
+(  items: T[];) Tj
+T*
+(  page: number;) Tj
+T*
+(  pageSize: number;) Tj
+T*
+(  totalItems: number;) Tj
+T*
+(  totalPages: number;) Tj
+T*
+(}) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+25 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 26 0 R >>
+endobj
+26 0 obj
+<< /Length 2267 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(export interface ApiErrorResponse {) Tj
+T*
+(  success: false;) Tj
+T*
+(  message: string;) Tj
+T*
+(  errors?: Record<string, string[]>;) Tj
+T*
+(}) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9.3 Which Fields Are Required And Optional) Tj
+T*
+() Tj
+T*
+(Time Off Create Form) Tj
+T*
+() Tj
+T*
+(- `leaveTypeId`: required `number`) Tj
+T*
+(- `dateFrom`: required `string` in `YYYY-MM-DD`) Tj
+T*
+(- `dateTo`: required `string` in `YYYY-MM-DD`) Tj
+T*
+(- `durationType`: required `string`) Tj
+T*
+(- `startTime`: optional for full day, required for hourly) Tj
+T*
+(- `endTime`: optional for full day, required for hourly) Tj
+T*
+(- `reason`: required `string`, minimum 5 characters) Tj
+T*
+() Tj
+T*
+(Regularization Create Form) Tj
+T*
+() Tj
+T*
+(- `attendanceDate`: required `string`) Tj
+T*
+(- `requestedPunchIn`: optional `string | null`) Tj
+T*
+(- `requestedPunchOut`: optional `string | null`) Tj
+T*
+(- `reasonType`: required `string`) Tj
+T*
+(- `reasonText`: required `string`, minimum 10 characters) Tj
+T*
+() Tj
+T*
+(Master Data Form) Tj
+T*
+() Tj
+T*
+(- `name`: required `string`) Tj
+T*
+(- `code`: required `string`) Tj
+T*
+(- `description`: optional `string | null`) Tj
+T*
+(- `isActive`: required `boolean`) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9.4 Validation Rules To Implement In Angular) Tj
+T*
+() Tj
+T*
+(Use Angular reactive forms and explicitly apply these validations:) Tj
+T*
+() Tj
+T*
+(Time Off Form) Tj
+T*
+() Tj
+T*
+(- `leaveTypeId`: `Validators.required`) Tj
+T*
+(- `dateFrom`: `Validators.required`) Tj
+T*
+(- `dateTo`: `Validators.required`) Tj
+T*
+(- `reason`: `Validators.required`, `Validators.minLength\(5\)`, `Validators.maxLength\(500\)`) Tj
+T*
+(- `startTime` and `endTime`: required only when `durationType === 'hourly'`) Tj
+T*
+() Tj
+T*
+(Regularization Form) Tj
+T*
+() Tj
+T*
+(- `attendanceDate`: `Validators.required`) Tj
+T*
+(- `reasonType`: `Validators.required`) Tj
+T*
+(- `reasonText`: `Validators.required`, `Validators.minLength\(10\)`,) Tj
+T*
+(  `Validators.maxLength\(1000\)`) Tj
+T*
+() Tj
+T*
+(Master Data Forms) Tj
+T*
+() Tj
+T*
+(- `name`: `Validators.required`, `Validators.maxLength\(100\)`) Tj
+T*
+(- `code`: `Validators.required`, `Validators.maxLength\(30\)`) Tj
+T*
+(- `description`: `Validators.maxLength\(250\)`) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+27 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 28 0 R >>
+endobj
+28 0 obj
+<< /Length 2194 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(---) Tj
+T*
+() Tj
+T*
+(9.5 Suggested Angular File Map Per Feature) Tj
+T*
+() Tj
+T*
+(Time Off) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(features/emp/pages/time-off/) Tj
+T*
+(??? time-off.ts) Tj
+T*
+(??? time-off.html) Tj
+T*
+(??? time-off.css) Tj
+T*
+(??? components/) Tj
+T*
+(?   ??? time-off-form/) Tj
+T*
+(?   ??? time-off-history-table/) Tj
+T*
+(?   ??? time-off-balance-card/) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Approval Center) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(features/hr/pages/approval-center/) Tj
+T*
+(??? approval-center.ts) Tj
+T*
+(??? approval-center.html) Tj
+T*
+(??? approval-center.css) Tj
+T*
+(??? components/) Tj
+T*
+(?   ??? approval-summary-cards/) Tj
+T*
+(?   ??? approval-table/) Tj
+T*
+(?   ??? approval-decision-modal/) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Regularization) Tj
+T*
+() Tj
+T*
+(```text) Tj
+T*
+(features/emp/pages/regularization/) Tj
+T*
+(??? regularization.ts) Tj
+T*
+(??? regularization.html) Tj
+T*
+(??? regularization.css) Tj
+T*
+(??? components/) Tj
+T*
+(?   ??? regularization-form/) Tj
+T*
+(?   ??? regularization-history/) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(9.6 Frontend Service Method Signatures) Tj
+T*
+() Tj
+T*
+(Use method signatures like this so implementation stays predictable:) Tj
+T*
+() Tj
+T*
+(```ts) Tj
+T*
+(getTimeOffBootstrap\(\): Observable<ApiSuccessResponse<TimeOffBootstrap>>;) Tj
+T*
+(createTimeOff\(payload: TimeOffCreatePayload\):) Tj
+T*
+(Observable<ApiSuccessResponse<TimeOffRequestItem>>;) Tj
+T*
+(getMyTimeOffRequests\(page: number, pageSize: number, status?: string\):) Tj
+T*
+(Observable<PaginatedResponse<TimeOffRequestItem>>;) Tj
+T*
+(decideTimeOff\(requestId: number, payload: TimeOffDecisionPayload\):) Tj
+T*
+(Observable<ApiSuccessResponse<TimeOffRequestItem>>;) Tj
+T*
+() Tj
+T*
+(createRegularization\(payload: RegularizationCreatePayload\):) Tj
+T*
+(Observable<ApiSuccessResponse<RegularizationRequestItem>>;) Tj
+T*
+(getMyRegularizations\(page: number, pageSize: number, status?: string\):) Tj
+T*
+(Observable<PaginatedResponse<RegularizationRequestItem>>;) Tj
+T*
+(decideRegularization\(id: number, payload: { decision: 'approved' | 'rejected'; comment: string) Tj
+T*
+(}\): Observable<ApiSuccessResponse<RegularizationRequestItem>>;) Tj
+T*
+ET
+endstream
+endobj
+29 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 30 0 R >>
+endobj
+30 0 obj
+<< /Length 1760 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(getApprovalQueue\(\): Observable<ApiSuccessResponse<ApprovalQueueResponse>>;) Tj
+T*
+(getDepartments\(page: number, pageSize: number, search?: string\):) Tj
+T*
+(Observable<PaginatedResponse<Department>>;) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(10. UI/UX Rules For Phase 2) Tj
+T*
+() Tj
+T*
+(Keep Existing UI Style) Tj
+T*
+() Tj
+T*
+(The current portal already has a visual style.) Tj
+T*
+() Tj
+T*
+(Phase 2 should:) Tj
+T*
+() Tj
+T*
+(- reuse current navbar and sidebar style) Tj
+T*
+(- reuse current cards and table style) Tj
+T*
+(- reuse badge and form patterns) Tj
+T*
+(- avoid introducing a totally different design language) Tj
+T*
+() Tj
+T*
+(Improve Consistency) Tj
+T*
+() Tj
+T*
+(Areas to clean up:) Tj
+T*
+() Tj
+T*
+(- button labels) Tj
+T*
+(- form spacing) Tj
+T*
+(- modal width and structure) Tj
+T*
+(- table action placement) Tj
+T*
+(- status badge colors) Tj
+T*
+(- error message handling) Tj
+T*
+() Tj
+T*
+(Status Colors) Tj
+T*
+() Tj
+T*
+(Use the same status color pattern across attendance, leave, and approval screens:) Tj
+T*
+() Tj
+T*
+(- pending) Tj
+T*
+(- approved) Tj
+T*
+(- rejected) Tj
+T*
+(- active) Tj
+T*
+(- inactive) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(11. API Integration Rules) Tj
+T*
+() Tj
+T*
+(Frontend should stop doing backend work where possible.) Tj
+T*
+() Tj
+T*
+(That means:) Tj
+T*
+() Tj
+T*
+(- filtering should move to backend) Tj
+T*
+(- pagination should move to backend) Tj
+T*
+(- list summary counts should come from backend) Tj
+T*
+(- calculation-heavy dashboards should use backend aggregates) Tj
+T*
+() Tj
+T*
+(Frontend should still keep:) Tj
+T*
+() Tj
+T*
+(- local loading states) Tj
+T*
+(- form validation) Tj
+T*
+(- UI-only formatting) Tj
+T*
+(- optimistic status handling where safe) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+ET
+endstream
+endobj
+31 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 32 0 R >>
+endobj
+32 0 obj
+<< /Length 1678 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(12. Step-By-Step Frontend Build Order) Tj
+T*
+() Tj
+T*
+(Follow this order:) Tj
+T*
+() Tj
+T*
+(Step 1) Tj
+T*
+() Tj
+T*
+(Clean and align existing routes and shared navigation.) Tj
+T*
+() Tj
+T*
+(Step 2) Tj
+T*
+() Tj
+T*
+(Create service files and models for:) Tj
+T*
+() Tj
+T*
+(- time off) Tj
+T*
+(- approvals) Tj
+T*
+(- regularization) Tj
+T*
+(- master data) Tj
+T*
+(- reports) Tj
+T*
+() Tj
+T*
+(Step 3) Tj
+T*
+() Tj
+T*
+(Build employee time off page and connect it to backend.) Tj
+T*
+() Tj
+T*
+(Step 4) Tj
+T*
+() Tj
+T*
+(Build HR approval center and leave request review screens.) Tj
+T*
+() Tj
+T*
+(Step 5) Tj
+T*
+() Tj
+T*
+(Build attendance regularization request and approval flow.) Tj
+T*
+() Tj
+T*
+(Step 6) Tj
+T*
+() Tj
+T*
+(Build admin master data pages.) Tj
+T*
+() Tj
+T*
+(Step 7) Tj
+T*
+() Tj
+T*
+(Build reports and export screens.) Tj
+T*
+() Tj
+T*
+(Step 8) Tj
+T*
+() Tj
+T*
+(Refine notifications, login activity linking, and empty states.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(13. Frontend Definition Of Done For Phase 2) Tj
+T*
+() Tj
+T*
+(Phase 2 frontend is done when:) Tj
+T*
+() Tj
+T*
+(- all new pages are routed and accessible by correct roles) Tj
+T*
+(- all forms submit to real APIs) Tj
+T*
+(- pending and processed requests display correctly) Tj
+T*
+(- approval actions update UI without page confusion) Tj
+T*
+(- master data pages are CRUD-capable) Tj
+T*
+(- reports load with filters and export action) Tj
+T*
+(- notifications and login activity feel connected) Tj
+T*
+(- no important page depends on hardcoded dropdown data) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(14. Notes For The Developer) Tj
+T*
+() Tj
+T*
+(If one developer is doing both frontend and backend:) Tj
+T*
+ET
+endstream
+endobj
+33 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 35 0 R >> >> /Contents 34 0 R >>
+endobj
+34 0 obj
+<< /Length 1296 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+() Tj
+T*
+(- build models and service contracts first) Tj
+T*
+(- do not start styling every page before API shape is clear) Tj
+T*
+(- finish one workflow fully before opening the next one) Tj
+T*
+() Tj
+T*
+(Recommended workflow:) Tj
+T*
+() Tj
+T*
+(1. time off full loop) Tj
+T*
+(2. approval center) Tj
+T*
+(3. regularization) Tj
+T*
+(4. master data) Tj
+T*
+(5. reports) Tj
+T*
+() Tj
+T*
+(That order will keep the work understandable and easier to test.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(15. Fresher Developer Notes) Tj
+T*
+() Tj
+T*
+(If the developer is very new, tell him to work in this exact frontend order:) Tj
+T*
+() Tj
+T*
+(1. read existing route file) Tj
+T*
+(2. create model interfaces first) Tj
+T*
+(3. create service methods next) Tj
+T*
+(4. create form page after service contract is fixed) Tj
+T*
+(5. bind form submission to backend) Tj
+T*
+(6. then create history table) Tj
+T*
+(7. then create filters and pagination) Tj
+T*
+() Tj
+T*
+(Important rule:) Tj
+T*
+() Tj
+T*
+(Do not directly start with HTML design first.) Tj
+T*
+() Tj
+T*
+(First define:) Tj
+T*
+() Tj
+T*
+(- what object is coming from backend) Tj
+T*
+(- what object is going to backend) Tj
+T*
+(- what fields are required) Tj
+T*
+(- what screen state is needed) Tj
+T*
+() Tj
+T*
+(Then build the component.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+35 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 36
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000218 00000 n 
+0000000345 00000 n 
+0000003014 00000 n 
+0000003141 00000 n 
+0000005158 00000 n 
+0000005285 00000 n 
+0000007146 00000 n 
+0000007274 00000 n 
+0000009039 00000 n 
+0000009168 00000 n 
+0000010790 00000 n 
+0000010919 00000 n 
+0000013278 00000 n 
+0000013407 00000 n 
+0000015032 00000 n 
+0000015161 00000 n 
+0000017069 00000 n 
+0000017198 00000 n 
+0000019141 00000 n 
+0000019270 00000 n 
+0000021050 00000 n 
+0000021179 00000 n 
+0000022905 00000 n 
+0000023034 00000 n 
+0000025354 00000 n 
+0000025483 00000 n 
+0000027730 00000 n 
+0000027859 00000 n 
+0000029672 00000 n 
+0000029801 00000 n 
+0000031532 00000 n 
+0000031661 00000 n 
+0000033010 00000 n 
+trailer
+<< /Size 36 /Root 1 0 R >>
+startxref
+33079
+%%EOF
