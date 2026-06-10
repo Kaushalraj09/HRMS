@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { take } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -15,7 +16,7 @@ export class LoginActivityRedirect implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
       if (user) {
         const role = user.role.toLowerCase();
         const id = this.route.snapshot.paramMap.get('id');

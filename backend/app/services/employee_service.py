@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import literal, or_, func
 from sqlalchemy.orm import Session
 from app.models.user import User, Role
 from app.models.employee import Employee
@@ -49,45 +49,105 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     db.refresh(new_employee)
     return new_employee
 
-def list_employees(db: Session, skip: int = 0, limit: int = 100):
+def _matches_employee_filters(employee, search: str, department: str, employee_type: str, status: str) -> bool:
+    search_value = (search or "").strip().lower()
+    if search_value:
+        searchable_values = [
+            f"{employee.first_name or ''} {employee.last_name or ''}",
+            employee.employee_code or "",
+            employee.department or "",
+            employee.official_email or "",
+        ]
+        if not any(search_value in value.lower() for value in searchable_values):
+            return False
+
+    if department and employee.department != department:
+        return False
+    if employee_type and employee.employee_type != employee_type:
+        return False
+    if status and employee.status != status:
+        return False
+
+    return True
+
+
+def list_employees(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    search: str = "",
+    department: str = "",
+    employee_type: str = "",
+    status: str = "",
+    exclude_hr: bool = False,
+):
     # Filter out shadow employee records of HR users so they aren't duplicated in the list
-    employees = (
+    query = (
         db.query(Employee)
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(func.lower(Role.name) != "hr")
-        .order_by(Employee.id.desc())
-        .all()
     )
-    hrs = db.query(HrUser).order_by(HrUser.id.desc()).all()
-    
-    for hr in hrs:
-        name_parts = hr.full_name.split(" ", 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ""
-        emp_code = f"EMP-{hr.user_id:04d}"
-        
-        simulated_emp = Employee(
-            id=hr.id + 10000,
-            user_id=hr.user_id,
-            employee_code=emp_code,
-            first_name=first_name,
-            last_name=last_name,
-            gender="Other",
-            department=hr.department or "Human Resources",
-            designation=hr.designation or "HR Manager",
-            employee_type="Full-Time",
-            work_location="Main Office",
-            shift_type="General Shift",
-            official_email=hr.email,
-            mobile=hr.phone or "0000000000",
-            status=hr.status or "Active",
-            created_at=hr.created_at
+
+    search_value = (search or "").strip()
+    if search_value:
+        like_value = f"%{search_value}%"
+        full_name = func.coalesce(Employee.first_name, "") + literal(" ") + func.coalesce(Employee.last_name, "")
+        query = query.filter(
+            or_(
+                Employee.first_name.ilike(like_value),
+                Employee.last_name.ilike(like_value),
+                full_name.ilike(like_value),
+                Employee.employee_code.ilike(like_value),
+                Employee.department.ilike(like_value),
+                Employee.official_email.ilike(like_value),
+            )
         )
-        employees.append(simulated_emp)
-        
+
+    if department:
+        query = query.filter(Employee.department == department)
+    if employee_type:
+        query = query.filter(Employee.employee_type == employee_type)
+    if status:
+        query = query.filter(Employee.status == status)
+
+    employees = query.order_by(Employee.id.desc()).all()
+
+    if not exclude_hr:
+        hrs = db.query(HrUser).order_by(HrUser.id.desc()).all()
+
+        for hr in hrs:
+            name_parts = hr.full_name.split(" ", 1)
+            first_name = name_parts[0]
+            last_name = name_parts[1] if len(name_parts) > 1 else ""
+            emp_code = f"EMP-{hr.user_id:04d}"
+
+            simulated_emp = Employee(
+                id=hr.id + 10000,
+                user_id=hr.user_id,
+                employee_code=emp_code,
+                first_name=first_name,
+                last_name=last_name,
+                gender="Other",
+                department=hr.department or "Human Resources",
+                designation=hr.designation or "HR Manager",
+                employee_type="Full-Time",
+                work_location="Main Office",
+                shift_type="General Shift",
+                official_email=hr.email,
+                mobile=hr.phone or "0000000000",
+                status=hr.status or "Active",
+                created_at=hr.created_at
+            )
+            if _matches_employee_filters(simulated_emp, search, department, employee_type, status):
+                employees.append(simulated_emp)
+
     employees.sort(key=lambda e: e.id, reverse=True)
-    return employees[skip : skip + limit]
+    start = (page - 1) * limit
+    return {
+        "data": employees[start : start + limit],
+        "total": len(employees),
+    }
 
 def get_employee_by_id(db: Session, employee_id: int):
     if employee_id >= 10000:

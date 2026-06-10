@@ -217,10 +217,18 @@ class AttendanceRecord(BaseModel):
         return "green" if self.status.lower() == "working" else "gray"
 
 
+class AttendanceMetrics(BaseModel):
+    present: int
+    working: int
+    absent: int
+    not_marked: int = Field(alias="notMarked")
+
+
 class AttendanceListResponse(BaseModel):
     """List response for all attendance records."""
     data: List[AttendanceRecord]
     total: int
+    metrics: AttendanceMetrics
 
 class TodayAnalytics(BaseModel):
     punch_in: Optional[str] = Field(default=None, alias="punchIn")
@@ -244,3 +252,19 @@ class EmployeeAnalytics(BaseModel):
     department: str
     today: TodayAnalytics
     monthly: MonthlyAnalytics
+
+
+class EmployeeLocationResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    employee_id: int = Field(alias="employeeId")
+    employee_name: str = Field(alias="employeeName")
+    latitude: float
+    longitude: float
+    city: str
+    state: str
+    punch_in_time: Optional[str] = Field(default=None, alias="punchInTime")
+    punch_out_time: Optional[str] = Field(default=None, alias="punchOutTime")
+    work_mode: str = Field(alias="workMode")  # 'FIELD', 'OFFICE', 'REMOTE'
+    status: str  # 'ACTIVE', 'PUNCHED_OUT', 'LATE'
+

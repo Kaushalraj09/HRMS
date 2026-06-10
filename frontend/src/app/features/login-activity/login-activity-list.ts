@@ -1,7 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { take } from 'rxjs';
 import { LoginActivityService, LoginActivity } from '../../core/services/login-activity.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -24,11 +25,12 @@ export class LoginActivityList implements OnInit {
     private readonly loginActivityService: LoginActivityService,
     private readonly authService: AuthService,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
       if (user) {
         const role = user.role.toLowerCase();
         this.isAdminOrHR = (role === 'admin' || role === 'hr');
@@ -73,6 +75,6 @@ export class LoginActivityList implements OnInit {
   }
 
   viewDetails(id: number): void {
-    this.router.navigate(['/notifications/login-activity', id]);
+    this.router.navigate([id], { relativeTo: this.route });
   }
 }

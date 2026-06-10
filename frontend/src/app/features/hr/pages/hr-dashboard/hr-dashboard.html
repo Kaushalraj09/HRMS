@@ -1,10 +1,10 @@
 <div class="Hr_dashboard">
   <app-navbar 
     [userName]="userName" 
+    [searchValue]="searchTerm"
     (hamburgerClick)="toggleSidebar()"
     (searchChange)="onSearch($event)" 
-    (profileClick)="openProfile()" 
-    (notificationClick)="openNotifications()">
+    (profileClick)="openProfile()">
   </app-navbar>
   <div class="dashboard-layout">
     <app-hr-sidebar>
@@ -130,7 +130,10 @@
             </div>
             <div class="divider"></div>
             <div class="event-list">
-              <div class="event-item" *ngFor="let event of events">
+              <div class="event-item" *ngIf="filteredEvents.length === 0" style="padding: 24px; color: #64748b;">
+                No matching events found
+              </div>
+              <div class="event-item" *ngFor="let event of filteredEvents">
                 <div class="event-icon">
                   <i id="cakei" class="fas fa-birthday-cake blue-icon"></i>
                 </div>
@@ -146,15 +149,7 @@
 
         <!-- map -->
         <div class="map_data">
-          <div class="card mapping">
-            <div class="card-header">
-              Employee Location Map
-            </div>
-            <div class="divider"></div>
-            <div class="world_map">
-
-            </div>
-          </div>
+          <app-employee-location-map></app-employee-location-map>
         </div>
         <!-- absent tate and quick stats -->
 
@@ -209,7 +204,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let sheet of recentTimeSheets">
+                  <tr *ngIf="filteredRecentTimeSheets.length === 0">
+                    <td colspan="10" style="padding: 24px; text-align: center; color: #64748b;">No matching time sheets found</td>
+                  </tr>
+                  <tr *ngFor="let sheet of filteredRecentTimeSheets">
                     <td><span style="color: #64748b; font-weight: 500;">{{ sheet.employeeCode }}</span></td>
                     <td>{{ sheet.employee }}</td>
                     <td>{{ sheet.date }}</td>

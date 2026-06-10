@@ -74,6 +74,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome = true;
   isAdmin = false;
+  searchTerm = '';
 
   isPunchedIn = false;
   punchInTime: string | null = null;
@@ -138,6 +139,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   public pendingPunchLatitude: number | undefined;
   public pendingPunchLongitude: number | undefined;
   public pendingPunchAddress: string | undefined;
+  public isLocationLoading = false;
 
   latestNews_content = [
     {
@@ -203,16 +205,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.empsidebarService.toggleSidebar();
   }
 
-  onSearch(event: unknown) {
-    console.log('Search:', event);
+  onSearch(term: string) {
+    this.searchTerm = term || '';
+    this.timeSheetPage = 1;
+    this.filterEvents(this.selectedDate);
   }
 
   openProfile() {
     console.log('Opening profile');
-  }
-
-  openNotifications() {
-    console.log('Opening notifications');
   }
 
   get punchActionLabel(): string {
@@ -326,13 +326,36 @@ export class EmpDashboard implements OnInit, OnDestroy {
     });
   }
 
+  get filteredTimeSheets(): EmployeeTimesheetRow[] {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return this.sortedTimeSheets;
+    }
+
+    return this.sortedTimeSheets.filter((row) => this.matchesSearch([
+      row.date,
+      row.day,
+      row.scheduledStart,
+      row.scheduledEnd,
+      row.taskDescription,
+      row.entry,
+      row.exit,
+      row.late,
+      row.total,
+      row.overtime,
+      row.break,
+      row.grandTotal,
+      row.status
+    ]));
+  }
+
   get pagedTimeSheets(): EmployeeTimesheetRow[] {
     const start = (this.timeSheetPage - 1) * this.timeSheetPageSize;
-    return this.sortedTimeSheets.slice(start, start + this.timeSheetPageSize);
+    return this.filteredTimeSheets.slice(start, start + this.timeSheetPageSize);
   }
 
   get timeSheetTotalPages(): number {
-    return Math.ceil(this.timeSheets.length / this.timeSheetPageSize);
+    return Math.ceil(this.filteredTimeSheets.length / this.timeSheetPageSize);
   }
 
   get timeSheetPages(): number[] {
@@ -340,11 +363,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   get timeSheetStartEntry(): number {
-    return this.timeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
+    return this.filteredTimeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
   }
 
   get timeSheetEndEntry(): number {
-    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.timeSheets.length);
+    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.filteredTimeSheets.length);
   }
 
   setTimeSheetPage(page: number): void {
@@ -399,6 +422,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
     this.punchMessage = '';
     this.pendingPunchWorkMode = this.status;
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
+    this.pendingPunchAddress = '';
+
+    this.openCameraModal();
+    this.fetchCurrentLocation();
+  }
+
+  fetchCurrentLocation(): void {
+    this.isLocationLoading = true;
+    this.cdr.detectChanges();
 
     const fallbackToIp = () => {
       this.subscriptions.add(
@@ -417,19 +451,20 @@ export class EmpDashboard implements OnInit, OnDestroy {
               this.pendingPunchLongitude = undefined;
               this.pendingPunchAddress = 'Location Unavailable';
             }
-            this.openCameraModal();
+            this.isLocationLoading = false;
+            this.cdr.detectChanges();
           },
           error: () => {
             this.pendingPunchLatitude = undefined;
             this.pendingPunchLongitude = undefined;
             this.pendingPunchAddress = 'Location Unavailable';
-            this.openCameraModal();
+            this.isLocationLoading = false;
+            this.cdr.detectChanges();
           }
         })
       );
     };
 
-    // Capture location in the background for both punch-in and punch-out, keeping the UI focused on verification.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -438,7 +473,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
           this.attendanceService.reverseGeocode(pos.coords.latitude, pos.coords.longitude).subscribe({
             next: (geo: any) => {
               this.pendingPunchAddress = geo?.display_name || '';
-              this.openCameraModal();
+              this.isLocationLoading = false;
+              this.cdr.detectChanges();
             },
             error: () => {
               fallbackToIp();
@@ -448,11 +484,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
         () => {
           fallbackToIp();
         },
-        { timeout: 3000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
       fallbackToIp();
     }
+  }
+
+  refetchLocation(): void {
+    this.pendingPunchAddress = '';
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
+    this.fetchCurrentLocation();
+  }
+
+  onAddressManualEdit(): void {
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
   }
 
   openCameraModal(): void {
@@ -659,8 +707,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
   filterEvents(date: Date) {
     const isoDate = this.toIsoDate(date);
     this.selectedEvents = this.timelineEvents
-      .filter((event) => event.date === isoDate)
+      .filter((event) => event.date === isoDate && this.matchesSearch([
+        event.date,
+        event.time,
+        event.title,
+        event.location,
+        event.taskDescription
+      ]))
       .sort((left, right) => this.eventSortValue(left.time) - this.eventSortValue(right.time));
+  }
+
+  get filteredLatestNews() {
+    return this.latestNews_content.filter((item) => this.matchesSearch([
+      item.heading,
+      item.contents,
+      item.newsType,
+      item.date ? new Date(item.date).toDateString() : ''
+    ]));
   }
 
   private initialize(): void {
@@ -810,13 +873,22 @@ export class EmpDashboard implements OnInit, OnDestroy {
       : 0;
     this.attendanceStatusLabel = todayState.status;
     this.status = todayState.workMode;
-    this.punchInTime = todayState.punchIn || null;
-    this.punchOutTime = todayState.punchOut || null;
+    this.punchInTime = this.formatTimeWithoutMicroseconds(todayState.punchIn);
+    this.punchOutTime = this.formatTimeWithoutMicroseconds(todayState.punchOut);
     // Preserve first image; only update if not already set
     if (todayState.punchInImage) { this.punchInImage = todayState.punchInImage; }
     if (todayState.punchOutImage) { this.punchOutImage = todayState.punchOutImage; }
     if (todayState.punchInAddress) { this.punchInAddress = todayState.punchInAddress; }
     if (todayState.punchOutAddress) { this.punchOutAddress = todayState.punchOutAddress; }
+  }
+
+  private formatTimeWithoutMicroseconds(timeVal: string | null | undefined): string | null {
+    if (!timeVal) return null;
+    const dotIndex = timeVal.indexOf('.');
+    if (dotIndex !== -1) {
+      return timeVal.substring(0, dotIndex);
+    }
+    return timeVal;
   }
 
   private toIsoDate(date: Date): string {
@@ -869,5 +941,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.currentDate = new Date();
       })
     );
+  }
+
+  private matchesSearch(values: Array<string | number | undefined | null>): boolean {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    return values.some((value) => String(value ?? '').toLowerCase().includes(query));
   }
 }

@@ -14,11 +14,12 @@ import { CustomSelectComponent } from '../../../../shared/components/custom-sele
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { EmployeeLocationMap } from '../../components/employee-location-map/employee-location-map';
 
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar, CustomSelectComponent],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar, CustomSelectComponent, EmployeeLocationMap],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
@@ -32,6 +33,7 @@ export class HrDashboard implements OnInit {
   processedRequests: any[] = [];
   recentTimeSheets: any[] = [];
   dashboardError = '';
+  searchTerm = '';
 
   // Photo viewer modal state
   selectedPhotoUrl: string | null = null;
@@ -166,16 +168,12 @@ export class HrDashboard implements OnInit {
     this.hrsidebarService.toggleSidebar();
   }
 
-  onSearch(event: any) {
-    console.log('Search:', event);
+  onSearch(term: string) {
+    this.searchTerm = term || '';
   }
 
   openProfile() {
     console.log('Opening profile');
-  }
-
-  openNotifications() {
-    console.log('Opening notifications');
   }
   
   projects = [
@@ -192,6 +190,24 @@ export class HrDashboard implements OnInit {
 
   get projectOptions() { return [{label: 'Choose a project...', value: ''}, ...this.projects.map(p => ({label: p.name, value: p.id}))]; }
   get clientOptions() { return [{label: 'Choose a client...', value: ''}, ...this.clients.map(c => ({label: c.name, value: c.id}))]; }
+
+  get filteredRecentTimeSheets(): any[] {
+    return this.recentTimeSheets.filter((sheet) => this.matchesSearch([
+      sheet.employee,
+      sheet.employeeCode,
+      sheet.date,
+      sheet.punchIn,
+      sheet.punchOut,
+      sheet.breakTime,
+      sheet.overtime,
+      sheet.totalHours,
+      sheet.status
+    ]));
+  }
+
+  get filteredEvents(): any[] {
+    return this.events.filter((event) => this.matchesSearch([event.name, event.note, event.role]));
+  }
 
   kpis: any[] = [];
 
@@ -424,4 +440,13 @@ export class HrDashboard implements OnInit {
   };
 
   stats: any[] = [];
+
+  private matchesSearch(values: Array<string | number | undefined | null>): boolean {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    return values.some((value) => String(value ?? '').toLowerCase().includes(query));
+  }
 }
