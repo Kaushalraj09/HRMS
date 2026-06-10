@@ -43,6 +43,7 @@ interface BackendAttendanceRecord {
 interface BackendAttendanceListResponse {
   data: BackendAttendanceRecord[];
   total: number;
+  metrics: AttendanceMetrics;
 }
 
 interface BackendTodayAttendanceState {
@@ -178,38 +179,44 @@ export class AttendanceService {
     status: string,
     location?: string
   ): Observable<PaginatedAttendance> {
-    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, this.noCacheOptions()).pipe(
-      map(result => {
-        let rows = result.data.map(row => this.mapAttendanceRecord(row));
-        rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status, location);
+    const options = this.noCacheOptions();
+    options.params = options.params
+      .set('page', page)
+      .set('limit', limit)
+      .set('search', search.trim())
+      .set('department', department)
+      .set('status', status)
+      .set('location', location || '');
+    if (fromDate) {
+      options.params = options.params.set('fromDate', fromDate);
+    }
+    if (toDate) {
+      options.params = options.params.set('toDate', toDate);
+    }
 
-        // Sort all rows: date descending first, then punch-in time descending (latest first)
-        rows.sort((a, b) => {
-          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-          if (dateDiff !== 0) return dateDiff;
-
-          if (a.punchIn && b.punchIn) {
-            return b.punchIn.localeCompare(a.punchIn);
-          }
-          if (b.punchIn) return 1;
-          if (a.punchIn) return -1;
-          return 0;
-        });
-
-        const metrics = this.buildMetrics(rows);
-        const startIndex = (page - 1) * limit;
-
-        return {
-          data: rows.slice(startIndex, startIndex + limit),
-          total: rows.length,
-          metrics
-        };
-      })
+    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, options).pipe(
+      map(result => ({
+        data: result.data.map(row => this.mapAttendanceRecord(row)),
+        total: result.total,
+        metrics: result.metrics
+      }))
     );
   }
 
-  getMyTimesheets(): Observable<EmployeeTimesheetRow[]> {
-    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/my-history`, this.noCacheOptions()).pipe(
+  getMyTimesheets(fromDate: string = '', toDate: string = '', status: string = ''): Observable<EmployeeTimesheetRow[]> {
+    const options = this.noCacheOptions();
+    const trimmedStatus = status.trim();
+    if (fromDate) {
+      options.params = options.params.set('from_date', fromDate);
+    }
+    if (toDate) {
+      options.params = options.params.set('to_date', toDate);
+    }
+    if (trimmedStatus) {
+      options.params = options.params.set('status', trimmedStatus);
+    }
+
+    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/my-history`, options).pipe(
       map(rows => rows.map(row => this.mapTimesheet(row)))
     );
   }
@@ -405,41 +412,6 @@ export class AttendanceService {
       break: punchOut ? formatMinutesToHours(breakMinutes) : '-',
       grandTotal: punchOut ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
       status: this.normalizeStatus(row.status)
-    };
-  }
-
-  private filterAttendanceRows(
-    rows: AttendanceRecord[],
-    fromDate: string,
-    toDate: string,
-    search: string,
-    department: string,
-    status: string,
-    location?: string
-  ): AttendanceRecord[] {
-    const searchValue = search.trim().toLowerCase();
-
-    return rows.filter(row => {
-      const matchesFrom = !fromDate || row.date >= fromDate;
-      const matchesTo = !toDate || row.date <= toDate;
-      const matchesSearch = !searchValue
-        || row.name.toLowerCase().includes(searchValue)
-        || row.code.toLowerCase().includes(searchValue);
-      const matchesDepartment = !department || row.department === department;
-      const normalizedStatus = this.normalizeStatus(status || '');
-      const matchesStatus = !status || row.status === normalizedStatus;
-      const matchesLocation = !location || row.workMode === location;
-
-      return matchesFrom && matchesTo && matchesSearch && matchesDepartment && matchesStatus && matchesLocation;
-    });
-  }
-
-  private buildMetrics(rows: AttendanceRecord[]): AttendanceMetrics {
-    return {
-      present: rows.filter(row => row.status === 'Present').length,
-      working: rows.filter(row => row.status === 'Working').length,
-      absent: rows.filter(row => row.status === 'Absent').length,
-      notMarked: rows.filter(row => row.status === 'Not Marked').length
     };
   }
 

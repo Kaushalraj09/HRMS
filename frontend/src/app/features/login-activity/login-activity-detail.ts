@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { take } from 'rxjs';
 import { LoginActivityService, LoginActivity } from '../../core/services/login-activity.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -33,13 +34,13 @@ export class LoginActivityDetail implements OnInit {
         this.checkRoleAndLoad();
         this.cdr.detectChanges();
       } else {
-        this.router.navigate(['/login-activity']);
+        this.goBack();
       }
     });
   }
 
   checkRoleAndLoad(): void {
-    this.authService.currentUser$.subscribe(user => {
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
       if (user) {
         const role = user.role.toLowerCase();
         this.isAdminOrHR = (role === 'admin' || role === 'hr');
@@ -62,12 +63,12 @@ export class LoginActivityDetail implements OnInit {
         console.error('Error loading login activity detail:', err);
         this.isLoading = false;
         this.cdr.detectChanges();
-        this.router.navigate(['/login-activity']);
+        this.goBack();
       }
     });
   }
 
   goBack(): void {
-    this.router.navigate(['/login-activity']);
+    this.router.navigate(['../'], { relativeTo: this.route });
   }
 }

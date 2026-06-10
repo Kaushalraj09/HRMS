@@ -64,6 +64,11 @@ class EmployeeResponse(EmployeeBase):
         from_attributes = True
 
 
+class EmployeeListResponse(BaseModel):
+    data: List[EmployeeResponse]
+    total: int
+
+
 class EmployeeCredentialsResponse(BaseModel):
     employee_id: int
     employee_code: str

@@ -12,7 +12,6 @@ import { EmployeeTimesheetRow } from '../../../../core/models/attendance.model';
   styleUrl: './my-attendance.css',
 })
 export class MyAttendance implements OnInit {
-  allSheets: EmployeeTimesheetRow[] = [];
   timeSheets: EmployeeTimesheetRow[] = [];
   timeSheetPage = 1;
   readonly timeSheetPageSize = 10;
@@ -31,23 +30,7 @@ export class MyAttendance implements OnInit {
   }
 
   ngOnInit(): void {
-    this.attendanceService.getMyTimesheets().subscribe((rows: EmployeeTimesheetRow[]) => {
-      const todayIso = new Date().toISOString().slice(0, 10);
-      const visibleRows = rows.filter(row =>
-        row.date <= todayIso
-        && (
-          row.entry !== '-'
-          || row.exit !== '-'
-          || !!row.scheduledStart
-          || !!row.scheduledEnd
-          || !!row.taskDescription
-        )
-      );
-      this.allSheets = this.sortLatestFirst(visibleRows);
-      this.timeSheets = this.allSheets;
-      this.timeSheetPage = 1;
-      this.cdr.detectChanges();
-    });
+    this.loadTimesheets();
   }
 
   get pagedTimeSheets(): EmployeeTimesheetRow[] {
@@ -81,14 +64,7 @@ export class MyAttendance implements OnInit {
 
   onSearch(): void {
     const { fromDate, toDate, status } = this.filterForm.getRawValue();
-
-    this.timeSheets = this.allSheets.filter(row => {
-      const matchesFrom = !fromDate || row.date >= fromDate;
-      const matchesTo = !toDate || row.date <= toDate;
-      const matchesStatus = !status || row.status.toLowerCase().includes(status.toLowerCase());
-      return matchesFrom && matchesTo && matchesStatus;
-    });
-    this.timeSheetPage = 1;
+    this.loadTimesheets(fromDate || '', toDate || '', status || '');
   }
 
   onReset(): void {
@@ -97,8 +73,26 @@ export class MyAttendance implements OnInit {
       toDate: '',
       status: ''
     });
-    this.timeSheets = this.allSheets;
-    this.timeSheetPage = 1;
+    this.loadTimesheets();
+  }
+
+  private loadTimesheets(fromDate: string = '', toDate: string = '', status: string = ''): void {
+    this.attendanceService.getMyTimesheets(fromDate, toDate, status).subscribe((rows: EmployeeTimesheetRow[]) => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const visibleRows = rows.filter(row =>
+        row.date <= todayIso
+        && (
+          row.entry !== '-'
+          || row.exit !== '-'
+          || !!row.scheduledStart
+          || !!row.scheduledEnd
+          || !!row.taskDescription
+        )
+      );
+      this.timeSheets = this.sortLatestFirst(visibleRows);
+      this.timeSheetPage = 1;
+      this.cdr.detectChanges();
+    });
   }
 
   private sortLatestFirst(rows: EmployeeTimesheetRow[]): EmployeeTimesheetRow[] {

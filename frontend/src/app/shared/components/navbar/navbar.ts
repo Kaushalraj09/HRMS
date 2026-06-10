@@ -1,11 +1,11 @@
-import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Dropdown } from '../dropdown/dropdown';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -14,14 +14,14 @@ import { Subscription } from 'rxjs';
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
-export class Navbar implements OnInit, OnDestroy {
+export class Navbar implements OnInit, OnDestroy, OnChanges {
   @Input() userName: string = 'User';
   @Input() showSearch: boolean = true;
+  @Input() searchValue: string = '';
 
   @Output() hamburgerClick = new EventEmitter<void>();
   @Output() searchChange = new EventEmitter<string>();
   @Output() profileClick = new EventEmitter<void>();
-  @Output() notificationClick = new EventEmitter<void>();
 
   selectedLang = 'en';
   isOpen = false;
@@ -34,6 +34,8 @@ export class Navbar implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   unreadCount = 0;
   private connectedUserId: string | number | null = null;
+  searchTerm = '';
+  private readonly searchInput$ = new Subject<string>();
 
   private sub = new Subscription();
 
@@ -45,6 +47,18 @@ export class Navbar implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.searchTerm = this.searchValue || '';
+
+    this.sub.add(
+      this.searchInput$.pipe(
+        map(value => value.trim()),
+        debounceTime(150),
+        distinctUntilChanged()
+      ).subscribe(value => {
+        this.searchChange.emit(value);
+      })
+    );
+
     this.sub.add(
       this.authService.currentUser$.subscribe(user => {
         if (user) {
@@ -74,15 +88,25 @@ export class Navbar implements OnInit, OnDestroy {
     // Subscribe to notification service updates (BehaviorSubjects)
     this.sub.add(
       this.notificationService.notifications$.subscribe(notifs => {
-        this.notifications = notifs;
+        setTimeout(() => {
+          this.notifications = notifs;
+        });
       })
     );
 
     this.sub.add(
       this.notificationService.unreadCount$.subscribe(count => {
-        this.unreadCount = count;
+        setTimeout(() => {
+          this.unreadCount = count;
+        });
       })
     );
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['searchValue'] && changes['searchValue'].currentValue !== this.searchTerm) {
+      this.searchTerm = changes['searchValue'].currentValue || '';
+    }
   }
 
   loadNotifications(): void {
@@ -113,8 +137,16 @@ export class Navbar implements OnInit, OnDestroy {
     this.isOpen = !this.isOpen;
   }
 
-  onSearch(value: string) {
-    this.searchChange.emit(value);
+  onSearchInput(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchTerm = value;
+    this.searchInput$.next(value);
+  }
+
+  clearSearch(event?: Event) {
+    event?.stopPropagation();
+    this.searchTerm = '';
+    this.searchInput$.next('');
   }
 
   onProfileClick() {
@@ -144,7 +176,6 @@ export class Navbar implements OnInit, OnDestroy {
       // Reload on open
       this.loadNotifications();
     }
-    this.notificationClick.emit();
   }
 
   markAllAsRead(event: MouseEvent) {
@@ -161,9 +192,63 @@ export class Navbar implements OnInit, OnDestroy {
     }
 
     // Redirect based on type
-    if (notif.type === 'LOGIN_ACTIVITY' && notif.reference_id) {
-      this.router.navigate(['/notifications/login-activity', notif.reference_id]);
+    const targetRoute = this.getNotificationTargetRoute(notif);
+    if (targetRoute) {
+      this.router.navigate(targetRoute);
     }
+  }
+
+  private getActiveDashboardBaseRoute(): string | null {
+    const currentUrl = this.router.url;
+    if (currentUrl.startsWith('/master-dashboard')) {
+      return '/master-dashboard';
+    }
+    if (currentUrl.startsWith('/hr-dashboard')) {
+      return '/hr-dashboard';
+    }
+    if (currentUrl.startsWith('/emp-dashboard')) {
+      return '/emp-dashboard';
+    }
+
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return null;
+    }
+
+    if (user.role === 'admin') {
+      return '/master-dashboard';
+    }
+    if (user.role === 'hr') {
+      return '/hr-dashboard';
+    }
+    return '/emp-dashboard';
+  }
+
+  private getNotificationTargetRoute(notif: Notification): string[] | null {
+    const baseRoute = this.getActiveDashboardBaseRoute();
+    if (!baseRoute) {
+      return null;
+    }
+
+    if (notif.type === 'ATTENDANCE') {
+      return baseRoute === '/emp-dashboard'
+        ? ['/emp-dashboard', 'my-attendance']
+        : [baseRoute, 'attendance'];
+    }
+
+    if (notif.type === 'LOGIN_ACTIVITY') {
+      if (baseRoute === '/emp-dashboard') {
+        return [baseRoute];
+      }
+
+      if (notif.reference_id) {
+        return [baseRoute, 'login-activity', String(notif.reference_id)];
+      }
+
+      return [baseRoute, 'login-activity'];
+    }
+
+    return null;
   }
 
   getIconClass(type: string): string {

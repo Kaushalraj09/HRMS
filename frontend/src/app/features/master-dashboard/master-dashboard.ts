@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
@@ -8,6 +8,7 @@ import { Sidebar } from '../../shared/components/sidebar/sidebar';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+import { Subscription } from 'rxjs';
 
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AdminDashboardData } from '../../core/models/dashboard.model';
@@ -21,13 +22,15 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',
 })
-export class MasterDashboard implements OnInit {
+export class MasterDashboard implements OnInit, OnDestroy {
   selectedLang = 'en';
   isSidebarOpen$!: import('rxjs').Observable<boolean>;
   dashboardData: AdminDashboardData | null = null;
   userName = 'Admin';
   dashboardError = '';
   isMainRoute = false;
+  searchTerm = '';
+  private sub = new Subscription();
 
   constructor(
     private sidebarService: SidebarService,
@@ -44,32 +47,42 @@ export class MasterDashboard implements OnInit {
     this.updateMainRouteState();
 
     // Subscribe to router events to update route state dynamically
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe(() => {
-      this.updateMainRouteState();
-      this.cdr.detectChanges();
-    });
+    this.sub.add(
+      this.router.events.pipe(
+        filter(event => event instanceof NavigationEnd)
+      ).subscribe(() => {
+        this.updateMainRouteState();
+        this.cdr.detectChanges();
+      })
+    );
 
     // Subscribe to current user details dynamically
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.userName = user.displayName || 'System Admin';
-        this.cdr.detectChanges();
-      }
-    });
+    this.sub.add(
+      this.authService.currentUser$.subscribe(user => {
+        if (user) {
+          this.userName = user.displayName || 'System Admin';
+          this.cdr.detectChanges();
+        }
+      })
+    );
 
-    this.dashboardService.getAdminDashboard().subscribe({
-      next: (data) => {
-        this.dashboardError = '';
-        this.dashboardData = data;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.dashboardError = error?.error?.detail || 'Unable to load master dashboard data.';
-        this.cdr.detectChanges();
-      }
-    });
+    this.sub.add(
+      this.dashboardService.getAdminDashboard().subscribe({
+        next: (data) => {
+          this.dashboardError = '';
+          this.dashboardData = data;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.dashboardError = error?.error?.detail || 'Unable to load master dashboard data.';
+          this.cdr.detectChanges();
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.sub.unsubscribe();
   }
 
   toggleSidebar() {
@@ -84,14 +97,11 @@ export class MasterDashboard implements OnInit {
   isMainDashboardRoute(): boolean {
     return this.isMainRoute;
   }
-  onSearch(event: any) {
-    console.log('Search:', event);
+  onSearch(term: string) {
+    this.searchTerm = term || '';
   }
   openProfile() {
     console.log('Opening profile');
-  }
-  openNotifications() {
-    console.log('Opening notifications');
   }
 
   get fullDetails() {
@@ -104,5 +114,22 @@ export class MasterDashboard implements OnInit {
 
   get employees() {
     return this.dashboardData?.employees || [];
+  }
+
+  get filteredHrUsers() {
+    return this.hrUsers.filter((row) => this.matchesSearch([row.primary, row.secondary, row.tertiary, row.status]));
+  }
+
+  get filteredEmployees() {
+    return this.employees.filter((row) => this.matchesSearch([row.primary, row.secondary, row.tertiary, row.status]));
+  }
+
+  private matchesSearch(values: Array<string | number | undefined | null>): boolean {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    return values.some((value) => String(value ?? '').toLowerCase().includes(query));
   }
 }

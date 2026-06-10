@@ -29,6 +29,11 @@ interface BackendEmployee {
   status: 'Active' | 'Inactive';
 }
 
+interface BackendPaginatedEmployees {
+  data: BackendEmployee[];
+  total: number;
+}
+
 interface BackendEmployeePayload {
   first_name: string;
   last_name: string;
@@ -77,22 +82,21 @@ export class EmployeeService {
     status: string,
     excludeHr: boolean = false
   ): Observable<PaginatedResult<Employee>> {
-    return this.http.get<BackendEmployee[]>(this.apiUrl).pipe(
-      map(rows => rows.map(row => this.mapEmployee(row))),
-      map(rows => this.filterEmployees(rows, search, department, type, status)),
-      map(rows => {
-        if (excludeHr) {
-          rows = rows.filter(emp => {
-            const isHr = emp.id.startsWith('hr') || (!isNaN(Number(emp.id)) && Number(emp.id) >= 10000);
-            return !isHr;
-          });
-        }
-        const startIndex = (page - 1) * limit;
-        return {
-          data: rows.slice(startIndex, startIndex + limit),
-          total: rows.length
-        };
-      })
+    const params = {
+      page,
+      limit,
+      search: search.trim(),
+      department,
+      type,
+      status,
+      exclude_hr: excludeHr
+    };
+
+    return this.http.get<BackendPaginatedEmployees>(this.apiUrl, { params }).pipe(
+      map(result => ({
+        data: result.data.map(row => this.mapEmployee(row)),
+        total: result.total
+      }))
     );
   }
 
@@ -190,23 +194,6 @@ export class EmployeeService {
 
   private normalizeEmployeeId(employeeId: string): string {
     return String(employeeId ?? '').trim();
-  }
-
-  private filterEmployees(rows: Employee[], search: string, department: string, type: string, status: string): Employee[] {
-    return rows.filter(employee => {
-      const searchValue = search.trim().toLowerCase();
-      const matchesSearch = !searchValue
-        || employee.name.toLowerCase().includes(searchValue)
-        || employee.employeeCode.toLowerCase().includes(searchValue)
-        || employee.department.toLowerCase().includes(searchValue)
-        || employee.officialEmail.toLowerCase().includes(searchValue);
-
-      const matchesDepartment = !department || employee.department === department;
-      const matchesType = !type || employee.employeeType === type;
-      const matchesStatus = !status || employee.status === status;
-
-      return matchesSearch && matchesDepartment && matchesType && matchesStatus;
-    });
   }
 
   private toBackendPayload(payload: EmployeePayload): BackendEmployeePayload {

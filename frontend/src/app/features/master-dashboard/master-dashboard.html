@@ -1,10 +1,10 @@
 <div class="dashboard-wrapper">
     <app-navbar 
         [userName]="userName" 
+        [searchValue]="searchTerm"
         (hamburgerClick)="toggleSidebar()"
         (searchChange)="onSearch($event)" 
-        (profileClick)="openProfile()" 
-        (notificationClick)="openNotifications()">
+        (profileClick)="openProfile()">
     </app-navbar>
 
     <div class="dashboard-layout">
@@ -57,7 +57,10 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr *ngFor="let client of hrUsers">
+                                        <tr *ngIf="filteredHrUsers.length === 0">
+                                            <td colspan="4" class="text-center" style="padding: 24px; color: #64748b;">No matching HR users found</td>
+                                        </tr>
+                                        <tr *ngFor="let client of filteredHrUsers">
                                             <td class="name-cell">
                                                 <div class="avatar_client">
                                                     <i class="fas fa-user-shield"></i>
@@ -100,7 +103,10 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr *ngFor="let project of employees">
+                                        <tr *ngIf="filteredEmployees.length === 0">
+                                            <td colspan="4" class="text-center" style="padding: 24px; color: #64748b;">No matching employees found</td>
+                                        </tr>
+                                        <tr *ngFor="let project of filteredEmployees">
                                             <td>
                                                 <div class="project-info">
                                                     <strong>{{ project.primary }}</strong>

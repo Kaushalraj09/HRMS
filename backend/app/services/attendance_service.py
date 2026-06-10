@@ -9,7 +9,7 @@ This module implements a simplified single punch-in/punch-out system with:
 """
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import literal, or_, func
 from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
@@ -410,7 +410,56 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "punchOutImage": attendance.punch_out_image if attendance else None,
     }
 
-def get_my_history(db: Session, employee_id: int) -> list[Attendance]:
+def _normalize_attendance_status(status: str) -> str:
+    known_statuses = {
+        "present": "Present",
+        "working": "Working",
+        "absent": "Absent",
+        "not marked": "Not Marked",
+        "notmarked": "Not Marked",
+        "punched in": "Working",
+        "punched out": "Present",
+        "not working": "Present",
+    }
+    value = (status or "").strip().lower()
+    return known_statuses.get(value, status or "")
+
+
+def _matches_computed_status(record: Attendance, status_filter: str) -> bool:
+    if not status_filter:
+        return True
+    requested = _normalize_attendance_status(status_filter).lower()
+    actual = get_attendance_status(record.punch_in, record.punch_out, record.date).lower()
+    return actual == requested or requested in actual
+
+
+def _attendance_metrics(records: list[Attendance]) -> dict:
+    metrics = {
+        "present": 0,
+        "working": 0,
+        "absent": 0,
+        "notMarked": 0,
+    }
+    for record in records:
+        status_value = get_attendance_status(record.punch_in, record.punch_out, record.date)
+        if status_value == "Present":
+            metrics["present"] += 1
+        elif status_value == "Working":
+            metrics["working"] += 1
+        elif status_value == "Absent":
+            metrics["absent"] += 1
+        elif status_value == "Not Marked":
+            metrics["notMarked"] += 1
+    return metrics
+
+
+def get_my_history(
+    db: Session,
+    employee_id: int,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    status_filter: str = "",
+) -> list[Attendance]:
     """
     Get attendance history for employee up to today.
     
@@ -422,15 +471,25 @@ def get_my_history(db: Session, employee_id: int) -> list[Attendance]:
         list[Attendance]: List of attendance records in descending date order
     """
     today = datetime.now(APP_TIMEZONE).date()
-    return (
+    query = (
         db.query(Attendance)
         .filter(
             Attendance.employee_id == employee_id,
             Attendance.date <= today,
         )
-        .order_by(Attendance.date.desc())
-        .all()
     )
+
+    if from_date:
+        query = query.filter(Attendance.date >= from_date)
+    if to_date:
+        query = query.filter(Attendance.date <= to_date)
+
+    records = query.order_by(
+        Attendance.date.desc(),
+        Attendance.punch_in.desc().nulls_last(),
+        Attendance.id.desc(),
+    ).all()
+    return [record for record in records if _matches_computed_status(record, status_filter)]
 
 
 def to_attendance_response(record: Attendance) -> AttendanceResponse:
@@ -543,7 +602,17 @@ def add_schedule(
     
     return to_attendance_response(record)
 
-def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
+def list_all_attendance(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    search: str = "",
+    department: str = "",
+    status_filter: str = "",
+    location: str = "",
+) -> dict:
     """
     List all attendance records (HR/Admin only).
     
@@ -560,14 +629,43 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
         db.query(Attendance)
         .join(Employee)
         .filter(Attendance.date <= today)
-        .order_by(Attendance.date.desc(), Attendance.punch_in.desc().nulls_last(), Attendance.id.desc())
     )
+
+    if from_date:
+        query = query.filter(Attendance.date >= from_date)
+    if to_date:
+        query = query.filter(Attendance.date <= to_date)
+    if department:
+        query = query.filter(Employee.department == department)
+    if location:
+        query = query.filter(Attendance.work_mode == location)
+
+    search_value = (search or "").strip()
+    if search_value:
+        like_value = f"%{search_value}%"
+        full_name = func.coalesce(Employee.first_name, "") + literal(" ") + func.coalesce(Employee.last_name, "")
+        query = query.filter(
+            or_(
+                Employee.first_name.ilike(like_value),
+                Employee.last_name.ilike(like_value),
+                full_name.ilike(like_value),
+                Employee.employee_code.ilike(like_value),
+            )
+        )
     
-    total = query.count()
-    records = query.offset(skip).limit(limit).all()
+    records = query.order_by(
+        Attendance.date.desc(),
+        Attendance.punch_in.desc().nulls_last(),
+        Attendance.id.desc(),
+    ).all()
+    records = [record for record in records if _matches_computed_status(record, status_filter)]
+    total = len(records)
+    metrics = _attendance_metrics(records)
+    start = (page - 1) * limit
+    paged_records = records[start : start + limit]
     
     formatted_data = []
-    for record in records:
+    for record in paged_records:
         calculate_attendance_metrics(record)
         employee_name = f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown Employee"
         
@@ -601,7 +699,7 @@ def list_all_attendance(db: Session, skip: int = 0, limit: int = 1000) -> dict:
             "punchOutImage": record.punch_out_image,
         })
     
-    return {"data": formatted_data, "total": total}
+    return {"data": formatted_data, "total": total, "metrics": metrics}
 
 
 def update_today_work_mode(
