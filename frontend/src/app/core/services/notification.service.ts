@@ -7,7 +7,7 @@ import { AttendanceService } from './attendance.service';
 export interface Notification {
   id: number;
   user_id: number;
-  type: 'LOGIN_ACTIVITY' | 'ATTENDANCE' | 'LEAVE' | 'SYSTEM';
+  type: 'LOGIN_ACTIVITY' | 'ATTENDANCE' | 'LEAVE' | 'SYSTEM' | 'TIMEOFF_APPLY' | 'TIMEOFF_REQUEST' | 'TIMEOFF_UPDATE' | 'ATTENDANCE_AUTO_CHECKOUT' | 'TIMEOFF_EXPIRED' | 'TIMEOFF_REMINDER';
   title: string;
   message: string;
   reference_id?: number;

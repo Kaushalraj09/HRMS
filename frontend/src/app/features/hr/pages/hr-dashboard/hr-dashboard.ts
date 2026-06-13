@@ -5,7 +5,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { SharedModule } from '../../../../shared/shared-module';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service';
 import { FormsModule } from '@angular/forms';
@@ -19,7 +19,7 @@ import { EmployeeLocationMap } from '../../components/employee-location-map/empl
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, SharedModule, RouterModule, HrSidebar, CustomSelectComponent, EmployeeLocationMap],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, BaseChartDirective, Navbar, RouterModule, HrSidebar, CustomSelectComponent, EmployeeLocationMap],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
 })
@@ -119,18 +119,18 @@ export class HrDashboard implements OnInit {
         this.cdr.detectChanges();
       }
     });
-    // this.loadPendingRequests();
-    // this.loadProcessedRequests();
+    this.loadPendingRequests();
+    this.loadProcessedRequests();
 
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
     }
 
-    // this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
-    //   if (event?.type === 'TIMEOFF_REQUEST') {
-    //     this.loadPendingRequests();
-    //   }
-    // });
+    this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
+      if (event?.type === 'TIMEOFF_REQUEST') {
+        this.loadPendingRequests();
+       }
+     });
   }
 
   loadPendingRequests() {

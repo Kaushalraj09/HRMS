@@ -10,8 +10,6 @@ import { MyProfile } from './features/emp/pages/my-profile/my-profile';
 import { ChangePasswordComponent } from './features/emp/pages/change-password/change-password';
 import { AttendanceComponent } from './features/hr/pages/attendance/attendance';
 import { Employees } from './features/hr/pages/employees/employees';
-import { AddEmployeeComponent } from './features/hr/pages/employees/add-employee/add-employee';
-import { EmployeeDetailComponent } from './features/hr/pages/employees/employee-detail/employee-detail';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { HrUsersComponent } from './features/admin/pages/hr-users/hr-users';

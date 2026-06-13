@@ -31,6 +31,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   isLoading = true;
   isSaving = false;
   errorMessage = '';
+  saveError = '';
 
   // Dropdown mappings
   genderOptions = [{ label: 'Male', value: 'Male' }, { label: 'Female', value: 'Female' }, { label: 'Other', value: 'Other' }];
@@ -101,6 +102,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.saveError = '';
 
     this.subscription = this.employeeService.getEmployeeById(employeeId)
       .pipe(
@@ -181,6 +183,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     this.errorMessage = '';
+    this.saveError = '';
 
     const raw = this.form.getRawValue();
     const payload: EmployeePayload = {
@@ -209,7 +212,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => this.closed.emit(true),
         error: (err) => {
-          this.errorMessage = err?.error?.detail || 'Failed to update employee';
+          this.saveError = err?.error?.detail || 'Failed to update employee';
           this.cdr.markForCheck();
         }
       });

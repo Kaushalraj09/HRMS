@@ -7,8 +7,7 @@ from app.models.attendance import Attendance
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.models.user import Role, User
-from app.services.attendance_service import calculate_attendance_metrics
-from app.services.time_calculator import get_attendance_status
+from app.services.attendance_service import calculate_attendance_metrics, get_attendance_status_with_timeoff
 
 
 def _employee_query(db: Session):
@@ -117,15 +116,17 @@ def get_hr_dashboard_data(db: Session):
     for emp in active_emps_list:
         record = attendance_map.get(emp.id)
         if record:
-            status = get_attendance_status(record.punch_in, record.punch_out, today)
+            status = get_attendance_status_with_timeoff(db, emp.id, record.punch_in, record.punch_out, today)
             work_mode = record.work_mode
         else:
-            status = get_attendance_status(None, None, today)
+            status = get_attendance_status_with_timeoff(db, emp.id, None, None, today)
             work_mode = None
 
-        if status == "Present":
+        if status in ("Present", "Time Off"):
             present += 1
-            punched_out += 1  # present means Punch Out completed
+            punched_out += 1  # present/time-off means Punch Out completed or excused
+        elif status == "Half Day":
+            present += 1
         elif status == "Working":
             punched_in += 1  # working means punched in but not punched out
         elif status == "Absent":
@@ -278,7 +279,7 @@ def get_hr_dashboard_data(db: Session):
                 "breakTime": f"{record.break_minutes or 0} mins",
                 "overtime": f"{record.overtime_minutes or 0} mins",
                 "totalHours": f"{record.total_working_minutes // 60}h {record.total_working_minutes % 60}m" if record.total_working_minutes else "0h 0m",
-                "status": get_attendance_status(record.punch_in, record.punch_out, record.date),
+                "status": get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date),
                 "punchInImage": record.punch_in_image,
                 "punchOutImage": record.punch_out_image
             } for record in recent_records

@@ -240,7 +240,7 @@ def get_my_history(
         to_date=to_date,
         status_filter=status_filter,
     )
-    return [attendance_service.to_attendance_response(r) for r in records]
+    return [attendance_service.to_attendance_response(r, db) for r in records]
 
 @router.get("/all", response_model=AttendanceListResponse)
 def get_all_attendance_records(

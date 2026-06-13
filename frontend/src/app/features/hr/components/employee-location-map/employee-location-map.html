@@ -12,11 +12,7 @@
     </div>
     <div class="stat-card stat-active">
       <div class="stat-value">{{ stats.currentlyActive }}</div>
-      <div class="stat-label">Currently Active</div>
-    </div>
-    <div class="stat-card stat-field">
-      <div class="stat-value">{{ stats.fieldEmployees }}</div>
-      <div class="stat-label">Field Work</div>
+      <div class="stat-label">Working</div>
     </div>
     <div class="stat-card stat-late">
       <div class="stat-value">{{ stats.lateArrivals }}</div>
@@ -32,7 +28,6 @@
   <div class="filter-actions">
     <button class="filter-btn" [class.active]="activeFilter === 'ALL'" (click)="setFilter('ALL')">All Employees</button>
     <button class="filter-btn" [class.active]="activeFilter === 'ACTIVE'" (click)="setFilter('ACTIVE')">Currently Active</button>
-    <button class="filter-btn" [class.active]="activeFilter === 'FIELD'" (click)="setFilter('FIELD')">Field Work</button>
     <button class="filter-btn" [class.active]="activeFilter === 'LATE'" (click)="setFilter('LATE')">Late Employees</button>
     <button class="filter-btn" [class.active]="activeFilter === 'PUNCHED_OUT'" (click)="setFilter('PUNCHED_OUT')">Punched Out</button>
   </div>

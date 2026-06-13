@@ -3,7 +3,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharedModule } from '../../shared/shared-module';
+import { Navbar } from '../../shared/components/navbar/navbar';
 import { Sidebar } from '../../shared/components/sidebar/sidebar';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -17,7 +17,7 @@ import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-master-dashboard',
-  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, SharedModule, Sidebar, RouterModule],
+  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, Sidebar, RouterModule],
   standalone: true,
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',

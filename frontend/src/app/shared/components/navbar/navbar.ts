@@ -248,6 +248,26 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
       return [baseRoute, 'login-activity'];
     }
 
+    if (notif.type === 'TIMEOFF_APPLY' || notif.type === 'TIMEOFF_REQUEST' || notif.type === 'TIMEOFF_UPDATE') {
+      return [baseRoute];
+    }
+
+    if (notif.type === 'ATTENDANCE_AUTO_CHECKOUT') {
+      return baseRoute === '/emp-dashboard'
+        ? ['/emp-dashboard', 'my-attendance']
+        : [baseRoute];
+    }
+
+    if (notif.type === 'TIMEOFF_EXPIRED') {
+      return [baseRoute];
+    }
+
+    if (notif.type === 'TIMEOFF_REMINDER') {
+      return baseRoute === '/emp-dashboard'
+        ? [baseRoute]
+        : [baseRoute, 'attendance'];
+    }
+
     return null;
   }
 
@@ -257,7 +277,16 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
         return 'fas fa-shield-alt';
       case 'ATTENDANCE':
         return 'fas fa-clock';
+      case 'ATTENDANCE_AUTO_CHECKOUT':
+        return 'fas fa-history';
+      case 'TIMEOFF_EXPIRED':
+        return 'fas fa-calendar-times';
+      case 'TIMEOFF_REMINDER':
+        return 'fas fa-bell';
       case 'LEAVE':
+      case 'TIMEOFF_APPLY':
+      case 'TIMEOFF_REQUEST':
+      case 'TIMEOFF_UPDATE':
         return 'fas fa-calendar-alt';
       default:
         return 'fas fa-bell';
