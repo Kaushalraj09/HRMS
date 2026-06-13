@@ -88,8 +88,8 @@ async def request_timeoff(
             reference_id=created.id
         )
 
-        # 2. Notify all HR and Admin users
-        hr_users = db.query(User).join(Role).filter(func.lower(Role.name).in_(["hr", "admin"])).all()
+        # 2. Notify all HR users
+        hr_users = db.query(User).join(Role).filter(func.lower(Role.name) == "hr").all()
         for hr_user in hr_users:
             await create_notification(
                 db=db,

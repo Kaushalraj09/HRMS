@@ -62,15 +62,37 @@ def check_timeoff_status():
     finally:
         db.close()
 
+def send_websocket_message_sync(user_id: int, message: dict):
+    """Sync wrapper to broadcast websocket messages from the scheduler thread."""
+    try:
+        from app.core.websocket_manager import manager
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        if loop.is_running():
+            loop.create_task(manager.send_personal_message(message, user_id))
+        else:
+            loop.run_until_complete(manager.send_personal_message(message, user_id))
+    except Exception as e:
+        logger.error(f"Error sending sync websocket message: {e}")
+
 def auto_checkout_forgotten_punches():
-    """Scheduled job to check out employees who forgot to check out today."""
+    """Scheduled job to check out employees who forgot to check out today, running every 5 minutes."""
     db = SessionLocal()
     try:
         from app.models.attendance import Attendance
         from app.models.user import User
         from app.services.time_calculator import calculate_times
+        from zoneinfo import ZoneInfo
         
-        today = date.today()
+        APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+        current_dt = datetime.now(APP_TIMEZONE)
+        today = current_dt.date()
+        current_time = current_dt.time()
+        
         # Find all active attendance records for today where punch_in is set but punch_out is missing
         active_records = db.query(Attendance).filter(
             Attendance.date == today,
@@ -80,35 +102,131 @@ def auto_checkout_forgotten_punches():
         ).all()
         
         for record in active_records:
-            # Auto check-out at 18:00 (scheduled end time) unless punch-in was at/after 18:00
-            in_hour = record.punch_in.hour
-            if in_hour >= 18:
-                record.punch_out = time(23, 59)
-            else:
-                record.punch_out = time(18, 0)
-                
-            record.is_working = 0
-            
-            # Recalculate metrics (working minutes, break minutes, overtime)
-            calculate_times(record)
-            
-            # Override status to "Auto Checked-out"
-            record.status = "Auto Checked-out"
-            db.commit()
-            
-            logger.info(f"Auto-checked out employee {record.employee_id} for date {record.date}")
-            
-            # Send notification to the employee
             user = db.query(User).filter(User.id == record.employee.user_id).first()
-            if user:
-                send_notification_sync(
-                    db=db,
-                    user_id=user.id,
-                    type="ATTENDANCE_AUTO_CHECKOUT",
-                    title="Automatic Check-Out",
-                    message=f"You forgot to check out today ({record.date}). The system checked you out automatically at {record.punch_out.strftime('%H:%M')}.",
-                    reference_id=record.id
-                )
+            if not user:
+                continue
+                
+            # Phase 1: Shift End Reminders (18:00 - 18:45) - only if overtime is NOT approved
+            if not record.overtime_approved:
+                # 18:00 to 18:15
+                if current_time >= time(18, 0) and current_time < time(18, 15):
+                    if record.shift_end_reminder_sent < 1:
+                        record.shift_end_reminder_sent = 1
+                        db.commit()
+                        send_notification_sync(db, user.id, "SHIFT_END_REMINDER", "Shift Ended", "Your shift has ended. Please punch out or request to continue working.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "SHIFT_END_REMINDER", "title": "Shift Ended", "message": "Your shift has ended. Please punch out or request to continue working."})
+                # 18:15 to 18:30
+                elif current_time >= time(18, 15) and current_time < time(18, 30):
+                    if record.shift_end_reminder_sent < 2:
+                        record.shift_end_reminder_sent = 2
+                        db.commit()
+                        send_notification_sync(db, user.id, "SHIFT_END_REMINDER", "Shift Ended - Warning 2", "Second warning: Please punch out or request to continue working.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "SHIFT_END_REMINDER", "title": "Shift Ended - Warning 2", "message": "Second warning: Please punch out or request to continue working."})
+                # 18:30 to 18:45
+                elif current_time >= time(18, 30) and current_time < time(18, 45):
+                    if record.shift_end_reminder_sent < 3:
+                        record.shift_end_reminder_sent = 3
+                        db.commit()
+                        send_notification_sync(db, user.id, "SHIFT_END_REMINDER", "Shift Ended - Final Warning", "Final warning: You will be auto-checked out at 18:45.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "SHIFT_END_REMINDER", "title": "Shift Ended - Final Warning", "message": "Final warning: You will be auto-checked out at 18:45."})
+                # 18:45 and onwards
+                elif current_time >= time(18, 45):
+                    # Auto checkout
+                    record.punch_out = time(18, 0)
+                    record.is_working = 0
+                    record.checkout_source = "AUTO"
+                    record.requires_regularization = True
+                    
+                    # Ensure AUTO_CHECKOUT and MISSED_PUNCH flags are set
+                    current_flags = record.flags or []
+                    if "AUTO_CHECKOUT" not in current_flags:
+                        current_flags.append("AUTO_CHECKOUT")
+                    if "MISSED_PUNCH" not in current_flags:
+                        current_flags.append("MISSED_PUNCH")
+                    record.flags = current_flags
+                    
+                    calculate_times(record)
+                    db.commit()
+                    
+                    from app.services.attendance_service import log_audit_trail_sync
+                    log_audit_trail_sync(db, "AUTO_CHECKOUT", record.employee_id, f"Auto-checked out at 18:45 with checkout time 18:00 due to missed checkout.")
+                    
+                    send_notification_sync(db, user.id, "ATTENDANCE_AUTO_CHECKOUT", "Automatic Check-Out", "You forgot to check out today. The system checked you out automatically at 18:00.", record.id)
+                    send_websocket_message_sync(user.id, {"type": "AUTO_CHECKOUT", "title": "Automatic Check-Out", "message": "You forgot to check out. System auto checked you out at 18:00."})
+            
+            # Phase 2: Overtime Reminders (20:00 - 20:45) - if overtime approved but NOT extended
+            elif record.overtime_approved and not record.overtime_extended:
+                # 20:00 to 20:15
+                if current_time >= time(20, 0) and current_time < time(20, 15):
+                    if record.overtime_reminder_sent < 1:
+                        record.overtime_reminder_sent = 1
+                        db.commit()
+                        send_notification_sync(db, user.id, "OVERTIME_REMINDER", "Overtime Limit", "Your overtime is ending. Please punch out or request an extension.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "OVERTIME_REMINDER", "title": "Overtime Limit", "message": "Your overtime is ending. Please punch out or request an extension."})
+                # 20:15 to 20:30
+                elif current_time >= time(20, 15) and current_time < time(20, 30):
+                    if record.overtime_reminder_sent < 2:
+                        record.overtime_reminder_sent = 2
+                        db.commit()
+                        send_notification_sync(db, user.id, "OVERTIME_REMINDER", "Overtime Limit - Warning 2", "Second warning: Please punch out or extend.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "OVERTIME_REMINDER", "title": "Overtime Limit - Warning 2", "message": "Second warning: Please punch out or extend."})
+                # 20:30 to 20:45
+                elif current_time >= time(20, 30) and current_time < time(20, 45):
+                    if record.overtime_reminder_sent < 3:
+                        record.overtime_reminder_sent = 3
+                        db.commit()
+                        send_notification_sync(db, user.id, "OVERTIME_REMINDER", "Overtime Limit - Final Warning", "Final warning: You will be auto-checked out at 20:45.", record.id)
+                        send_websocket_message_sync(user.id, {"type": "OVERTIME_REMINDER", "title": "Overtime Limit - Final Warning", "message": "Final warning: You will be auto-checked out at 20:45."})
+                # 20:45 onwards
+                elif current_time >= time(20, 45):
+                    # Auto checkout
+                    record.punch_out = time(20, 0)
+                    record.is_working = 0
+                    record.checkout_source = "AUTO"
+                    record.requires_regularization = True
+                    
+                    # Ensure AUTO_CHECKOUT and MISSED_PUNCH flags are set
+                    current_flags = record.flags or []
+                    if "AUTO_CHECKOUT" not in current_flags:
+                        current_flags.append("AUTO_CHECKOUT")
+                    if "MISSED_PUNCH" not in current_flags:
+                        current_flags.append("MISSED_PUNCH")
+                    record.flags = current_flags
+                    
+                    calculate_times(record)
+                    db.commit()
+                    
+                    from app.services.attendance_service import log_audit_trail_sync
+                    log_audit_trail_sync(db, "AUTO_CHECKOUT", record.employee_id, f"Auto-checked out at 20:45 with checkout time 20:00 due to missed overtime checkout.")
+                    
+                    send_notification_sync(db, user.id, "ATTENDANCE_AUTO_CHECKOUT", "Automatic Check-Out", "Your overtime ended. The system checked you out automatically at 20:00.", record.id)
+                    send_websocket_message_sync(user.id, {"type": "AUTO_CHECKOUT", "title": "Automatic Check-Out", "message": "Your overtime ended. System auto checked you out at 20:00."})
+            
+            # Phase 3: Extended Overtime Auto-Checkout (22:00 onwards)
+            elif record.overtime_approved and record.overtime_extended:
+                if current_time >= time(22, 0):
+                    # Auto checkout
+                    record.punch_out = time(22, 0)
+                    record.is_working = 0
+                    record.checkout_source = "AUTO"
+                    record.requires_regularization = False  # Authorized extension
+                    
+                    # Clean auto checkout flag
+                    current_flags = record.flags or []
+                    if "AUTO_CHECKOUT" not in current_flags:
+                        current_flags.append("AUTO_CHECKOUT")
+                    if "MISSED_PUNCH" in current_flags:
+                        current_flags.remove("MISSED_PUNCH")
+                    record.flags = current_flags
+                    
+                    calculate_times(record)
+                    db.commit()
+                    
+                    from app.services.attendance_service import log_audit_trail_sync
+                    log_audit_trail_sync(db, "AUTO_CHECKOUT", record.employee_id, f"Auto-checked out at 22:00 with checkout time 22:00 (authorized extension).")
+                    
+                    send_notification_sync(db, user.id, "ATTENDANCE_AUTO_CHECKOUT", "Automatic Check-Out", "You were checked out automatically at 22:00 (extended overtime limit reached).", record.id)
+                    send_websocket_message_sync(user.id, {"type": "AUTO_CHECKOUT", "title": "Automatic Check-Out", "message": "Extended overtime limit reached. System checked you out at 22:00."})
     except Exception as e:
         logger.error(f"Error in auto_checkout_forgotten_punches: {e}")
         db.rollback()
@@ -200,7 +318,7 @@ def remind_hr_pending_timeoff():
         ).all()
         
         if pending_tomorrow:
-            hr_users = db.query(User).join(Role).filter(func.lower(Role.name).in_(["hr", "admin"])).all()
+            hr_users = db.query(User).join(Role).filter(func.lower(Role.name) == "hr").all()
             
             for req in pending_tomorrow:
                 employee = db.query(Employee).filter(Employee.id == req.employee_id).first()
@@ -223,7 +341,7 @@ def remind_hr_pending_timeoff():
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_timeoff_status, 'interval', minutes=1)
-scheduler.add_job(auto_checkout_forgotten_punches, 'cron', hour=23, minute=59)
+scheduler.add_job(auto_checkout_forgotten_punches, 'interval', minutes=5)
 scheduler.add_job(auto_expire_pending_timeoff, 'interval', minutes=15)
 scheduler.add_job(remind_hr_pending_timeoff, 'cron', hour=9, minute=0)
 

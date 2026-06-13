@@ -1,4 +1,4 @@
-from app.models.attendance import Attendance
+from app.models.attendance import Attendance, AttendanceAuditTrail, AttendanceRegularizationRequest
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.models.user import Role, User
@@ -9,6 +9,8 @@ from app.models.notification import Notification
 
 __all__ = [
     "Attendance",
+    "AttendanceAuditTrail",
+    "AttendanceRegularizationRequest",
     "Employee",
     "HrUser",
     "Role",

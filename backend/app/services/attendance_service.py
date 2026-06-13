@@ -69,15 +69,34 @@ def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, pun
     if not db:
         return get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
         
-    # Check if there is an existing record with "Auto Checked-out" status
+    # Check if there is an existing record
     existing_record = db.query(Attendance).filter(
         Attendance.employee_id == employee_id,
         Attendance.date == record_date
     ).first()
+    if existing_record and existing_record.status in ("PRESENT", "Present") and existing_record.requires_regularization and "AUTO_CHECKOUT" in existing_record.flags:
+        return "PRESENT"
     if existing_record and existing_record.status == "Auto Checked-out":
-        return "Auto Checked-out"
+        return "PRESENT"
         
     status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+    
+    from app.models.timeoff import TimeOffRequest
+    timeoff = db.query(TimeOffRequest).filter(
+        TimeOffRequest.employee_id == employee_id,
+        TimeOffRequest.date == record_date,
+        TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+    ).first()
+    
+    if timeoff:
+        if timeoff.leave_type in ("Full-Day", "Full Day"):
+            return "LEAVE"
+        elif timeoff.leave_type in ("Half-Day", "Half Day"):
+            if punch_in_time is not None and punch_out_time is None:
+                return "WORKING"
+            return "HALF_DAY"
+            
+    return status_val
     
     from app.models.timeoff import TimeOffRequest
     timeoff = db.query(TimeOffRequest).filter(
@@ -140,6 +159,16 @@ def get_timeoff_duration_today(db: Session, employee_id: int) -> float:
 
 
 
+
+def log_audit_trail_sync(db: Session, event: str, employee_id: int, details: str = None) -> None:
+    from app.models.attendance import AttendanceAuditTrail
+    audit = AttendanceAuditTrail(
+        event=event,
+        employee_id=employee_id,
+        details=details
+    )
+    db.add(audit)
+    db.commit()
 
 def punch_in(
     db: Session,
@@ -230,7 +259,7 @@ def punch_in(
             date=today,
             is_working=1,
             work_mode=work_mode,
-            status="Working",
+            status="WORKING",
         )
         db.add(attendance)
         db.flush()
@@ -238,7 +267,7 @@ def punch_in(
         # Update existing attendance record
         attendance.is_working = 1
         attendance.work_mode = work_mode
-        attendance.status = "Working"
+        attendance.status = "WORKING"
     
     # Set punch-in with location and image (first check-in of the day)
     attendance.punch_in = current.time()
@@ -249,6 +278,8 @@ def punch_in(
     
     db.commit()
     db.refresh(attendance)
+    
+    log_audit_trail_sync(db, "PUNCH_IN", employee_id, f"Punched in via {work_mode} at {current.time()}")
     
     return to_attendance_response(attendance, db)
 
@@ -347,7 +378,7 @@ def punch_out(
     attendance.punch_out_address = address
     attendance.punch_out_image = image
     attendance.is_working = 0
-    attendance.status = "Present"
+    attendance.status = "PRESENT"
     
     # Calculate metrics
     calculate_attendance_metrics(attendance)
@@ -355,24 +386,13 @@ def punch_out(
     db.commit()
     db.refresh(attendance)
     
+    log_audit_trail_sync(db, "PUNCH_OUT", employee_id, f"Punched out via {work_mode} at {current.time()}")
+    
     return to_attendance_response(attendance, db)
 
 def get_today_state(db: Session, employee_id: int) -> dict:
     """
     Get current attendance state for today.
-    
-    Calculates:
-    - Total worked seconds (including active session if still working)
-    - Approved/time-off seconds
-    - Remaining seconds = shift total - worked - approved
-    - Current shift elapsed time
-    
-    Args:
-        db: Database session
-        employee_id: Employee to get state for
-        
-    Returns:
-        dict: Attendance state with working metrics
     """
     current = datetime.now(APP_TIMEZONE)
     today = current.date()
@@ -418,11 +438,37 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     # Calculate shift elapsed time
     shift_elapsed_seconds = _shift_elapsed_seconds(current)
     
+    # Check if yesterday was auto checked out and has not yet been regularized
+    from datetime import timedelta
+    yesterday = today - timedelta(days=1)
+    yesterday_rec = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee_id, Attendance.date == yesterday)
+        .first()
+    )
+    yesterday_auto_checked_out = False
+    if yesterday_rec and yesterday_rec.requires_regularization and "AUTO_CHECKOUT" in yesterday_rec.flags:
+        yesterday_auto_checked_out = True
+        
+        # Suppress banner if regularization request is already pending
+        from app.models.attendance import AttendanceRegularizationRequest
+        pending_request = (
+            db.query(AttendanceRegularizationRequest)
+            .filter(
+                AttendanceRegularizationRequest.employee_id == employee_id,
+                AttendanceRegularizationRequest.attendance_date == yesterday,
+                AttendanceRegularizationRequest.status == "pending"
+            )
+            .first()
+        )
+        if pending_request:
+            yesterday_auto_checked_out = False
+    
     # Prepare response
     return {
         "employeeId": employee_id,
         "isWorking": bool(attendance and attendance.is_working),
-        "status": get_attendance_status(attendance.punch_in, attendance.punch_out, attendance.date, current),
+        "status": get_attendance_status_with_timeoff(db, employee_id, attendance.punch_in, attendance.punch_out, attendance.date, current),
         "totalWorkedSeconds": worked_seconds,
         "approvedSeconds": approved_seconds,
         "remainingSeconds": remaining_seconds,
@@ -441,28 +487,35 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "punchOutAddress": attendance.punch_out_address if attendance else None,
         "punchInImage": attendance.punch_in_image if attendance else None,
         "punchOutImage": attendance.punch_out_image if attendance else None,
+        "yesterdayAutoCheckedOut": yesterday_auto_checked_out,
+        "flags": attendance.flags if attendance else [],
+        "requiresRegularization": attendance.requires_regularization if attendance else False,
+        "overtimeApproved": attendance.overtime_approved if attendance else False,
     }
 
 def _normalize_attendance_status(status: str) -> str:
     known_statuses = {
-        "present": "Present",
-        "working": "Working",
-        "absent": "Absent",
-        "not marked": "Not Marked",
-        "notmarked": "Not Marked",
-        "punched in": "Working",
-        "punched out": "Present",
-        "not working": "Present",
+        "present": "PRESENT",
+        "working": "WORKING",
+        "absent": "ABSENT",
+        "not marked": "NOT_MARKED",
+        "notmarked": "NOT_MARKED",
+        "half day": "HALF_DAY",
+        "half-day": "HALF_DAY",
+        "leave": "LEAVE",
+        "time off": "LEAVE",
+        "holiday": "HOLIDAY",
+        "week off": "WEEK_OFF",
     }
     value = (status or "").strip().lower()
-    return known_statuses.get(value, status or "")
+    return known_statuses.get(value, status.upper() if status else "")
 
 
 def _matches_computed_status(db: Session, record: Attendance, status_filter: str) -> bool:
     if not status_filter:
         return True
-    requested = _normalize_attendance_status(status_filter).lower()
-    actual = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date).lower()
+    requested = _normalize_attendance_status(status_filter).upper()
+    actual = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date).upper()
     return actual == requested or requested in actual
 
 
@@ -475,15 +528,16 @@ def _attendance_metrics(db: Session, records: list[Attendance]) -> dict:
     }
     for record in records:
         status_value = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
-        if status_value == "Present":
+        status_upper = status_value.upper()
+        if status_upper in ("PRESENT", "AUTO_CHECKOUT", "AUTO CHECKED-OUT"):
             metrics["present"] += 1
-        elif status_value == "Working":
+        elif status_upper == "WORKING":
             metrics["working"] += 1
-        elif status_value == "Absent":
+        elif status_upper == "ABSENT":
             metrics["absent"] += 1
-        elif status_value == "Not Marked":
+        elif status_upper in ("NOT_MARKED", "NOT MARKED"):
             metrics["notMarked"] += 1
-        elif status_value in ("Half Day", "Time Off"):
+        elif status_upper in ("HALF_DAY", "HALF DAY", "LEAVE", "TIME OFF"):
             metrics["present"] += 1
     return metrics
 
@@ -530,16 +584,6 @@ def get_my_history(
 def to_attendance_response(record: Attendance, db: Session = None) -> AttendanceResponse:
     """
     Convert attendance record to response schema.
-    
-    Automatically calculates all metrics and properly serializes
-    all fields including optional location and image data.
-    
-    Args:
-        record: Attendance database record
-        db: Optional database session to check timeoff requests
-        
-    Returns:
-        AttendanceResponse: Properly formatted API response
     """
     calculate_attendance_metrics(record)
     
@@ -575,6 +619,12 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
         punch_out_longitude=record.punch_out_longitude,
         punch_out_address=record.punch_out_address,
         punch_out_image=record.punch_out_image,
+        flags=record.flags,
+        checkout_source=record.checkout_source,
+        requires_regularization=record.requires_regularization,
+        overtime_approved=record.overtime_approved,
+        overtime_start=record.overtime_start,
+        overtime_end=record.overtime_end,
     )
 
 def add_schedule(
@@ -735,6 +785,10 @@ def list_all_attendance(
             "punchOutAddress": record.punch_out_address,
             "punchInImage": record.punch_in_image,
             "punchOutImage": record.punch_out_image,
+            "flags": record.flags,
+            "checkoutSource": record.checkout_source,
+            "requiresRegularization": record.requires_regularization,
+            "overtimeApproved": record.overtime_approved,
         })
     
     return {"data": formatted_data, "total": total, "metrics": metrics}

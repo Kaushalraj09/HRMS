@@ -147,6 +147,99 @@ def change_work_mode(
     
     return attendance_service.update_today_work_mode(db, employee.id, request.work_mode)
 
+@router.post("/continue-working", response_model=TodayAttendanceState)
+def continue_working(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Acknowledge shift end reminder and request overtime.
+    This marks overtime_approved = True.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only employees can use this endpoint"
+        )
+        
+    # Get today's attendance record
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+    current = datetime.now(APP_TIMEZONE)
+    today = current.date()
+    
+    attendance = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee.id, Attendance.date == today)
+        .first()
+    )
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active attendance record found for today"
+        )
+        
+    attendance.overtime_approved = True
+    attendance.overtime_start = datetime.strptime("18:00", "%H:%M").time()
+    attendance.shift_end_reminder_sent = 3 # Acknowledged/dismissed
+    
+    # Recalculate metrics
+    from app.services.attendance_service import calculate_attendance_metrics, log_audit_trail_sync
+    calculate_attendance_metrics(attendance)
+    db.commit()
+    db.refresh(attendance)
+    
+    log_audit_trail_sync(db, "OVERTIME_CONTINUE", employee.id, f"Employee requested to continue working into overtime")
+    
+    return attendance_service.get_today_state(db, employee.id)
+
+@router.post("/extend-overtime", response_model=TodayAttendanceState)
+def extend_overtime(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Extend overtime at 20:00 to avoid auto-checkout.
+    This sets overtime_extended = True and shifts the auto-checkout threshold.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only employees can use this endpoint"
+        )
+        
+    # Get today's attendance record
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+    current = datetime.now(APP_TIMEZONE)
+    today = current.date()
+    
+    attendance = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee.id, Attendance.date == today)
+        .first()
+    )
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active attendance record found for today"
+        )
+        
+    attendance.overtime_extended = True
+    attendance.overtime_reminder_sent = 3 # Acknowledged/dismissed
+    
+    from app.services.attendance_service import log_audit_trail_sync
+    db.commit()
+    db.refresh(attendance)
+    
+    log_audit_trail_sync(db, "OVERTIME_EXTEND", employee.id, f"Employee extended overtime at 20:00")
+    
+    return attendance_service.get_today_state(db, employee.id)
+
 @router.post("/schedule", response_model=AttendanceResponse)
 def add_schedule(
     request: ScheduleRequest,

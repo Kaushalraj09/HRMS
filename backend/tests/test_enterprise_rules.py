@@ -21,7 +21,7 @@ def test_enterprise_standard_present():
     assert att.total_working_minutes == 480
     assert att.break_minutes == 60
     assert att.overtime_minutes == 0
-    assert att.status == "Present"
+    assert att.status == "PRESENT"
     
     # Late arrival and early exit checks
     assert calculate_late_minutes(att.punch_in) == 0
@@ -40,7 +40,7 @@ def test_enterprise_late_arrival_half_day():
     calculate_times(att)
     assert att.total_working_minutes == 359
     assert att.break_minutes == 60
-    assert att.status == "Half Day"
+    assert att.status == "HALF_DAY"
     
     # Late: 11:36 - 09:00 = 2 hours 36 minutes (156 minutes)
     assert calculate_late_minutes(att.punch_in) == 156
@@ -59,7 +59,7 @@ def test_enterprise_early_exit_half_day():
     calculate_times(att)
     assert att.total_working_minutes == 440
     assert att.break_minutes == 60
-    assert att.status == "Half Day"
+    assert att.status == "HALF_DAY"
     
     # Late: 09:10 <= 09:15 -> 0 mins
     assert calculate_late_minutes(att.punch_in) == 0
@@ -75,12 +75,13 @@ def test_enterprise_overtime():
     att = Attendance(
         date=date(2026, 6, 4),
         punch_in=time(9, 0),
-        punch_out=time(19, 30)
+        punch_out=time(19, 30),
+        overtime_approved=True
     )
     calculate_times(att)
     assert att.total_working_minutes == 570
     assert att.overtime_minutes == 90
-    assert att.status == "Present"
+    assert att.status == "PRESENT"
 
 def test_enterprise_absent():
     # Punch In at 09:00, Punch Out at 12:30
@@ -94,4 +95,4 @@ def test_enterprise_absent():
     )
     calculate_times(att)
     assert att.total_working_minutes == 210
-    assert att.status == "Absent"
+    assert att.status == "ABSENT"
