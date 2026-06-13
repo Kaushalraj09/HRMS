@@ -113,6 +113,29 @@ class AttendanceResponse(BaseModel):
     late_minutes: int = Field(default=0, alias="lateMinutes")
     early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
 
+    # Enterprise checkout & overtime fields
+    flags: List[str] = Field(default=[], alias="flags")
+    checkout_source: str = Field(default="MANUAL", alias="checkoutSource")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+    overtime_start: Optional[time] = Field(default=None, alias="overtimeStart")
+    overtime_end: Optional[time] = Field(default=None, alias="overtimeEnd")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
+    @field_validator("checkout_source", mode="before")
+    @classmethod
+    def coerce_checkout_source(cls, v):
+        return "MANUAL" if v is None else v
+
     @computed_field(alias="isWorking")
     @property
     def is_working(self) -> bool:
@@ -164,6 +187,22 @@ class TodayAttendanceState(BaseModel):
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
 
+    # Enterprise checkout & overtime fields
+    yesterday_auto_checked_out: bool = Field(default=False, alias="yesterdayAutoCheckedOut")
+    flags: List[str] = Field(default=[], alias="flags")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
     @computed_field(alias="attendanceStatus")
     @property
     def attendance_status(self) -> str:
@@ -200,6 +239,27 @@ class AttendanceRecord(BaseModel):
     punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
+
+    # Enterprise checkout & overtime fields
+    flags: List[str] = Field(default=[], alias="flags")
+    checkout_source: Optional[str] = Field(default="MANUAL", alias="checkoutSource")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
+    @field_validator("checkout_source", mode="before")
+    @classmethod
+    def coerce_checkout_source(cls, v):
+        return "MANUAL" if v is None else v
 
     @computed_field(alias="isWorking")
     @property

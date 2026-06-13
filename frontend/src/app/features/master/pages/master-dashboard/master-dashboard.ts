@@ -3,21 +3,21 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Navbar } from '../../shared/components/navbar/navbar';
-import { Sidebar } from '../../shared/components/sidebar/sidebar';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
+import { MasterSidebar } from '../../components/master-sidebar/master-sidebar';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { SidebarService } from '../../shared/components/sidebar/sidebar.service';
+import { MasterSidebarService } from '../../components/master-sidebar/master-sidebar.service';
 import { Subscription } from 'rxjs';
 
-import { DashboardService } from '../../core/services/dashboard.service';
-import { AdminDashboardData } from '../../core/models/dashboard.model';
-import { AuthService } from '../../core/services/auth.service';
+import { DashboardService } from '../../../../core/services/dashboard.service';
+import { AdminDashboardData } from '../../../../core/models/dashboard.model';
+import { AuthService } from '../../../../core/services/auth.service';
 
 
 @Component({
   selector: 'app-master-dashboard',
-  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, Sidebar, RouterModule],
+  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, MasterSidebar, RouterModule],
   standalone: true,
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',
@@ -33,7 +33,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
   private sub = new Subscription();
 
   constructor(
-    private sidebarService: SidebarService,
+    private sidebarService: MasterSidebarService,
     private router: Router,
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,

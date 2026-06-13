@@ -1,9 +1,9 @@
 import { Component, Input, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
-import { SidebarService } from './sidebar.service';
+import { MasterSidebarService } from './master-sidebar.service';
 import { filter } from 'rxjs/operators';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 export interface MenuItem {
   label: string;
@@ -20,16 +20,16 @@ export interface MenuGroup {
 }
 
 @Component({
-  selector: 'app-sidebar',
+  selector: 'app-master-sidebar',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './sidebar.html',
-  styleUrls: ['./sidebar.css'],
+  templateUrl: './master-sidebar.html',
+  styleUrls: ['./master-sidebar.css'],
   host: {
     '[class.collapsed]': 'collapsed'
   }
 })
-export class Sidebar implements OnInit {
+export class MasterSidebar implements OnInit {
   isLogoutPopupOpen = false;
   collapsed = false;
   @Input() menuConfig: MenuGroup[] = [
@@ -72,7 +72,7 @@ export class Sidebar implements OnInit {
 
   isSidebarOpen$! : import('rxjs').Observable<boolean>;
 
-  constructor(private sidebarService: SidebarService, private router: Router, private readonly authService: AuthService) {
+  constructor(private sidebarService: MasterSidebarService, private router: Router, private readonly authService: AuthService) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
   }
 
