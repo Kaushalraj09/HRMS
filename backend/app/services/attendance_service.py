@@ -64,6 +64,39 @@ def _shift_elapsed_seconds(now: datetime | None = None) -> int:
     return current_seconds - shift_start_seconds
 
 
+def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, punch_in_time, punch_out_time, record_date: date, current_dt=None) -> str:
+    from app.services.time_calculator import get_attendance_status
+    if not db:
+        return get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+        
+    # Check if there is an existing record with "Auto Checked-out" status
+    existing_record = db.query(Attendance).filter(
+        Attendance.employee_id == employee_id,
+        Attendance.date == record_date
+    ).first()
+    if existing_record and existing_record.status == "Auto Checked-out":
+        return "Auto Checked-out"
+        
+    status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+    
+    from app.models.timeoff import TimeOffRequest
+    timeoff = db.query(TimeOffRequest).filter(
+        TimeOffRequest.employee_id == employee_id,
+        TimeOffRequest.date == record_date,
+        TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+    ).first()
+    
+    if timeoff:
+        if timeoff.leave_type in ("Full-Day", "Full Day"):
+            return "Time Off"
+        elif timeoff.leave_type in ("Half-Day", "Half Day"):
+            if punch_in_time is not None and punch_out_time is None:
+                return "Working"
+            return "Half Day"
+            
+    return status_val
+
+
 def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: date) -> float:
     """
     Get approved time-off duration for a specific date.
@@ -76,18 +109,18 @@ def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: da
     Returns:
         float: Approved time-off hours
     """
-    # Time-off queries are commented out for future work
-    # total = (
-    #     db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
-    #     .filter(
-    #         TimeOffRequest.employee_id == employee_id,
-    #         TimeOffRequest.date == target_date,
-    #         TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-    #     )
-    #     .scalar()
-    # )
-    # return float(total or 0.0)
-    return 0.0
+    from app.models.timeoff import TimeOffRequest
+    from sqlalchemy import func
+    total = (
+        db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
+        .filter(
+            TimeOffRequest.employee_id == employee_id,
+            TimeOffRequest.date == target_date,
+            TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+        )
+        .scalar()
+    )
+    return float(total or 0.0)
 
 
 def get_timeoff_duration_today(db: Session, employee_id: int) -> float:
@@ -217,7 +250,7 @@ def punch_in(
     db.commit()
     db.refresh(attendance)
     
-    return to_attendance_response(attendance)
+    return to_attendance_response(attendance, db)
 
 def punch_out(
     db: Session,
@@ -322,7 +355,7 @@ def punch_out(
     db.commit()
     db.refresh(attendance)
     
-    return to_attendance_response(attendance)
+    return to_attendance_response(attendance, db)
 
 def get_today_state(db: Session, employee_id: int) -> dict:
     """
@@ -425,15 +458,15 @@ def _normalize_attendance_status(status: str) -> str:
     return known_statuses.get(value, status or "")
 
 
-def _matches_computed_status(record: Attendance, status_filter: str) -> bool:
+def _matches_computed_status(db: Session, record: Attendance, status_filter: str) -> bool:
     if not status_filter:
         return True
     requested = _normalize_attendance_status(status_filter).lower()
-    actual = get_attendance_status(record.punch_in, record.punch_out, record.date).lower()
+    actual = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date).lower()
     return actual == requested or requested in actual
 
 
-def _attendance_metrics(records: list[Attendance]) -> dict:
+def _attendance_metrics(db: Session, records: list[Attendance]) -> dict:
     metrics = {
         "present": 0,
         "working": 0,
@@ -441,7 +474,7 @@ def _attendance_metrics(records: list[Attendance]) -> dict:
         "notMarked": 0,
     }
     for record in records:
-        status_value = get_attendance_status(record.punch_in, record.punch_out, record.date)
+        status_value = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
         if status_value == "Present":
             metrics["present"] += 1
         elif status_value == "Working":
@@ -450,6 +483,8 @@ def _attendance_metrics(records: list[Attendance]) -> dict:
             metrics["absent"] += 1
         elif status_value == "Not Marked":
             metrics["notMarked"] += 1
+        elif status_value in ("Half Day", "Time Off"):
+            metrics["present"] += 1
     return metrics
 
 
@@ -489,10 +524,10 @@ def get_my_history(
         Attendance.punch_in.desc().nulls_last(),
         Attendance.id.desc(),
     ).all()
-    return [record for record in records if _matches_computed_status(record, status_filter)]
+    return [record for record in records if _matches_computed_status(db, record, status_filter)]
 
 
-def to_attendance_response(record: Attendance) -> AttendanceResponse:
+def to_attendance_response(record: Attendance, db: Session = None) -> AttendanceResponse:
     """
     Convert attendance record to response schema.
     
@@ -501,6 +536,7 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
     
     Args:
         record: Attendance database record
+        db: Optional database session to check timeoff requests
         
     Returns:
         AttendanceResponse: Properly formatted API response
@@ -512,6 +548,8 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
     late_minutes = calculate_late_minutes(record.punch_in)
     early_exit_minutes = calculate_early_exit_minutes(record.punch_out)
     
+    status_val = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
+    
     return AttendanceResponse(
         id=record.id,
         employee_id=record.employee_id,
@@ -521,7 +559,7 @@ def to_attendance_response(record: Attendance) -> AttendanceResponse:
         task_description=record.task_description,
         punch_in=record.punch_in,
         punch_out=record.punch_out,
-        status=get_attendance_status(record.punch_in, record.punch_out, record.date),
+        status=status_val,
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
         overtime_minutes=record.overtime_minutes or 0,
@@ -600,7 +638,7 @@ def add_schedule(
     db.commit()
     db.refresh(record)
     
-    return to_attendance_response(record)
+    return to_attendance_response(record, db)
 
 def list_all_attendance(
     db: Session,
@@ -658,9 +696,9 @@ def list_all_attendance(
         Attendance.punch_in.desc().nulls_last(),
         Attendance.id.desc(),
     ).all()
-    records = [record for record in records if _matches_computed_status(record, status_filter)]
+    records = [record for record in records if _matches_computed_status(db, record, status_filter)]
     total = len(records)
-    metrics = _attendance_metrics(records)
+    metrics = _attendance_metrics(db, records)
     start = (page - 1) * limit
     paged_records = records[start : start + limit]
     
@@ -685,7 +723,7 @@ def list_all_attendance(
             "taskDescription": record.task_description,
             "punchIn": record.punch_in,
             "punchOut": record.punch_out,
-            "status": get_attendance_status(record.punch_in, record.punch_out, record.date),
+            "status": get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date),
             "totalWorkingMinutes": record.total_working_minutes or 0,
             "overtimeMinutes": record.overtime_minutes or 0,
             "breakMinutes": record.break_minutes or 0,
@@ -727,7 +765,7 @@ def update_today_work_mode(
             date=today,
             is_working=0,
             work_mode=work_mode,
-            status=get_attendance_status(None, None, today, current),
+            status=get_attendance_status_with_timeoff(db, employee_id, None, None, today, current),
         )
         db.add(attendance)
     else:
@@ -789,13 +827,13 @@ def get_employee_analytics(db: Session) -> list[dict]:
             calculate_attendance_metrics(today_rec)
             today_punch_in = today_rec.punch_in
             today_punch_out = today_rec.punch_out
-            today_status = get_attendance_status(today_punch_in, today_punch_out, today)
+            today_status = get_attendance_status_with_timeoff(db, emp.id, today_punch_in, today_punch_out, today)
             today_working_mins = today_rec.total_working_minutes or 0
             today_working_hours = f"{today_working_mins // 60}h {today_working_mins % 60}m"
         else:
             today_punch_in = None
             today_punch_out = None
-            today_status = get_attendance_status(None, None, today)
+            today_status = get_attendance_status_with_timeoff(db, emp.id, None, None, today)
             today_working_hours = "0h 0m"
             
         # Monthly aggregates
@@ -812,10 +850,10 @@ def get_employee_analytics(db: Session) -> list[dict]:
             
             if rec:
                 calculate_attendance_metrics(rec)
-                status = get_attendance_status(rec.punch_in, rec.punch_out, d)
+                status = get_attendance_status_with_timeoff(db, emp.id, rec.punch_in, rec.punch_out, d)
                 
                 # Metrics
-                if status == "Present":
+                if status in ("Present", "Time Off", "Auto Checked-out"):
                     present_days += 1
                 elif status == "Half Day":
                     half_days += 1
@@ -839,9 +877,13 @@ def get_employee_analytics(db: Session) -> list[dict]:
                     continue
                 
                 # Weekday with no punch
-                status = get_attendance_status(None, None, d)
+                status = get_attendance_status_with_timeoff(db, emp.id, None, None, d)
                 if status == "Absent":
                     absent_days += 1
+                elif status in ("Present", "Time Off", "Auto Checked-out"):
+                    present_days += 1
+                elif status == "Half Day":
+                    half_days += 1
                     
         # Attendance % = (Present + 0.5 * Half Day) / (Present + Half Day + Absent) * 100
         total_work_days = present_days + half_days + absent_days

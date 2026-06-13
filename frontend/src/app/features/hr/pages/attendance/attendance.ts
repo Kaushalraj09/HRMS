@@ -19,7 +19,7 @@ export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
-  statuses = ['Working', 'Present', 'Absent', 'Not Marked'];
+  statuses = ['Working', 'Present', 'Absent', 'Not Marked','Half Day','Time Off'];
   locations = ['Office', 'Remote'];
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }

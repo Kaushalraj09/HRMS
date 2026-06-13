@@ -494,7 +494,8 @@ app-dropdown {
   color: white;
 }
 
-.notif-icon.login_activity {
+.notif-icon.login_activity,
+.notif-icon.timeoff_reminder {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   color: #3b82f6;
@@ -506,13 +507,18 @@ app-dropdown {
   color: #22c55e;
 }
 
-.notif-icon.leave {
+.notif-icon.leave,
+.notif-icon.timeoff_apply,
+.notif-icon.timeoff_request,
+.notif-icon.timeoff_update,
+.notif-icon.attendance_auto_checkout {
   background: #fffbeb;
   border: 1px solid #fef3c7;
   color: #d97706;
 }
 
-.notif-icon.system {
+.notif-icon.system,
+.notif-icon.timeoff_expired {
   background: #fef2f2;
   border: 1px solid #fee2e2;
   color: #ef4444;

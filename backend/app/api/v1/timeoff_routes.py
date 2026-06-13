@@ -71,6 +71,37 @@ async def request_timeoff(
             },
         }
     )
+
+    # Dispatch notifications
+    try:
+        from app.services.notification_service import create_notification
+        from app.models.user import User, Role
+        from sqlalchemy import func
+
+        # 1. Notify the employee
+        await create_notification(
+            db=db,
+            user_id=current_user.id,
+            type="TIMEOFF_APPLY",
+            title="Time Off Request Submitted",
+            message=f"You have successfully applied for time off ({created.leave_type}) on {created.date}.",
+            reference_id=created.id
+        )
+
+        # 2. Notify all HR and Admin users
+        hr_users = db.query(User).join(Role).filter(func.lower(Role.name).in_(["hr", "admin"])).all()
+        for hr_user in hr_users:
+            await create_notification(
+                db=db,
+                user_id=hr_user.id,
+                type="TIMEOFF_REQUEST",
+                title="New Time Off Request",
+                message=f"Employee {employee.first_name} {employee.last_name} (ID: {employee.id}) has applied for time off ({created.leave_type}) on {created.date}.",
+                reference_id=created.id
+            )
+    except Exception as e:
+        print(f"Error dispatching apply notifications: {e}")
+
     return created
 
 
@@ -211,5 +242,20 @@ async def approve_request(
             },
             employee.user_id
         )
+
+        # Dispatch notification to database/notifications system
+        try:
+            from app.services.notification_service import create_notification
+            status_label = "Approved" if action.upper() == "APPROVE" else "Rejected"
+            await create_notification(
+                db=db,
+                user_id=employee.user_id,
+                type="TIMEOFF_UPDATE",
+                title=f"Time Off Request {status_label}",
+                message=f"Your time off request for {result.date} has been {status_label.lower()}.",
+                reference_id=result.id
+            )
+        except Exception as e:
+            print(f"Error dispatching approve notifications: {e}")
     
     return result

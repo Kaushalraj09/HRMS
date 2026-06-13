@@ -33,7 +33,7 @@ import {
   clampSeconds,
   formatSecondsToClock
 } from '../../../../core/utils/attendance-time.util';
-import { SharedModule } from '../../../../shared/shared-module';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
 
@@ -53,7 +53,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     MatSelectModule,
     FormsModule,
     CalendarModule,
-    SharedModule,
+    Navbar,
     RouterModule,
     EmpSidebar
   ],
@@ -99,7 +99,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
   readonly allTimeSlots: TimeSlotOption[] = buildHalfHourSlots();
 
   timeOffDate = toIsoDateLocal(new Date());
-  timeOffLeaveType: 'Hourly' | 'Full Day' = 'Hourly';
+  timeOffLeaveType: 'Hourly' | 'Half Day' | 'Full Day' = 'Hourly';
+  timeOffHalfDaySession: 'First Half' | 'Second Half' = 'First Half';
   timeOffStart = '09:00';
   timeOffEnd = '10:00';
   isTimeOffSubmitting = false;
@@ -254,12 +255,18 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.timeOffLeaveType === 'Full Day') {
       return SHIFT_TOTAL_HOURS;
     }
+    if (this.timeOffLeaveType === 'Half Day') {
+      return 4.0;
+    }
     return hoursBetweenSameDay(this.timeOffStart, this.timeOffEnd);
   }
 
   get previewRequestedSeconds(): number {
     if (this.timeOffLeaveType === 'Full Day') {
       return SHIFT_TOTAL_SECONDS;
+    }
+    if (this.timeOffLeaveType === 'Half Day') {
+      return 4.0 * 3600;
     }
     return clampSeconds(this.previewRequestedHours * 3600);
   }
@@ -300,8 +307,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
     return this.formatMinutesCompact(this.overtimeMinutes);
   }
 
+  get isFutureDateSelected(): boolean {
+    if (!this.timeOffDate) return false;
+    const todayStr = this.toIsoDate(new Date());
+    return this.timeOffDate > todayStr;
+  }
+
   get canSubmitInlineTimeOff(): boolean {
-    if (this.isTimeOffSubmitting || !this.isPunchedIn) {
+    if (this.isTimeOffSubmitting) {
+      return false;
+    }
+    if (this.isFutureDateSelected) {
+      if (this.timeOffLeaveType === 'Hourly') {
+        return this.previewRequestedSeconds > 0 && this.previewRequestedSeconds <= SHIFT_TOTAL_SECONDS;
+      }
+      return true;
+    }
+    if (!this.isPunchedIn) {
       return false;
     }
     if (this.timeOffLeaveType === 'Full Day') {
@@ -610,6 +632,24 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.timeOffLeaveType === 'Full Day') {
       this.timeOffStart = '09:00';
       this.timeOffEnd = '18:00';
+    } else if (this.timeOffLeaveType === 'Half Day') {
+      this.timeOffHalfDaySession = 'First Half';
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '13:00';
+    } else {
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '10:00';
+    }
+  }
+
+  onHalfDaySessionChange(): void {
+    this.timeOffInlineError = '';
+    if (this.timeOffHalfDaySession === 'First Half') {
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '13:00';
+    } else {
+      this.timeOffStart = '14:00';
+      this.timeOffEnd = '18:00';
     }
   }
 
@@ -629,21 +669,43 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.timeOffInlineError = '';
     this.timeOffInlineSuccess = '';
     if (!this.canSubmitInlineTimeOff) {
-      this.timeOffInlineError = this.isPunchedIn
-        ? 'Requested time must fit inside your remaining shift balance.'
-        : 'You can apply time off only while marked as Working.';
+      this.timeOffInlineError = this.isFutureDateSelected
+        ? 'Invalid requested time duration.'
+        : (this.isPunchedIn
+            ? 'Requested time must fit inside your remaining shift balance.'
+            : 'You can apply time off only while marked as Working.');
       return;
     }
 
     this.isTimeOffSubmitting = true;
+
+    let leaveTypeBackend = 'Hourly';
+    let startTimeBackend: string | null = this.timeOffStart;
+    let endTimeBackend: string | null = this.timeOffEnd;
+
+    if (this.timeOffLeaveType === 'Full Day') {
+      leaveTypeBackend = 'Full-Day';
+      startTimeBackend = null;
+      endTimeBackend = null;
+    } else if (this.timeOffLeaveType === 'Half Day') {
+      leaveTypeBackend = 'Half-Day';
+      if (this.timeOffHalfDaySession === 'First Half') {
+        startTimeBackend = '09:00';
+        endTimeBackend = '13:00';
+      } else {
+        startTimeBackend = '14:00';
+        endTimeBackend = '18:00';
+      }
+    }
+
     this.subscriptions.add(
       this.attendanceService
         .requestTimeOff(
           this.timeOffDate,
-          this.timeOffLeaveType === 'Full Day' ? 'Full-Day' : 'Hourly',
-          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffStart,
-          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffEnd,
-          this.previewRequestedSeconds / 3600
+          leaveTypeBackend,
+          startTimeBackend,
+          endTimeBackend,
+          this.timeOffLeaveType === 'Full Day' ? 9.0 : (this.timeOffLeaveType === 'Half Day' ? 4.0 : this.previewRequestedSeconds / 3600)
         )
         .pipe(finalize(() => { this.isTimeOffSubmitting = false; }))
         .subscribe({
@@ -768,7 +830,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.subscriptions.add(
       forkJoin({
         timesheets: this.attendanceService.getMyTimesheets(),
-        timeoffs: of<any[]>([])
+        timeoffs: this.attendanceService.getMyTimeOffRequests()
       }).subscribe(({ timesheets, timeoffs }) => {
         const todayIso = this.toIsoDate(new Date());
         
@@ -818,33 +880,55 @@ export class EmpDashboard implements OnInit, OnDestroy {
           return events;
         });
 
-        // Map time-off requests to timeline events (Approved/Active/Completed)
+        // Map time-off requests to timeline events (Approved/Active/Completed/Pending/Expired)
         const timeoffEvents: EmployeeTimelineEvent[] = timeoffs
-          .filter(req => ['Approved', 'Active', 'Completed'].includes(req.status))
+          .filter(req => ['Approved', 'Active', 'Completed', 'Pending', 'Expired'].includes(req.status))
           .map(req => {
             let timeLabel = 'Full Day';
             if (req.leave_type === 'Hourly' && req.start_time && req.end_time) {
+              timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
+            } else if (req.leave_type === 'Half-Day' && req.start_time && req.end_time) {
               timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
             }
             return {
               date: req.date,
               time: timeLabel,
-              title: `Time Off (${req.leave_type})`,
-              location: 'Remote',
-              type: 'time-off'
+              title: `Time Off (${req.leave_type}) - ${req.status}`,
+              location: req.status === 'Pending' ? 'Pending Approval' : (req.status === 'Expired' ? 'Expired' : 'Approved'),
+              type: 'time-off',
+              taskDescription: req.status
             };
           });
 
         this.timelineEvents = [...timesheetEvents, ...timeoffEvents];
 
-        this.calendarEvents = this.timelineEvents.map((event) => ({
-          start: new Date(`${event.date}T00:00:00`),
-          title: event.title,
-          color: {
-            primary: event.type === 'schedule' ? '#2563eb' : (event.type === 'time-off' ? '#9333ea' : '#16a34a'),
-            secondary: event.type === 'schedule' ? '#dbeafe' : (event.type === 'time-off' ? '#f3e8ff' : '#dcfce7')
+        this.calendarEvents = this.timelineEvents.map((event) => {
+          let primaryColor = '#2563eb';
+          let secondaryColor = '#dbeafe';
+          if (event.type === 'punch-in' || event.type === 'punch-out') {
+            primaryColor = '#16a34a';
+            secondaryColor = '#dcfce7';
+          } else if (event.type === 'time-off') {
+            if (event.taskDescription === 'Pending') {
+              primaryColor = '#d97706';
+              secondaryColor = '#fef3c7';
+            } else if (event.taskDescription === 'Expired') {
+              primaryColor = '#6b7280';
+              secondaryColor = '#f3f4f6';
+            } else {
+              primaryColor = '#9333ea';
+              secondaryColor = '#f3e8ff';
+            }
           }
-        }));
+          return {
+            start: new Date(`${event.date}T00:00:00`),
+            title: event.title,
+            color: {
+              primary: primaryColor,
+              secondary: secondaryColor
+            }
+          };
+        });
 
         // Map attendance summary directly from timesheets to avoid duplicate API calls
         this.attendanceSummary = [

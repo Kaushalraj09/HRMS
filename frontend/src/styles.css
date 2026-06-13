@@ -137,6 +137,22 @@ tbody tr:last-child td {
   text-transform: none !important;
 }
 
+.status-badge.half,
+.status-badge.half-day {
+  background-color: #fef3c7 !important;
+  color: #d97706 !important;
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 9999px !important;
+}
+
+.status-badge.time,
+.status-badge.time-off {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 9999px !important;
+}
+
 .status-badge.present,
 .status-badge.not-marked,
 .status-badge.absent,
