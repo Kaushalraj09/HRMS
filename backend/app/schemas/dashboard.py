@@ -39,6 +39,15 @@ class UpcomingEvent(BaseModel):
     note: str
     role: str
 
+class WeeklyAttendanceTrendItem(BaseModel):
+    date: str
+    present: int
+    absent: int
+    leave: int
+    wfh: int
+    total: int
+    percentage: float
+
 class HrDashboardData(BaseModel):
     totalEmployees: int
     presentEmployees: int
@@ -50,4 +59,6 @@ class HrDashboardData(BaseModel):
     quickStats: List[QuickStat]
     recentTimeSheets: List[RecentTimeSheet]
     upcomingEvents: List[UpcomingEvent]
+    weeklyAttendanceTrend: List[WeeklyAttendanceTrendItem]
+
 

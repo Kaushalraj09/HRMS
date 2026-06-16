@@ -85,8 +85,18 @@ def test_auto_checkout_shift_end_progressive(db_session, monkeypatch):
     db_session.refresh(attendance)
     assert attendance.shift_end_reminder_sent == 1
     
-    # 2. At 18:50: should trigger Auto-Checkout
+    # 2. At 18:50: should trigger Reminder 3 but NOT auto-checkout yet
     target_dt = datetime(2026, 6, 2, 18, 50, tzinfo=APP_TIMEZONE)
+    
+    auto_checkout_forgotten_punches()
+    db_session.refresh(attendance)
+    
+    assert attendance.is_working == 1
+    assert attendance.shift_end_reminder_sent == 3
+    assert attendance.punch_out is None
+    
+    # 3. At 20:05: should trigger Auto-Checkout
+    target_dt = datetime(2026, 6, 2, 20, 5, tzinfo=APP_TIMEZONE)
     
     auto_checkout_forgotten_punches()
     db_session.refresh(attendance)
@@ -98,6 +108,136 @@ def test_auto_checkout_shift_end_progressive(db_session, monkeypatch):
     assert "AUTO_CHECKOUT" in attendance.flags
     assert "MISSED_PUNCH" in attendance.flags
     assert attendance.status == "PRESENT"
+
+def test_auto_checkout_past_day_catchup(db_session, monkeypatch):
+    emp = db_session.query(Employee).first()
+    
+    # Set current time to 10:00 AM today (June 3)
+    target_dt = datetime(2026, 6, 3, 10, 0, tzinfo=APP_TIMEZONE)
+    class MockDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            return target_dt
+    monkeypatch.setattr("app.services.scheduler_service.datetime", MockDatetime)
+    
+    # Create an active record for yesterday (June 2) where punch-out was missed
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        punch_in=time(9, 0),
+        is_working=1,
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+    
+    monkeypatch.setattr(db_session, "close", lambda: None)
+    monkeypatch.setattr("app.services.scheduler_service.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.services.scheduler_service.send_notification_sync", lambda *args, **kwargs: None)
+    monkeypatch.setattr("app.services.scheduler_service.send_websocket_message_sync", lambda *args, **kwargs: None)
+    
+    # Run scheduler job
+    auto_checkout_forgotten_punches()
+    db_session.refresh(attendance)
+    
+    # Should be immediately checked out for yesterday
+    assert attendance.is_working == 0
+    assert attendance.punch_out == time(18, 0)
+    assert attendance.checkout_source == "AUTO"
+    assert attendance.requires_regularization is True
+    assert "AUTO_CHECKOUT" in attendance.flags
+    assert "MISSED_PUNCH" in attendance.flags
+    assert attendance.status == "PRESENT"
+
+def test_auto_checkout_overtime_no_response(db_session, monkeypatch):
+    emp = db_session.query(Employee).first()
+    
+    # 1. Start overtime today
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        punch_in=time(9, 0),
+        is_working=1,
+        overtime_approved=True,
+        overtime_start=time(18, 0),
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+    
+    # Set time to 20:05 today -> should send OT reminder 1
+    target_dt = datetime(2026, 6, 2, 20, 5, tzinfo=APP_TIMEZONE)
+    class MockDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            return target_dt
+    monkeypatch.setattr("app.services.scheduler_service.datetime", MockDatetime)
+    
+    monkeypatch.setattr(db_session, "close", lambda: None)
+    monkeypatch.setattr("app.services.scheduler_service.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.services.scheduler_service.send_notification_sync", lambda *args, **kwargs: None)
+    monkeypatch.setattr("app.services.scheduler_service.send_websocket_message_sync", lambda *args, **kwargs: None)
+    
+    auto_checkout_forgotten_punches()
+    db_session.refresh(attendance)
+    assert attendance.overtime_reminder_sent == 1
+    assert attendance.is_working == 1
+    
+    # 2. Set time to 20:50 today -> should trigger auto-checkout to 20:00 with OVERTIME flag
+    target_dt = datetime(2026, 6, 2, 20, 50, tzinfo=APP_TIMEZONE)
+    auto_checkout_forgotten_punches()
+    db_session.refresh(attendance)
+    
+    assert attendance.is_working == 0
+    assert attendance.punch_out == time(20, 0)
+    assert attendance.checkout_source == "AUTO"
+    assert attendance.requires_regularization is True
+    assert "AUTO_CHECKOUT" in attendance.flags
+    assert "MISSED_PUNCH" in attendance.flags
+    assert "OVERTIME" in attendance.flags
+    assert attendance.status == "PRESENT"
+
+def test_auto_checkout_extended_overtime_catchup(db_session, monkeypatch):
+    emp = db_session.query(Employee).first()
+    
+    # Active record yesterday with extended overtime
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        punch_in=time(9, 0),
+        is_working=1,
+        overtime_approved=True,
+        overtime_extended=True,
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+    
+    # Run scheduler today
+    target_dt = datetime(2026, 6, 3, 10, 0, tzinfo=APP_TIMEZONE)
+    class MockDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            return target_dt
+    monkeypatch.setattr("app.services.scheduler_service.datetime", MockDatetime)
+    
+    monkeypatch.setattr(db_session, "close", lambda: None)
+    monkeypatch.setattr("app.services.scheduler_service.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.services.scheduler_service.send_notification_sync", lambda *args, **kwargs: None)
+    monkeypatch.setattr("app.services.scheduler_service.send_websocket_message_sync", lambda *args, **kwargs: None)
+    
+    auto_checkout_forgotten_punches()
+    db_session.refresh(attendance)
+    
+    # Should be immediately checked out for yesterday to 22:00 without missed punch or regularization requirements
+    assert attendance.is_working == 0
+    assert attendance.punch_out == time(22, 0)
+    assert attendance.checkout_source == "AUTO"
+    assert attendance.requires_regularization is False
+    assert "AUTO_CHECKOUT" in attendance.flags
+    assert "OVERTIME" in attendance.flags
+    assert "MISSED_PUNCH" not in attendance.flags
+
 
 def test_approve_regularization_logic(db_session):
     emp = db_session.query(Employee).first()

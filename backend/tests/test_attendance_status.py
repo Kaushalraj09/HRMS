@@ -29,3 +29,10 @@ def test_status_absent_past_day():
     record_date = date(2026, 6, 1)
     current_dt = datetime(2026, 6, 2, 10, 0, tzinfo=APP_TIMEZONE)
     assert get_attendance_status(None, None, record_date, current_dt) == "ABSENT"
+
+def test_get_attendance_status_with_timeoff_no_db():
+    from app.services.attendance_service import get_attendance_status_with_timeoff
+    assert get_attendance_status_with_timeoff(None, 1, time(9, 0), time(18, 0), date(2026, 6, 2)) == "Present"
+    assert get_attendance_status_with_timeoff(None, 1, time(9, 0), None, date(2026, 6, 2)) == "Working"
+    assert get_attendance_status_with_timeoff(None, 1, None, None, date(2026, 6, 2), datetime(2026, 6, 2, 11, 0, tzinfo=APP_TIMEZONE)) == "Not Marked"
+    assert get_attendance_status_with_timeoff(None, 1, None, None, date(2026, 6, 2), datetime(2026, 6, 2, 15, 0, tzinfo=APP_TIMEZONE)) == "Absent"

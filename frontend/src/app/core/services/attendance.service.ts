@@ -416,7 +416,7 @@ export class AttendanceService {
   }
 
   private normalizeStatus(status: string): AttendanceRecord['status'] {
-    const knownStatuses = ['Present', 'Working', 'Absent', 'Not Marked'];
+    const knownStatuses = ['Present', 'Working', 'Absent', 'Not Marked', 'Half Day', 'Time Off'];
     if (knownStatuses.includes(status)) {
       return status as AttendanceRecord['status'];
     }

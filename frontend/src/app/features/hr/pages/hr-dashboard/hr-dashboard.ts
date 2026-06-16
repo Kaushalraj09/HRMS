@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { DashboardService } from '../../../../core/services/dashboard.service';
+import { WeeklyAttendanceTrendItem } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { EmployeeLocationMap } from '../../components/employee-location-map/employee-location-map';
@@ -72,6 +73,30 @@ export class HrDashboard implements OnInit {
     const user = this.authService.getCurrentUser();
     this.isAdmin = user?.role === 'admin';
 
+    this.loadDashboardData();
+    this.loadPendingRequests();
+    this.loadProcessedRequests();
+
+    if (user) {
+      this.attendanceService.connectWebSocket(user.id);
+    }
+
+    this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
+      this.loadDashboardData();
+      if (event?.type === 'TIMEOFF_REQUEST') {
+        this.loadPendingRequests();
+       }
+     });
+
+    this.attendanceService.wsMessage$.subscribe((msg: any) => {
+      if (msg?.type === 'PUNCH_UPDATE' || msg?.type === 'ATTENDANCE_UPDATE' || msg?.type === 'NEW_NOTIFICATION') {
+        this.loadDashboardData();
+      }
+    });
+  }
+
+  loadDashboardData() {
+    this.isDataLoading = true;
     this.dashboardService.getHrDashboard().subscribe({
       next: (data) => {
         this.dashboardError = '';
@@ -84,6 +109,25 @@ export class HrDashboard implements OnInit {
         this.stats = data.quickStats.map(item => ({ total: String(item.total), name: item.name }));
         this.recentTimeSheets = data.recentTimeSheets;
         this.events = data.upcomingEvents;
+
+        const trend = data.weeklyAttendanceTrend || [];
+        this.weeklyAttendanceTrend = trend;
+        this.calculateInsights(trend);
+        this.updateWeeklyTrendChart(trend);
+
+        if (trend.length > 0) {
+          const todayItem = trend[trend.length - 1];
+          this.todayPresent = todayItem.present;
+          this.todayLeave = todayItem.leave;
+          this.todayWfh = todayItem.wfh;
+          this.todayAttendanceRate = todayItem.percentage;
+        } else {
+          this.todayPresent = data.presentEmployees || 0;
+          this.todayLeave = 0;
+          this.todayWfh = data.workModeBreakdown?.[0] || 0;
+          this.todayAttendanceRate = data.totalEmployees ? Math.round((data.presentEmployees / data.totalEmployees) * 100) : 0;
+        }
+
         this.kpis = [
           { label: 'TOTAL EMPLOYEES', value: data.totalEmployees, icon: 'users', accent: 'blue' as const },
           { label: 'WORKING', value: data.checkedInEmployees, icon: 'userClock', accent: 'blue' as const },
@@ -112,25 +156,15 @@ export class HrDashboard implements OnInit {
             }
           ]
         };
+        this.isDataLoading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
         this.dashboardError = error?.error?.detail || 'Unable to load HR dashboard data.';
+        this.isDataLoading = false;
         this.cdr.detectChanges();
       }
     });
-    this.loadPendingRequests();
-    this.loadProcessedRequests();
-
-    if (user) {
-      this.attendanceService.connectWebSocket(user.id);
-    }
-
-    this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
-      if (event?.type === 'TIMEOFF_REQUEST') {
-        this.loadPendingRequests();
-       }
-     });
   }
 
   loadPendingRequests() {
@@ -386,58 +420,195 @@ export class HrDashboard implements OnInit {
 
   // stats
 
+  weeklyAttendanceTrend: WeeklyAttendanceTrendItem[] = [];
+  averageWeeklyAttendance = 0;
+  bestAttendanceDay = 'N/A';
+  lowestAttendanceDay = 'N/A';
+  trendDirection: 'increasing' | 'decreasing' | 'stable' = 'stable';
+  todayPresent = 0;
+  todayAttendanceRate = 0;
+  todayLeave = 0;
+  todayWfh = 0;
+  isDataLoading = true;
+  hasAttendanceData = false;
+
   absenceChartType: 'line' = 'line';
 
   absenceChartData: ChartConfiguration<'line'>['data'] = {
-    labels: ['Mar 04', 'Mar 05', 'Mar 06', 'Mar 07', 'Mar 08', 'Mar 09', 'Mar 10'],
-    datasets: [
-      {
-        label: 'Absence Count',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        borderColor: '#6b7280',
-        backgroundColor: '#6b7280',
-        tension: 0.3,
-        pointRadius: 4,
-        pointHoverRadius: 5,
-        fill: false
-      }
-    ]
+    labels: [],
+    datasets: []
   };
   absenceChartOptions: ChartConfiguration<'line'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-
     plugins: {
       legend: {
         display: false
+      },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        titleFont: {
+          size: 13,
+          weight: 'bold',
+          family: "'Inter', sans-serif"
+        },
+        bodyFont: {
+          size: 12,
+          family: "'Inter', sans-serif"
+        },
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
+        callbacks: {
+          label: (context: any) => {
+            const index = context.dataIndex;
+            const dataItem = this.weeklyAttendanceTrend[index];
+            if (!dataItem) return '';
+            return [
+              `Present: ${dataItem.present} / ${dataItem.total}`,
+              `Absent: ${dataItem.absent}`,
+              `Leave: ${dataItem.leave}`,
+              `WFH: ${dataItem.wfh}`,
+              `Attendance: ${dataItem.percentage}%`
+            ];
+          }
+        }
       }
     },
-
     scales: {
       x: {
         grid: {
           display: false
         },
         ticks: {
-          color: '#6b7280'
+          color: '#64748b',
+          font: {
+            family: "'Inter', sans-serif",
+            size: 11
+          }
         }
       },
       y: {
         beginAtZero: true,
+        max: 100,
         ticks: {
-          stepSize: 1,
-          color: '#6b7280'
+          stepSize: 20,
+          color: '#64748b',
+          callback: (value) => `${value}%`,
+          font: {
+            family: "'Inter', sans-serif",
+            size: 11
+          }
         },
         grid: {
-          color: '#e5e7eb'
-        },
-        title: {
-          display: true,
-          text: 'Absence Count'
+          color: 'rgba(241, 245, 249, 0.8)'
         }
       }
     }
   };
+
+  updateWeeklyTrendChart(trendData: WeeklyAttendanceTrendItem[]) {
+    if (!trendData || trendData.length === 0) {
+      this.hasAttendanceData = false;
+      return;
+    }
+
+    const totalRecords = trendData.reduce((sum, item) => sum + item.present + item.absent + item.leave, 0);
+    this.hasAttendanceData = totalRecords > 0;
+
+    const labels = trendData.map(item => item.date);
+    const percentages = trendData.map(item => item.percentage);
+
+    this.absenceChartData = {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Attendance Rate (%)',
+          data: percentages,
+          borderColor: '#10B981',
+          borderWidth: 3,
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) {
+              return 'rgba(16, 185, 129, 0.1)';
+            }
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.22)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+            return gradient;
+          },
+          tension: 0.4,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#10B981',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointHoverBackgroundColor: '#10B981',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 3,
+          fill: true
+        }
+      ]
+    };
+  }
+
+  calculateInsights(trendData: WeeklyAttendanceTrendItem[]) {
+    if (!trendData || trendData.length === 0) {
+      this.averageWeeklyAttendance = 0;
+      this.bestAttendanceDay = 'N/A';
+      this.lowestAttendanceDay = 'N/A';
+      this.trendDirection = 'stable';
+      return;
+    }
+
+    // Average
+    const totalPercentage = trendData.reduce((sum, item) => sum + item.percentage, 0);
+    this.averageWeeklyAttendance = Math.round(totalPercentage / trendData.length);
+
+    // Best Day
+    let bestDay = trendData[0];
+    for (const item of trendData) {
+      if (item.percentage > bestDay.percentage) {
+        bestDay = item;
+      }
+    }
+    this.bestAttendanceDay = `${bestDay.date} (${bestDay.percentage}%)`;
+
+    // Lowest Day
+    let lowestDay = trendData[0];
+    for (const item of trendData) {
+      if (item.percentage < lowestDay.percentage) {
+        lowestDay = item;
+      }
+    }
+    this.lowestAttendanceDay = `${lowestDay.date} (${lowestDay.percentage}%)`;
+
+    // Trend Direction
+    if (trendData.length >= 6) {
+      const first3 = (trendData[0].percentage + trendData[1].percentage + trendData[2].percentage) / 3;
+      const last3 = (trendData[trendData.length - 3].percentage + trendData[trendData.length - 2].percentage + trendData[trendData.length - 1].percentage) / 3;
+      if (last3 > first3 + 1) {
+        this.trendDirection = 'increasing';
+      } else if (last3 < first3 - 1) {
+        this.trendDirection = 'decreasing';
+      } else {
+        this.trendDirection = 'stable';
+      }
+    } else {
+      const first = trendData[0].percentage;
+      const last = trendData[trendData.length - 1].percentage;
+      if (last > first) {
+        this.trendDirection = 'increasing';
+      } else if (last < first) {
+        this.trendDirection = 'decreasing';
+      } else {
+        this.trendDirection = 'stable';
+      }
+    }
+  }
 
   stats: any[] = [];
 

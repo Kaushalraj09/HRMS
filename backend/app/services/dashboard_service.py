@@ -255,6 +255,129 @@ def get_hr_dashboard_data(db: Session):
             "role": emp.designation or "Employee"
         })
 
+    # Calculate weekly attendance trend (last 7 days, ending today)
+    from datetime import timedelta
+    from app.models.timeoff import TimeOffRequest
+    
+    start_date = today - timedelta(days=6)
+    
+    # Query attendance records in date range
+    attendance_records = (
+        db.query(Attendance)
+        .filter(Attendance.date >= start_date, Attendance.date <= today)
+        .all()
+    )
+    
+    # Query approved time-off requests in date range
+    timeoff_requests = (
+        db.query(TimeOffRequest)
+        .filter(
+            TimeOffRequest.date >= start_date,
+            TimeOffRequest.date <= today,
+            TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+        )
+        .all()
+    )
+    
+    # Map attendance records by (employee_id, date)
+    attendance_map_7d = {}
+    for r in attendance_records:
+        attendance_map_7d[(r.employee_id, r.date)] = r
+        
+    # Map timeoff requests by (employee_id, date)
+    timeoff_map_7d = {}
+    for tor in timeoff_requests:
+        timeoff_map_7d[(tor.employee_id, tor.date)] = tor
+
+    weekly_trend = []
+    
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        
+        present_count = 0
+        absent_count = 0
+        leave_count = 0
+        wfh_count = 0
+        
+        for emp in active_emps_list:
+            record = attendance_map_7d.get((emp.id, d))
+            timeoff = timeoff_map_7d.get((emp.id, d))
+            
+            # Default state is Not Marked
+            status = "Not Marked"
+            work_mode = None
+            
+            if record:
+                if record.status in ("PRESENT", "Present") and record.requires_regularization and "AUTO_CHECKOUT" in record.flags:
+                    status = "Present"
+                elif record.status == "Auto Checked-out":
+                    status = "Present"
+                else:
+                    from app.services.time_calculator import get_attendance_status
+                    status_val = get_attendance_status(record.punch_in, record.punch_out, d)
+                    status_map = {
+                        "WORKING": "Working",
+                        "PRESENT": "Present",
+                        "HALF_DAY": "Half Day",
+                        "ABSENT": "Absent",
+                        "NOT_MARKED": "Not Marked",
+                        "LEAVE": "Time Off",
+                        "PRESENT_TODAY": "Present",
+                        "AUTO_CHECKOUT": "Present",
+                        "AUTO CHECKED-OUT": "Present",
+                    }
+                    status = status_map.get(status_val, status_val)
+                work_mode = record.work_mode
+            else:
+                from app.services.time_calculator import get_attendance_status
+                status_val = get_attendance_status(None, None, d)
+                status_map = {
+                    "WORKING": "Working",
+                    "PRESENT": "Present",
+                    "HALF_DAY": "Half Day",
+                    "ABSENT": "Absent",
+                    "NOT_MARKED": "Not Marked",
+                    "LEAVE": "Time Off",
+                    "PRESENT_TODAY": "Present",
+                    "AUTO_CHECKOUT": "Present",
+                    "AUTO CHECKED-OUT": "Present",
+                }
+                status = status_map.get(status_val, status_val)
+                
+            if timeoff:
+                if timeoff.leave_type in ("Full-Day", "Full Day"):
+                    status = "Time Off"
+                elif timeoff.leave_type in ("Half-Day", "Half Day"):
+                    if record and record.punch_in is not None and record.punch_out is None:
+                        status = "Working"
+                    else:
+                        status = "Half Day"
+                        
+            # Accumulate counts
+            if status in ("Present", "Working", "Half Day"):
+                present_count += 1
+            elif status == "Time Off":
+                leave_count += 1
+            else:
+                absent_count += 1
+                
+            if record and record.punch_in:
+                if work_mode and work_mode.lower() == "remote":
+                    wfh_count += 1
+                    
+        total_active = total_emps
+        percentage = (present_count / total_active * 100.0) if total_active > 0 else 0.0
+        
+        weekly_trend.append({
+            "date": d.strftime("%b %d"),
+            "present": present_count,
+            "absent": absent_count,
+            "leave": leave_count,
+            "wfh": wfh_count,
+            "total": total_active,
+            "percentage": round(percentage, 1)
+        })
+
     return {
         "totalEmployees": total_emps,
         "presentEmployees": present,
@@ -284,5 +407,7 @@ def get_hr_dashboard_data(db: Session):
                 "punchOutImage": record.punch_out_image
             } for record in recent_records
         ],
-        "upcomingEvents": events_list
+        "upcomingEvents": events_list,
+        "weeklyAttendanceTrend": weekly_trend
     }
+

@@ -49,7 +49,7 @@
                 <p class="title">{{ kpis[1]?.label }}</p>
                 <h2>{{ kpis[1]?.value }}</h2>
               </div>
-              <i class="fas fa-user-check"></i>
+              <i class="fas fa-user-clock"></i>
             </div>
           </div>
           <div class="card total_emp">
@@ -58,7 +58,7 @@
                 <p class="title">{{ kpis[2]?.label }}</p>
                 <h2>{{ kpis[2]?.value }}</h2>
               </div>
-              <i class="fas fa-user-clock"></i>
+              <i class="fas fa-user-check"></i>
             </div>
           </div>
           <div class="card present_emp">
@@ -67,7 +67,7 @@
                 <p class="title">{{ kpis[3]?.label }}</p>
                 <h2>{{ kpis[3]?.value }}</h2>
               </div>
-              <i class="fas fa-user-check"></i>
+              <i class="fas fa-user-times"></i>
             </div>
           </div>
           <div class="card absent_emp">
@@ -76,7 +76,7 @@
                 <p class="title">{{ kpis[4]?.label }}</p>
                 <h2>{{ kpis[4]?.value }}</h2>
               </div>
-              <i class="fas fa-user-clock"></i>
+              <i class="fas fa-minus-circle"></i>
             </div>
           </div>
           <div class="card unschegule_abs">
@@ -154,15 +154,154 @@
         <!-- absent tate and quick stats -->
 
         <div class="abs_and_stats">
-          <div class="card absence_rate">
-            <div class="card-header">
-              Absence Rate(Last 7 Days)
+          <div class="card workforce-analytics">
+            <div class="workforce-header">
+              <div class="workforce-title-area">
+                <h3 class="workforce-title">Workforce Analytics</h3>
+                <span class="workforce-subtitle">Last 7 Days</span>
+              </div>
+              <div class="workforce-actions">
+                <button class="refresh-btn" (click)="loadDashboardData()" title="Reload Analytics">
+                  <i class="fas fa-sync-alt" [class.fa-spin]="isDataLoading"></i>
+                </button>
+              </div>
             </div>
-            <div class="divider"></div>
-            <div class="chart_abs_data">
-              <canvas baseChart [data]="absenceChartData" [type]="absenceChartType" [options]="absenceChartOptions">
-              </canvas>
+            
+            <!-- KPI Cards Row -->
+            <div class="kpi-grid">
+              <!-- KPI: Present Today -->
+              <div class="kpi-glass-card present">
+                <div class="kpi-card-header">
+                  <span class="kpi-label">Present Today</span>
+                  <div class="kpi-icon-wrapper bg-green-light">
+                    <i class="fas fa-user-check text-green"></i>
+                  </div>
+                </div>
+                <div class="kpi-value-area">
+                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayPresent }}</h4>
+                  <!-- <span class="kpi-trend text-green" title="Employees currently marked present">
+                    Active Workforce
+                  </span> -->
+                </div>
+              </div>
+
+              <!-- KPI: Attendance Rate -->
+              <div class="kpi-glass-card rate">
+                <div class="kpi-card-header">
+                  <span class="kpi-label">Attendance Rate</span>
+                  <div class="kpi-icon-wrapper bg-blue-light">
+                    <i class="fas fa-chart-line text-blue"></i>
+                  </div>
+                </div>
+                <div class="kpi-value-area">
+                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayAttendanceRate + '%' }}</h4>
+                  <!-- <span class="kpi-trend" [ngClass]="trendDirection === 'increasing' ? 'text-green' : (trendDirection === 'decreasing' ? 'text-red' : 'text-slate')">
+                    <i class="fas" [ngClass]="trendDirection === 'increasing' ? 'fa-arrow-up' : (trendDirection === 'decreasing' ? 'fa-arrow-down' : 'fa-minus')"></i>
+                    {{ trendDirection === 'increasing' ? 'Upward' : (trendDirection === 'decreasing' ? 'Downward' : 'Stable') }} trend
+                  </span> -->
+                </div>
+              </div>
+
+              <!-- KPI: Employees on Leave -->
+              <div class="kpi-glass-card leave">
+                <div class="kpi-card-header">
+                  <span class="kpi-label">On Leave</span>
+                  <div class="kpi-icon-wrapper bg-amber-light">
+                    <i class="fas fa-calendar-times text-amber"></i>
+                  </div>
+                </div>
+                <div class="kpi-value-area">
+                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayLeave }}</h4>
+                  <!-- <span class="kpi-trend text-amber" title="Employees on approved leave today">
+                    Excused Absences
+                  </span> -->
+                </div>
+              </div>
+
+              <!-- KPI: Work From Home -->
+              <div class="kpi-glass-card wfh">
+                <div class="kpi-card-header">
+                  <span class="kpi-label">Work From Home</span>
+                  <div class="kpi-icon-wrapper bg-purple-light">
+                    <i class="fas fa-home text-purple"></i>
+                  </div>
+                </div>
+                <div class="kpi-value-area">
+                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayWfh }}</h4>
+                  <!-- <span class="kpi-trend text-purple" title="Employees working remotely today">
+                    Remote Office
+                  </span> -->
+                </div>
+              </div>
             </div>
+
+            <!-- Chart Section -->
+            <div class="chart-section">
+              <!-- Loading Skeleton -->
+              <div class="skeleton-container" *ngIf="isDataLoading">
+                <div class="skeleton-chart-line"></div>
+                <div class="skeleton-chart-grid">
+                  <div class="skeleton-grid-bar" style="height: 40%"></div>
+                  <div class="skeleton-grid-bar" style="height: 60%"></div>
+                  <div class="skeleton-grid-bar" style="height: 50%"></div>
+                  <div class="skeleton-grid-bar" style="height: 75%"></div>
+                  <div class="skeleton-grid-bar" style="height: 90%"></div>
+                  <div class="skeleton-grid-bar" style="height: 85%"></div>
+                  <div class="skeleton-grid-bar" style="height: 95%"></div>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div class="empty-state-container" *ngIf="!isDataLoading && !hasAttendanceData">
+                <div class="empty-state-graphic">
+                  <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="50" fill="rgba(241, 245, 249, 0.5)" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 4"/>
+                    <path d="M40 70C40 58.9543 48.9543 50 60 50C71.0457 50 80 58.9543 80 70" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="50" cy="65" r="3" fill="#64748b"/>
+                    <circle cx="70" cy="65" r="3" fill="#64748b"/>
+                    <rect x="48" y="40" width="24" height="6" rx="3" fill="#e2e8f0"/>
+                    <path d="M35 85H85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <p class="empty-state-message">No attendance records available for the selected period</p>
+                <span class="empty-state-subtext">New entries will automatically populate the visualization.</span>
+              </div>
+
+              <!-- Line Chart Canvas -->
+              <div class="chart-canvas-wrapper" *ngIf="!isDataLoading && hasAttendanceData">
+                <canvas baseChart 
+                  [data]="absenceChartData" 
+                  [type]="absenceChartType" 
+                  [options]="absenceChartOptions">
+                </canvas>
+              </div>
+            </div>
+
+            <!-- Insights Footer Section -->
+            <!-- <div class="insights-footer">
+              <div class="insight-metric">
+                <span class="insight-label">Avg Attendance</span>
+                <span class="insight-value">{{ isDataLoading ? '...' : averageWeeklyAttendance + '%' }}</span>
+              </div>
+              <div class="insight-divider"></div>
+              <div class="insight-metric">
+                <span class="insight-label">Best Attendance Day</span>
+                <span class="insight-value text-green-dark">{{ isDataLoading ? '...' : bestAttendanceDay }}</span>
+              </div>
+              <div class="insight-divider"></div>
+              <div class="insight-metric">
+                <span class="insight-label">Lowest Attendance Day</span>
+                <span class="insight-value text-red-dark">{{ isDataLoading ? '...' : lowestAttendanceDay }}</span>
+              </div>
+              <div class="insight-divider"></div>
+              <div class="insight-metric">
+                <span class="insight-label">Weekly Trend</span>
+                <div class="insight-trend-indicator" [ngClass]="trendDirection">
+                  <i class="fas" [ngClass]="trendDirection === 'increasing' ? 'fa-chart-line text-green' : (trendDirection === 'decreasing' ? 'fa-chart-line text-red' : 'fa-minus text-slate')"></i>
+                  <span class="trend-text">{{ trendDirection === 'increasing' ? 'Increasing' : (trendDirection === 'decreasing' ? 'Decreasing' : 'Stable') }}</span>
+                </div>
+              </div>
+            </div> -->
           </div>
           <div class="card quick_Stats">
             <div class="card-header">
@@ -267,7 +406,7 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let req of pendingRequests">
-                    <td><strong>#{{ req.employee_id }}</strong></td>
+                    <td><strong>{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</strong></td>
                     <td>
                       <span class="status-badge" [ngClass]="req.leave_type === 'Hourly' ? 'working' : 'present'">
                         {{ req.leave_type }}

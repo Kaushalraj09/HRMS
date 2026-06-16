@@ -66,8 +66,22 @@ def _shift_elapsed_seconds(now: datetime | None = None) -> int:
 
 def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, punch_in_time, punch_out_time, record_date: date, current_dt=None) -> str:
     from app.services.time_calculator import get_attendance_status
+    
+    status_map = {
+        "WORKING": "Working",
+        "PRESENT": "Present",
+        "HALF_DAY": "Half Day",
+        "ABSENT": "Absent",
+        "NOT_MARKED": "Not Marked",
+        "LEAVE": "Time Off",
+        "PRESENT_TODAY": "Present",
+        "AUTO_CHECKOUT": "Present",
+        "AUTO CHECKED-OUT": "Present",
+    }
+    
     if not db:
-        return get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+        status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+        return status_map.get(status_val, status_val)
         
     # Check if there is an existing record
     existing_record = db.query(Attendance).filter(
@@ -75,28 +89,11 @@ def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, pun
         Attendance.date == record_date
     ).first()
     if existing_record and existing_record.status in ("PRESENT", "Present") and existing_record.requires_regularization and "AUTO_CHECKOUT" in existing_record.flags:
-        return "PRESENT"
+        return "Present"
     if existing_record and existing_record.status == "Auto Checked-out":
-        return "PRESENT"
+        return "Present"
         
     status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
-    
-    from app.models.timeoff import TimeOffRequest
-    timeoff = db.query(TimeOffRequest).filter(
-        TimeOffRequest.employee_id == employee_id,
-        TimeOffRequest.date == record_date,
-        TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
-    ).first()
-    
-    if timeoff:
-        if timeoff.leave_type in ("Full-Day", "Full Day"):
-            return "LEAVE"
-        elif timeoff.leave_type in ("Half-Day", "Half Day"):
-            if punch_in_time is not None and punch_out_time is None:
-                return "WORKING"
-            return "HALF_DAY"
-            
-    return status_val
     
     from app.models.timeoff import TimeOffRequest
     timeoff = db.query(TimeOffRequest).filter(
@@ -113,7 +110,7 @@ def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, pun
                 return "Working"
             return "Half Day"
             
-    return status_val
+    return status_map.get(status_val, status_val)
 
 
 def get_timeoff_duration_for_date(db: Session, employee_id: int, target_date: date) -> float:
@@ -494,29 +491,32 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     }
 
 def _normalize_attendance_status(status: str) -> str:
-    known_statuses = {
-        "present": "PRESENT",
-        "working": "WORKING",
-        "absent": "ABSENT",
-        "not marked": "NOT_MARKED",
-        "notmarked": "NOT_MARKED",
-        "half day": "HALF_DAY",
-        "half-day": "HALF_DAY",
-        "leave": "LEAVE",
-        "time off": "LEAVE",
-        "holiday": "HOLIDAY",
-        "week off": "WEEK_OFF",
+    if not status:
+        return ""
+    val = status.strip().lower().replace("_", " ").replace("-", " ")
+    mapping = {
+        "present": "present",
+        "working": "working",
+        "absent": "absent",
+        "not marked": "not marked",
+        "notmarked": "not marked",
+        "half day": "half day",
+        "half-day": "half day",
+        "leave": "time off",
+        "time off": "time off",
+        "holiday": "holiday",
+        "week off": "week off",
     }
-    value = (status or "").strip().lower()
-    return known_statuses.get(value, status.upper() if status else "")
+    return mapping.get(val, val)
 
 
 def _matches_computed_status(db: Session, record: Attendance, status_filter: str) -> bool:
     if not status_filter:
         return True
-    requested = _normalize_attendance_status(status_filter).upper()
-    actual = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date).upper()
-    return actual == requested or requested in actual
+    requested = _normalize_attendance_status(status_filter)
+    actual_raw = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
+    actual = _normalize_attendance_status(actual_raw)
+    return requested == actual or requested in actual
 
 
 def _attendance_metrics(db: Session, records: list[Attendance]) -> dict:

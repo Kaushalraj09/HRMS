@@ -18,6 +18,16 @@ export interface AdminDashboardData {
   employees: DashboardTableRow[];
 }
 
+export interface WeeklyAttendanceTrendItem {
+  date: string;
+  present: number;
+  absent: number;
+  leave: number;
+  wfh: number;
+  total: number;
+  percentage: number;
+}
+
 export interface HrDashboardData {
   totalEmployees: number;
   presentEmployees: number;
@@ -44,4 +54,6 @@ export interface HrDashboardData {
     note: string;
     role: string;
   }>;
+  weeklyAttendanceTrend: WeeklyAttendanceTrendItem[];
 }
+

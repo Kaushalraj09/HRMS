@@ -10,7 +10,7 @@ LUNCH_START_TIME = time(13, 0)
 LUNCH_END_TIME = time(14, 0)
 GRACE_PERIOD_MINUTES = 15
 REQUIRED_WORKING_MINUTES = 480 # 8 hours
-HALF_DAY_MINUTES = 240 # 4 hours
+HALF_DAY_MINUTES = 120 # 2 hours
 
 def _time_to_minutes(t: time) -> int:
     if not t:
@@ -78,7 +78,13 @@ def get_attendance_status(punch_in: time | None, punch_out: time | None, record_
         lunch_overlap = calculate_overlap_minutes(punch_in, punch_out, LUNCH_START_TIME, LUNCH_END_TIME)
         net_minutes = max(0, gross_minutes - lunch_overlap)
         
-        if net_minutes >= REQUIRED_WORKING_MINUTES:
+        # Late arrival within grace period tolerance
+        required_mins = REQUIRED_WORKING_MINUTES
+        if calculate_late_minutes(punch_in) == 0:
+            late_deviation = max(0, in_mins - _time_to_minutes(OFFICE_START_TIME))
+            required_mins -= late_deviation
+            
+        if net_minutes >= required_mins:
             return "PRESENT"
         elif net_minutes >= HALF_DAY_MINUTES:
             return "HALF_DAY"
