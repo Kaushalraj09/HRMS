@@ -68,6 +68,8 @@ async def request_timeoff(
                 "duration_hours": created.duration_hours,
                 "status": created.status,
                 "employee_name": created.employee_name,
+                "reason": created.reason,
+                "attachment_name": created.attachment_name,
             },
         }
     )

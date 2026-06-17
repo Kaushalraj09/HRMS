@@ -103,7 +103,7 @@
                         </div>
                         <div class="card request_time_off">
                             <div class="card-header">
-                                Time Off Management
+                                <span>Time Off Management</span>
                             </div>
                             <div class="divider"></div>
                             <div class="stats">
@@ -121,74 +121,12 @@
                                 </div>
                             </div>
 
-                            <div class="timeoff-inline">
-                                <p class="timeoff-inline__hint">Shift: 9:00 AM - 6:00 PM. Time off is available only
-                                    while you are marked as Working.</p>
-                                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Hourly'">
-                                    
-                                </p>
-                                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Half Day'">
-                                    Half day uses {{ requestedTimeDisplay }} of your shift balance.
-                                </p>
-                                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Full Day'">
-                                    Full day uses {{ requestedTimeDisplay }} of your shift balance.
-                                </p>
-                                <p class="punch-message" *ngIf="timeOffInlineError">{{ timeOffInlineError }}</p>
-                                <div class="timeoff-success-container" *ngIf="timeOffInlineSuccess">
-                                    <i class="fas fa-check-circle"></i>
-                                    <span>{{ timeOffInlineSuccess }}</span>
-                                </div>
-
-                                <div class="timeoff-inline__grid">
-                                    <div class="form-group">
-                                        <label>Date</label>
-                                        <input type="date" class="form-control" [(ngModel)]="timeOffDate"
-                                            [min]="todayIsoMin" (ngModelChange)="onTimeOffDateChange()" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Leave type</label>
-                                        <select class="form-control" [(ngModel)]="timeOffLeaveType"
-                                            (ngModelChange)="onLeaveTypeChange()">
-                                            <option value="Hourly">Hourly</option>
-                                            <option value="Half Day">Half Day</option>
-                                            <option value="Full Day">Full Day</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="timeoff-inline__grid" *ngIf="timeOffLeaveType === 'Half Day'">
-                                    <div class="form-group">
-                                        <label>Session</label>
-                                        <select class="form-control" [(ngModel)]="timeOffHalfDaySession"
-                                            (ngModelChange)="onHalfDaySessionChange()">
-                                            <option value="First Half">First Half (9:00 AM - 1:00 PM)</option>
-                                            <option value="Second Half">Second Half (2:00 PM - 6:00 PM)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="timeoff-inline__grid" *ngIf="timeOffLeaveType === 'Hourly'">
-                                    <div class="form-group">
-                                        <label>Start time</label>
-                                        <select class="form-control" [(ngModel)]="timeOffStart"
-                                            (ngModelChange)="onStartTimeChange()">
-                                            <option *ngFor="let s of startTimeOptions" [value]="s.value">{{ s.label }}
-                                                ({{ s.value }})</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>End time</label>
-                                        <select class="form-control" [(ngModel)]="timeOffEnd">
-                                            <option *ngFor="let s of endTimeOptions" [value]="s.value">{{ s.label }} ({{
-                                                s.value }})</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <button type="button" class="apply-btn timeoff-inline__submit"
-                                    (click)="submitInlineTimeOff()"
-                                    [disabled]="isTimeOffSubmitting || !canSubmitInlineTimeOff">
-                                    {{ isTimeOffSubmitting ? 'Submitting…' : 'Request time off' }}
+                            <div class="timeoff-inline" style="display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
+                                <p class="timeoff-inline__hint" style="margin-bottom: 20px; font-size: 13px; color: #64748b; line-height: 1.5;">Request leaves, hourly time off, or single/multi-day leaves via formal HRMS pipelines.</p>
+                                <button type="button" class="apply-btn timeoff-inline__submit" style="margin-top: auto;"
+                                    (click)="openTimeOffModal()"
+                                    [disabled]="isTimeOffSubmitting">
+                                    Request time off
                                 </button>
                             </div>
                         </div>
@@ -493,3 +431,6 @@
         </div>
     </div>
 </div>
+
+<!-- Advanced Time Off Request Modal -->
+<app-time-off-modal *ngIf="showTimeOffModal" (closed)="onTimeOffModalClose($event)"></app-time-off-modal>

@@ -303,14 +303,18 @@ export class AttendanceService {
     leaveType: string,
     startTime: string | null,
     endTime: string | null,
-    durationHours: number
+    durationHours: number,
+    reason?: string,
+    attachmentName?: string
   ): Observable<any> {
     return this.http.post(`${this.timeoffApiUrl}/request`, {
       date,
       leave_type: leaveType,
       start_time: startTime,
       end_time: endTime,
-      duration_hours: durationHours
+      duration_hours: durationHours,
+      reason: reason || null,
+      attachment_name: attachmentName || null
     });
   }
 

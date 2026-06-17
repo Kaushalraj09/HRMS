@@ -113,7 +113,9 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         start_time=st,
         end_time=et,
         duration_hours=duration_hours,
-        status="Pending"
+        status="Pending",
+        reason=request.reason,
+        attachment_name=request.attachment_name
     )
     
     db.add(new_request)

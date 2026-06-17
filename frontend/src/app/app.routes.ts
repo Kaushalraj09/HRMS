@@ -8,8 +8,10 @@ import { MasterDashboard } from './features/master/pages/master-dashboard/master
 import { MyAttendance } from './features/emp/pages/my-attendance/my-attendance';
 import { MyProfile } from './features/emp/pages/my-profile/my-profile';
 import { ChangePasswordComponent } from './features/emp/pages/change-password/change-password';
+
 import { AttendanceComponent } from './features/hr/pages/attendance/attendance';
 import { Employees } from './features/hr/pages/employees/employees';
+import { HrTimeOffComponent } from './features/hr/pages/time-off/time-off';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { HrUsersComponent } from './features/master/pages/hr-users/hr-users';
@@ -61,6 +63,7 @@ export const routes: Routes = [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
       { path: 'attendance', component: AttendanceComponent },
+      { path: 'time-off', component: HrTimeOffComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'login-activity', component: LoginActivityList },
       { path: 'login-activity/:id', component: LoginActivityDetail }

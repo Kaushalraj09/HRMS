@@ -13,6 +13,7 @@ import { Subscription } from 'rxjs';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AdminDashboardData } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
+import { AttendanceService } from '../../../../core/services/attendance.service';
 
 
 @Component({
@@ -30,6 +31,10 @@ export class MasterDashboard implements OnInit, OnDestroy {
   dashboardError = '';
   isMainRoute = false;
   searchTerm = '';
+  pendingRequests: any[] = [];
+  processedRequests: any[] = [];
+  selectedRequest: any = null;
+  activeOversightTab = 'pending';
   private sub = new Subscription();
 
   constructor(
@@ -37,6 +42,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
     private router: Router,
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,
+    private readonly attendanceService: AttendanceService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
@@ -77,6 +83,17 @@ export class MasterDashboard implements OnInit, OnDestroy {
           this.dashboardError = error?.error?.detail || 'Unable to load master dashboard data.';
           this.cdr.detectChanges();
         }
+      })
+    );
+
+    this.loadPendingRequests();
+    this.loadProcessedRequests();
+
+    // WebSocket updates
+    this.sub.add(
+      this.attendanceService.timeoffUpdate$.subscribe(() => {
+        this.loadPendingRequests();
+        this.loadProcessedRequests();
       })
     );
   }
@@ -131,5 +148,58 @@ export class MasterDashboard implements OnInit, OnDestroy {
     }
 
     return values.some((value) => String(value ?? '').toLowerCase().includes(query));
+  }
+
+  loadPendingRequests() {
+    this.attendanceService.getPendingTimeOffRequests().subscribe(requests => {
+      this.pendingRequests = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  loadProcessedRequests() {
+    this.attendanceService.getProcessedTimeOffRequests().subscribe(requests => {
+      this.processedRequests = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  processRequest(requestId: number, action: string) {
+    let approvedHours: number | undefined;
+    if (action === 'APPROVE') {
+      const req = this.pendingRequests.find(r => r.id === requestId);
+      approvedHours = req?.duration_hours;
+    }
+    
+    this.attendanceService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
+      next: () => {
+        alert(`Request ${action.toLowerCase()}d successfully`);
+        this.loadPendingRequests();
+        this.loadProcessedRequests();
+      },
+      error: (err) => alert(err?.error?.detail || "Error processing request")
+    });
+  }
+
+  viewRequestDetails(req: any): void {
+    this.selectedRequest = req;
+  }
+
+  closeDetailsModal(): void {
+    this.selectedRequest = null;
+  }
+
+  processRequestFromModal(requestId: number, action: string): void {
+    this.processRequest(requestId, action);
+    this.closeDetailsModal();
+  }
+
+  downloadAttachment(fileName: string): void {
+    alert(`Downloading attachment: ${fileName}`);
+  }
+
+  setOversightTab(tab: string) {
+    this.activeOversightTab = tab;
+    this.cdr.detectChanges();
   }
 }

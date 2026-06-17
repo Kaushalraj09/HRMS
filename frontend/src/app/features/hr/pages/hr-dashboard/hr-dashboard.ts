@@ -74,8 +74,6 @@ export class HrDashboard implements OnInit {
     this.isAdmin = user?.role === 'admin';
 
     this.loadDashboardData();
-    this.loadPendingRequests();
-    this.loadProcessedRequests();
 
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
@@ -83,9 +81,6 @@ export class HrDashboard implements OnInit {
 
     this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
       this.loadDashboardData();
-      if (event?.type === 'TIMEOFF_REQUEST') {
-        this.loadPendingRequests();
-       }
      });
 
     this.attendanceService.wsMessage$.subscribe((msg: any) => {
@@ -611,6 +606,24 @@ export class HrDashboard implements OnInit {
   }
 
   stats: any[] = [];
+  selectedRequest: any = null;
+
+  viewRequestDetails(req: any): void {
+    this.selectedRequest = req;
+  }
+
+  closeDetailsModal(): void {
+    this.selectedRequest = null;
+  }
+
+  processRequestFromModal(requestId: number, action: string): void {
+    this.processRequest(requestId, action);
+    this.closeDetailsModal();
+  }
+
+  downloadAttachment(fileName: string): void {
+    alert(`Downloading attachment: ${fileName}`);
+  }
 
   private matchesSearch(values: Array<string | number | undefined | null>): boolean {
     const query = this.searchTerm.trim().toLowerCase();

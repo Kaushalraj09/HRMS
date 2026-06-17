@@ -15,6 +15,8 @@ class TimeOffRequest(Base):
     start_time = Column(Time, nullable=True)
     end_time = Column(Time, nullable=True)
     status = Column(String(20), default="Pending") # Pending, Approved, Rejected, Active, Completed
+    reason = Column(String(500), nullable=True)
+    attachment_name = Column(String(255), nullable=True)
     
     # Relationships
     employee = relationship("Employee", backref="timeoff_requests")

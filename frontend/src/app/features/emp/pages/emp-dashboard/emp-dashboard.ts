@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+// Trigger dev server recompilation of dashboard component after modal import fix
+
 import { ChangeDetectorRef, Component, Injectable, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -11,6 +13,7 @@ import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
+import { TimeOffModalComponent } from './modals/time-off-modal/time-off-modal';
 import {
   EmployeeAttendanceSummaryItem,
   EmployeeTimelineEvent,
@@ -55,7 +58,8 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     CalendarModule,
     Navbar,
     RouterModule,
-    EmpSidebar
+    EmpSidebar,
+    TimeOffModalComponent
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -119,6 +123,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   selectedEvents: EmployeeTimelineEvent[] = [];
 
   showScheduleModal = false;
+  showTimeOffModal = false;
   scheduleForm = {
     date: new Date().toISOString().slice(0, 10),
     startTime: '09:00',
@@ -736,6 +741,19 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   closeScheduleModal() {
     this.showScheduleModal = false;
+  }
+
+  openTimeOffModal(): void {
+    this.showTimeOffModal = true;
+    this.cdr.detectChanges();
+  }
+
+  onTimeOffModalClose(refresh: boolean): void {
+    this.showTimeOffModal = false;
+    if (refresh) {
+      this.loadDashboardData();
+    }
+    this.cdr.detectChanges();
   }
 
   saveSchedule() {
