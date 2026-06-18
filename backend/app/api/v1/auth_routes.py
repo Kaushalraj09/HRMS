@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse
 from app.schemas.forgot_password import ForgotPasswordRequest, ResetPasswordRequest
@@ -63,12 +64,9 @@ def change_password(
 @router.post("/forgot-password", response_model=StandardResponse)
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
     reset_link = auth_service.forgot_password(db, request)
-    if not reset_link:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Official email or username is not registered."
-        )
-    return {"success": True, "message": f"Password reset link generated. Reset Link: {reset_link}"}
+    if settings.EXPOSE_RESET_LINK_IN_RESPONSE and reset_link:
+        return {"success": True, "message": f"Password reset link generated. Reset Link: {reset_link}"}
+    return {"success": True, "message": "If the account exists, a password reset link has been generated and dispatched."}
 
 @router.post("/reset-password", response_model=StandardResponse)
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
@@ -79,5 +77,4 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
             detail=result["message"]
         )
     return result
-
 

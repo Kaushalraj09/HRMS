@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
+import { buildApiUrl } from '../config/api.config';
 import { PaginatedResult } from '../models/employee.model';
 import { CreateHrPayload, HrUser } from '../models/hr.model';
 
@@ -26,7 +27,7 @@ interface BackendHrUser {
   providedIn: 'root'
 })
 export class HrService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/hr-users';
+  private readonly apiUrl = buildApiUrl('/hr-users');
 
   constructor(private readonly http: HttpClient) {}
 

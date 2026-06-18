@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { EmpSidebar } from './emp-sidebar';
+import { provideStandaloneComponentTestProviders } from '../../../../../testing/standalone-test-helpers';
 
 describe('EmpSidebar', () => {
   let component: EmpSidebar;
@@ -9,6 +10,7 @@ describe('EmpSidebar', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [EmpSidebar],
+      providers: provideStandaloneComponentTestProviders()
     }).compileComponents();
 
     fixture = TestBed.createComponent(EmpSidebar);

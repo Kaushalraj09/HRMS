@@ -36,19 +36,27 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 
 @app.on_event("startup")
 def startup():
-    # Ensure all SQLAlchemy models are registered before creating tables.
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_roles(db)
-        seed_users(db)
-    finally:
-        db.close()
-    start_scheduler()
+    if settings.AUTO_CREATE_TABLES:
+        # Development convenience only. Production should rely on managed migrations.
+        Base.metadata.create_all(bind=engine)
+
+    if settings.AUTO_SEED_ROLES or settings.AUTO_SEED_DEMO_DATA:
+        db = SessionLocal()
+        try:
+            if settings.AUTO_SEED_ROLES:
+                seed_roles(db)
+            if settings.AUTO_SEED_DEMO_DATA:
+                seed_users(db)
+        finally:
+            db.close()
+
+    if settings.ENABLE_SCHEDULER:
+        start_scheduler()
 
 @app.on_event("shutdown")
 def shutdown():
-    shutdown_scheduler()
+    if settings.ENABLE_SCHEDULER:
+        shutdown_scheduler()
 
 app.add_middleware(
     CORSMiddleware,
@@ -72,4 +80,3 @@ app.include_router(notification_routes.router, prefix="/api/v1")
 app.include_router(login_activity_routes.router, prefix="/api/v1")
 app.include_router(timeoff_routes.router, prefix="/api/v1")
 app.include_router(regularization_routes.router, prefix="/api/v1")
-

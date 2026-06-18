@@ -2,13 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { buildApiUrl } from '../config/api.config';
 import { EmployeeProfile } from '../models/profile.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MyProfileService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/profile';
+  private readonly apiUrl = buildApiUrl('/profile');
 
   constructor(private readonly http: HttpClient) {}
 

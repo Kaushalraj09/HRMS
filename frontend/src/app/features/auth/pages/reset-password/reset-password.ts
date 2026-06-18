@@ -36,7 +36,6 @@ export class ResetPassword implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       this.token = params['token'] || '';
-      console.log('ResetPassword token loaded:', this.token);
     });
   }
 

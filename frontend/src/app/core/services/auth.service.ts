@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 import { LoginRequest, LoginResponse, SessionUser, UserRole } from '../models/auth.model';
+import { buildApiUrl } from '../config/api.config';
 import { Phase1StoreService } from './phase1-store.service';
 
 @Injectable({
@@ -12,7 +13,7 @@ export class AuthService {
   private readonly currentUserSubject: BehaviorSubject<SessionUser | null>;
   readonly currentUser$: Observable<SessionUser | null>;
 
-  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
+  private readonly apiUrl = buildApiUrl('/auth');
 
   constructor(
     private readonly http: HttpClient,
