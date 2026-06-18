@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
+import { buildApiUrl } from '../config/api.config';
 import { Employee, EmployeeCredentials, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
 
 interface BackendEmployee {
@@ -64,7 +65,7 @@ interface BackendEmployeeCredentials {
 
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/employees';
+  private readonly apiUrl = buildApiUrl('/employees');
 
   constructor(private readonly http: HttpClient) {}
 

@@ -45,7 +45,7 @@ export class ForgotPassword {
     this.authService.forgotPassword(email).subscribe({
       next: (response) => {
         const msg = response.message || '';
-        this.message = 'Reset link generated successfully! ✅';
+        this.message = msg || 'If the account exists, recovery instructions have been sent. ✅';
         this.messageType = 'success';
         
         // Extract the token from the response message if present

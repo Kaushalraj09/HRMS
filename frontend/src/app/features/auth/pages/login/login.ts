@@ -59,7 +59,7 @@ export class Login {
     this.authService.forgotPassword(email).subscribe({
       next: (response) => {
         const msg = response.message || '';
-        this.forgotMessage = 'Reset link generated successfully! ✅';
+        this.forgotMessage = msg || 'If the account exists, recovery instructions have been sent. ✅';
         this.forgotMessageType = 'success';
         
         const match = msg.match(/token=([^\s&]+)/);

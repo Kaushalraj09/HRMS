@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { buildApiUrl } from '../config/api.config';
 import { AttendanceService } from './attendance.service';
 
 export interface Notification {
@@ -20,7 +21,7 @@ export interface Notification {
   providedIn: 'root'
 })
 export class NotificationService implements OnDestroy {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/notifications';
+  private readonly apiUrl = buildApiUrl('/notifications');
   
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();

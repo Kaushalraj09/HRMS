@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { buildApiUrl } from '../../../../core/config/api.config';
 import { ChangePasswordPayload } from '../../../../core/models/auth.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChangePasswordService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
+  private readonly apiUrl = buildApiUrl('/auth');
 
   constructor(private readonly http: HttpClient) {}
 

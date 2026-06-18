@@ -109,3 +109,44 @@ Use clean, descriptive commit messages starting with a standard categorization t
 If you encounter blockers, need clarification on requirements, or require new third-party packages to be approved, please reach out directly to the project owner before proceeding. 
 
 Let's build a robust, high-quality Aivan HRMS system together!
+
+---
+
+## Phase 1 Publish Notes
+
+For Phase 1 production publish, use production-safe environment values instead of the local development defaults.
+
+### Frontend
+
+- Production build reads `frontend/src/environments/environment.ts`
+- Default production API path is relative: `/api/v1`
+- WebSocket base resolves from the current browser host automatically
+
+### Backend
+
+Set these environment variables on the server:
+
+```env
+APP_ENV=production
+DATABASE_URL=postgresql+psycopg://...
+JWT_SECRET_KEY=replace-with-strong-secret
+JWT_ALGORITHM=HS256
+BACKEND_CORS_ORIGINS=https://your-frontend-domain.com
+FRONTEND_URL=https://your-frontend-domain.com
+AUTO_CREATE_TABLES=false
+AUTO_SEED_ROLES=false
+AUTO_SEED_DEMO_DATA=false
+ENABLE_SCHEDULER=false
+EXPOSE_RESET_LINK_IN_RESPONSE=false
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+SMTP_FROM=...
+```
+
+Important:
+
+- `AUTO_SEED_DEMO_DATA=false` prevents demo users from being created in production
+- `EXPOSE_RESET_LINK_IN_RESPONSE=false` prevents password reset links from being returned in API responses
+- `AUTO_CREATE_TABLES=false` is recommended when schema changes are managed through migrations

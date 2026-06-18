@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning(f"SMTP credentials are not defined in .env file! Skipping SMTP transmission for {to_email}. Reset link: {reset_link}")
+        logger.warning(
+            "SMTP credentials are not defined in .env file. Skipping SMTP transmission for %s.",
+            to_email
+        )
         return False
 
     # Create message container
@@ -160,4 +163,3 @@ def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to send SMTP email to {to_email}: {str(e)}")
         return False
-

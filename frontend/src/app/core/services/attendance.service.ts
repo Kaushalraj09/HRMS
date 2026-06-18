@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map, Subject, switchMap } from 'rxjs';
 
+import { buildApiUrl, buildWsUrl } from '../config/api.config';
 import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode } from '../models/attendance.model';
 import { formatMinutesToHours } from '../utils/attendance-calc.util';
 
@@ -86,8 +87,8 @@ export interface TimeOffApplyResponse {
 
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/attendance';
-  private readonly timeoffApiUrl = 'http://localhost:8000/api/v1/timeoff';
+  private readonly apiUrl = buildApiUrl('/attendance');
+  private readonly timeoffApiUrl = buildApiUrl('/timeoff');
   private readonly noCacheHeaders = new HttpHeaders({
     'Cache-Control': 'no-cache',
     Pragma: 'no-cache'
@@ -101,7 +102,7 @@ export class AttendanceService {
   constructor(private readonly http: HttpClient) { }
 
   connectWebSocket(userId: string | number) {
-    const wsUrl = `ws://localhost:8000/ws/${userId}`;
+    const wsUrl = buildWsUrl(`/ws/${userId}`);
     
     // If we already have a socket connection to this exact URL, don't reconnect
     if (this.socket && (this.socket.url === wsUrl || this.socket.url.endsWith(`/ws/${userId}`))) {

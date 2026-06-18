@@ -12,7 +12,7 @@
       <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
         <div class="form-group">
           <label for="emailInput">Username</label>
-          <input type="email" id="emailInput" name="email" formControlName="email" placeholder="username@gmail.com" />
+          <input type="email" id="emailInput" name="email" formControlName="email" placeholder="name@aivan.com" />
 
           <small *ngIf="f['email'].touched && f['email'].errors">
             <span *ngIf="f['email'].errors['required']">Email is required</span>
@@ -110,12 +110,12 @@
     
     <div class="forgot-header">
       <h3 class="forgot-title">Reset your password</h3>
-      <p class="forgot-subtitle">Enter your official email or username and we'll help you recover access.</p>
+      <p class="forgot-subtitle">Enter your official email and we'll help you recover access.</p>
     </div>
 
     <form [formGroup]="forgotPasswordForm" (ngSubmit)="onForgotPassword()">
       <div class="form-group" style="margin-bottom: 24px; text-align: left;">
-        <label class="forgot-label" for="forgotEmail">OFFICIAL EMAIL OR USERNAME</label>
+        <label class="forgot-label" for="forgotEmail">OFFICIAL EMAIL</label>
         <input type="email" id="forgotEmail" name="email" formControlName="email" placeholder="abc@aivan.com" class="forgot-input" />
 
         <small *ngIf="forgotF['email'].touched && forgotF['email'].errors" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: block;">

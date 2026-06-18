@@ -144,8 +144,20 @@ def forgot_password(db: Session, request):
     # Trigger real SMTP email send
     from app.services.mail_service import send_reset_email
     email_sent = send_reset_email(user.email, user.display_name, reset_link)
-    
-    logger.info(f"PASSWORD RESET REQUEST FOR: {user.email} | RESET LINK: {reset_link} | SMTP Email Dispatched: {'YES' if email_sent else 'NO (Check SMTP config in .env)'}")
+
+    if settings.EXPOSE_RESET_LINK_IN_RESPONSE:
+        logger.info(
+            "Password reset requested for %s | Reset link: %s | SMTP email dispatched: %s",
+            user.email,
+            reset_link,
+            "YES" if email_sent else "NO"
+        )
+    else:
+        logger.info(
+            "Password reset requested for %s | SMTP email dispatched: %s",
+            user.email,
+            "YES" if email_sent else "NO"
+        )
     
     return reset_link
 
@@ -178,5 +190,4 @@ def reset_password(db: Session, request):
     db.commit()
     
     return {"success": True, "message": "Password reset successfully"}
-
 

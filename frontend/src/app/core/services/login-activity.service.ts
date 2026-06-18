@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { buildApiUrl } from '../config/api.config';
 
 export interface LoginActivity {
   id: number;
@@ -23,7 +24,7 @@ export interface LoginActivity {
   providedIn: 'root'
 })
 export class LoginActivityService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/login-activity';
+  private readonly apiUrl = buildApiUrl('/login-activity');
 
   constructor(private readonly http: HttpClient) {}
 
