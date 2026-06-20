@@ -37,6 +37,7 @@ export class MasterSidebar implements OnInit {
       groupName: 'Main',
       items: [
         { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' },
+        { label: 'Reports', icon: 'fas fa-file-contract', route: '/master-dashboard/reports' },
         { label: 'My Profile', icon: 'far fa-user', route: '/master-dashboard/my-profile' },
         { label: 'Login Activity', icon: 'fas fa-history', route: '/master-dashboard/login-activity' }
       ]
@@ -52,7 +53,8 @@ export class MasterSidebar implements OnInit {
       items: [
         { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
         { label: 'Attendance', icon: 'far fa-clock', route: '/master-dashboard/attendance' },
-        { label: 'Time Off Oversight', icon: 'fas fa-calendar-times', route: '/master-dashboard/time-off' }
+        { label: 'Time Off Oversight', icon: 'fas fa-calendar-times', route: '/master-dashboard/time-off' },
+        { label: 'Regularization Oversight', icon: 'fas fa-business-time', route: '/master-dashboard/regularization-requests' }
       ]
     },
     {

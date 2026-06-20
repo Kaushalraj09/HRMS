@@ -16,6 +16,7 @@ from app.api.v1 import (
     login_activity_routes,
     timeoff_routes,
     regularization_routes,
+    report_routes,
 )
 
 from app.core.websocket_manager import manager
@@ -80,3 +81,5 @@ app.include_router(notification_routes.router, prefix="/api/v1")
 app.include_router(login_activity_routes.router, prefix="/api/v1")
 app.include_router(timeoff_routes.router, prefix="/api/v1")
 app.include_router(regularization_routes.router, prefix="/api/v1")
+app.include_router(report_routes.router, prefix="/api/v1")
+

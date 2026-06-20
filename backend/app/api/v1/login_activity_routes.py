@@ -21,11 +21,13 @@ def get_login_history(
 ):
     role = current_user.role.name.lower() if current_user.role else ""
     exclude_admin = False
+    hr_user_id = None
     if role == "admin":
         target_user_id = user_id
     elif role == "hr":
         target_user_id = user_id
         exclude_admin = True
+        hr_user_id = current_user.id
     else:
         target_user_id = current_user.id
 
@@ -35,7 +37,8 @@ def get_login_history(
         start_date=start_date,
         end_date=end_date,
         user_id=target_user_id,
-        exclude_admin=exclude_admin
+        exclude_admin=exclude_admin,
+        hr_user_id=hr_user_id
     )
 
 @router.get("/{id}", response_model=LoginActivityResponse)
@@ -55,7 +58,7 @@ def get_login_detail(
     if role == "hr":
         from app.models.user import User as UserModel
         user = db.query(UserModel).filter(UserModel.id == activity.user_id).first()
-        if user and user.role and user.role.name.lower() == "admin":
+        if user and user.role and user.role.name.lower() not in ["employee"] and activity.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to view this login activity record"

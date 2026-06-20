@@ -550,9 +550,7 @@ def get_today_locations(
             from app.services.time_calculator import calculate_late_minutes
             if r.punch_out is not None:
                 status_val = "PUNCHED_OUT"
-            elif r.punch_in and calculate_late_minutes(r.punch_in) > 0:
-                status_val = "LATE"
-            elif r.status and "late" in r.status.lower():
+            elif r.punch_in is not None and (calculate_late_minutes(r.punch_in) > 0 or "LATE_ARRIVAL" in r.flags):
                 status_val = "LATE"
             else:
                 status_val = "ACTIVE"
