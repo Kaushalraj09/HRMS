@@ -138,20 +138,30 @@
                     <div class="project_details" style="grid-template-columns: 1fr; margin-top: 20px;">
                         <div class="card recent_projects" style="width: 100%;">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-                                <h3 class="project_title" style="margin: 0; color: #ff4d4d; font-weight: 700;">Time Off Approval Oversight</h3>
+                                <div style="display: flex; gap: 16px; align-items: center;">
+                                    <button class="btn" [ngStyle]="{'background': activeCategoryTab === 'timeoff' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeCategoryTab === 'timeoff' ? '#ffffff' : '#64748b', 'border': activeCategoryTab === 'timeoff' ? 'none' : '1px solid #cbd5e1'}" (click)="activeCategoryTab = 'timeoff'" style="height: 36px; padding: 0 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                                        Time Off Requests
+                                    </button>
+                                    <button class="btn" [ngStyle]="{'background': activeCategoryTab === 'regularization' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeCategoryTab === 'regularization' ? '#ffffff' : '#64748b', 'border': activeCategoryTab === 'regularization' ? 'none' : '1px solid #cbd5e1'}" (click)="activeCategoryTab = 'regularization'" style="height: 36px; padding: 0 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                                        Regularization Requests
+                                    </button>
+                                </div>
                                 <div style="display: flex; gap: 12px; align-items: center;">
-                                    <span class="status-badge working" *ngIf="pendingRequests.length > 0">
+                                    <span class="status-badge working" *ngIf="activeCategoryTab === 'timeoff' && pendingRequests.length > 0">
                                         {{ pendingRequests.length }} Pending Requests
                                     </span>
-                                    <span class="status-badge time-off" *ngIf="processedRequests.length > 0">
+                                    <span class="status-badge time-off" *ngIf="activeCategoryTab === 'timeoff' && processedRequests.length > 0">
                                         {{ processedRequests.length }} Decisions Logged
+                                    </span>
+                                    <span class="status-badge working" *ngIf="activeCategoryTab === 'regularization' && pendingRegularizations.length > 0">
+                                        {{ pendingRegularizations.length }} Pending Requests
                                     </span>
                                 </div>
                             </div>
                             <div class="divider"></div>
 
-                            <!-- Tabs for Pending Approvals vs Decision Logs -->
-                            <div style="display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                            <!-- Tabs for Pending Approvals vs Decision Logs (Only for Time Off) -->
+                            <div *ngIf="activeCategoryTab === 'timeoff'" style="display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
                                 <button class="btn" [ngStyle]="{'background': activeOversightTab === 'pending' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeOversightTab === 'pending' ? '#ffffff' : '#64748b', 'border': activeOversightTab === 'pending' ? 'none' : '1px solid #cbd5e1'}" (click)="setOversightTab('pending')" style="height: 36px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                                     Pending Approvals ({{ pendingRequests.length }})
                                 </button>
@@ -161,8 +171,8 @@
                             </div>
 
                             <div class="table-responsive" style="padding: 12px;">
-                                <!-- PENDING APPROVALS -->
-                                <table class="modern-table" *ngIf="activeOversightTab === 'pending'">
+                                <!-- PENDING TIMEOFF APPROVALS -->
+                                <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'pending'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -218,7 +228,7 @@
                                 </table>
 
                                 <!-- DECISION LOGS -->
-                                <table class="modern-table" *ngIf="activeOversightTab === 'history'">
+                                <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'history'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -266,6 +276,57 @@
                                                 <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRequestDetails(req)">
                                                     View
                                                 </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- REGULARIZATION REQUESTS -->
+                                <table class="modern-table" *ngIf="activeCategoryTab === 'regularization'">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Attendance Date</th>
+                                            <th>Requested Punch In</th>
+                                            <th>Requested Punch Out</th>
+                                            <th>Reason Type</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngIf="pendingRegularizations.length === 0">
+                                            <td colspan="6" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
+                                                <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px; margin-right: 8px;"></i>
+                                                No pending regularization requests found
+                                            </td>
+                                        </tr>
+                                        <tr *ngFor="let req of pendingRegularizations">
+                                            <td>
+                                                <div class="project-info">
+                                                    <strong>{{ req.employeeName || '—' }}</strong>
+                                                    <p>{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</p>
+                                                </div>
+                                            </td>
+                                            <td>{{ req.attendanceDate | date:'dd MMM yyyy' }}</td>
+                                            <td>{{ formatTime(req.requestedPunchIn) }}</td>
+                                            <td>{{ formatTime(req.requestedPunchOut) }}</td>
+                                            <td>
+                                                <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">
+                                                    {{ getReasonTypeLabel(req.reasonType) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; gap: 8px;">
+                                                    <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRegularizationDetails(req)">
+                                                        View
+                                                    </button>
+                                                    <button class="status-btn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'approved')">
+                                                        Approve
+                                                    </button>
+                                                    <button class="status-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'rejected')">
+                                                        Reject
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -363,3 +424,61 @@
     </div>
   </div>
 </div>
+
+<!-- Regularization Details Modal -->
+<div class="camera-modal-overlay" *ngIf="selectedRegularization" (click)="closeRegularizationModal()">
+  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
+    <div class="camera-modal-header">
+      <span class="camera-modal-title">Regularization Request Details</span>
+      <button class="close-btn" (click)="closeRegularizationModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
+          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRegularization.employeeName || '—' }} ({{ selectedRegularization.employeeCode || ('EMP-' + ('0000' + selectedRegularization.employeeId).slice(-4)) }})</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attendance Date</strong>
+            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRegularization.attendanceDate | date:'dd MMM yyyy' }}</span>
+          </div>
+          <div>
+            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Type</strong>
+            <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">{{ getReasonTypeLabel(selectedRegularization.reasonType) }}</span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch In</strong>
+            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchIn) }}</span>
+          </div>
+          <div>
+            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch Out</strong>
+            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchOut) }}</span>
+          </div>
+        </div>
+        <div>
+          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Text</strong>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
+            {{ selectedRegularization.reasonText || 'No reason specified.' }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
+      <button class="btn btn-secondary" type="button" (click)="closeRegularizationModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
+        Close
+      </button>
+      <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center;" (click)="processRegularizationFromModal(selectedRegularization.id, 'rejected')">
+        Reject
+      </button>
+      <button class="btn btn-primary" (click)="processRegularizationFromModal(selectedRegularization.id, 'approved')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none; display: inline-flex; align-items: center; justify-content: center;">
+        Approve
+      </button>
+    </div>
+  </div>
+</div>
+

@@ -14,6 +14,7 @@ import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AdminDashboardData } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { RegularizationService } from '../../../../core/services/regularization.service';
 
 
 @Component({
@@ -35,6 +36,20 @@ export class MasterDashboard implements OnInit, OnDestroy {
   processedRequests: any[] = [];
   selectedRequest: any = null;
   activeOversightTab = 'pending';
+
+  pendingRegularizations: any[] = [];
+  selectedRegularization: any = null;
+  activeCategoryTab: 'timeoff' | 'regularization' = 'timeoff';
+
+  reasonTypeOptions: any[] = [
+    { label: 'Missed Punch', value: 'missed_punch' },
+    { label: 'Forgot Punch In', value: 'forgot_punch_in' },
+    { label: 'Forgot Punch Out', value: 'forgot_punch_out' },
+    { label: 'Late Arrival Sync', value: 'late_sync' },
+    { label: 'System/Network Issue', value: 'system_issue' },
+    { label: 'Other', value: 'other' }
+  ];
+
   private sub = new Subscription();
 
   constructor(
@@ -43,6 +58,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,
     private readonly attendanceService: AttendanceService,
+    private readonly regularizationService: RegularizationService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
@@ -88,12 +104,14 @@ export class MasterDashboard implements OnInit, OnDestroy {
 
     this.loadPendingRequests();
     this.loadProcessedRequests();
+    this.loadPendingRegularizations();
 
     // WebSocket updates
     this.sub.add(
       this.attendanceService.timeoffUpdate$.subscribe(() => {
         this.loadPendingRequests();
         this.loadProcessedRequests();
+        this.loadPendingRegularizations();
       })
     );
   }
@@ -201,5 +219,49 @@ export class MasterDashboard implements OnInit, OnDestroy {
   setOversightTab(tab: string) {
     this.activeOversightTab = tab;
     this.cdr.detectChanges();
+  }
+
+  loadPendingRegularizations() {
+    this.regularizationService.getPendingRequests().subscribe(requests => {
+      this.pendingRegularizations = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  processRegularization(requestId: number, status: 'approved' | 'rejected') {
+    this.regularizationService.submitDecision(requestId, { status, reviewComment: 'Admin Oversight Decision' }).subscribe({
+      next: () => {
+        alert(`Regularization request ${status} successfully`);
+        this.loadPendingRegularizations();
+      },
+      error: (err) => alert(err?.error?.detail || "Error processing regularization request")
+    });
+  }
+
+  viewRegularizationDetails(req: any): void {
+    this.selectedRegularization = req;
+  }
+
+  closeRegularizationModal(): void {
+    this.selectedRegularization = null;
+  }
+
+  processRegularizationFromModal(requestId: number, status: 'approved' | 'rejected'): void {
+    this.processRegularization(requestId, status);
+    this.closeRegularizationModal();
+  }
+
+  getReasonTypeLabel(type: string): string {
+    const option = this.reasonTypeOptions.find(opt => opt.value === type);
+    return option ? option.label : type;
+  }
+
+  formatTime(timeStr?: string | null): string {
+    if (!timeStr) return '-';
+    const parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeStr;
   }
 }

@@ -196,9 +196,9 @@
         <button class="pag-btn" [disabled]="page === 1" (click)="onPageChange(page - 1)">
           <i class="fas fa-chevron-left"></i> Previous
         </button>
-        <button class="pag-btn" *ngFor="let p of [].constructor(totalPages); let idx = index"
-          [class.active]="(idx + 1) === page" (click)="onPageChange(idx + 1)">
-          {{ idx + 1 }}
+        <button class="pag-btn" *ngFor="let p of pageNumbers"
+          [class.active]="p === page" (click)="onPageChange(p)">
+          {{ p }}
         </button>
         <button class="pag-btn" [disabled]="page === totalPages" (click)="onPageChange(page + 1)">
           Next <i class="fas fa-chevron-right"></i>

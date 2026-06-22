@@ -142,8 +142,16 @@ export class RegularizationRequestsComponent implements OnInit {
     return Math.min(this.currentPage * this.pageSize, this.filteredRequests.length);
   }
 
+  private _cachedTotalPages = 0;
+  private _cachedPageNumbers: number[] = [];
+
   get pageNumbers(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    const pages = this.totalPages;
+    if (pages !== this._cachedTotalPages) {
+      this._cachedTotalPages = pages;
+      this._cachedPageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+    }
+    return this._cachedPageNumbers;
   }
 
   setPage(page: number): void {

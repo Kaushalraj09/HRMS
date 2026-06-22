@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.employee import Employee
+from app.models.attendance import Attendance
 from app.core.enums import WorkMode, UserRole
 from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics, EmployeeLocationResponse
 from app.services import attendance_service
@@ -428,7 +429,6 @@ def get_today_locations(
 
     from datetime import date
     import random
-    from app.models.attendance import Attendance
 
     today = date.today()
     # Query today's attendance records where the user has punched in

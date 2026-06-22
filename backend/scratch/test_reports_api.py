@@ -23,17 +23,24 @@ except Exception as e:
     token = None
 
 if token:
-    # Query reports endpoint
-    reports_url = "http://localhost:8000/api/v1/reports/admin/hr-workload"
-    req_reports = urllib.request.Request(
-        reports_url, 
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    try:
-        with urllib.request.urlopen(req_reports) as res:
-            print("Reports API Success!")
-            print(json.loads(res.read().decode()))
-    except Exception as e:
-        print("Reports API Failed:", e)
-        if hasattr(e, 'read'):
-            print(e.read().decode())
+    # Query reports endpoints
+    endpoints = [
+        "admin/hr-workload",
+        "admin/employee-status",
+        "admin/login-activity"
+    ]
+    for endpoint in endpoints:
+        reports_url = f"http://localhost:8000/api/v1/reports/{endpoint}"
+        req_reports = urllib.request.Request(
+            reports_url, 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        try:
+            with urllib.request.urlopen(req_reports) as res:
+                print(f"Reports API {endpoint} Success!")
+                data = json.loads(res.read().decode())
+                print(data)
+        except Exception as e:
+            print(f"Reports API {endpoint} Failed:", e)
+            if hasattr(e, 'read'):
+                print(e.read().decode())

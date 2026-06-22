@@ -16,6 +16,7 @@ import { WeeklyAttendanceTrendItem } from '../../../../core/models/dashboard.mod
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { EmployeeLocationMap } from '../../components/employee-location-map/employee-location-map';
+import { RegularizationService } from '../../../../core/services/regularization.service';
 
 @Component({
   selector: 'app-hr-dashboard',
@@ -35,6 +36,20 @@ export class HrDashboard implements OnInit {
   recentTimeSheets: any[] = [];
   dashboardError = '';
   searchTerm = '';
+
+  pendingRegularizations: any[] = [];
+  selectedRegularization: any = null;
+  activeCategoryTab: 'timeoff' | 'regularization' = 'timeoff';
+  activeOversightTab = 'pending';
+
+  reasonTypeOptions: any[] = [
+    { label: 'Missed Punch', value: 'missed_punch' },
+    { label: 'Forgot Punch In', value: 'forgot_punch_in' },
+    { label: 'Forgot Punch Out', value: 'forgot_punch_out' },
+    { label: 'Late Arrival Sync', value: 'late_sync' },
+    { label: 'System/Network Issue', value: 'system_issue' },
+    { label: 'Other', value: 'other' }
+  ];
 
   // Photo viewer modal state
   selectedPhotoUrl: string | null = null;
@@ -56,6 +71,7 @@ export class HrDashboard implements OnInit {
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,
     private readonly attendanceService: AttendanceService,
+    private readonly regularizationService: RegularizationService,
     private readonly cdr: ChangeDetectorRef
   ) {
       this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
@@ -74,6 +90,9 @@ export class HrDashboard implements OnInit {
     this.isAdmin = user?.role === 'admin';
 
     this.loadDashboardData();
+    this.loadPendingRequests();
+    this.loadProcessedRequests();
+    this.loadPendingRegularizations();
 
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
@@ -81,11 +100,17 @@ export class HrDashboard implements OnInit {
 
     this.attendanceService.timeoffUpdate$.subscribe((event: any) => {
       this.loadDashboardData();
+      this.loadPendingRequests();
+      this.loadProcessedRequests();
+      this.loadPendingRegularizations();
      });
 
     this.attendanceService.wsMessage$.subscribe((msg: any) => {
       if (msg?.type === 'PUNCH_UPDATE' || msg?.type === 'ATTENDANCE_UPDATE' || msg?.type === 'NEW_NOTIFICATION') {
         this.loadDashboardData();
+        this.loadPendingRequests();
+        this.loadProcessedRequests();
+        this.loadPendingRegularizations();
       }
     });
   }
@@ -623,6 +648,55 @@ export class HrDashboard implements OnInit {
 
   downloadAttachment(fileName: string): void {
     alert(`Downloading attachment: ${fileName}`);
+  }
+
+  loadPendingRegularizations() {
+    this.regularizationService.getPendingRequests().subscribe(requests => {
+      this.pendingRegularizations = requests;
+      this.cdr.detectChanges();
+    });
+  }
+
+  processRegularization(requestId: number, status: 'approved' | 'rejected') {
+    this.regularizationService.submitDecision(requestId, { status, reviewComment: 'HR Oversight Decision' }).subscribe({
+      next: () => {
+        alert(`Regularization request ${status} successfully`);
+        this.loadPendingRegularizations();
+      },
+      error: (err) => alert(err?.error?.detail || "Error processing regularization request")
+    });
+  }
+
+  viewRegularizationDetails(req: any): void {
+    this.selectedRegularization = req;
+  }
+
+  closeRegularizationModal(): void {
+    this.selectedRegularization = null;
+  }
+
+  processRegularizationFromModal(requestId: number, status: 'approved' | 'rejected'): void {
+    this.processRegularization(requestId, status);
+    this.closeRegularizationModal();
+  }
+
+  getReasonTypeLabel(type: string): string {
+    const option = this.reasonTypeOptions.find(opt => opt.value === type);
+    return option ? option.label : type;
+  }
+
+  formatTime(timeStr?: string | null): string {
+    if (!timeStr) return '-';
+    const parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeStr;
+  }
+
+  setOversightTab(tab: string) {
+    this.activeOversightTab = tab;
+    this.cdr.detectChanges();
   }
 
   private matchesSearch(values: Array<string | number | undefined | null>): boolean {

@@ -95,7 +95,7 @@ async def get_pending_regularizations(
     current_user: User = Depends(get_current_user),
 ):
     # Only Admin or HR roles
-    if current_user.role not in (Role.ADMIN, Role.HR, "Admin", "HR", "admin", "hr"):
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Only Admin or HR can view pending regularization requests."
@@ -115,7 +115,7 @@ async def review_regularization(
     current_user: User = Depends(get_current_user),
 ):
     # Only Admin or HR roles
-    if current_user.role not in (Role.ADMIN, Role.HR, "Admin", "HR", "admin", "hr"):
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Only Admin or HR can review regularization requests."

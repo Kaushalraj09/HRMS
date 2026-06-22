@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../../../core/services/report.service';
@@ -37,7 +37,10 @@ export class AdminReportsComponent implements OnInit {
   departments: string[] = ['Engineering', 'Sales', 'Marketing', 'Human Resources', 'Finance', 'Operations'];
   statuses: string[] = ['Active', 'Inactive'];
 
-  constructor(private readonly reportService: ReportService) {
+  constructor(
+    private readonly reportService: ReportService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
     const today = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -73,9 +76,14 @@ export class AdminReportsComponent implements OnInit {
               this.workloadData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
       case 'status':
@@ -85,9 +93,14 @@ export class AdminReportsComponent implements OnInit {
               this.statusData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
       case 'login':
@@ -97,9 +110,14 @@ export class AdminReportsComponent implements OnInit {
               this.loginData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
     }
@@ -156,6 +174,12 @@ export class AdminReportsComponent implements OnInit {
       },
       error: (err) => console.error('Export failed', err)
     });
+  }
+
+  pageNumbers: number[] = [1];
+
+  private updatePageNumbers(): void {
+    this.pageNumbers = Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
   onPageChange(p: number): void {

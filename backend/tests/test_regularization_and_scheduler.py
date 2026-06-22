@@ -303,3 +303,38 @@ def test_approve_regularization_logic(db_session):
     assert "REGULARIZED" in attendance.flags
     assert "MISSED_PUNCH" not in attendance.flags
     assert "AUTO_CHECKOUT" not in attendance.flags
+
+
+def test_continue_working_and_extend_overtime_endpoints(db_session):
+    from app.api.v1.attendance_routes import continue_working, extend_overtime
+    from app.models.employee import Employee
+    from app.models.user import User
+    from app.models.attendance import Attendance
+
+    emp = db_session.query(Employee).first()
+    user = db_session.query(User).filter(User.id == emp.user_id).first()
+
+    # Create today's attendance record
+    today_date = date.today()
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=today_date,
+        punch_in=time(9, 0),
+        is_working=1,
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+
+    # Call continue_working
+    res = continue_working(db=db_session, current_user=user)
+    assert res is not None
+    db_session.refresh(attendance)
+    assert attendance.overtime_approved is True
+
+    # Call extend_overtime
+    res_extend = extend_overtime(db=db_session, current_user=user)
+    assert res_extend is not None
+    db_session.refresh(attendance)
+    assert attendance.overtime_extended is True
+

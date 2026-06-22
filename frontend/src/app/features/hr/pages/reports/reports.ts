@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../../../core/services/report.service';
@@ -36,7 +36,10 @@ export class HRReportsComponent implements OnInit {
 
   departments: string[] = ['Engineering', 'Sales', 'Marketing', 'Human Resources', 'Finance', 'Operations'];
 
-  constructor(private readonly reportService: ReportService) {
+  constructor(
+    private readonly reportService: ReportService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
     const today = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -72,9 +75,14 @@ export class HRReportsComponent implements OnInit {
               this.summaryData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
       case 'late':
@@ -84,9 +92,14 @@ export class HRReportsComponent implements OnInit {
               this.lateData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
       case 'missing':
@@ -96,9 +109,14 @@ export class HRReportsComponent implements OnInit {
               this.missingData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
       case 'leave':
@@ -108,9 +126,14 @@ export class HRReportsComponent implements OnInit {
               this.leaveData = res.data;
               this.totalItems = res.total;
               this.totalPages = res.pages;
+              this.updatePageNumbers();
               this.isLoading = false;
+              this.cdr.detectChanges();
             },
-            error: () => this.isLoading = false
+            error: () => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
           });
         break;
     }
@@ -171,6 +194,12 @@ export class HRReportsComponent implements OnInit {
       },
       error: (err) => console.error('Export failed', err)
     });
+  }
+
+  pageNumbers: number[] = [1];
+
+  private updatePageNumbers(): void {
+    this.pageNumbers = Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
   onPageChange(p: number): void {
