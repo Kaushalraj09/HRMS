@@ -54,3 +54,10 @@ class TimeOffApplyResponse(BaseModel):
     approved_seconds_today: int
     remaining_seconds_today: int
     employee_name: Optional[str] = None
+
+class TimeOffRequestPaginatedResponse(BaseModel):
+    items: list[TimeOffRequestResponse]
+    page: int
+    pageSize: int
+    totalItems: int
+    totalPages: int

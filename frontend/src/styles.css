@@ -169,4 +169,54 @@ tbody tr:last-child td {
 /* Typography Helpers */
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
-.text-dark { color: #0f172a; }
+.text-dark { color: #0f172a; }
+
+/* Curved tab buttons matching the map filter buttons styling */
+.dashboard-tab-btn {
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(210, 10%, 50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dashboard-tab-btn:hover {
+  background: transparent;
+  color: hsl(210, 15%, 20%);
+}
+
+.dashboard-tab-btn.active {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #e11d48 !important;
+  box-shadow: none !important;
+}
+
+.dashboard-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  border-radius: 3px;
+  animation: tabSlider 0.3s ease;
+}
+
+@keyframes tabSlider {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}

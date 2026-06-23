@@ -16,6 +16,7 @@
           type="text"
           id="search"
           [(ngModel)]="searchTerm"
+          (ngModelChange)="onFilterChange()"
           placeholder="Search by name, code..."
           class="filter-input"
         >
@@ -27,6 +28,7 @@
           [options]="reasonTypeOptions"
           placeholder="All Reason Types"
           [(ngModel)]="selectedReasonType"
+          (ngModelChange)="onFilterChange()"
           inputId="reasonType"
         ></app-custom-select>
       </div>
@@ -36,7 +38,7 @@
   <!-- Requests Table Panel -->
   <div class="table-panel card bg-card-theme">
     <div class="table-header">
-      <h2>Pending Requests ({{ filteredRequests.length }})</h2>
+      <h2>Pending Requests ({{ totalItems }})</h2>
     </div>
 
     <div class="table-responsive">
@@ -52,7 +54,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let req of pagedRequests">
+          <tr *ngFor="let req of pendingRequests">
             <td>
               <div class="emp-info">
                 <span class="emp-name">{{ req.employeeName }}</span>
@@ -76,7 +78,7 @@
               </button>
             </td>
           </tr>
-          <tr *ngIf="pagedRequests.length === 0">
+          <tr *ngIf="pendingRequests.length === 0">
             <td colspan="6" class="empty-state">
               <i class="fas fa-check-double empty-icon"></i>
               <p>All regularization requests have been processed!</p>
@@ -87,9 +89,9 @@
     </div>
 
     <!-- Pagination -->
-    <div class="pagination-container" *ngIf="totalPages > 1">
+    <div class="pagination-container" *ngIf="totalItems > pageSize">
       <div class="pagination-info">
-        Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ endIndex }} of {{ filteredRequests.length }} requests
+        Showing {{ pendingRequests.length > 0 ? (currentPage - 1) * pageSize + 1 : 0 }} to {{ endIndex }} of {{ totalItems }} requests
       </div>
       <div class="pagination-controls">
         <button (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn"><i class="fas fa-chevron-left"></i></button>

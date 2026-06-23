@@ -13,7 +13,6 @@ import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
-import { TimeOffModalComponent } from './modals/time-off-modal/time-off-modal';
 import {
   EmployeeAttendanceSummaryItem,
   EmployeeTimelineEvent,
@@ -58,8 +57,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     CalendarModule,
     Navbar,
     RouterModule,
-    EmpSidebar,
-    TimeOffModalComponent
+    EmpSidebar
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -743,19 +741,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.showScheduleModal = false;
   }
 
-  openTimeOffModal(): void {
-    this.showTimeOffModal = true;
-    this.cdr.detectChanges();
-  }
-
-  onTimeOffModalClose(refresh: boolean): void {
-    this.showTimeOffModal = false;
-    if (refresh) {
-      this.loadDashboardData();
-    }
-    this.cdr.detectChanges();
-  }
-
   saveSchedule() {
     this.subscriptions.add(
       this.attendanceService.addSchedule(
@@ -899,9 +884,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
         });
 
         // Map time-off requests to timeline events (Approved/Active/Completed/Pending/Expired)
-        const timeoffEvents: EmployeeTimelineEvent[] = timeoffs
-          .filter(req => ['Approved', 'Active', 'Completed', 'Pending', 'Expired'].includes(req.status))
-          .map(req => {
+        const timeoffEvents: EmployeeTimelineEvent[] = (timeoffs.items || [])
+          .filter((req: any) => ['Approved', 'Active', 'Completed', 'Pending', 'Expired'].includes(req.status))
+          .map((req: any) => {
             let timeLabel = 'Full Day';
             if (req.leave_type === 'Hourly' && req.start_time && req.end_time) {
               timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;

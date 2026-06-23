@@ -21,6 +21,7 @@ import { LoginActivityDetail } from './features/login-activity/login-activity-de
 import { LoginActivityRedirect } from './features/login-activity/login-activity-redirect';
 import { RegularizationComponent } from './features/emp/pages/regularization/regularization';
 import { RegularizationRequestsComponent } from './features/hr/pages/regularization-requests/regularization-requests';
+import { EmpTimeOffComponent } from './features/emp/pages/time-off/time-off';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -57,7 +58,8 @@ export const routes: Routes = [
       { path: 'my-attendance', component: MyAttendance },
       { path: 'regularization', component: RegularizationComponent },
       { path: 'my-profile', component: MyProfile },
-      { path: 'change-password', component: ChangePasswordComponent }
+      { path: 'change-password', component: ChangePasswordComponent },
+      { path: 'time-off', component: EmpTimeOffComponent }
     ]
   },
   {

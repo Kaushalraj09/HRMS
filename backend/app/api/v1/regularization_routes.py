@@ -11,9 +11,11 @@ from app.schemas.regularization import (
     RegularizationRequestCreate,
     RegularizationRequestDecision,
     RegularizationRequestResponse,
+    RegularizationRequestPaginatedResponse,
 )
 from app.api.deps import get_current_user
 from app.services.attendance_service import to_attendance_response, log_audit_trail_sync
+from app.core.websocket_manager import manager
 
 router = APIRouter(prefix="/regularizations", tags=["Attendance Regularization"])
 
@@ -68,11 +70,52 @@ async def submit_regularization(
 
     log_audit_trail_sync(db, "REGULARIZATION_SUBMIT", employee.id, f"Submitted regularization request for {request.attendance_date}")
 
+    # Broadcast websocket alert to HR/Admin users of type REGULARIZATION_REQUEST
+    await manager.broadcast(
+        {
+            "type": "REGULARIZATION_REQUEST",
+            "message": f"New regularization request from {employee.first_name} {employee.last_name}",
+            "request_id": new_request.id,
+            "employee_id": employee.id
+        }
+    )
+
+    try:
+        from app.services.notification_service import create_notification
+        from app.models.user import User, Role
+        from sqlalchemy import func
+
+        # 1. Notify the employee
+        await create_notification(
+            db=db,
+            user_id=current_user.id,
+            type="ATTENDANCE",
+            title="Regularization Request Submitted",
+            message=f"You have successfully applied for attendance regularization on {new_request.attendance_date}.",
+            reference_id=new_request.id
+        )
+
+        # 2. Notify all HR users
+        hr_users = db.query(User).join(Role).filter(func.lower(Role.name) == "hr").all()
+        for hr_user in hr_users:
+            await create_notification(
+                db=db,
+                user_id=hr_user.id,
+                type="ATTENDANCE",
+                title="New Regularization Request",
+                message=f"Employee {employee.first_name} {employee.last_name} (ID: {employee.id}) has submitted an attendance regularization request for {new_request.attendance_date}.",
+                reference_id=new_request.id
+            )
+    except Exception as e:
+        print(f"Error dispatching regularization apply notifications: {e}")
+
     # Return response mapped
     return _map_request_to_response(new_request)
 
-@router.get("/my", response_model=List[RegularizationRequestResponse])
+@router.get("/my", response_model=RegularizationRequestPaginatedResponse)
 async def get_my_regularizations(
+    page: int = 1,
+    pageSize: int = 10,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -83,14 +126,30 @@ async def get_my_regularizations(
             detail="Only employees can view their requests"
         )
 
-    requests = db.query(AttendanceRegularizationRequest).filter(
+    import math
+    query = db.query(AttendanceRegularizationRequest).filter(
         AttendanceRegularizationRequest.employee_id == employee.id
-    ).order_by(AttendanceRegularizationRequest.created_at.desc()).all()
+    )
 
-    return [_map_request_to_response(r) for r in requests]
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    requests = query.order_by(AttendanceRegularizationRequest.created_at.desc()).offset(offset).limit(pageSize).all()
 
-@router.get("/pending", response_model=List[RegularizationRequestResponse])
+    return {
+        "items": [_map_request_to_response(r) for r in requests],
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
+
+@router.get("/pending", response_model=RegularizationRequestPaginatedResponse)
 async def get_pending_regularizations(
+    page: int = 1,
+    pageSize: int = 10,
+    search: str = "",
+    reason_type: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -101,11 +160,34 @@ async def get_pending_regularizations(
             detail="Access denied. Only Admin or HR can view pending regularization requests."
         )
 
-    requests = db.query(AttendanceRegularizationRequest).filter(
+    import math
+    query = db.query(AttendanceRegularizationRequest).filter(
         AttendanceRegularizationRequest.status == "pending"
-    ).order_by(AttendanceRegularizationRequest.created_at.asc()).all()
+    )
 
-    return [_map_request_to_response(r) for r in requests]
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if reason_type:
+        query = query.filter(AttendanceRegularizationRequest.reason_type == reason_type)
+
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    requests = query.order_by(AttendanceRegularizationRequest.created_at.asc()).offset(offset).limit(pageSize).all()
+
+    return {
+        "items": [_map_request_to_response(r) for r in requests],
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
 
 @router.put("/{request_id}/decision", response_model=RegularizationRequestResponse)
 async def review_regularization(
@@ -190,6 +272,14 @@ async def review_regularization(
                         message=f"Your attendance regularization request for {req.attendance_date} has been APPROVED.",
                         reference_id=attendance.id
                     )
+                    await manager.send_personal_message(
+                        {
+                            "type": "REGULARIZATION_UPDATE",
+                            "status": "Approved",
+                            "message": f"Your regularization request for {req.attendance_date} has been APPROVED."
+                        },
+                        emp.user_id
+                    )
             except Exception as e:
                 print(f"Failed to create regularization approved notification: {e}")
 
@@ -205,6 +295,14 @@ async def review_regularization(
                     type="ATTENDANCE",
                     title="Regularization Rejected",
                     message=f"Your attendance regularization request for {req.attendance_date} has been REJECTED. Reason: {decision.review_comment or 'N/A'}"
+                )
+                await manager.send_personal_message(
+                    {
+                        "type": "REGULARIZATION_UPDATE",
+                        "status": "Rejected",
+                        "message": f"Your regularization request for {req.attendance_date} has been REJECTED."
+                    },
+                    emp.user_id
                 )
         except Exception as e:
             print(f"Failed to create regularization rejected notification: {e}")

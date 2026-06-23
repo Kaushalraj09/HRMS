@@ -58,9 +58,9 @@ export class RegularizationComponent implements OnInit {
   }
 
   loadRequests(): void {
-    this.regularizationService.getMyRequests().subscribe({
-      next: (data) => {
-        this.requests = data;
+    this.regularizationService.getMyRequests(1, 1000).subscribe({
+      next: (res) => {
+        this.requests = res.items || [];
         this.applyTabFilter();
         this.cdr.detectChanges();
       },

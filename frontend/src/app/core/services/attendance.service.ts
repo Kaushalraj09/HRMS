@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, map, Subject, switchMap } from 'rxjs';
 
 import { buildApiUrl, buildWsUrl } from '../config/api.config';
-import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode } from '../models/attendance.model';
+import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode, PaginatedResponse } from '../models/attendance.model';
 import { formatMinutesToHours } from '../utils/attendance-calc.util';
 
 interface BackendAttendanceResponse {
@@ -295,8 +295,12 @@ export class AttendanceService {
     });
   }
 
-  getMyTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/my-requests`);
+  getMyTimeOffRequests(page: number = 1, pageSize: number = 10): Observable<PaginatedResponse<any>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('_ts', Date.now().toString());
+    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/my-requests`, { headers: this.noCacheHeaders, params });
   }
 
   requestTimeOff(
@@ -334,12 +338,25 @@ export class AttendanceService {
     });
   }
 
-  getPendingTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/pending`);
+  getPendingTimeOffRequests(page: number = 1, pageSize: number = 10, search: string = '', leaveType: string = ''): Observable<PaginatedResponse<any>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('search', search.trim())
+      .set('leave_type', leaveType)
+      .set('_ts', Date.now().toString());
+    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/pending`, { headers: this.noCacheHeaders, params });
   }
 
-  getProcessedTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/history`);
+  getProcessedTimeOffRequests(page: number = 1, pageSize: number = 10, search: string = '', leaveType: string = '', status: string = ''): Observable<PaginatedResponse<any>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('search', search.trim())
+      .set('leave_type', leaveType)
+      .set('status', status)
+      .set('_ts', Date.now().toString());
+    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/history`, { headers: this.noCacheHeaders, params });
   }
 
   approveTimeOffRequest(requestId: number, action: string, approvedHours?: number, comments?: string): Observable<any> {

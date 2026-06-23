@@ -169,15 +169,15 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   loadPendingRequests() {
-    this.attendanceService.getPendingTimeOffRequests().subscribe(requests => {
-      this.pendingRequests = requests;
+    this.attendanceService.getPendingTimeOffRequests(1, 100).subscribe(res => {
+      this.pendingRequests = res.items || [];
       this.cdr.detectChanges();
     });
   }
 
   loadProcessedRequests() {
-    this.attendanceService.getProcessedTimeOffRequests().subscribe(requests => {
-      this.processedRequests = requests;
+    this.attendanceService.getProcessedTimeOffRequests(1, 100).subscribe(res => {
+      this.processedRequests = res.items || [];
       this.cdr.detectChanges();
     });
   }
@@ -222,8 +222,8 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   loadPendingRegularizations() {
-    this.regularizationService.getPendingRequests().subscribe(requests => {
-      this.pendingRegularizations = requests;
+    this.regularizationService.getPendingRequests(1, 100).subscribe(res => {
+      this.pendingRegularizations = res.items || [];
       this.cdr.detectChanges();
     });
   }

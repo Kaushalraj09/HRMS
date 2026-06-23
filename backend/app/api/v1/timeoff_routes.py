@@ -11,6 +11,7 @@ from app.schemas.timeoff import (
     TimeOffRequestResponse,
     TimeOffApplyPayload,
     TimeOffApplyResponse,
+    TimeOffRequestPaginatedResponse,
 )
 from app.services import timeoff_service, attendance_service
 from app.core.websocket_manager import manager
@@ -165,8 +166,10 @@ def get_timeoff_by_date(
         )
     return timeoff
 
-@router.get("/my-requests", response_model=List[TimeOffRequestResponse])
+@router.get("/my-requests", response_model=TimeOffRequestPaginatedResponse)
 def get_my_timeoffs(
+    page: int = 1,
+    pageSize: int = 10,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -179,10 +182,34 @@ def get_my_timeoffs(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Only employees can view their time-off"
         )
-    return timeoff_service.get_my_timeoffs(db, employee.id)
+    
+    import math
+    from app.models.timeoff import TimeOffRequest
+    
+    query = db.query(TimeOffRequest).filter(TimeOffRequest.employee_id == employee.id)
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    results = query.order_by(TimeOffRequest.date.desc()).offset(offset).limit(pageSize).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+        
+    return {
+        "items": results,
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
 
-@router.get("/pending", response_model=List[TimeOffRequestResponse])
+@router.get("/pending", response_model=TimeOffRequestPaginatedResponse)
 def get_pending_requests(
+    page: int = 1,
+    pageSize: int = 10,
+    search: str = "",
+    leave_type: str = "",
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -194,11 +221,48 @@ def get_pending_requests(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Not authorized to view pending requests"
         )
-    return timeoff_service.get_pending_requests(db)
     
-@router.get("/history", response_model=List[TimeOffRequestResponse])
+    import math
+    from app.models.timeoff import TimeOffRequest
+    from app.models.employee import Employee
+    
+    query = db.query(TimeOffRequest).filter(TimeOffRequest.status == "Pending")
+    
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if leave_type:
+        query = query.filter(TimeOffRequest.leave_type == leave_type)
+        
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    results = query.order_by(TimeOffRequest.created_at.desc()).offset(offset).limit(pageSize).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+        
+    return {
+        "items": results,
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
+    
+@router.get("/history", response_model=TimeOffRequestPaginatedResponse)
 def get_processed_requests(
-    limit: int = 20,
+    page: int = 1,
+    pageSize: int = 10,
+    search: str = "",
+    leave_type: str = "",
+    status: str = "",
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -210,7 +274,43 @@ def get_processed_requests(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Not authorized to view request history"
         )
-    return timeoff_service.get_processed_requests(db, limit)
+    
+    import math
+    from app.models.timeoff import TimeOffRequest
+    from app.models.employee import Employee
+    
+    query = db.query(TimeOffRequest).filter(TimeOffRequest.status != "Pending")
+    
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if leave_type:
+        query = query.filter(TimeOffRequest.leave_type == leave_type)
+        
+    if status:
+        query = query.filter(TimeOffRequest.status == status)
+        
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    results = query.order_by(TimeOffRequest.updated_at.desc()).offset(offset).limit(pageSize).all()
+    
+    for r in results:
+        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+        r.employee_code = r.employee.employee_code
+        
+    return {
+        "items": results,
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
 
 @router.put("/approve/{request_id}", response_model=TimeOffRequestResponse)
 async def approve_request(

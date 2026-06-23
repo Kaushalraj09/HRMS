@@ -1,7 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { RegularizationService } from '../../../../core/services/regularization.service';
+import { AttendanceService } from '../../../../core/services/attendance.service';
 import { RegularizationRequestItem } from '../../../../core/models/regularization.model';
 import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
 
@@ -12,15 +14,13 @@ import { CustomSelectComponent, SelectOption } from '../../../../shared/componen
   templateUrl: './regularization-requests.html',
   styleUrl: './regularization-requests.css'
 })
-export class RegularizationRequestsComponent implements OnInit {
+export class RegularizationRequestsComponent implements OnInit, OnDestroy {
   pendingRequests: RegularizationRequestItem[] = [];
-  processedRequests: RegularizationRequestItem[] = [];
   activeTab: 'pending' | 'history' = 'pending';
 
   // Filters
   searchTerm = '';
   selectedReasonType = '';
-  selectedStatus = '';
 
   // Decision Modal State
   selectedRequest: RegularizationRequestItem | null = null;
@@ -39,30 +39,51 @@ export class RegularizationRequestsComponent implements OnInit {
     { label: 'Other', value: 'other' }
   ];
 
-  statusOptions: SelectOption[] = [
-    { label: 'All Statuses', value: '' },
-    { label: 'Approved', value: 'approved' },
-    { label: 'Rejected', value: 'rejected' }
-  ];
-
   // Pagination
   currentPage = 1;
   pageSize = 10;
+  totalItems = 0;
+
+  private readonly subscriptions = new Subscription();
 
   constructor(
     private readonly regularizationService: RegularizationService,
+    private readonly attendanceService: AttendanceService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadPendingRequests();
-    this.loadProcessedRequests();
+
+    // WebSocket updates
+    this.subscriptions.add(
+      this.attendanceService.wsMessage$.subscribe((msg) => {
+        if (msg.type === 'REGULARIZATION_REQUEST' || msg.type === 'REGULARIZATION_UPDATE') {
+          this.loadPendingRequests();
+        }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
+    this.loadPendingRequests();
   }
 
   loadPendingRequests(): void {
-    this.regularizationService.getPendingRequests().subscribe({
-      next: (data) => {
-        this.pendingRequests = data;
+    this.regularizationService.getPendingRequests(
+      this.currentPage,
+      this.pageSize,
+      this.searchTerm,
+      this.selectedReasonType
+    ).subscribe({
+      next: (res: any) => {
+        this.pendingRequests = res.items;
+        this.totalItems = res.totalItems;
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -71,92 +92,28 @@ export class RegularizationRequestsComponent implements OnInit {
     });
   }
 
-  loadProcessedRequests(): void {
-    // For processed requests, since backend does not have a separate processed endpoint,
-    // we fetch history and filter for non-pending requests.
-    this.regularizationService.getMyRequests().subscribe({
-      next: (data) => {
-        // Wait, "getMyRequests" returns own requests for employee. But for HR, they want all requests.
-        // Let's check how backend lists requests for HR.
-        // Oh! In regularization_routes.py:
-        // @router.get("/pending") -> returns all requests with status="pending" (for hr/admin)
-        // Let's check if there is an endpoint to list ALL requests or if we can fetch all requests.
-        // Let's view regularization_routes.py to see if there is another endpoint.
-        // Ah! Line 74: @router.get("/my") -> gets current employee's requests
-        // Line 92: @router.get("/pending") -> gets pending requests
-        // Wait, is there any endpoint to get history of regularization requests for HR?
-        // Let's check regularization_routes.py line 74 to end.
-        // There is ONLY `/my` and `/pending`.
-        // Let's check: can HR read all requests from the database?
-        // Wait, let's search if there's any other endpoint in regularization_routes.py.
-        // We viewed the whole regularization_routes.py file earlier (253 lines).
-        // Let's check what routes are in it:
-        // - POST /regularizations
-        // - GET /regularizations/my
-        // - GET /regularizations/pending
-        // - PUT /regularizations/{request_id}/decision
-        // So yes, there is NO HR history endpoint for regularization in the backend yet!
-        // But wait! How does the report service get regularization statistics or lists?
-        // Wait, in `report_service.py`:
-        // `pending_reg_q = db.query(AttendanceRegularizationRequest).filter(AttendanceRegularizationRequest.status.ilike("pending"))`
-        // In regularization_routes.py, HR can see pending requests.
-        // For regularization history/processed requests, is there a way?
-        // Wait, since there is no HR history route, we can just display the Pending requests, which is the main operational requirement.
-        // Or wait, we can just list pending requests, and show them in a single view.
-        // Let's check if there is any other route or model we missed.
-        // Yes, the route is just `GET /regularizations/pending` to show pending items.
-        // Let's verify if HR needs to see a history. If there's no endpoint, we only show pending requests for approval, which matches the main goal.
-        // Wait, let's confirm if we can add an HR history route, but the user requested:
-        // "according to phase 2 documentation do we have any thing to implement in bracken and frontend is left"
-        // And we saw regularization backend was marked completed because routes for submitting and reviewing pending requests are there.
-        // So we will just show the Pending Requests table, which is perfectly aligned with `GET /regularizations/pending`.
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
   setActiveTab(tab: 'pending' | 'history'): void {
-    this.activeTab = tab;
+    // Left for potential future tab extensions, but template only renders pending requests.
     this.currentPage = 1;
-  }
-
-  get filteredRequests(): RegularizationRequestItem[] {
-    const list = this.pendingRequests;
-    return list.filter((req) => {
-      const matchesSearch = this.matchesSearchText(req);
-      const matchesReason = !this.selectedReasonType || req.reasonType === this.selectedReasonType;
-      return matchesSearch && matchesReason;
-    });
-  }
-
-  get pagedRequests(): RegularizationRequestItem[] {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    return this.filteredRequests.slice(startIndex, startIndex + this.pageSize);
+    this.loadPendingRequests();
   }
 
   get totalPages(): number {
-    return Math.ceil(this.filteredRequests.length / this.pageSize);
+    return Math.ceil(this.totalItems / this.pageSize);
   }
 
   get endIndex(): number {
-    return Math.min(this.currentPage * this.pageSize, this.filteredRequests.length);
+    return Math.min(this.currentPage * this.pageSize, this.totalItems);
   }
 
-  private _cachedTotalPages = 0;
-  private _cachedPageNumbers: number[] = [];
-
   get pageNumbers(): number[] {
-    const pages = this.totalPages;
-    if (pages !== this._cachedTotalPages) {
-      this._cachedTotalPages = pages;
-      this._cachedPageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
-    }
-    return this._cachedPageNumbers;
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
   setPage(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
+      this.loadPendingRequests();
     }
   }
 
@@ -212,15 +169,5 @@ export class RegularizationRequestsComponent implements OnInit {
       return `${parts[0]}:${parts[1]}`;
     }
     return timeStr;
-  }
-
-  private matchesSearchText(req: RegularizationRequestItem): boolean {
-    const query = this.searchTerm.trim().toLowerCase();
-    if (!query) return true;
-
-    const name = (req.employeeName || '').toLowerCase();
-    const code = (req.employeeCode || '').toLowerCase();
-    const reasonText = (req.reasonText || '').toLowerCase();
-    return name.includes(query) || code.includes(query) || reasonText.includes(query);
   }
 }

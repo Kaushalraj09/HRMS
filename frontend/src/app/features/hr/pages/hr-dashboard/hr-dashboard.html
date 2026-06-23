@@ -324,10 +324,10 @@
             <div class="card recent_projects" style="width: 100%;">
                 <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
                     <div style="display: flex; gap: 16px; align-items: center;">
-                        <button class="btn" [ngStyle]="{'background': activeCategoryTab === 'timeoff' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeCategoryTab === 'timeoff' ? '#ffffff' : '#64748b', 'border': activeCategoryTab === 'timeoff' ? 'none' : '1px solid #cbd5e1'}" (click)="activeCategoryTab = 'timeoff'" style="height: 36px; padding: 0 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                        <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'timeoff'" (click)="activeCategoryTab = 'timeoff'">
                             Time Off Requests
                         </button>
-                        <button class="btn" [ngStyle]="{'background': activeCategoryTab === 'regularization' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeCategoryTab === 'regularization' ? '#ffffff' : '#64748b', 'border': activeCategoryTab === 'regularization' ? 'none' : '1px solid #cbd5e1'}" (click)="activeCategoryTab = 'regularization'" style="height: 36px; padding: 0 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                        <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'regularization'" (click)="activeCategoryTab = 'regularization'">
                             Regularization Requests
                         </button>
                     </div>

@@ -40,6 +40,13 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     { label: 'Rejected', value: 'Rejected' }
   ];
 
+  // Pagination state
+  pendingPage = 1;
+  historyPage = 1;
+  pageSize = 10;
+  pendingTotal = 0;
+  historyTotal = 0;
+
   private readonly subscriptions = new Subscription();
 
   constructor(
@@ -68,19 +75,69 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
+  onFilterChange(): void {
+    this.pendingPage = 1;
+    this.historyPage = 1;
+    this.loadPendingRequests();
+    this.loadProcessedRequests();
+  }
+
+  setPendingPage(page: number): void {
+    if (page >= 1 && page <= this.pendingTotalPages) {
+      this.pendingPage = page;
+      this.loadPendingRequests();
+    }
+  }
+
+  setHistoryPage(page: number): void {
+    if (page >= 1 && page <= this.historyTotalPages) {
+      this.historyPage = page;
+      this.loadProcessedRequests();
+    }
+  }
+
+  get pendingTotalPages(): number {
+    return Math.ceil(this.pendingTotal / this.pageSize);
+  }
+
+  get historyTotalPages(): number {
+    return Math.ceil(this.historyTotal / this.pageSize);
+  }
+
+  get pendingPageNumbers(): number[] {
+    return Array.from({ length: this.pendingTotalPages }, (_, i) => i + 1);
+  }
+
+  get historyPageNumbers(): number[] {
+    return Array.from({ length: this.historyTotalPages }, (_, i) => i + 1);
+  }
+
   loadPendingRequests(): void {
-    this.attendanceService.getPendingTimeOffRequests().subscribe({
-      next: (requests) => {
-        this.pendingRequests = requests;
+    this.attendanceService.getPendingTimeOffRequests(
+      this.pendingPage,
+      this.pageSize,
+      this.searchTerm,
+      this.selectedLeaveType
+    ).subscribe({
+      next: (res) => {
+        this.pendingRequests = res.items;
+        this.pendingTotal = res.totalItems;
         this.cdr.detectChanges();
       }
     });
   }
 
   loadProcessedRequests(): void {
-    this.attendanceService.getProcessedTimeOffRequests().subscribe({
-      next: (requests) => {
-        this.processedRequests = requests;
+    this.attendanceService.getProcessedTimeOffRequests(
+      this.historyPage,
+      this.pageSize,
+      this.searchTerm,
+      this.selectedLeaveType,
+      this.selectedStatus
+    ).subscribe({
+      next: (res) => {
+        this.processedRequests = res.items;
+        this.historyTotal = res.totalItems;
         this.cdr.detectChanges();
       }
     });
@@ -109,20 +166,11 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   }
 
   get filteredPendingRequests(): any[] {
-    return this.pendingRequests.filter((req) => {
-      const matchesSearch = this.matchesSearchText(req);
-      const matchesType = !this.selectedLeaveType || req.leave_type === this.selectedLeaveType;
-      return matchesSearch && matchesType;
-    });
+    return this.pendingRequests;
   }
 
   get filteredProcessedRequests(): any[] {
-    return this.processedRequests.filter((req) => {
-      const matchesSearch = this.matchesSearchText(req);
-      const matchesType = !this.selectedLeaveType || req.leave_type === this.selectedLeaveType;
-      const matchesStatus = !this.selectedStatus || req.status === this.selectedStatus;
-      return matchesSearch && matchesType && matchesStatus;
-    });
+    return this.processedRequests;
   }
 
   selectedRequest: any = null;

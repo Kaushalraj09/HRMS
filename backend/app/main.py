@@ -38,8 +38,11 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 @app.on_event("startup")
 def startup():
     if settings.AUTO_CREATE_TABLES:
-        # Development convenience only. Production should rely on managed migrations.
-        Base.metadata.create_all(bind=engine)
+        # Run Alembic migrations programmatically to set up/upgrade the database schema
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
 
     if settings.AUTO_SEED_ROLES or settings.AUTO_SEED_DEMO_DATA:
         db = SessionLocal()

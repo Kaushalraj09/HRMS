@@ -42,3 +42,12 @@ class RegularizationRequestResponse(BaseModel):
     review_comment: Optional[str] = Field(default=None, alias="reviewComment")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+class RegularizationRequestPaginatedResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[RegularizationRequestResponse]
+    page: int
+    pageSize: int = Field(alias="pageSize")
+    total_items: int = Field(alias="totalItems")
+    total_pages: int = Field(alias="totalPages")

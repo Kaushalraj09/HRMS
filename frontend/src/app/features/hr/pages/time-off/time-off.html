@@ -36,6 +36,7 @@
             type="text" 
             id="employeeSearch" 
             [(ngModel)]="searchTerm" 
+            (ngModelChange)="onFilterChange()"
             placeholder="Search by name or code..." 
             class="filter-input" />
         </div>
@@ -47,6 +48,7 @@
             name="leaveTypeFilter" 
             inputId="leaveTypeFilter" 
             [(ngModel)]="selectedLeaveType" 
+            (ngModelChange)="onFilterChange()"
             [options]="leaveTypeOptions">
           </app-custom-select>
         </div>
@@ -58,6 +60,7 @@
             name="statusFilter" 
             inputId="statusFilter" 
             [(ngModel)]="selectedStatus" 
+            (ngModelChange)="onFilterChange()"
             [options]="statusOptions">
           </app-custom-select>
         </div>
@@ -199,6 +202,72 @@
           </tbody>
         </table>
 
+      </div>
+
+      <!-- Pagination for Pending Requests -->
+      <div class="pagination-footer" *ngIf="activeTab === 'pending' && pendingRequests.length > 0">
+        <div class="pagination-info">
+          Showing <span class="font-medium">{{ ((pendingPage - 1) * pageSize) + 1 }}</span> to 
+          <span class="font-medium">{{ ((pendingPage - 1) * pageSize) + pendingRequests.length }}</span> of 
+          <span class="font-medium">{{ pendingTotal }}</span> entries
+        </div>
+        
+        <div class="pagination-controls" *ngIf="pendingTotal > pageSize">
+          <button 
+            class="page-btn" 
+            [disabled]="pendingPage === 1"
+            (click)="setPendingPage(pendingPage - 1)">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          
+          <button 
+            *ngFor="let p of pendingPageNumbers" 
+            class="page-btn" 
+            [class.active]="p === pendingPage"
+            (click)="setPendingPage(p)">
+            {{ p }}
+          </button>
+          
+          <button 
+            class="page-btn" 
+            [disabled]="pendingPage === pendingTotalPages"
+            (click)="setPendingPage(pendingPage + 1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pagination for Processed Requests -->
+      <div class="pagination-footer" *ngIf="activeTab === 'history' && processedRequests.length > 0">
+        <div class="pagination-info">
+          Showing <span class="font-medium">{{ ((historyPage - 1) * pageSize) + 1 }}</span> to 
+          <span class="font-medium">{{ ((historyPage - 1) * pageSize) + processedRequests.length }}</span> of 
+          <span class="font-medium">{{ historyTotal }}</span> entries
+        </div>
+        
+        <div class="pagination-controls" *ngIf="historyTotal > pageSize">
+          <button 
+            class="page-btn" 
+            [disabled]="historyPage === 1"
+            (click)="setHistoryPage(historyPage - 1)">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          
+          <button 
+            *ngFor="let p of historyPageNumbers" 
+            class="page-btn" 
+            [class.active]="p === historyPage"
+            (click)="setHistoryPage(p)">
+            {{ p }}
+          </button>
+          
+          <button 
+            class="page-btn" 
+            [disabled]="historyPage === historyTotalPages"
+            (click)="setHistoryPage(historyPage + 1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 

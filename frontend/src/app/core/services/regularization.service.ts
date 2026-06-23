@@ -8,6 +8,7 @@ import {
   RegularizationRequestItem,
   RegularizationDecisionPayload
 } from '../models/regularization.model';
+import { PaginatedResponse } from '../models/attendance.model';
 
 @Injectable({
   providedIn: 'root'
@@ -35,17 +36,25 @@ export class RegularizationService {
     );
   }
 
-  getMyRequests(): Observable<RegularizationRequestItem[]> {
-    return this.http.get<RegularizationRequestItem[]>(
+  getMyRequests(page: number = 1, pageSize: number = 10): Observable<PaginatedResponse<RegularizationRequestItem>> {
+    const params = this.noCacheParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+    return this.http.get<PaginatedResponse<RegularizationRequestItem>>(
       `${this.apiUrl}/my`,
-      { headers: this.noCacheHeaders, params: this.noCacheParams() }
+      { headers: this.noCacheHeaders, params }
     );
   }
 
-  getPendingRequests(): Observable<RegularizationRequestItem[]> {
-    return this.http.get<RegularizationRequestItem[]>(
+  getPendingRequests(page: number = 1, pageSize: number = 10, search: string = '', reasonType: string = ''): Observable<PaginatedResponse<RegularizationRequestItem>> {
+    const params = this.noCacheParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('search', search.trim())
+      .set('reason_type', reasonType);
+    return this.http.get<PaginatedResponse<RegularizationRequestItem>>(
       `${this.apiUrl}/pending`,
-      { headers: this.noCacheHeaders, params: this.noCacheParams() }
+      { headers: this.noCacheHeaders, params }
     );
   }
 

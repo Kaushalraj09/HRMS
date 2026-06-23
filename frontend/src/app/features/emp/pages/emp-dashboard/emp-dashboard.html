@@ -123,11 +123,9 @@
 
                             <div class="timeoff-inline" style="display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
                                 <p class="timeoff-inline__hint" style="margin-bottom: 20px; font-size: 13px; color: #64748b; line-height: 1.5;">Request leaves, hourly time off, or single/multi-day leaves via formal HRMS pipelines.</p>
-                                <button type="button" class="apply-btn timeoff-inline__submit" style="margin-top: auto;"
-                                    (click)="openTimeOffModal()"
-                                    [disabled]="isTimeOffSubmitting">
+                                <a routerLink="/emp-dashboard/time-off" class="apply-btn timeoff-inline__submit" style="margin-top: auto; display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box;">
                                     Request time off
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -431,6 +429,3 @@
         </div>
     </div>
 </div>
-
-<!-- Advanced Time Off Request Modal -->
-<app-time-off-modal *ngIf="showTimeOffModal" (closed)="onTimeOffModalClose($event)"></app-time-off-modal>
