@@ -20,7 +20,7 @@ def test_seed_users_bootstraps_fresh_database():
     seed_users(db)
 
     assert db.query(User).count() == 3
-    assert db.query(Employee).count() == 2
+    assert db.query(Employee).count() == 3
     assert db.query(HrUser).count() == 1
 
     db.close()

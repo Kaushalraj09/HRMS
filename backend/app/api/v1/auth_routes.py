@@ -63,9 +63,14 @@ def change_password(
 @router.post("/forgot-password", response_model=StandardResponse)
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
     reset_link = auth_service.forgot_password(db, request)
-    if settings.EXPOSE_RESET_LINK_IN_RESPONSE and reset_link:
+    if not reset_link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email does not exist"
+        )
+    if settings.EXPOSE_RESET_LINK_IN_RESPONSE:
         return {"success": True, "message": f"Password reset link generated. Reset Link: {reset_link}"}
-    return {"success": True, "message": "If the account exists, a password reset link has been generated and dispatched."}
+    return {"success": True, "message": "Password reset link generated and sent successfully."}
 
 @router.post("/reset-password", response_model=StandardResponse)
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):

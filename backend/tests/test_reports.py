@@ -87,7 +87,7 @@ def test_attendance_summary_report(db_session):
     
     assert report["total"] == 1
     row = report["data"][0]
-    assert row["employeeCode"] == "EMP-0002"  # normalized
+    assert row["employeeCode"] == "0002"  # normalized
     assert row["presentDays"] == 1
     assert row["halfDays"] == 1
     assert row["absentDays"] == 0

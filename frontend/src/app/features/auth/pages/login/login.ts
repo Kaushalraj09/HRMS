@@ -75,6 +75,7 @@ export class Login {
         this.forgotMessageType = 'error';
         this.showForgotPopup = true;
         this.forgotToken = '';
+        this.cdr.detectChanges();
         
         this.forgotTimeoutRef = setTimeout(() => {
           this.showForgotPopup = false;
@@ -128,6 +129,7 @@ export class Login {
         this.message = 'Login successful';
         this.messageType = 'success';
         this.showPopup = true;
+        this.cdr.detectChanges();
 
         this.timeoutRef = setTimeout(() => {
           this.showPopup = false;
@@ -140,6 +142,7 @@ export class Login {
         this.message = error.error?.detail || error.message || 'Invalid email or password';
         this.messageType = 'error';
         this.showPopup = true;
+        this.cdr.detectChanges();
 
         this.timeoutRef = setTimeout(() => {
           this.showPopup = false;
@@ -162,6 +165,7 @@ export class Login {
         this.message = 'Login successful';
         this.messageType = 'success';
         this.showPopup = true;
+        this.cdr.detectChanges();
 
         this.timeoutRef = setTimeout(() => {
           this.showPopup = false;
@@ -176,6 +180,7 @@ export class Login {
         this.showPopup = true;
         this.showSelectionModal = false;
         this.tempCredentials = null;
+        this.cdr.detectChanges();
 
         this.timeoutRef = setTimeout(() => {
           this.showPopup = false;

@@ -221,7 +221,7 @@ def punch_in(
     if attendance:
         # Fetch employee information for extra detail fields
         employee = db.query(Employee).filter(Employee.id == employee_id).first()
-        emp_code = employee.employee_code if employee else f"EMP-{employee_id:04d}"
+        emp_code = employee.employee_code if employee else f"{employee_id:04d}"
         
         if attendance.is_working:
             raise HTTPException(
@@ -690,6 +690,117 @@ def add_schedule(
     
     return to_attendance_response(record, db)
 
+def get_computed_status_expression(db: Session, current_dt=None):
+    from sqlalchemy import case, and_, or_, cast, Integer, Date, String
+    from app.models.timeoff import TimeOffRequest
+
+    if current_dt is None:
+        current_dt = datetime.now(APP_TIMEZONE)
+    today = current_dt.date()
+    current_time = current_dt.time()
+
+    # Subquery for approved timeoff hours for this record
+    timeoff_hours_expr = (
+        db.query(func.coalesce(func.sum(TimeOffRequest.duration_hours), 0.0))
+        .filter(
+            TimeOffRequest.employee_id == Attendance.employee_id,
+            TimeOffRequest.date == Attendance.date,
+            TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+        )
+        .correlate_all()
+        .scalar_subquery()
+    )
+
+    # Case 1: Time Off (full day leave)
+    cond_timeoff_full = timeoff_hours_expr >= 8.0
+
+    # Case 2: Explicitly Marked status / Auto Checked-out
+    cond_auto_checkout_flag = and_(
+        Attendance.status.in_(["PRESENT", "Present"]),
+        Attendance.requires_regularization == True,
+        Attendance._flags.like("%AUTO_CHECKOUT%")
+    )
+    cond_present_status = or_(
+        Attendance.status == "Auto Checked-out",
+        cond_auto_checkout_flag
+    )
+
+    # Case 3: Working (punched in but not punched out)
+    cond_working = and_(
+        Attendance.punch_in.isnot(None),
+        Attendance.punch_out.is_(None)
+    )
+
+    # Case 4: Punched in and out
+    credited_mins = Attendance.total_working_minutes + func.cast(timeoff_hours_expr * 60, Integer)
+
+    cond_present_work = and_(
+        Attendance.punch_in.isnot(None),
+        Attendance.punch_out.isnot(None),
+        credited_mins >= 480
+    )
+
+    cond_half_day_work = and_(
+        Attendance.punch_in.isnot(None),
+        Attendance.punch_out.isnot(None),
+        credited_mins >= 120,
+        credited_mins < 480
+    )
+
+    # Case 5: No punch in
+    cond_half_day_leave = and_(
+        Attendance.punch_in.is_(None),
+        timeoff_hours_expr >= 2.0,
+        timeoff_hours_expr < 8.0
+    )
+
+    cond_leave_no_punch = and_(
+        Attendance.punch_in.is_(None),
+        timeoff_hours_expr >= 8.0
+    )
+
+    # Not Marked condition
+    cond_not_marked = and_(
+        Attendance.punch_in.is_(None),
+        timeoff_hours_expr < 2.0,
+        Attendance.date == today,
+        literal(current_time) <= time(14, 30)
+    )
+
+    # Absent condition
+    cond_absent_no_punch = and_(
+        Attendance.punch_in.is_(None),
+        timeoff_hours_expr < 2.0,
+        or_(
+            Attendance.date < today,
+            and_(
+                Attendance.date == today,
+                literal(current_time) > time(14, 30)
+            )
+        )
+    )
+
+    cond_absent_work = and_(
+        Attendance.punch_in.isnot(None),
+        Attendance.punch_out.isnot(None),
+        credited_mins < 120
+    )
+
+    status_expr = case(
+        (cond_timeoff_full, "Time Off"),
+        (cond_present_status, "Present"),
+        (cond_working, "Working"),
+        (cond_present_work, "Present"),
+        (cond_half_day_work, "Half Day"),
+        (cond_leave_no_punch, "Time Off"),
+        (cond_half_day_leave, "Half Day"),
+        (cond_not_marked, "Not Marked"),
+        (cond_absent_no_punch, "Absent"),
+        (cond_absent_work, "Absent"),
+        else_="Absent"
+    )
+    return status_expr
+
 def list_all_attendance(
     db: Session,
     page: int = 1,
@@ -703,15 +814,9 @@ def list_all_attendance(
 ) -> dict:
     """
     List all attendance records (HR/Admin only).
-    
-    Args:
-        db: Database session
-        skip: Records to skip (pagination)
-        limit: Records to return (pagination)
-        
-    Returns:
-        dict: Paginated list of attendance records with total count
     """
+    from sqlalchemy import case, and_, or_
+
     today = datetime.now(APP_TIMEZONE).date()
     query = (
         db.query(Attendance)
@@ -740,18 +845,81 @@ def list_all_attendance(
                 Employee.employee_code.ilike(like_value),
             )
         )
-    
-    records = query.order_by(
+
+    # Apply computed status filter at the database level if specified
+    status_expr = get_computed_status_expression(db)
+    if status_filter:
+        normalized_requested = _normalize_attendance_status(status_filter).lower()
+        if normalized_requested == "present":
+            query = query.filter(status_expr == "Present")
+        elif normalized_requested == "working":
+            query = query.filter(status_expr == "Working")
+        elif normalized_requested == "absent":
+            query = query.filter(status_expr == "Absent")
+        elif normalized_requested == "not marked":
+            query = query.filter(status_expr == "Not Marked")
+        elif normalized_requested == "half day":
+            query = query.filter(status_expr == "Half Day")
+        elif normalized_requested == "time off":
+            query = query.filter(status_expr == "Time Off")
+
+    # Now count total matching records
+    total = query.count()
+
+    # Re-apply the filters to calculate metrics for all matching records using a single aggregate query
+    m_query = db.query(
+        func.sum(case((status_expr == "Present", 1), else_=0)).label("present"),
+        func.sum(case((status_expr == "Working", 1), else_=0)).label("working"),
+        func.sum(case((status_expr == "Absent", 1), else_=0)).label("absent"),
+        func.sum(case((status_expr == "Not Marked", 1), else_=0)).label("not_marked")
+    ).select_from(Attendance).join(Employee).filter(Attendance.date <= today)
+
+    if from_date:
+        m_query = m_query.filter(Attendance.date >= from_date)
+    if to_date:
+        m_query = m_query.filter(Attendance.date <= to_date)
+    if department:
+        m_query = m_query.filter(Employee.department == department)
+    if location:
+        m_query = m_query.filter(Attendance.work_mode == location)
+    if search_value:
+        m_query = m_query.filter(
+            or_(
+                Employee.first_name.ilike(like_value),
+                Employee.last_name.ilike(like_value),
+                full_name.ilike(like_value),
+                Employee.employee_code.ilike(like_value),
+            )
+        )
+    if status_filter:
+        if normalized_requested == "present":
+            m_query = m_query.filter(status_expr == "Present")
+        elif normalized_requested == "working":
+            m_query = m_query.filter(status_expr == "Working")
+        elif normalized_requested == "absent":
+            m_query = m_query.filter(status_expr == "Absent")
+        elif normalized_requested == "not marked":
+            m_query = m_query.filter(status_expr == "Not Marked")
+        elif normalized_requested == "half day":
+            m_query = m_query.filter(status_expr == "Half Day")
+        elif normalized_requested == "time off":
+            m_query = m_query.filter(status_expr == "Time Off")
+
+    metrics_row = m_query.first()
+    metrics = {
+        "present": int(metrics_row.present or 0),
+        "working": int(metrics_row.working or 0),
+        "absent": int(metrics_row.absent or 0),
+        "notMarked": int(metrics_row.not_marked or 0),
+    }
+
+    # Now, paginate database-side
+    paged_records = query.order_by(
         Attendance.date.desc(),
         Attendance.punch_in.desc().nulls_last(),
         Attendance.id.desc(),
-    ).all()
-    records = [record for record in records if _matches_computed_status(db, record, status_filter)]
-    total = len(records)
-    metrics = _attendance_metrics(db, records)
-    start = (page - 1) * limit
-    paged_records = records[start : start + limit]
-    
+    ).offset((page - 1) * limit).limit(limit).all()
+
     formatted_data = []
     for record in paged_records:
         calculate_attendance_metrics(record)
@@ -790,7 +958,7 @@ def list_all_attendance(
             "requiresRegularization": record.requires_regularization,
             "overtimeApproved": record.overtime_approved,
         })
-    
+
     return {"data": formatted_data, "total": total, "metrics": metrics}
 
 
@@ -951,7 +1119,7 @@ def get_employee_analytics(db: Session) -> list[dict]:
         analytics_data.append({
             "employeeId": emp.id,
             "employeeName": f"{emp.first_name} {emp.last_name}".strip(),
-            "employeeCode": normalize_employee_code(emp.employee_code) if emp.employee_code else f"EMP-{emp.id:04d}",
+            "employeeCode": normalize_employee_code(emp.employee_code) if emp.employee_code else f"{emp.id:04d}",
             "department": emp.department or "Unassigned",
             "today": {
                 "punchIn": today_punch_in.strftime("%H:%M") if today_punch_in else None,

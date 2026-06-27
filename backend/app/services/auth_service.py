@@ -17,16 +17,15 @@ def authenticate_user(db: Session, request: LoginRequest):
     if user and verify_password(request.password, user.password_hash):
         role_name = user.role.name.lower() if user.role else ""
         
-        # Ensure shadow employee profile exists for HR user dynamically
-        if role_name == "hr":
+        # Ensure shadow employee profile exists for HR and Admin users dynamically
+        if role_name in ["hr", "admin"]:
             employee = db.query(Employee).filter(Employee.user_id == user.id).first()
             if not employee:
-                hr = db.query(HrUser).filter(HrUser.user_id == user.id).first()
-                fullName = hr.full_name if hr else user.display_name
-                email = hr.email if hr else user.email
-                phone = hr.phone if hr else "0000000000"
-                dept = hr.department if hr else "Human Resources"
-                desig = hr.designation if hr else "HR"
+                fullName = user.display_name
+                email = user.email
+                phone = "0000000000"
+                dept = "Human Resources" if role_name == "hr" else "Administration"
+                desig = "HR Manager" if role_name == "hr" else "System Admin"
                 
                 parts = fullName.split(" ", 1)
                 first_name = parts[0]
@@ -34,7 +33,7 @@ def authenticate_user(db: Session, request: LoginRequest):
                 
                 employee = Employee(
                     user_id=user.id,
-                    employee_code=f"EMP-{user.id:04d}",
+                    employee_code=f"{user.id:04d}",
                     first_name=first_name,
                     last_name=last_name,
                     official_email=email,
@@ -118,10 +117,10 @@ def change_user_password(db: Session, user_id: int, request: ChangePasswordReque
     return {"success": True, "message": "Password updated successfully"}
 
 def generate_reset_token(user: User) -> str:
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from jose import jwt
     from app.core.config import settings
-    expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode = {
         "exp": expire,
         "sub": user.email,

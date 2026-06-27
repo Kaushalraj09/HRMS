@@ -19,7 +19,10 @@ def send_notification_sync(db: Session, user_id: int, type: str, title: str, mes
             asyncio.set_event_loop(loop)
             
         if loop.is_running():
-            loop.create_task(create_notification(db, user_id, type, title, message, reference_id))
+            asyncio.run_coroutine_threadsafe(
+                create_notification(db, user_id, type, title, message, reference_id),
+                loop
+            )
         else:
             loop.run_until_complete(create_notification(db, user_id, type, title, message, reference_id))
     except Exception as e:
@@ -73,7 +76,10 @@ def send_websocket_message_sync(user_id: int, message: dict):
             asyncio.set_event_loop(loop)
             
         if loop.is_running():
-            loop.create_task(manager.send_personal_message(message, user_id))
+            asyncio.run_coroutine_threadsafe(
+                manager.send_personal_message(message, user_id),
+                loop
+            )
         else:
             loop.run_until_complete(manager.send_personal_message(message, user_id))
     except Exception as e:
