@@ -36,3 +36,14 @@ class StandardResponse(BaseModel):
     success: bool
     message: str
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema for forgot password request payload."""
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for resetting user password using token."""
+    token: str
+    newPassword: str
+    confirmPassword: str
+
+

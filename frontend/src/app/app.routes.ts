@@ -15,7 +15,6 @@ import { HrTimeOffComponent } from './features/hr/pages/time-off/time-off';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { HrUsersComponent } from './features/master/pages/hr-users/hr-users';
-import { AdminEmployeesComponent } from './features/master/pages/admin-employees/admin-employees';
 import { LoginActivityList } from './features/login-activity/login-activity-list';
 import { LoginActivityDetail } from './features/login-activity/login-activity-detail';
 import { LoginActivityRedirect } from './features/login-activity/login-activity-redirect';

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
-import { LoginRequest, LoginResponse, SessionUser, UserRole } from '../models/auth.model';
+import { LoginRequest, LoginResponse, SessionUser, UserRole, ForgotPasswordPayload, ResetPasswordPayload, StandardResponse } from '../models/auth.model';
 import { buildApiUrl } from '../config/api.config';
 import { Phase1StoreService } from './phase1-store.service';
 
@@ -75,11 +75,11 @@ export class AuthService {
     }
   }
 
-  forgotPassword(email: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/forgot-password`, { email });
+  forgotPassword(email: string): Observable<StandardResponse> {
+    return this.http.post<StandardResponse>(`${this.apiUrl}/forgot-password`, { email } as ForgotPasswordPayload);
   }
 
-  resetPassword(data: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/reset-password`, data);
+  resetPassword(data: ResetPasswordPayload): Observable<StandardResponse> {
+    return this.http.post<StandardResponse>(`${this.apiUrl}/reset-password`, data);
   }
 }

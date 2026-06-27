@@ -100,17 +100,19 @@
 }
 
 .form-input {
+  font-family: inherit;
   height: 44px;
   padding: 0 14px;
-  border: 2px solid hsl(210, 15%, 92%);
-  border-radius: 10px;
-  background: hsl(210, 20%, 98%);
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
   color: hsl(210, 10%, 20%);
   font-size: 14px;
   font-weight: 500;
   outline: none;
   transition: all 0.2s ease;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .form-input:focus {
@@ -140,9 +142,10 @@
 
 /* Buttons */
 .btn {
+  font-family: inherit;
   height: 46px;
   padding: 0 24px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
@@ -153,6 +156,7 @@
   gap: 8px;
   border: none;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-primary {
@@ -222,6 +226,7 @@
 }
 
 .tab-btn {
+  font-family: inherit;
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -354,6 +359,7 @@
 }
 
 .page-btn {
+  font-family: inherit;
   min-width: 32px;
   height: 32px;
   border: 1px solid hsl(210, 15%, 88%);

@@ -8,6 +8,7 @@ from app.core.database import Base
 from app.models.attendance import Attendance, AttendanceRegularizationRequest, AttendanceAuditTrail
 from app.models.employee import Employee
 from app.models.user import User, Role
+from app.models.timeoff import TimeOffRequest
 from app.services.time_calculator import calculate_times
 from app.services.scheduler_service import auto_checkout_forgotten_punches
 
@@ -337,4 +338,88 @@ def test_continue_working_and_extend_overtime_endpoints(db_session):
     assert res_extend is not None
     db_session.refresh(attendance)
     assert attendance.overtime_extended is True
+
+
+def test_partial_day_with_approved_timeoff(db_session):
+    # Get employee
+    emp = db_session.query(Employee).first()
+    
+    # Create approved time-off request for today: 3 hours leave from 15:00 to 18:00
+    req = TimeOffRequest(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        leave_type="Hourly",
+        start_time=time(15, 0),
+        end_time=time(18, 0),
+        duration_hours=3.0,
+        status="Approved"
+    )
+    db_session.add(req)
+    db_session.commit()
+    
+    # Create attendance record: worked from 09:00 to 15:00 (gross = 6 hours, lunch overlap = 1 hour)
+    # Net worked minutes = 360 - 60 = 300 minutes (5 hours)
+    # Approved leave = 3 hours
+    # Total shift credit = 5 + 3 = 8 hours (480 minutes) -> PRESENT status!
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        punch_in=time(9, 0),
+        punch_out=time(15, 0),
+        is_working=0,
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+    
+    # Run calculate_times
+    calculate_times(attendance)
+    
+    # Verify net working minutes is 300 (5 hours)
+    assert attendance.total_working_minutes == 300
+    # Verify break minutes is 60 (lunch) + 180 (leave) = 240
+    assert attendance.break_minutes == 240
+    # Verify status is PRESENT because net worked + leave = 8 hours
+    assert attendance.status == "PRESENT"
+
+
+def test_overlapping_timeoff(db_session):
+    emp = db_session.query(Employee).first()
+    
+    # Approved hourly leave: 2 hours from 14:00 to 16:00
+    req = TimeOffRequest(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        leave_type="Hourly",
+        start_time=time(14, 0),
+        end_time=time(16, 0),
+        duration_hours=2.0,
+        status="Approved"
+    )
+    db_session.add(req)
+    db_session.commit()
+    
+    # Attendance: punch in 09:00, punch out 18:00 (gross = 9 hours, lunch = 1 hour)
+    # Leave of 2 hours is during work time, so it overlaps.
+    # Net worked time = 9 hours - 1 hour (lunch) - 2 hours (leave overlap) = 6 hours (360 mins)
+    # Credited time = 6 hours + 2 hours leave = 8 hours (480 mins) -> PRESENT
+    attendance = Attendance(
+        employee_id=emp.id,
+        date=date(2026, 6, 2),
+        punch_in=time(9, 0),
+        punch_out=time(18, 0),
+        is_working=0,
+        status="WORKING"
+    )
+    db_session.add(attendance)
+    db_session.commit()
+    
+    calculate_times(attendance)
+    
+    # Net worked minutes is 360 (6 hours)
+    assert attendance.total_working_minutes == 360
+    # Break minutes is 60 (lunch) + 120 (leave) = 180
+    assert attendance.break_minutes == 180
+    # Status is PRESENT
+    assert attendance.status == "PRESENT"
 

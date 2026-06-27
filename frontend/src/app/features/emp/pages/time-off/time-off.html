@@ -16,15 +16,15 @@
     <div class="balance-cards">
       <div class="metric-card">
         <div class="metric-label">Approved Time (Today)</div>
-        <div class="metric-value checked-in">{{ approvedHours | number:'1.1-2' }} hrs</div>
+        <div class="metric-value checked-in">{{ formatHours(approvedHours) }}</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Remaining Working Time</div>
-        <div class="metric-value present">{{ remainingHours | number:'1.1-2' }} hrs</div>
+        <div class="metric-value present">{{ formatHours(remainingHours) }}</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Pending Requested Time</div>
-        <div class="metric-value not-marked">{{ requestedHours | number:'1.1-2' }} hrs</div>
+        <div class="metric-value not-marked">{{ formatHours(requestedHours) }}</div>
       </div>
     </div>
 
@@ -59,7 +59,7 @@
                 <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
                 <span *ngIf="!req.start_time">Full Day</span>
               </td>
-              <td>{{ req.duration_hours }} hrs</td>
+              <td>{{ formatHours(req.duration_hours) }}</td>
               <td>
                 <span class="status-badge" [ngClass]="{
                   'present': req.status === 'Approved',

@@ -4,8 +4,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse
-from app.schemas.forgot_password import ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse, ForgotPasswordRequest, ResetPasswordRequest
 from app.services import auth_service
 from app.services.login_activity_service import log_login_activity
 

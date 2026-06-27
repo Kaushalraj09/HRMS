@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeOffModalComponent } from '../emp-dashboard/modals/time-off-modal/time-off-modal';
+import { TimeEngineService } from '../../../../core/services/time-engine.service';
 
 @Component({
   selector: 'app-emp-time-off',
@@ -21,6 +22,14 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   remainingHours = 9.0;
   requestedHours = 0;
 
+  formatHours(hours: number): string {
+    if (hours === 0 || !hours) return '0h 0m';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m`;
+  }
+
   // Pagination state
   page = 1;
   pageSize = 10;
@@ -33,12 +42,23 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   constructor(
     private readonly attendanceService: AttendanceService,
     private readonly authService: AuthService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly timeEngine: TimeEngineService
   ) {}
 
   ngOnInit(): void {
     this.loadRequests();
     this.loadBalances();
+
+    this.subscriptions.add(
+      this.timeEngine.state$.subscribe((state) => {
+        if (state) {
+          this.approvedHours = (state.approvedSeconds || 0) / 3600;
+          this.remainingHours = (state.remainingSeconds || 0) / 3600;
+          this.cdr.detectChanges();
+        }
+      })
+    );
 
     // WebSocket updates
     this.subscriptions.add(
@@ -69,9 +89,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   loadBalances(): void {
     this.attendanceService.getTodayAttendanceState().subscribe({
       next: (state) => {
-        this.approvedHours = (state.approvedSeconds || 0) / 3600;
-        this.remainingHours = (state.remainingSeconds || 0) / 3600;
-        this.cdr.detectChanges();
+        this.timeEngine.updateState(state);
       }
     });
 
