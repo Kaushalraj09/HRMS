@@ -61,3 +61,10 @@ class TimeOffRequestPaginatedResponse(BaseModel):
     pageSize: int
     totalItems: int
     totalPages: int
+
+
+class TimeOffDecisionRequest(BaseModel):
+    decision: str  # "approved" or "rejected"
+    comment: Optional[str] = None
+    approvedHours: Optional[float] = None
+

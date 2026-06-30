@@ -707,7 +707,7 @@ def get_computed_status_expression(db: Session, current_dt=None):
             TimeOffRequest.date == Attendance.date,
             TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
         )
-        .correlate_all()
+        .correlate(Attendance)
         .scalar_subquery()
     )
 

@@ -57,6 +57,26 @@ def get_admin_dashboard_data(db: Session):
         .all()
     )
 
+    hr_list = []
+    for hr in recent_hrs:
+        emp = db.query(Employee).filter(Employee.user_id == hr.user_id).first()
+        if emp:
+            primary = f"{emp.first_name} {emp.last_name}".strip()
+            secondary = emp.official_email
+            tertiary = f"{emp.department} · {emp.designation}"
+            status = emp.status
+        else:
+            primary = hr.user.display_name if hr.user else "HR User"
+            secondary = hr.user.email if hr.user else ""
+            tertiary = "HR Department"
+            status = hr.user.status if hr.user else "Active"
+        hr_list.append({
+            "primary": primary,
+            "secondary": secondary,
+            "tertiary": tertiary,
+            "status": status
+        })
+
     return {
         "cards": [
             {"icon": "fas fa-user-shield", "label": "Total HR Users", "value": str(total_hrs)},
@@ -64,14 +84,7 @@ def get_admin_dashboard_data(db: Session):
             {"icon": "fas fa-user-check", "label": "Active Accounts", "value": str(active_users)},
             {"icon": "fas fa-calendar-check", "label": "Present Today", "value": str(present_today)}
         ],
-        "hrUsers": [
-            {
-                "primary": hr.full_name,
-                "secondary": hr.email,
-                "tertiary": f"{hr.department} · {hr.designation}",
-                "status": hr.status
-            } for hr in recent_hrs
-        ],
+        "hrUsers": hr_list,
         "employees": [
             {
                 "primary": f"{emp.first_name} {emp.last_name}".strip(),

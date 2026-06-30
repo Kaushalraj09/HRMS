@@ -52,13 +52,13 @@ async def punch_in(
     )
 
     # Trigger unread notification
-    from app.services.notification_service import create_notification
+    from app.services.notification_service import create_notification, create_notification_for_roles
     from datetime import datetime
     time_str = datetime.now().strftime("%I:%M %p")
     # Determine the target user's id (if specified employee, notify them, else notify current_user)
     target_user_id = employee.user_id if employee else current_user.id
+    attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
     try:
-        attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
         await create_notification(
             db=db,
             user_id=target_user_id,
@@ -69,6 +69,26 @@ async def punch_in(
         )
     except Exception as e:
         print(f"Failed to auto create punch-in notification: {e}")
+
+    # Trigger admin notifications for HR and Admin
+    try:
+        p_time = res.punch_in if hasattr(res, "punch_in") else datetime.now().time()
+        p_time_str = p_time.strftime("%I:%M %p") if p_time else time_str
+        await create_notification_for_roles(
+            db=db,
+            roles=["HR", "Admin"],
+            type="ATTENDANCE",
+            category="PUNCH_IN",
+            severity="SUCCESS",
+            title="Employee Punched In",
+            message=f"{employee.first_name} {employee.last_name} punched in at {p_time_str}.",
+            employee_id=employee.id,
+            created_by=current_user.id,
+            reference_id=attendance_id,
+            notification_metadata={"work_mode": res.work_mode if hasattr(res, "work_mode") else None}
+        )
+    except Exception as e:
+        print(f"Failed to create admin punch-in notification: {e}")
 
     return res
 
@@ -108,12 +128,12 @@ async def punch_out(
     )
 
     # Trigger unread notification
-    from app.services.notification_service import create_notification
+    from app.services.notification_service import create_notification, create_notification_for_roles
     from datetime import datetime
     time_str = datetime.now().strftime("%I:%M %p")
     target_user_id = employee.user_id if employee else current_user.id
+    attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
     try:
-        attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
         await create_notification(
             db=db,
             user_id=target_user_id,
@@ -125,7 +145,55 @@ async def punch_out(
     except Exception as e:
         print(f"Failed to auto create punch-out notification: {e}")
 
+    # Trigger admin notifications for HR and Admin
+    try:
+        p_time = res.punch_out if hasattr(res, "punch_out") else datetime.now().time()
+        p_time_str = p_time.strftime("%I:%M %p") if p_time else time_str
+        await create_notification_for_roles(
+            db=db,
+            roles=["HR", "Admin"],
+            type="ATTENDANCE",
+            category="PUNCH_OUT",
+            severity="SUCCESS",
+            title="Employee Punched Out",
+            message=f"{employee.first_name} {employee.last_name} punched out at {p_time_str}.",
+            employee_id=employee.id,
+            created_by=current_user.id,
+            reference_id=attendance_id,
+            notification_metadata={"work_mode": res.work_mode if hasattr(res, "work_mode") else None}
+        )
+    except Exception as e:
+        print(f"Failed to create admin punch-out notification: {e}")
+
     return res
+
+
+@router.post("/me/punch", response_model=TodayAttendanceState)
+async def punch_dynamic(
+    request: PunchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Dynamic Punch In / Punch Out depending on active session state.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only employees can punch attendance"
+        )
+    
+    # Check today's state
+    today_state = attendance_service.get_today_state(db, employee.id)
+    
+    if not today_state.get("punchIn"):
+        await punch_in(request, db, current_user)
+    else:
+        await punch_out(request, db, current_user)
+        
+    return attendance_service.get_today_state(db, employee.id)
+
 
 class ChangeWorkModeRequest(BaseModel):
     work_mode: WorkMode = Field(alias="workMode")
@@ -269,6 +337,7 @@ def add_schedule(
 
 @router.get("/today", response_model=TodayAttendanceState)
 @router.get("/today-state", response_model=TodayAttendanceState)
+@router.get("/me/today", response_model=TodayAttendanceState)
 def get_today_attendance_state(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -309,6 +378,7 @@ def get_today_attendance_state(
 
 @router.get("/my-history", response_model=List[AttendanceResponse])
 @router.get("/timesheet", response_model=List[AttendanceResponse])
+@router.get("/me/timesheets", response_model=List[AttendanceResponse])
 def get_my_history(
     from_date: date | None = Query(None),
     to_date: date | None = Query(None),
@@ -336,6 +406,7 @@ def get_my_history(
     )
     return [attendance_service.to_attendance_response(r, db) for r in records]
 
+@router.get("", response_model=AttendanceListResponse)
 @router.get("/all", response_model=AttendanceListResponse)
 def get_all_attendance_records(
     page: int = Query(1, ge=1),
@@ -470,57 +541,7 @@ def get_today_locations(
     response_data = []
 
     if not records:
-        # Generate mock data using DB employees for testing
-        active_employees = db.query(Employee).filter(Employee.status == "Active").all()
-        if not active_employees:
-            active_employees = db.query(Employee).all()
-
-        mock_cities = [
-            {"city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lon": 77.2090},
-            {"city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lon": 72.8777},
-            {"city": "Bengaluru", "state": "Karnataka", "lat": 12.9716, "lon": 77.5946},
-            {"city": "Chennai", "state": "Tamil Nadu", "lat": 13.0827, "lon": 80.2707},
-            {"city": "Kolkata", "state": "West Bengal", "lat": 22.5726, "lon": 88.3639},
-            {"city": "Hyderabad", "state": "Telangana", "lat": 17.3850, "lon": 78.4867},
-            {"city": "Pune", "state": "Maharashtra", "lat": 18.5204, "lon": 73.8567},
-            {"city": "Ahmedabad", "state": "Gujarat", "lat": 23.0225, "lon": 72.5714},
-            {"city": "Jaipur", "state": "Rajasthan", "lat": 26.9124, "lon": 75.7873},
-            {"city": "Lucknow", "state": "Uttar Pradesh", "lat": 26.8467, "lon": 80.9462},
-            {"city": "Indore", "state": "Madhya Pradesh", "lat": 22.7196, "lon": 75.8577},
-            {"city": "Kochi", "state": "Kerala", "lat": 9.9312, "lon": 76.2673},
-        ]
-
-        for emp in active_employees:
-            # Seed to ensure same employee coordinates are stable across multiple calls
-            random.seed(emp.id)
-            city_info = mock_cities[emp.id % len(mock_cities)]
-            
-            lat_offset = random.uniform(-0.06, 0.06)
-            lon_offset = random.uniform(-0.06, 0.06)
-            
-            work_modes = ["OFFICE", "REMOTE", "FIELD"]
-            work_mode = work_modes[emp.id % len(work_modes)]
-            
-            statuses = ["ACTIVE", "PUNCHED_OUT", "LATE"]
-            status_val = statuses[emp.id % len(statuses)]
-            
-            p_in = "09:15 AM" if status_val == "LATE" else "09:00 AM"
-            p_out = "06:00 PM" if status_val == "PUNCHED_OUT" else None
-            
-            response_data.append(
-                EmployeeLocationResponse(
-                    employeeId=emp.id,
-                    employeeName=f"{emp.first_name} {emp.last_name}",
-                    latitude=city_info["lat"] + lat_offset,
-                    longitude=city_info["lon"] + lon_offset,
-                    city=city_info["city"],
-                    state=city_info["state"],
-                    punchInTime=p_in,
-                    punchOutTime=p_out,
-                    workMode=work_mode,
-                    status=status_val
-                )
-            )
+        pass
     else:
         for r in records:
             emp = r.employee
@@ -583,4 +604,37 @@ def get_today_locations(
             )
 
     return response_data
+
+
+@router.get("/me/summary")
+def get_me_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(status_code=400, detail="Only employees have attendance summaries")
+        
+    records = attendance_service.get_my_history(db, employee.id)
+    
+    total_days = len(records)
+    computed_statuses = [
+        attendance_service.get_attendance_status_with_timeoff(db, r.employee_id, r.punch_in, r.punch_out, r.date)
+        for r in records
+    ]
+    worked_days = len([s for s in computed_statuses if s not in ["Not Marked", "Absent", "Time Off"]])
+    present_days = len([s for s in computed_statuses if s in ["Present", "Half Day"]])
+    working_days = len([s for s in computed_statuses if s == "Working"])
+    absent_days = len([s for s in computed_statuses if s == "Absent"])
+    not_marked_days = len([s for s in computed_statuses if s == "Not Marked"])
+    
+    return [
+        { "label": "Total Days", "value": total_days, "icon": "fas fa-calendar total blue-icon" },
+        { "label": "Worked Days", "value": worked_days, "icon": "fas fa-calendar-check worked blue-icon" },
+        { "label": "Present", "value": present_days, "icon": "fas fa-check-circle blue-icon" },
+        { "label": "Working", "value": working_days, "icon": "fas fa-user-check blue-icon" },
+        { "label": "Absent", "value": absent_days, "icon": "fas fa-times-circle red-icon" },
+        { "label": "Not Marked", "value": not_marked_days, "icon": "fas fa-user-times unapproved gold-icon" }
+    ]
+
 

@@ -9,6 +9,7 @@ from app.schemas.profile import EmployeeProfile, ProfileUpdate
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 @router.get("/", response_model=EmployeeProfile)
+@router.get("/me", response_model=EmployeeProfile)
 def read_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     profile = profile_service.get_employee_profile(db, current_user.id)
     if not profile:

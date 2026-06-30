@@ -5,6 +5,7 @@ import { Dropdown } from '../dropdown/dropdown';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
+import { TimeEngineService } from '../../../core/services/time-engine.service';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from 'rxjs';
 
 @Component({
@@ -30,8 +31,16 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   isLanguageDropdownOpen = false;
   profileImage: string | null = null;
   userInitials: string = 'U';
+  isPunchedIn = false;
 
-  notifications: Notification[] = [];
+  // New notification fields
+  currentFilterTab = 'all'; // 'all' | 'attendance' | 'leave' | 'unread'
+  notificationSearchTerm = '';
+  notificationPage = 1;
+  hasMoreNotifications = true;
+  loadingNotifications = false;
+
+  notifications: any[] = [];
   unreadCount = 0;
   private connectedUserId: string | number | null = null;
   searchTerm = '';
@@ -43,6 +52,7 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     private readonly authService: AuthService,
     private readonly notificationService: NotificationService,
     private readonly attendanceService: AttendanceService,
+    private readonly timeEngine: TimeEngineService,
     private readonly router: Router
   ) {}
 
@@ -56,6 +66,12 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
         distinctUntilChanged()
       ).subscribe(value => {
         this.searchChange.emit(value);
+      })
+    );
+
+    this.sub.add(
+      this.timeEngine.state$.subscribe(state => {
+        this.isPunchedIn = !!state?.isWorking;
       })
     );
 
@@ -110,8 +126,134 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   }
 
   loadNotifications(): void {
-    this.notificationService.fetchNotifications().subscribe();
+    this.loadNotificationsWithFilters();
     this.notificationService.fetchUnreadCount().subscribe();
+  }
+
+  loadNotificationsWithFilters(append: boolean = false) {
+    this.loadingNotifications = true;
+    let category: string | undefined = undefined;
+    let isRead: boolean | undefined = undefined;
+    
+    if (this.currentFilterTab === 'attendance') {
+      category = 'ATTENDANCE';
+    } else if (this.currentFilterTab === 'leave') {
+      category = 'LEAVE';
+    } else if (this.currentFilterTab === 'unread') {
+      isRead = false;
+    }
+    
+    const pageToLoad = append ? this.notificationPage + 1 : 1;
+    const limit = 15;
+    
+    this.notificationService.fetchNotifications(
+      limit,
+      pageToLoad,
+      category,
+      isRead,
+      this.notificationSearchTerm || undefined
+    ).subscribe({
+      next: (notifs) => {
+        this.loadingNotifications = false;
+        if (notifs.length < limit) {
+          this.hasMoreNotifications = false;
+        } else {
+          this.hasMoreNotifications = true;
+        }
+        if (append) {
+          this.notificationPage = pageToLoad;
+        } else {
+          this.notificationPage = 1;
+        }
+      },
+      error: (err) => {
+        this.loadingNotifications = false;
+        console.error('Error loading notifications', err);
+      }
+    });
+  }
+
+  setNotificationTab(tab: string) {
+    this.currentFilterTab = tab;
+    this.notificationPage = 1;
+    this.hasMoreNotifications = true;
+    this.loadNotificationsWithFilters();
+  }
+
+  onNotificationSearch(event: Event) {
+    const val = (event.target as HTMLInputElement).value;
+    this.notificationSearchTerm = val;
+    this.notificationPage = 1;
+    this.hasMoreNotifications = true;
+    this.loadNotificationsWithFilters();
+  }
+
+  clearNotificationSearch() {
+    this.notificationSearchTerm = '';
+    this.notificationPage = 1;
+    this.hasMoreNotifications = true;
+    this.loadNotificationsWithFilters();
+  }
+
+  getGroupedNotifications() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const groups: { [key: string]: { label: string; items: any[] } } = {
+      today: { label: 'Today', items: [] },
+      yesterday: { label: 'Yesterday', items: [] },
+      week: { label: 'Last 7 Days', items: [] },
+      older: { label: 'Older', items: [] }
+    };
+
+    for (const notif of this.notifications) {
+      const createdDate = new Date(notif.created_at);
+      createdDate.setHours(0, 0, 0, 0);
+      
+      if (createdDate.getTime() === today.getTime()) {
+        groups['today'].items.push(notif);
+      } else if (createdDate.getTime() === yesterday.getTime()) {
+        groups['yesterday'].items.push(notif);
+      } else if (createdDate.getTime() >= sevenDaysAgo.getTime()) {
+        groups['week'].items.push(notif);
+      } else {
+        groups['older'].items.push(notif);
+      }
+    }
+
+    return Object.keys(groups)
+      .map(key => ({ key, label: groups[key].label, items: groups[key].items }))
+      .filter(g => g.items.length > 0);
+  }
+
+  clearAllNotifications(event: MouseEvent) {
+    event.stopPropagation();
+    if (confirm('Are you sure you want to clear all notifications?')) {
+      this.notificationService.clearAllNotifications().subscribe();
+    }
+  }
+
+  deleteNotification(event: MouseEvent, notifId: number) {
+    event.stopPropagation();
+    this.notificationService.deleteNotification(notifId).subscribe();
+  }
+
+  markSingleAsRead(event: MouseEvent, notifId: number) {
+    event.stopPropagation();
+    this.notificationService.markAsRead(notifId).subscribe();
+  }
+
+  getSeverityClass(severity: string | undefined): string {
+    if (!severity) return 'severity-info';
+    return `severity-${severity.toLowerCase()}`;
   }
 
   ngOnDestroy(): void {
@@ -224,72 +366,80 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     return '/emp-dashboard';
   }
 
-  private getNotificationTargetRoute(notif: Notification): string[] | null {
+  private getNotificationTargetRoute(notif: any): string[] | null {
     const baseRoute = this.getActiveDashboardBaseRoute();
     if (!baseRoute) {
       return null;
     }
 
-    if (notif.type === 'ATTENDANCE') {
+    const type = (notif.type || '').toUpperCase();
+    const category = (notif.category || '').toUpperCase();
+
+    if (type === 'ATTENDANCE' || category === 'LOGIN' || category === 'PUNCH_IN' || category === 'PUNCH_OUT') {
       return baseRoute === '/emp-dashboard'
         ? ['/emp-dashboard', 'my-attendance']
         : [baseRoute, 'attendance'];
     }
 
-    if (notif.type === 'LOGIN_ACTIVITY') {
-      if (baseRoute === '/emp-dashboard') {
-        return [baseRoute];
-      }
-
-      if (notif.reference_id) {
-        return [baseRoute, 'login-activity', String(notif.reference_id)];
-      }
-
-      return [baseRoute, 'login-activity'];
+    if (type === 'LEAVE' || category.startsWith('LEAVE_')) {
+      return baseRoute === '/emp-dashboard'
+        ? ['/emp-dashboard']
+        : [baseRoute, 'attendance'];
     }
 
-    if (notif.type === 'TIMEOFF_APPLY' || notif.type === 'TIMEOFF_REQUEST' || notif.type === 'TIMEOFF_UPDATE') {
-      return [baseRoute];
+    if (type === 'TIMEOFF_APPLY' || type === 'TIMEOFF_REQUEST' || type === 'TIMEOFF_UPDATE') {
+      return baseRoute === '/emp-dashboard'
+        ? ['/emp-dashboard']
+        : [baseRoute, 'attendance'];
     }
 
-    if (notif.type === 'ATTENDANCE_AUTO_CHECKOUT') {
+    if (type === 'ATTENDANCE_AUTO_CHECKOUT') {
       return baseRoute === '/emp-dashboard'
         ? ['/emp-dashboard', 'my-attendance']
         : [baseRoute];
     }
 
-    if (notif.type === 'TIMEOFF_EXPIRED') {
+    if (type === 'TIMEOFF_EXPIRED' || type === 'TIMEOFF_REMINDER') {
       return [baseRoute];
-    }
-
-    if (notif.type === 'TIMEOFF_REMINDER') {
-      return baseRoute === '/emp-dashboard'
-        ? [baseRoute]
-        : [baseRoute, 'attendance'];
     }
 
     return null;
   }
 
-  getIconClass(type: string): string {
-    switch (type) {
-      case 'LOGIN_ACTIVITY':
-        return 'fas fa-shield-alt';
-      case 'ATTENDANCE':
-        return 'fas fa-clock';
-      case 'ATTENDANCE_AUTO_CHECKOUT':
-        return 'fas fa-history';
-      case 'TIMEOFF_EXPIRED':
-        return 'fas fa-calendar-times';
-      case 'TIMEOFF_REMINDER':
-        return 'fas fa-bell';
-      case 'LEAVE':
-      case 'TIMEOFF_APPLY':
-      case 'TIMEOFF_REQUEST':
-      case 'TIMEOFF_UPDATE':
-        return 'fas fa-calendar-alt';
-      default:
-        return 'fas fa-bell';
+  getIconClass(type: string, category?: string): string {
+    const t = (type || '').toUpperCase();
+    const c = (category || '').toUpperCase();
+
+    if (c === 'LOGIN' || t === 'LOGIN_ACTIVITY') {
+      return 'fas fa-sign-in-alt';
     }
+    if (c === 'PUNCH_IN') {
+      return 'fas fa-clock';
+    }
+    if (c === 'PUNCH_OUT') {
+      return 'fas fa-sign-out-alt';
+    }
+    if (c === 'LEAVE_REQUEST' || t === 'TIMEOFF_REQUEST' || t === 'TIMEOFF_APPLY') {
+      return 'fas fa-calendar-plus';
+    }
+    if (c === 'LEAVE_APPROVED') {
+      return 'fas fa-check-circle';
+    }
+    if (c === 'LEAVE_REJECTED') {
+      return 'fas fa-times-circle';
+    }
+    if (c === 'LEAVE_CANCELLED') {
+      return 'fas fa-ban';
+    }
+    if (t === 'SYSTEM') {
+      return 'fas fa-cog';
+    }
+    if (t === 'ATTENDANCE_AUTO_CHECKOUT') {
+      return 'fas fa-history';
+    }
+    if (t === 'TIMEOFF_EXPIRED') {
+      return 'fas fa-calendar-times';
+    }
+    return 'fas fa-bell';
   }
 }

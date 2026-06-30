@@ -344,9 +344,14 @@ nav {
   right: -1px;
   width: 9px;
   height: 9px;
-  background: #22c55e;
+  background: #94a3b8;
   border-radius: 50%;
   border: 2px solid white;
+  transition: background-color 0.2s ease;
+}
+
+.online-dot.punched-in {
+  background: #22c55e;
 }
 
 app-dropdown {
@@ -421,6 +426,10 @@ app-dropdown {
   text-decoration: underline;
 }
 
+.mark-all-read.text-danger {
+  color: #ef4444;
+}
+
 .notification-list {
   overflow-y: auto;
   flex: 1;
@@ -473,6 +482,7 @@ app-dropdown {
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s;
+  align-items: flex-start;
 }
 
 .notification-item:hover {
@@ -483,14 +493,41 @@ app-dropdown {
   background: #f9fafb;
 }
 
-.notif-icon {
+/* Avatar / Icon Wrapper */
+.notif-icon-wrapper {
+  position: relative;
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
+}
+
+.notif-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.notif-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notif-icon {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   color: white;
 }
 
@@ -524,44 +561,142 @@ app-dropdown {
   color: #ef4444;
 }
 
+.severity-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}
+
+.severity-dot.severity-info {
+  background: #3b82f6;
+}
+
+.severity-dot.severity-success {
+  background: #10b981;
+}
+
+.severity-dot.severity-warning {
+  background: #f59e0b;
+}
+
+.severity-dot.severity-error {
+  background: #ef4444;
+}
+
 .notif-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.notif-title {
-  margin: 0 0 4px 0;
-  color: #111827;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.notif-msg {
-  margin: 0 0 6px 0;
-  color: #4b5563;
-  font-size: 12px;
+.notif-message-row {
+  font-size: 13px;
+  color: #374151;
   line-height: 1.4;
-  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.notif-message-row .emp-name {
+  font-weight: 700;
+  color: #111827;
+  margin-right: 4px;
+}
+
+.notif-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.category-badge.login, .category-badge.punch_in, .category-badge.punch_out {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.category-badge.leave_request, .category-badge.leave_approved, .category-badge.leave_rejected, .category-badge.leave_cancelled {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.category-badge.system {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .notif-time {
-  display: block;
-  color: #9ca3af;
   font-size: 10px;
+  color: #9ca3af;
 }
 
+/* Hover Action Button (Delete) */
+.notif-item-actions {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+}
+
+.notification-item:hover .notif-item-actions {
+  display: flex;
+}
+
+.action-btn {
+  background: #f3f4f6;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.action-btn.delete-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* Unread Badge Dot */
 .unread-dot {
   position: absolute;
-  top: 20px;
+  top: 50%;
   right: 20px;
+  transform: translateY(-50%);
   width: 8px;
   height: 8px;
   background: #fb7185;
   border-radius: 50%;
   box-shadow: 0 0 10px #fb7185;
+  flex-shrink: 0;
+}
+
+.notification-item:hover .unread-dot {
+  display: none;
 }
 
 @media (max-width: 768px) {

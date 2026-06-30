@@ -11,6 +11,7 @@ import { HrService } from '../app/core/services/hr.service';
 import { LoginActivityService } from '../app/core/services/login-activity.service';
 import { NotificationService } from '../app/core/services/notification.service';
 import { MyProfileService } from '../app/core/services/profile.service';
+import { TimeEngineService } from '../app/core/services/time-engine.service';
 
 const mockCurrentUser = {
   id: '1',
@@ -181,6 +182,19 @@ export function provideStandaloneComponentTestProviders(): any[] {
       useValue: {
         getHistory: () => of([]),
         getDetail: () => of(null)
+      }
+    },
+    {
+      provide: TimeEngineService,
+      useValue: {
+        state$: of(mockTodayState),
+        updateState: () => undefined,
+        formatHHMMSS: (sec: number) => {
+          const h = Math.floor(sec / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          const s = sec % 60;
+          return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
+        }
       }
     }
   ];

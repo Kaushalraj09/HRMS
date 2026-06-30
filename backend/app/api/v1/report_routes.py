@@ -43,15 +43,15 @@ def get_attendance_summary(
 ):
     check_role(current_user, ["admin", "hr"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_attendance_summary_report(
         db, start_date, end_date, department, search, page, limit, export_all=export_all
     )
     
-    if export == "csv":
+    if export in ["csv", "pdf"]:
         headers = [
             "Employee Code", "Employee Name", "Department", "Present Days",
-            "Absent Days", "Half Days", "Leave Days", "Total Working Hours", "Total Overtime Hours"
+            "Absent Days", "Half Days", "Leave Days", "Total Wk Hrs", "Total Ot Hrs"
         ]
         rows = [
             [
@@ -62,11 +62,13 @@ def get_attendance_summary(
                 str(row["absentDays"]),
                 str(row["halfDays"]),
                 str(row["leaveDays"]),
-                f"{row['totalWorkingMinutes'] / 60:.2f}",
-                f"{row['totalOvertimeMinutes'] / 60:.2f}"
+                f"{row['totalWorkingMinutes'] / 60:.1f}",
+                f"{row['totalOvertimeMinutes'] / 60:.1f}"
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"attendance_summary_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"attendance_summary_{date.today().isoformat()}.csv")
         
     return result
@@ -85,25 +87,27 @@ def get_late_arrivals(
 ):
     check_role(current_user, ["admin", "hr"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_late_arrival_report(
         db, start_date, end_date, department, search, page, limit, export_all=export_all
     )
     
-    if export == "csv":
-        headers = ["Employee Code", "Employee Name", "Department", "Date", "Scheduled Start", "Punch In", "Late Minutes"]
+    if export in ["csv", "pdf"]:
+        headers = ["Employee Code", "Employee Name", "Department", "Date", "Sched Start", "Punch In", "Late Mins"]
         rows = [
             [
                 row["employeeCode"],
                 row["employeeName"],
                 row["department"] or "",
                 row["date"].isoformat(),
-                row["scheduledStart"].isoformat() if row["scheduledStart"] else "",
-                row["punchIn"].isoformat() if row["punchIn"] else "",
+                row["scheduledStart"].strftime("%H:%M") if row["scheduledStart"] else "",
+                row["punchIn"].strftime("%H:%M") if row["punchIn"] else "",
                 str(row["lateMinutes"])
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"late_arrivals_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"late_arrivals_{date.today().isoformat()}.csv")
         
     return result
@@ -122,26 +126,28 @@ def get_missing_punches(
 ):
     check_role(current_user, ["admin", "hr"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_missing_punch_report(
         db, start_date, end_date, department, search, page, limit, export_all=export_all
     )
     
-    if export == "csv":
-        headers = ["Employee Code", "Employee Name", "Department", "Date", "Punch In", "Punch Out", "Status", "Reason"]
+    if export in ["csv", "pdf"]:
+        headers = ["Emp Code", "Name", "Department", "Date", "Punch In", "Punch Out", "Status", "Reason"]
         rows = [
             [
                 row["employeeCode"],
                 row["employeeName"],
                 row["department"] or "",
                 row["date"].isoformat(),
-                row["punchIn"].isoformat() if row["punchIn"] else "",
-                row["punchOut"].isoformat() if row["punchOut"] else "",
+                row["punchIn"].strftime("%H:%M") if row["punchIn"] else "",
+                row["punchOut"].strftime("%H:%M") if row["punchOut"] else "",
                 row["status"],
                 row["reason"]
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"missing_punches_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"missing_punches_{date.today().isoformat()}.csv")
         
     return result
@@ -160,13 +166,13 @@ def get_leave_usage(
 ):
     check_role(current_user, ["admin", "hr"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_leave_usage_report(
         db, start_date, end_date, department, search, page, limit, export_all=export_all
     )
     
-    if export == "csv":
-        headers = ["Employee Code", "Employee Name", "Department", "Date", "Leave Type", "Duration (Hours)", "Status", "Reason"]
+    if export in ["csv", "pdf"]:
+        headers = ["Emp Code", "Name", "Department", "Date", "Type", "Hrs", "Status", "Reason"]
         rows = [
             [
                 row["employeeCode"],
@@ -180,6 +186,8 @@ def get_leave_usage(
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"leave_usage_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"leave_usage_{date.today().isoformat()}.csv")
         
     return result
@@ -197,15 +205,15 @@ def get_hr_workload(
 ):
     check_role(current_user, ["admin"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_hr_workload_report(
         db, start_date, end_date, page, limit, export_all=export_all
     )
     
-    if export == "csv":
+    if export in ["csv", "pdf"]:
         headers = [
-            "HR Name", "Pending Time-Off Requests", "Pending Regularizations",
-            "Processed Time-Off Requests", "Processed Regularizations", "Total Handled"
+            "HR Name", "Pend TO", "Pend Reg",
+            "Proc TO", "Proc Reg", "Total"
         ]
         rows = [
             [
@@ -218,6 +226,8 @@ def get_hr_workload(
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"hr_workload_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"hr_workload_{date.today().isoformat()}.csv")
         
     return result
@@ -235,13 +245,13 @@ def get_employee_status(
 ):
     check_role(current_user, ["admin"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_employee_status_report(
         db, department, search, status_filter, page, limit, export_all=export_all
     )
     
-    if export == "csv":
-        headers = ["Employee Code", "Employee Name", "Department", "Designation", "Status", "DOJ", "Time-Off Balance (Hours)"]
+    if export in ["csv", "pdf"]:
+        headers = ["Emp Code", "Name", "Department", "Designation", "Status", "DOJ", "TO Bal (Hrs)"]
         rows = [
             [
                 row["employeeCode"],
@@ -254,6 +264,8 @@ def get_employee_status(
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"employee_status_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"employee_status_{date.today().isoformat()}.csv")
         
     return result
@@ -270,13 +282,13 @@ def get_login_activity(
 ):
     check_role(current_user, ["admin"])
     
-    export_all = (export == "csv")
+    export_all = (export in ["csv", "pdf"])
     result = report_service.get_login_activity_summary_report(
         db, start_date, end_date, page, limit, export_all=export_all
     )
     
-    if export == "csv":
-        headers = ["Employee Code", "Employee Name", "Email", "Login Time", "IP Address", "Browser", "Device", "OS", "Status"]
+    if export in ["csv", "pdf"]:
+        headers = ["Emp Code", "Name", "Email", "Login Time", "IP Addr", "Browser", "Device", "OS", "Status"]
         rows = [
             [
                 row["employeeCode"] or "",
@@ -291,6 +303,76 @@ def get_login_activity(
             ]
             for row in result["data"]
         ]
+        if export == "pdf":
+            return report_service.generate_report_pdf(headers, rows, f"login_activity_{date.today().isoformat()}.pdf")
         return report_service.generate_report_csv(headers, rows, f"login_activity_{date.today().isoformat()}.csv")
         
     return result
+
+
+@router.get("/attendance")
+def get_attendance_report(
+    startDate: Optional[date] = Query(None),
+    endDate: Optional[date] = Query(None),
+    department: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    check_role(current_user, ["admin", "hr"])
+    return report_service.get_attendance_summary_report(
+        db, startDate, endDate, department, search, page, limit
+    )
+
+
+@router.get("/attendance/export")
+def get_attendance_report_export(
+    startDate: Optional[date] = Query(None),
+    endDate: Optional[date] = Query(None),
+    department: Optional[str] = None,
+    search: Optional[str] = None,
+    export: str = "pdf",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    check_role(current_user, ["admin", "hr"])
+    return get_attendance_report(
+        startDate, endDate, department, search, page=1, limit=10000, export=export, db=db, current_user=current_user
+    )
+
+
+@router.get("/timeoff")
+def get_timeoff_report(
+    startDate: Optional[date] = Query(None),
+    endDate: Optional[date] = Query(None),
+    department: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    check_role(current_user, ["admin", "hr"])
+    return report_service.get_leave_usage_report(
+        db, startDate, endDate, department, search, page, limit
+    )
+
+
+@router.get("/exceptions")
+def get_exceptions_report(
+    startDate: Optional[date] = Query(None),
+    endDate: Optional[date] = Query(None),
+    department: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    check_role(current_user, ["admin", "hr"])
+    return report_service.get_late_arrival_report(
+        db, startDate, endDate, department, search, page, limit
+    )
+

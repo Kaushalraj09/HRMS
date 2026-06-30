@@ -122,6 +122,15 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     db.commit()
     db.refresh(new_request)
     
+    # Create unified ApprovalTask
+    try:
+        from app.services.approval_service import create_approval_task
+        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        submitted_by = employee_obj.user_id if employee_obj else 1
+        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
+    except Exception as e:
+        print(f"Failed to create approval task: {e}")
+        
     # Add employee_name and employee_code to the response object
     resp = new_request
     resp.employee_name = f"{new_request.employee.first_name} {new_request.employee.last_name}"
@@ -185,6 +194,22 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
         req.status = "Rejected"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action. Use APPROVE or REJECT.")
+
+    # Update matching ApprovalTask status if pending
+    try:
+        from app.models.approval_task import ApprovalTask
+        task = db.query(ApprovalTask).filter(
+            ApprovalTask.request_type == "timeoff",
+            ApprovalTask.request_id == req.id,
+            ApprovalTask.status == "pending"
+        ).first()
+        if task:
+            task.status = "approved" if action.upper() == "APPROVE" else "rejected"
+            task.reviewed_by = admin_user_id
+            task.reviewed_at = datetime.now()
+            task.decision_comment = comments
+    except Exception as e:
+        print(f"Failed to synchronize approval task: {e}")
 
     log = ApprovalLog(
         timeoff_request_id=req.id,

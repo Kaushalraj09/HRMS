@@ -47,6 +47,30 @@ async def login(
             status="Success"
         )
         
+        # Trigger real-time login notification for HR and Admin if user is an employee
+        from app.models.employee import Employee
+        employee = db.query(Employee).filter(Employee.user_id == user_id).first()
+        if employee:
+            try:
+                from app.services.notification_service import create_notification_for_roles
+                await create_notification_for_roles(
+                    db=db,
+                    roles=["HR", "Admin"],
+                    type="ATTENDANCE",
+                    category="LOGIN",
+                    severity="INFO",
+                    title="Employee Login",
+                    message=f"{employee.first_name} {employee.last_name} logged into the HRMS.",
+                    employee_id=employee.id,
+                    created_by=user_id,
+                    notification_metadata={
+                        "ip_address": ip_address,
+                        "user_agent": user_agent
+                    }
+                )
+            except Exception as e:
+                print(f"Failed to create login notification: {e}")
+        
     return result
 
 @router.post("/change-password", response_model=StandardResponse)
@@ -81,4 +105,18 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
             detail=result["message"]
         )
     return result
+
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "displayName": current_user.display_name,
+        "role": current_user.role.name.lower() if current_user.role else "employee",
+        "linkedEmployeeId": current_user.linked_employee_id,
+        "linkedHrId": current_user.linked_hr_id,
+        "status": current_user.status
+    }
+
 

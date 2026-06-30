@@ -79,12 +79,20 @@
 }
 
 .profile-header-card .header-right .status-badge {
-  background-color: #d1fae5;
-  color: #059669;
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
+}
+
+.profile-header-card .header-right .status-badge.punched-in {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.profile-header-card .header-right .status-badge.punched-out {
+  background-color: #f1f5f9;
+  color: #475569;
 }
 
 .profile-header-card .header-right .status-badge.inactive {

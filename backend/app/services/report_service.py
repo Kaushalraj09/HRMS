@@ -30,6 +30,83 @@ def generate_report_csv(headers: list[str], rows: list[list[str]], filename: str
     response.headers["Content-Disposition"] = f"attachment; filename={filename}"
     return response
 
+def generate_report_pdf(headers: list[str], rows: list[list[str]], filename: str) -> StreamingResponse:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=18,
+        spaceAfter=20,
+        textColor=colors.HexColor('#1E3A8A')
+    )
+    
+    title = filename.replace('.pdf', '').replace('_', ' ').title()
+    elements.append(Paragraph(title, title_style))
+    elements.append(Spacer(1, 10))
+    
+    data = [headers] + rows
+    
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=styles['Normal'],
+        fontSize=7,
+        leading=9
+    )
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7,
+        leading=9,
+        textColor=colors.white
+    )
+    
+    formatted_data = []
+    for r_idx, row in enumerate(data):
+        formatted_row = []
+        for cell in row:
+            text = str(cell)
+            if r_idx == 0:
+                formatted_row.append(Paragraph(text, header_style))
+            else:
+                formatted_row.append(Paragraph(text, cell_style))
+        formatted_data.append(formatted_row)
+        
+    t = Table(formatted_data)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E5E7EB')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = StreamingResponse(
+        io.BytesIO(buffer.getvalue()),
+        media_type="application/pdf"
+    )
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+
+
 def _apply_employee_filters(query, start_date: date | None, end_date: date | None, department: str | None, search: str | None):
     if department:
         query = query.filter(Employee.department == department)

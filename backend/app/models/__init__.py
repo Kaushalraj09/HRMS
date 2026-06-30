@@ -6,6 +6,8 @@ from app.models.timeoff import TimeOffRequest
 from app.models.approval_log import ApprovalLog
 from app.models.login_activity import LoginActivity
 from app.models.notification import Notification
+from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday
+from app.models.approval_task import ApprovalTask
 
 __all__ = [
     "Attendance",
@@ -19,4 +21,12 @@ __all__ = [
     "ApprovalLog",
     "LoginActivity",
     "Notification",
+    "Department",
+    "Designation",
+    "Shift",
+    "WorkLocation",
+    "LeaveType",
+    "Holiday",
+    "ApprovalTask",
 ]
+

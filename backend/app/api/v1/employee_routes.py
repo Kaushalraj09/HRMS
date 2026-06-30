@@ -79,25 +79,46 @@ def get_employee(
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
 
-@router.get("/{employee_id}/credentials", response_model=EmployeeCredentialsResponse)
-def get_employee_credentials(
-    employee_id: int, 
+@router.post("/{employee_id}/reset-access", response_model=EmployeeCredentialsResponse)
+def reset_user_access(
+    employee_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     if employee_id <= 0:
         raise HTTPException(status_code=400, detail="Invalid employee ID")
 
-    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators and HR personnel are authorized to view employee credentials"
+            detail="Only administrators and HR personnel are authorized to reset user access"
         )
 
-    credentials = employee_service.get_employee_credentials(db, employee_id)
-    if not credentials:
-        raise HTTPException(status_code=404, detail="Employee credentials not found")
-    return credentials
+    # Trigger password reset and return the temporary credentials
+    from app.core.security import hash_password
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+
+    temp_password = "Employee@123"
+    user.password_hash = hash_password(temp_password)
+    db.commit()
+
+    return {
+        "employee_id": employee.id,
+        "employee_code": employee.employee_code,
+        "employee_name": f"{employee.first_name} {employee.last_name}",
+        "username": user.email,
+        "email": user.email,
+        "password": temp_password,
+        "temporary_password_hint": "Default temporary password. Ask the employee to change it after login.",
+        "status": user.status
+    }
+
 
 @router.put("/{employee_id}", response_model=EmployeeResponse)
 def update_employee(

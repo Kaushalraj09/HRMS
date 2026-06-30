@@ -192,6 +192,16 @@
       </div>
     </div>
     <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
+      <button 
+        *ngIf="selectedRequest.status === 'Pending'" 
+        class="btn btn-danger" 
+        type="button" 
+        [disabled]="isCancelling"
+        (click)="cancelRequest(selectedRequest.id)" 
+        style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background-color: #ef4444; color: white; border: none;">
+        <span *ngIf="!isCancelling">Cancel Request</span>
+        <span *ngIf="isCancelling">Cancelling...</span>
+      </button>
       <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer;">
         Close
       </button>

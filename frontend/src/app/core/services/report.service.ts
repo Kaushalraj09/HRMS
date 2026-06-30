@@ -187,7 +187,7 @@ export class ReportService {
 
   // General CSV Export
   exportReportCsv(endpointPath: string, filterParams: any): Observable<Blob> {
-    let params = new HttpParams().set('export', 'csv');
+    let params = new HttpParams().set('export', 'pdf');
     Object.keys(filterParams).forEach(key => {
       if (filterParams[key] !== null && filterParams[key] !== undefined && filterParams[key] !== '') {
         params = params.set(key, filterParams[key].toString());

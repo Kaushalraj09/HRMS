@@ -162,7 +162,7 @@ export class AdminReportsComponent implements OnInit {
 
     this.reportService.exportReportCsv(endpoint, filters).subscribe({
       next: (blob) => {
-        const filename = `admin_${this.activeTab}_report_${new Date().toISOString().split('T')[0]}.csv`;
+        const filename = `admin_${this.activeTab}_report_${new Date().toISOString().split('T')[0]}.pdf`;
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;

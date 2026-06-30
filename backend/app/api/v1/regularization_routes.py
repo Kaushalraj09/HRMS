@@ -68,6 +68,13 @@ async def submit_regularization(
     db.commit()
     db.refresh(new_request)
 
+    # Create unified ApprovalTask
+    try:
+        from app.services.approval_service import create_approval_task
+        create_approval_task(db, request_type="regularization", request_id=new_request.id, employee_id=employee.id, submitted_by=current_user.id)
+    except Exception as e:
+        print(f"Failed to create regularization approval task: {e}")
+
     log_audit_trail_sync(db, "REGULARIZATION_SUBMIT", employee.id, f"Submitted regularization request for {request.attendance_date}")
 
     # Broadcast websocket alert to HR/Admin users of type REGULARIZATION_REQUEST
@@ -144,6 +151,53 @@ async def get_my_regularizations(
         "totalPages": total_pages
     }
 
+@router.get("", response_model=RegularizationRequestPaginatedResponse)
+async def get_all_regularizations(
+    page: int = 1,
+    pageSize: int = 10,
+    search: str = "",
+    reason_type: str = "",
+    status: str = "pending",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Only Admin or HR roles
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Only Admin or HR can view regularization requests."
+        )
+
+    import math
+    query = db.query(AttendanceRegularizationRequest)
+    if status:
+        query = query.filter(AttendanceRegularizationRequest.status == status.lower())
+        
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if reason_type:
+        query = query.filter(AttendanceRegularizationRequest.reason_type == reason_type)
+
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    requests = query.order_by(AttendanceRegularizationRequest.created_at.desc()).offset(offset).limit(pageSize).all()
+
+    return {
+        "items": [_map_request_to_response(r) for r in requests],
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
+
+
 @router.get("/pending", response_model=RegularizationRequestPaginatedResponse)
 async def get_pending_regularizations(
     page: int = 1,
@@ -190,6 +244,7 @@ async def get_pending_regularizations(
     }
 
 @router.put("/{request_id}/decision", response_model=RegularizationRequestResponse)
+@router.post("/{request_id}/decision", response_model=RegularizationRequestResponse)
 async def review_regularization(
     request_id: int,
     decision: RegularizationRequestDecision,
@@ -222,6 +277,23 @@ async def review_regularization(
     req.reviewed_by = current_user.id
     req.reviewed_at = datetime.now()
     req.review_comment = decision.review_comment
+
+    # Update matching ApprovalTask status if pending
+    try:
+        from app.models.approval_task import ApprovalTask
+        task = db.query(ApprovalTask).filter(
+            ApprovalTask.request_type == "regularization",
+            ApprovalTask.request_id == req.id,
+            ApprovalTask.status == "pending"
+        ).first()
+        if task:
+            task.status = decision.status
+            task.reviewed_by = current_user.id
+            task.reviewed_at = datetime.now()
+            task.decision_comment = decision.review_comment
+    except Exception as e:
+        print(f"Failed to synchronize regularization approval task: {e}")
+
 
     if decision.status == "approved":
         # Find attendance record and update it

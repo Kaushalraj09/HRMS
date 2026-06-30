@@ -137,6 +137,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   }
 
   selectedRequest: any = null;
+  isCancelling = false;
 
   viewRequestDetails(req: any): void {
     this.selectedRequest = req;
@@ -144,6 +145,24 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
 
   closeDetailsModal(): void {
     this.selectedRequest = null;
+  }
+
+  cancelRequest(requestId: number): void {
+    if (confirm('Are you sure you want to cancel this time off request?')) {
+      this.isCancelling = true;
+      this.attendanceService.cancelTimeOffRequest(requestId).subscribe({
+        next: () => {
+          this.isCancelling = false;
+          this.closeDetailsModal();
+          this.loadRequests();
+          this.loadBalances();
+        },
+        error: (err) => {
+          this.isCancelling = false;
+          alert('Error cancelling request: ' + (err.error?.detail || err.message));
+        }
+      });
+    }
   }
 
   downloadAttachment(fileName: string): void {
