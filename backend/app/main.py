@@ -58,6 +58,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
 
 @app.on_event("startup")
 def startup():
+    from app.domain.notifications.subscriber import register_all_listeners
+    register_all_listeners()
+
     if settings.AUTO_CREATE_TABLES:
         # Run Alembic migrations programmatically to set up/upgrade the database schema
         from alembic.config import Config

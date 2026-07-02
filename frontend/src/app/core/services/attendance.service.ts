@@ -69,6 +69,10 @@ interface BackendTodayAttendanceState {
   punchOutAddress: string | null;
   punchInImage: string | null;
   punchOutImage: string | null;
+  yesterdayAutoCheckedOut?: boolean;
+  requiresRegularization?: boolean;
+  overtimeApproved?: boolean;
+  overtimeExtended?: boolean;
 }
 
 export interface TimeOffApplyResponse {
@@ -245,7 +249,11 @@ export class AttendanceService {
         punchOutLongitude: typeof state.punchOutLongitude === 'string' ? null : state.punchOutLongitude, // Safeguard against DB migration types
         punchOutAddress: state.punchOutAddress,
         punchInImage: state.punchInImage,
-        punchOutImage: state.punchOutImage
+        punchOutImage: state.punchOutImage,
+        yesterdayAutoCheckedOut: state.yesterdayAutoCheckedOut,
+        requiresRegularization: state.requiresRegularization,
+        overtimeApproved: state.overtimeApproved,
+        overtimeExtended: state.overtimeExtended
       }))
     );
   }
@@ -278,6 +286,18 @@ export class AttendanceService {
     return this.http.post<TodayAttendanceState>(`${this.apiUrl}/work-mode`, {
       workMode
     });
+  }
+
+  continueWorking(): Observable<TodayAttendanceState> {
+    return this.http.post<void>(`${this.apiUrl}/continue-working`, {}).pipe(
+      switchMap(() => this.getTodayAttendanceState())
+    );
+  }
+
+  extendOvertime(): Observable<TodayAttendanceState> {
+    return this.http.post<void>(`${this.apiUrl}/extend-overtime`, {}).pipe(
+      switchMap(() => this.getTodayAttendanceState())
+    );
   }
 
   addSchedule(

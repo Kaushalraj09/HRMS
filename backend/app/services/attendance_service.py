@@ -488,6 +488,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "flags": attendance.flags if attendance else [],
         "requiresRegularization": attendance.requires_regularization if attendance else False,
         "overtimeApproved": attendance.overtime_approved if attendance else False,
+        "overtimeExtended": attendance.overtime_extended if attendance else False,
     }
 
 def _normalize_attendance_status(status: str) -> str:

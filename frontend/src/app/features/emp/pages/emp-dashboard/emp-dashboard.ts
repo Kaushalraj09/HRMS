@@ -84,6 +84,10 @@ export class EmpDashboard implements OnInit, OnDestroy {
   isPunchSaving = false;
   punchMessage = '';
   attendanceStatusLabel = 'Not working';
+  overtimeApproved = false;
+  overtimeExtended = false;
+  wsShiftEndReminderActive = false;
+  wsOvertimeReminderActive = false;
 
   approvedHours = 0;
   remainingHours = SHIFT_TOTAL_HOURS;
@@ -798,6 +802,19 @@ export class EmpDashboard implements OnInit, OnDestroy {
     const user = this.authService.getCurrentUser();
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
+      this.subscriptions.add(
+        this.attendanceService.wsMessage$.subscribe((msg) => {
+          if (msg && msg.type === 'SHIFT_END_REMINDER') {
+            this.wsShiftEndReminderActive = true;
+            this.cdr.detectChanges();
+          } else if (msg && msg.type === 'OVERTIME_REMINDER') {
+            this.wsOvertimeReminderActive = true;
+            this.cdr.detectChanges();
+          } else if (msg && msg.type === 'AUTO_CHECKOUT') {
+            this.loadDashboardData();
+          }
+        })
+      );
     }
 
     // this.subscriptions.add(
@@ -949,6 +966,72 @@ export class EmpDashboard implements OnInit, OnDestroy {
     );
   }
 
+  get isShiftEndReminderActive(): boolean {
+    if (!this.isPunchedIn || this.overtimeApproved || this.punchOutTime) {
+      return false;
+    }
+    if (this.wsShiftEndReminderActive) {
+      return true;
+    }
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentMinutesOfDay = currentHour * 60 + currentMinute;
+    return currentMinutesOfDay >= 1085; // >= 18:05
+  }
+
+  get isOvertimeReminderActive(): boolean {
+    if (!this.isPunchedIn || !this.overtimeApproved || this.overtimeExtended || this.punchOutTime) {
+      return false;
+    }
+    if (this.wsOvertimeReminderActive) {
+      return true;
+    }
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentMinutesOfDay = currentHour * 60 + currentMinute;
+    return currentMinutesOfDay >= 1200; // >= 20:00
+  }
+
+  handleContinueWorking(): void {
+    this.isPunchSaving = true;
+    this.punchMessage = '';
+    this.attendanceService.continueWorking().subscribe({
+      next: (state) => {
+        this.applyTodayState(state);
+        this.wsShiftEndReminderActive = false;
+        this.isPunchSaving = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isPunchSaving = false;
+        const detail = err?.error?.detail;
+        this.punchMessage = typeof detail === 'string' ? detail : 'Unable to request overtime.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  handleExtendOvertime(): void {
+    this.isPunchSaving = true;
+    this.punchMessage = '';
+    this.attendanceService.extendOvertime().subscribe({
+      next: (state) => {
+        this.applyTodayState(state);
+        this.wsOvertimeReminderActive = false;
+        this.isPunchSaving = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isPunchSaving = false;
+        const detail = err?.error?.detail;
+        this.punchMessage = typeof detail === 'string' ? detail : 'Unable to request overtime extension.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   private applyTodayState(todayState: TodayAttendanceState): void {
     this.isPunchedIn = todayState.isWorking;
     this.approvedSecondsToday = todayState.approvedSeconds;
@@ -962,6 +1045,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.status = todayState.workMode;
     this.punchInTime = this.formatTimeWithoutMicroseconds(todayState.punchIn);
     this.punchOutTime = this.formatTimeWithoutMicroseconds(todayState.punchOut);
+    this.overtimeApproved = todayState.overtimeApproved || false;
+    this.overtimeExtended = todayState.overtimeExtended || false;
     // Preserve first image; only update if not already set
     if (todayState.punchInImage) { this.punchInImage = todayState.punchInImage; }
     if (todayState.punchOutImage) { this.punchOutImage = todayState.punchOutImage; }

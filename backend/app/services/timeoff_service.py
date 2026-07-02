@@ -94,6 +94,10 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 detail=f"Requested hours exceed remaining shift balance ({remaining_hours:.2f} h left).",
             )
 
+    # Policy and overlap validation checks
+    from app.domain.attendance.validators.leave_validator import LeaveValidator
+    LeaveValidator.validate_leave(db, employee_id, request.date, st, et)
+
     existing = db.query(TimeOffRequest).filter(
         TimeOffRequest.employee_id == employee_id,
         TimeOffRequest.date == request.date,
@@ -130,6 +134,19 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
     except Exception as e:
         print(f"Failed to create approval task: {e}")
+        
+    # Dispatch LeaveRequested domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveRequested
+        EventDispatcher.dispatch(LeaveRequested(
+            employee_id=employee_id,
+            leave_request_id=new_request.id,
+            date=new_request.date,
+            leave_type=new_request.leave_type
+        ))
+    except Exception as e:
+        print(f"Failed to dispatch LeaveRequested event: {e}")
         
     # Add employee_name and employee_code to the response object
     resp = new_request
@@ -221,6 +238,26 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     db.commit()
     db.refresh(req)
     
+    # Dispatch LeaveApproved or LeaveRejected domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveApproved, LeaveRejected
+        if action.upper() == "APPROVE":
+            EventDispatcher.dispatch(LeaveApproved(
+                employee_id=req.employee_id,
+                leave_request_id=req.id,
+                date=req.date,
+                leave_type=req.leave_type
+            ))
+        else:
+            EventDispatcher.dispatch(LeaveRejected(
+                employee_id=req.employee_id,
+                leave_request_id=req.id,
+                date=req.date
+            ))
+    except Exception as e:
+        print(f"Failed to dispatch approve/reject leave event: {e}")
+
     req.employee_name = f"{req.employee.first_name} {req.employee.last_name}"
     req.employee_code = req.employee.employee_code
     return req
@@ -329,6 +366,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 detail="For today, start time must be at or after the current time.",
             )
 
+    # Policy and overlap validation checks
+    from app.domain.attendance.validators.leave_validator import LeaveValidator
+    LeaveValidator.validate_leave(db, employee_id, payload.date, st, et)
+
     new_request = TimeOffRequest(
         employee_id=employee_id,
         date=payload.date,
@@ -341,6 +382,19 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
+
+    # Dispatch LeaveApproved domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveApproved
+        EventDispatcher.dispatch(LeaveApproved(
+            employee_id=employee_id,
+            leave_request_id=new_request.id,
+            date=new_request.date,
+            leave_type=new_request.leave_type
+        ))
+    except Exception as e:
+        print(f"Failed to dispatch LeaveApproved event: {e}")
 
     approved_today = get_timeoff_duration_for_date(db, employee_id, date.today())
     approved_seconds_today = int(round(approved_today * 3600))

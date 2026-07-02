@@ -541,6 +541,18 @@ async def cancel_request(
     db.commit()
     db.refresh(req)
     
+    # Dispatch LeaveCancelled domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveCancelled
+        EventDispatcher.dispatch(LeaveCancelled(
+            employee_id=req.employee_id,
+            leave_request_id=req.id,
+            date=req.date
+        ))
+    except Exception as e:
+        print(f"Failed to dispatch LeaveCancelled event: {e}")
+        
     # Notify employee (if admin cancelled it)
     try:
         from app.services.notification_service import create_notification

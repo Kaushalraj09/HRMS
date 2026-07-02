@@ -91,6 +91,10 @@ export interface TodayAttendanceState {
   punchOutImage?: string | null;
   attendanceStatus?: string;
   badgeColor?: string;
+  yesterdayAutoCheckedOut?: boolean;
+  requiresRegularization?: boolean;
+  overtimeApproved?: boolean;
+  overtimeExtended?: boolean;
 }
 
 export interface PaginatedResponse<T> {

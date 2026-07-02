@@ -22,6 +22,44 @@
                         </div>
                     </div>
 
+                    <!-- Shift End Reminder Banner -->
+                    <div class="reminder-banner-card shift-end" *ngIf="isShiftEndReminderActive">
+                        <div class="reminder-icon-container">
+                            <i class="fas fa-hourglass-end pulse-icon"></i>
+                        </div>
+                        <div class="reminder-content">
+                            <h4>Your shift has ended</h4>
+                            <p>Please punch out or request to continue working into overtime.</p>
+                        </div>
+                        <div class="reminder-actions">
+                            <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
+                                <i class="fas fa-sign-out-alt"></i> Punch Out
+                            </button>
+                            <button type="button" class="action-btn continue-working" [disabled]="isPunchSaving" (click)="handleContinueWorking()">
+                                <i class="fas fa-clock"></i> Continue Working
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Overtime Reminder Banner -->
+                    <div class="reminder-banner-card overtime" *ngIf="isOvertimeReminderActive">
+                        <div class="reminder-icon-container">
+                            <i class="fas fa-exclamation-circle pulse-icon"></i>
+                        </div>
+                        <div class="reminder-content">
+                            <h4>Overtime limit reached</h4>
+                            <p>Your overtime session is ending. Please punch out or extend to avoid auto checkout.</p>
+                        </div>
+                        <div class="reminder-actions">
+                            <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
+                                <i class="fas fa-sign-out-alt"></i> Punch Out
+                            </button>
+                            <button type="button" class="action-btn extend-overtime" [disabled]="isPunchSaving" (click)="handleExtendOvertime()">
+                                <i class="fas fa-angle-double-right"></i> Extend Overtime
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Mark Attendence and Request Time off -->
                     <div class="mark_attendence_request_time">
                         <div class="card Mark_attendance">

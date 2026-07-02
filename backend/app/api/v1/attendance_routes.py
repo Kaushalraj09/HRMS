@@ -40,7 +40,8 @@ async def punch_in(
                 detail="Only employees can punch attendance"
             )
     
-    res = attendance_service.punch_in(
+    from app.domain.attendance.services.punch_service import PunchService
+    res = PunchService.punch_in(
         db,
         employee.id,
         request.work_mode,
@@ -51,46 +52,7 @@ async def punch_in(
         request.custom_time
     )
 
-    # Trigger unread notification
-    from app.services.notification_service import create_notification, create_notification_for_roles
-    from datetime import datetime
-    time_str = datetime.now().strftime("%I:%M %p")
-    # Determine the target user's id (if specified employee, notify them, else notify current_user)
-    target_user_id = employee.user_id if employee else current_user.id
-    attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
-    try:
-        await create_notification(
-            db=db,
-            user_id=target_user_id,
-            type="ATTENDANCE",
-            title="Attendance Marked",
-            message=f"You punched in at {time_str}.",
-            reference_id=attendance_id
-        )
-    except Exception as e:
-        print(f"Failed to auto create punch-in notification: {e}")
-
-    # Trigger admin notifications for HR and Admin
-    try:
-        p_time = res.punch_in if hasattr(res, "punch_in") else datetime.now().time()
-        p_time_str = p_time.strftime("%I:%M %p") if p_time else time_str
-        await create_notification_for_roles(
-            db=db,
-            roles=["HR", "Admin"],
-            type="ATTENDANCE",
-            category="PUNCH_IN",
-            severity="SUCCESS",
-            title="Employee Punched In",
-            message=f"{employee.first_name} {employee.last_name} punched in at {p_time_str}.",
-            employee_id=employee.id,
-            created_by=current_user.id,
-            reference_id=attendance_id,
-            notification_metadata={"work_mode": res.work_mode if hasattr(res, "work_mode") else None}
-        )
-    except Exception as e:
-        print(f"Failed to create admin punch-in notification: {e}")
-
-    return res
+    return attendance_service.to_attendance_response(res, db)
 
 @router.post("/punch-out", response_model=AttendanceResponse)
 async def punch_out(
@@ -116,7 +78,8 @@ async def punch_out(
                 detail="Only employees can punch attendance"
             )
     
-    res = attendance_service.punch_out(
+    from app.domain.attendance.services.punch_service import PunchService
+    res = PunchService.punch_out(
         db,
         employee.id,
         request.work_mode,
@@ -127,45 +90,7 @@ async def punch_out(
         request.custom_time
     )
 
-    # Trigger unread notification
-    from app.services.notification_service import create_notification, create_notification_for_roles
-    from datetime import datetime
-    time_str = datetime.now().strftime("%I:%M %p")
-    target_user_id = employee.user_id if employee else current_user.id
-    attendance_id = res.id if hasattr(res, "id") else getattr(res, "attendance_id", None)
-    try:
-        await create_notification(
-            db=db,
-            user_id=target_user_id,
-            type="ATTENDANCE",
-            title="Attendance Completed",
-            message=f"You punched out at {time_str}.",
-            reference_id=attendance_id
-        )
-    except Exception as e:
-        print(f"Failed to auto create punch-out notification: {e}")
-
-    # Trigger admin notifications for HR and Admin
-    try:
-        p_time = res.punch_out if hasattr(res, "punch_out") else datetime.now().time()
-        p_time_str = p_time.strftime("%I:%M %p") if p_time else time_str
-        await create_notification_for_roles(
-            db=db,
-            roles=["HR", "Admin"],
-            type="ATTENDANCE",
-            category="PUNCH_OUT",
-            severity="SUCCESS",
-            title="Employee Punched Out",
-            message=f"{employee.first_name} {employee.last_name} punched out at {p_time_str}.",
-            employee_id=employee.id,
-            created_by=current_user.id,
-            reference_id=attendance_id,
-            notification_metadata={"work_mode": res.work_mode if hasattr(res, "work_mode") else None}
-        )
-    except Exception as e:
-        print(f"Failed to create admin punch-out notification: {e}")
-
-    return res
+    return attendance_service.to_attendance_response(res, db)
 
 
 @router.post("/me/punch", response_model=TodayAttendanceState)

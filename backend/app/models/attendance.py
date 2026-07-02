@@ -108,11 +108,37 @@ class AttendanceRegularizationRequest(Base):
     reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     review_comment = Column(String(500), nullable=True)
+    
+    auto_checkout_time = Column(Time, nullable=True)
+    requested_time = Column(Time, nullable=True)
+    corrected_time = Column(Time, nullable=True)
+    manager_decision = Column(String(20), nullable=True)
+    hr_decision = Column(String(20), nullable=True)
+    audit_status = Column(String(20), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     employee = relationship("Employee", backref="regularization_requests")
     reviewer = relationship("User", backref="reviewed_regularizations")
+
+class OvertimeRequest(Base):
+    __tablename__ = "overtime_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    attendance_id = Column(Integer, ForeignKey("attendance.id"), nullable=True)
+    requested_minutes = Column(Integer, nullable=False)
+    reason = Column(String(500), nullable=True)
+    requested_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String(20), default="Pending") # Pending, Approved, Rejected, Expired, Completed
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    employee = relationship("Employee", backref="overtime_requests")
+    reviewer = relationship("User", backref="reviewed_overtimes")
 
 
 
