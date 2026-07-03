@@ -99,6 +99,7 @@ export class AttendanceService {
     Pragma: 'no-cache'
   });
   private socket: WebSocket | null = null;
+  private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private timeoffUpdateSubject = new Subject<any>();
   public timeoffUpdate$ = this.timeoffUpdateSubject.asObservable();
   private wsMessageSubject = new Subject<any>();
@@ -108,10 +109,17 @@ export class AttendanceService {
 
   connectWebSocket(userId: string | number) {
     const token = localStorage.getItem('aivan_hrms_phase1_token_v1') || '';
+    if (!token) {
+      console.warn('Skipping WebSocket connection because no auth token is available.');
+      return;
+    }
+
+    this.clearReconnectTimeout();
+
     const wsUrl = buildWsUrl(`/ws/${userId}?token=${encodeURIComponent(token)}`);
     
-    // If we already have a socket connection to this exact URL, don't reconnect
-    if (this.socket && (this.socket.url === wsUrl || this.socket.url.indexOf(`/ws/${userId}`) !== -1)) {
+    // If we already have a socket connection to this exact URL, don't reconnect.
+    if (this.socket && this.socket.url === wsUrl) {
       if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
         return;
       }
@@ -127,13 +135,14 @@ export class AttendanceService {
 
     console.log(`Attempting WebSocket connection to: ${wsUrl}`);
 
-    this.socket = new WebSocket(wsUrl);
+    const socket = new WebSocket(wsUrl);
+    this.socket = socket;
 
-    this.socket.onopen = () => {
+    socket.onopen = () => {
       console.log('WebSocket connection established successfully');
     };
 
-    this.socket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         this.wsMessageSubject.next(data);
@@ -145,17 +154,27 @@ export class AttendanceService {
       }
     };
 
-    this.socket.onerror = (error) => {
+    socket.onerror = (error) => {
       console.error('WebSocket Error:', error);
     };
 
-    this.socket.onclose = (event) => {
+    socket.onclose = (event) => {
+      if (this.socket === socket) {
+        this.socket = null;
+      }
+
+      if (event.code === 4001) {
+        console.warn('WebSocket authentication failed. Reconnect skipped until the user signs in again.');
+        return;
+      }
+
       console.warn(`WebSocket closed: ${event.code} ${event.reason}. Retrying in 5s...`);
-      setTimeout(() => this.connectWebSocket(userId), 5000);
+      this.reconnectTimeoutId = setTimeout(() => this.connectWebSocket(userId), 5000);
     };
   }
 
   disconnectWebSocket() {
+    this.clearReconnectTimeout();
     if (this.socket) {
       this.socket.onclose = () => { };
       this.socket.onerror = () => { };
@@ -163,6 +182,13 @@ export class AttendanceService {
         this.socket.close();
       } catch (e) {}
       this.socket = null;
+    }
+  }
+
+  private clearReconnectTimeout(): void {
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
     }
   }
 

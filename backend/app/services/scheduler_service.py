@@ -2,11 +2,13 @@ import logging
 import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, date, time, timedelta
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.timeoff import TimeOffRequest
 
 logger = logging.getLogger(__name__)
+APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 def send_notification_sync(db: Session, user_id: int, type: str, title: str, message: str, reference_id: int = None):
     """Sync wrapper to execute the async create_notification coroutine within the scheduler thread."""
@@ -356,11 +358,18 @@ def remind_hr_pending_timeoff():
     finally:
         db.close()
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(check_timeoff_status, 'interval', minutes=1)
-scheduler.add_job(auto_checkout_forgotten_punches, 'interval', minutes=5)
-scheduler.add_job(auto_expire_pending_timeoff, 'interval', minutes=15)
-scheduler.add_job(remind_hr_pending_timeoff, 'cron', hour=9, minute=0)
+scheduler = BackgroundScheduler(
+    timezone=APP_TIMEZONE,
+    job_defaults={
+        "coalesce": True,
+        "max_instances": 1,
+        "misfire_grace_time": 120,
+    },
+)
+scheduler.add_job(check_timeoff_status, 'interval', minutes=1, id="check_timeoff_status", replace_existing=True)
+scheduler.add_job(auto_checkout_forgotten_punches, 'interval', minutes=5, id="auto_checkout_forgotten_punches", replace_existing=True)
+scheduler.add_job(auto_expire_pending_timeoff, 'interval', minutes=15, id="auto_expire_pending_timeoff", replace_existing=True)
+scheduler.add_job(remind_hr_pending_timeoff, 'cron', hour=9, minute=0, id="remind_hr_pending_timeoff", replace_existing=True)
 
 def start_scheduler():
     if not scheduler.running:
