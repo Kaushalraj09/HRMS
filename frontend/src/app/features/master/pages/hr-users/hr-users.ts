@@ -8,6 +8,8 @@ import { RouterModule } from '@angular/router';
 import { PaginatedResult } from '../../../../core/models/employee.model';
 import { HrUser } from '../../../../core/models/hr.model';
 import { HrService } from '../../../../core/services/hr.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { EmployeeService } from '../../../../core/services/employee.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { HrAddModalComponent } from './modals/hr-add-modal/hr-add-modal';
 
@@ -26,6 +28,9 @@ import { HrAddModalComponent } from './modals/hr-add-modal/hr-add-modal';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HrUsersComponent implements OnInit {
+  currentUser: any = null;
+  deleteModalOpen = false;
+  hrToDelete: HrUser | null = null;
   activeModal: 'add' | null = null;
   searchControl = new FormControl('');
   statusControl = new FormControl('');
@@ -44,9 +49,14 @@ export class HrUsersComponent implements OnInit {
     { label: 'Inactive', value: 'Inactive' }
   ];
 
-  constructor(private readonly hrService: HrService) {}
+  constructor(
+    private readonly hrService: HrService,
+    private readonly authService: AuthService,
+    private readonly employeeService: EmployeeService
+  ) {}
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.hrData$ = combineLatest([this.reloadSubject, this.pageSubject]).pipe(
       tap(() => this.isLoading$.next(true)),
       switchMap(([_, page]) =>
@@ -89,6 +99,34 @@ export class HrUsersComponent implements OnInit {
     if (refresh) {
       this.onSearch();
     }
+  }
+
+  confirmDelete(hr: HrUser): void {
+    this.hrToDelete = hr;
+    this.deleteModalOpen = true;
+  }
+
+  closeDeleteModal(): void {
+    this.deleteModalOpen = false;
+    this.hrToDelete = null;
+  }
+
+  executeDelete(): void {
+    if (!this.hrToDelete) return;
+    const hr = this.hrToDelete;
+    this.closeDeleteModal();
+    this.isLoading$.next(true);
+    this.employeeService.deleteEmployee(hr.id).subscribe({
+      next: () => {
+        alert('HR user deleted successfully.');
+        this.onSearch();
+      },
+      error: (err) => {
+        this.isLoading$.next(false);
+        console.error('Failed to delete HR user:', err);
+        alert(err?.error?.detail || 'An error occurred while deleting the HR user.');
+      }
+    });
   }
 }
 

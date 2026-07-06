@@ -79,6 +79,8 @@ def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", stat
 
     if status:
         query = query.filter(Employee.status == status)
+    else:
+        query = query.filter(Employee.status != "Deleted")
         
     search_value = (search or "").strip()
     if search_value:

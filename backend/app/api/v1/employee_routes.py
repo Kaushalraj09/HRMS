@@ -141,3 +141,56 @@ def update_employee(
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
 
+
+@router.delete("/{employee_id}")
+def delete_employee(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if employee_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid employee ID")
+
+    # Auth check: must be Admin or HR
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to delete records"
+        )
+
+    # Get employee to check their role before deletion
+    employee = employee_service.get_employee_by_id(db, employee_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    # Prevent self-deletion
+    if current_user.id == employee.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Self-deletion is not permitted. Contact another administrator if you need to close your account."
+        )
+
+    # Get the target user's role
+    target_user = db.query(User).filter(User.id == employee.user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User account not found")
+
+    current_role = current_user.role.name.lower()
+    target_role = target_user.role.name.lower() if target_user.role else ""
+
+    # Rule checks:
+    # 1. Admin can delete anyone (except themselves, which is handled above)
+    # 2. HR can only delete standard employees (cannot delete HR or Admin)
+    if current_role == UserRole.HR:
+        if target_role in [UserRole.HR, UserRole.ADMIN]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="HR personnel are not authorized to delete HR or Admin accounts"
+            )
+
+    success = employee_service.delete_employee(db, employee_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete employee")
+
+    return {"success": True, "message": "Employee deleted successfully"}
+

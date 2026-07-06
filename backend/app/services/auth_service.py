@@ -15,6 +15,9 @@ def authenticate_user(db: Session, request: LoginRequest):
     
     # 2. If user exists and password is correct
     if user and verify_password(request.password, user.password_hash):
+        if user.status in ["Inactive", "Deleted"]:
+            return None
+            
         role_name = user.role.name.lower() if user.role else ""
         
         # Ensure shadow employee profile exists for HR and Admin users dynamically

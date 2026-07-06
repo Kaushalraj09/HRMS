@@ -193,6 +193,25 @@ export class EmployeeService {
     );
   }
 
+  deleteEmployee(employeeId: string): Observable<{ success: boolean; message: string }> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    console.log('EmployeeService.deleteEmployee request:', normalizedId);
+
+    return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${normalizedId}`).pipe(
+      map(row => {
+        console.log('EmployeeService.deleteEmployee response:', row);
+        return row;
+      }),
+      catchError(error => {
+        console.error('EmployeeService.deleteEmployee error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
   private normalizeEmployeeId(employeeId: string): string {
     return String(employeeId ?? '').trim();
   }

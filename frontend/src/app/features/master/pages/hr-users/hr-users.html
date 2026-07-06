@@ -38,6 +38,7 @@
                 <th>Department</th>
                 <th>Designation</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody *ngIf="state.loading">
@@ -48,6 +49,7 @@
                 <td><div class="skeleton s-text"></div></td>
                 <td><div class="skeleton s-text"></div></td>
                 <td><div class="skeleton s-badge"></div></td>
+                <td><div class="skeleton s-text" style="width: 60px"></div></td>
               </tr>
             </tbody>
             <tbody *ngIf="!state.loading && state.result as result">
@@ -58,9 +60,14 @@
                 <td>{{ hr.department }}</td>
                 <td>{{ hr.designation }}</td>
                 <td><span class="status-badge" [ngClass]="hr.status.toLowerCase()">{{ hr.status }}</span></td>
+                <td>
+                  <ng-container *ngIf="hr.userId !== currentUser?.id">
+                    <button type="button" class="action-btn-link danger-link" (click)="confirmDelete(hr)">Delete</button>
+                  </ng-container>
+                </td>
               </tr>
               <tr *ngIf="result.data.length === 0">
-                <td colspan="6" class="empty-state">
+                <td colspan="7" class="empty-state">
                   <div class="empty-content">
                     <i class="fas fa-user-shield empty-icon"></i>
                     <p>No HR users found</p>
@@ -101,4 +108,41 @@
   *ngIf="activeModal === 'add'" 
   (closed)="onModalClose($event)">
 </app-hr-add-modal>
+
+<!-- Delete Confirmation Modal -->
+<div class="camera-modal-overlay" *ngIf="deleteModalOpen" (click)="closeDeleteModal()">
+  <div class="camera-modal-box" (click)="$event.stopPropagation()">
+    <div class="camera-modal-header">
+      <div class="camera-modal-title">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>Confirm Deletion</span>
+      </div>
+      <button class="close-btn" (click)="closeDeleteModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="camera-modal-body">
+      <div class="punch-out-confirm">
+        <div class="punch-out-confirm__icon">
+          <i class="fas fa-trash-alt"></i>
+        </div>
+        <h3>Delete HR User?</h3>
+        <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">
+          Are you sure you want to delete HR User <strong>{{ hrToDelete?.fullName }}</strong> ({{ hrToDelete?.hrCode }})?
+        </p>
+        <p style="margin: 5px 0 0 0; max-width: 340px; color: #94a3b8; font-size: 13px; line-height: 1.4;">
+          This will permanently disable their login and remove them from active HR lists.
+        </p>
+      </div>
+    </div>
+    <div class="camera-modal-footer">
+      <button class="btn btn-secondary" (click)="closeDeleteModal()">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="executeDelete()">
+        Delete HR User
+      </button>
+    </div>
+  </div>
+</div>
 

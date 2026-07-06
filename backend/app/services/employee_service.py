@@ -132,6 +132,8 @@ def list_employees(
         emp_q = emp_q.filter(Employee.employee_type == employee_type)
     if status:
         emp_q = emp_q.filter(Employee.status == status)
+    else:
+        emp_q = emp_q.filter(Employee.status != "Deleted")
 
     total = emp_q.count()
 
@@ -197,3 +199,18 @@ def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
     db.commit()
     db.refresh(employee)
     return employee
+
+def delete_employee(db: Session, employee_id: int) -> bool:
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        return False
+        
+    employee.status = "Deleted"
+    
+    # Update linked User account status
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if user:
+        user.status = "Deleted"
+        
+    db.commit()
+    return True
