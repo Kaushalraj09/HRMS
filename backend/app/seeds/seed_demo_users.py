@@ -139,6 +139,10 @@ def seed_users(db: Session):
                 print(f"Verified demo HR profile: {user_info['email']}")
         else: # admin
             if existing_employee:
+                from app.models.login_activity import LoginActivity
+                from app.models.notification import Notification
+                db.query(LoginActivity).filter(LoginActivity.employee_id == existing_employee.id).update({LoginActivity.employee_id: None})
+                db.query(Notification).filter(Notification.employee_id == existing_employee.id).update({Notification.employee_id: None})
                 db.delete(existing_employee)
                 print(f"Removed demo admin employee profile: {user_info['email']}")
             if existing_hr:

@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { startWith, switchMap } from 'rxjs/operators';
+import { environment } from '../../../../../environments/environment';
 
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
@@ -106,7 +107,7 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private startPolling(): void {
-    const apiUrl = 'http://localhost:8000/api/v1/attendance/today-locations';
+    const apiUrl = `${environment.apiBaseUrl}/attendance/today-locations`;
 
     this.refreshSub = interval(60000)
       .pipe(
