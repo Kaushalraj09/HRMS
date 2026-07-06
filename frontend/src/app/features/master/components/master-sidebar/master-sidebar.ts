@@ -45,13 +45,13 @@ export class MasterSidebar implements OnInit {
     {
       groupName: 'Access Management',
       items: [
-        { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' },
+        { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
+        { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' }
       ]
     },
     {
       groupName: 'People',
       items: [
-        { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
         { label: 'Attendance', icon: 'far fa-clock', route: '/master-dashboard/attendance' },
         { label: 'Time Off Oversight', icon: 'fas fa-calendar-times', route: '/master-dashboard/time-off' },
         { label: 'Regularization Oversight', icon: 'fas fa-business-time', route: '/master-dashboard/regularization-requests' }

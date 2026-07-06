@@ -817,11 +817,15 @@ def list_all_attendance(
     List all attendance records (HR/Admin only).
     """
     from sqlalchemy import case, and_, or_
+    from app.models.user import User, Role
 
     today = datetime.now(APP_TIMEZONE).date()
     query = (
         db.query(Attendance)
         .join(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(func.lower(Role.name) != "admin")
         .filter(Attendance.date <= today)
     )
 
@@ -873,7 +877,7 @@ def list_all_attendance(
         func.sum(case((status_expr == "Working", 1), else_=0)).label("working"),
         func.sum(case((status_expr == "Absent", 1), else_=0)).label("absent"),
         func.sum(case((status_expr == "Not Marked", 1), else_=0)).label("not_marked")
-    ).select_from(Attendance).join(Employee).filter(Attendance.date <= today)
+    ).select_from(Attendance).join(Employee).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin").filter(Attendance.date <= today)
 
     if from_date:
         m_query = m_query.filter(Attendance.date >= from_date)

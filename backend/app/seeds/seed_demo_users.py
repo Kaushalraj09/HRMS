@@ -138,37 +138,9 @@ def seed_users(db: Session):
                 # Keep it simple, no columns to update other than ensuring it exists
                 print(f"Verified demo HR profile: {user_info['email']}")
         else: # admin
-            name_parts = user_info["display_name"].split(" ", 1)
-            first_name = name_parts[0]
-            last_name = name_parts[1] if len(name_parts) > 1 else ""
-            
-            emp_data = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "department": "Administration",
-                "designation": "System Admin",
-                "employee_type": "Full-Time",
-                "work_location": "Main Office",
-                "shift_type": "General Shift",
-                "mobile": "9876543210",
-                "official_email": user_info["email"],
-                "status": "Active"
-            }
-            if not existing_employee:
-                existing_employee = Employee(
-                    user_id=existing_user.id,
-                    employee_code=f"{existing_user.id:04d}",
-                    **emp_data
-                )
-                db.add(existing_employee)
-                print(f"Added demo admin employee profile: {user_info['email']}")
-            else:
-                for field, value in emp_data.items():
-                    setattr(existing_employee, field, value)
-                existing_employee.employee_code = f"{existing_user.id:04d}"
-                existing_employee.official_email = user_info["email"]
-                print(f"Updated demo admin employee profile: {user_info['email']}")
-            
+            if existing_employee:
+                db.delete(existing_employee)
+                print(f"Removed demo admin employee profile: {user_info['email']}")
             if existing_hr:
                 db.delete(existing_hr)
     

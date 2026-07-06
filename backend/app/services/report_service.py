@@ -107,7 +107,9 @@ def generate_report_pdf(headers: list[str], rows: list[list[str]], filename: str
     return response
 
 
-def _apply_employee_filters(query, start_date: date | None, end_date: date | None, department: str | None, search: str | None):
+def _apply_employee_filters(query, start_date: date | None, end_date: date | None, department: str | None, search: str | None, join_role: bool = False):
+    if join_role:
+        query = query.join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
     if department:
         query = query.filter(Employee.department == department)
     if search:
@@ -141,7 +143,7 @@ def get_attendance_summary_report(
     if not end_date:
         end_date = date.today()
         
-    query = db.query(Employee)
+    query = db.query(Employee).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
     query = _apply_employee_filters(query, start_date, end_date, department, search)
     
     total = query.count()
@@ -231,7 +233,7 @@ def get_late_arrival_report(
         Attendance.date >= start_date,
         Attendance.date <= end_date
     )
-    query = _apply_employee_filters(query, start_date, end_date, department, search)
+    query = _apply_employee_filters(query, start_date, end_date, department, search, join_role=True)
     
     records = query.order_by(Attendance.date.desc()).all()
     
@@ -285,7 +287,7 @@ def get_missing_punch_report(
         Attendance.date >= start_date,
         Attendance.date <= end_date
     )
-    query = _apply_employee_filters(query, start_date, end_date, department, search)
+    query = _apply_employee_filters(query, start_date, end_date, department, search, join_role=True)
     
     records = query.order_by(Attendance.date.desc()).all()
     today = date.today()
@@ -357,7 +359,7 @@ def get_leave_usage_report(
         TimeOffRequest.date <= end_date,
         TimeOffRequest.status.in_(["Approved", "Completed"])
     )
-    query = _apply_employee_filters(query, start_date, end_date, department, search)
+    query = _apply_employee_filters(query, start_date, end_date, department, search, join_role=True)
     
     total = query.count()
     if export_all:
@@ -490,7 +492,7 @@ def get_employee_status_report(
     limit: int = 10,
     export_all: bool = False
 ):
-    query = db.query(Employee)
+    query = db.query(Employee).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
     if department:
         query = query.filter(Employee.department == department)
     if status:

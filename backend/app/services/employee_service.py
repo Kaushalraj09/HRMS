@@ -106,7 +106,7 @@ def list_employees(
         Employee.emergency_contact_number.label("emergency_contact_number"),
         Employee.status.label("status"),
         Employee.created_at.label("created_at")
-    ).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id)
+    ).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
 
     if exclude_hr:
         emp_q = emp_q.filter(func.lower(Role.name) != "hr")
