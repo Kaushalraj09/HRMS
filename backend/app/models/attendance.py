@@ -5,10 +5,13 @@ from app.core.database import Base
 
 class Attendance(Base):
     __tablename__ = "attendance"
+    __table_args__ = (
+        UniqueConstraint("employee_id", "date", name="uq_attendance_employee_date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    date = Column(Date, nullable=False, server_default=func.current_date())
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, server_default=func.current_date(), index=True)
     
     scheduled_start = Column(Time, nullable=True)
     scheduled_end = Column(Time, nullable=True)
@@ -98,8 +101,8 @@ class AttendanceRegularizationRequest(Base):
     __tablename__ = "attendance_regularization_requests"
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    attendance_date = Column(Date, nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    attendance_date = Column(Date, nullable=False, index=True)
     requested_punch_in = Column(Time, nullable=True)
     requested_punch_out = Column(Time, nullable=True)
     reason_type = Column(String(50), nullable=False)

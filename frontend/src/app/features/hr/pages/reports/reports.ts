@@ -214,4 +214,13 @@ export class HRReportsComponent implements OnInit {
     const mins = minutes % 60;
     return `${hrs}h ${mins}m`;
   }
+
+  formatStatusText(status: string): string {
+    if (!status) return '';
+    return status.replace(/_/g, ' ')
+                 .toLowerCase()
+                 .split(' ')
+                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                 .join(' ');
+  }
 }

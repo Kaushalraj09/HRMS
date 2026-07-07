@@ -40,3 +40,29 @@ class User(Base):
     @property
     def profileImage(self) -> Optional[str]:
         return self.profile_image
+
+    @property
+    def linked_employee_id(self) -> Optional[int]:
+        from sqlalchemy.orm import object_session
+        from app.models.employee import Employee
+        session = object_session(self)
+        if session is not None:
+            emp = session.query(Employee).filter(Employee.user_id == self.id).first()
+            return emp.id if emp else None
+        from app.core.database import SessionLocal
+        with SessionLocal() as db:
+            emp = db.query(Employee).filter(Employee.user_id == self.id).first()
+            return emp.id if emp else None
+
+    @property
+    def linked_hr_id(self) -> Optional[int]:
+        from sqlalchemy.orm import object_session
+        from app.models.hr_user import HrUser
+        session = object_session(self)
+        if session is not None:
+            hr = session.query(HrUser).filter(HrUser.user_id == self.id).first()
+            return hr.id if hr else None
+        from app.core.database import SessionLocal
+        with SessionLocal() as db:
+            hr = db.query(HrUser).filter(HrUser.user_id == self.id).first()
+            return hr.id if hr else None

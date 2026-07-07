@@ -3,12 +3,12 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { isAppApiUrl } from './config/api.config';
-import { Phase1StoreService } from './services/phase1-store.service';
+import { AuthService } from './services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const store = inject(Phase1StoreService);
+  const auth = inject(AuthService);
   const router = inject(Router);
-  const token = store.getToken();
+  const token = auth.getToken();
 
   // Only attach the Authorization header if calling our local backend
   const isLocalApi = isAppApiUrl(req.url);
@@ -24,7 +24,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && isLocalApi) {
         // Token has expired or is invalid. Clear the session and redirect to login.
-        store.logout();
+        auth.logout();
         router.navigate(['/auth/login']);
       }
       return throwError(() => error);

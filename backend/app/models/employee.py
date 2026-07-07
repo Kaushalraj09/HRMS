@@ -34,7 +34,7 @@ class Employee(Base):
     emergency_contact_name = Column(String(150))
     emergency_contact_number = Column(String(20))
     
-    status = Column(String(20), default="Active") # Active, Inactive
+    status = Column(String(20), default="Active", index=True) # Active, Inactive
     timeoff_balance_hours = Column(Float, default=80.0)
     
     # Relationships

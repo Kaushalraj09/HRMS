@@ -192,6 +192,7 @@ class TodayAttendanceState(BaseModel):
     flags: List[str] = Field(default=[], alias="flags")
     requires_regularization: bool = Field(default=False, alias="requiresRegularization")
     overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+    overtime_extended: bool = Field(default=False, alias="overtimeExtended")
 
     @field_validator("requires_regularization", mode="before")
     @classmethod
@@ -203,6 +204,11 @@ class TodayAttendanceState(BaseModel):
     def coerce_overtime_approved(cls, v):
         return False if v is None else v
 
+    @field_validator("overtime_extended", mode="before")
+    @classmethod
+    def coerce_overtime_extended(cls, v):
+        return False if v is None else v
+
     @computed_field(alias="attendanceStatus")
     @property
     def attendance_status(self) -> str:
@@ -211,7 +217,10 @@ class TodayAttendanceState(BaseModel):
     @computed_field(alias="badgeColor")
     @property
     def badge_color(self) -> str:
-        return "green" if self.status.lower() == "working" else "gray"
+        status_lower = self.status.lower()
+        if status_lower == "overtime working":
+            return "amber"
+        return "green" if status_lower == "working" else "gray"
 
 class AttendanceRecord(BaseModel):
     """Attendance record for list responses."""

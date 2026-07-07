@@ -1,14 +1,17 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Float, Time
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Float, Time, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
 class TimeOffRequest(Base):
     __tablename__ = "timeoff_requests"
+    __table_args__ = (
+        Index("ix_timeoff_employee_date_status", "employee_id", "date", "status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    date = Column(Date, nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
     
     leave_type = Column(String(50), nullable=False) # Full-Day, Half-Day, Hourly
     duration_hours = Column(Float, nullable=False, default=0.0) # E.g., 8.0, 4.0, 2.5

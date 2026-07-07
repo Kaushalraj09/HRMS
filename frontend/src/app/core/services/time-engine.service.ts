@@ -24,17 +24,36 @@ export class TimeEngineService implements OnDestroy {
       const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
       const newState = { ...currentState };
 
-      // 1. Update Shift Elapsed
-      newState.shiftElapsedSeconds = this.calculateShiftElapsed(now);
-
-      // 2. If Working, increment Worked Time
+      // 1. If Working, increment Worked Time
       if (newState.isWorking) {
         newState.totalWorkedSeconds++;
       }
 
-      // 3. Recalculate Remaining Time = (Shift End - Now) - Approved
-      const secondsUntilShiftEnd = this.calculateSecondsUntilShiftEnd(now);
-      newState.remainingSeconds = Math.max(0, secondsUntilShiftEnd - newState.approvedSeconds);
+      // 2. Update Shift Elapsed, Remaining Time, and Shift Total dynamically for Overtime or Standard shift
+      if (newState.overtimeApproved) {
+        const limitHour = newState.overtimeExtended ? 22 : 20;
+        const overtimeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), limitHour, 0, 0);
+        const overtimeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
+        const totalOvertimeSeconds = (limitHour - 18) * 3600;
+
+        newState.shiftTotalSeconds = totalOvertimeSeconds;
+
+        if (now < overtimeStart) {
+          newState.remainingSeconds = totalOvertimeSeconds;
+          newState.shiftElapsedSeconds = 0;
+        } else if (now > overtimeEnd) {
+          newState.remainingSeconds = 0;
+          newState.shiftElapsedSeconds = totalOvertimeSeconds;
+        } else {
+          newState.remainingSeconds = Math.max(0, Math.floor((overtimeEnd.getTime() - now.getTime()) / 1000));
+          newState.shiftElapsedSeconds = Math.floor((now.getTime() - overtimeStart.getTime()) / 1000);
+        }
+      } else {
+        newState.shiftTotalSeconds = 9 * 3600;
+        newState.shiftElapsedSeconds = this.calculateShiftElapsed(now);
+        const secondsUntilShiftEnd = this.calculateSecondsUntilShiftEnd(now);
+        newState.remainingSeconds = Math.max(0, secondsUntilShiftEnd - newState.approvedSeconds);
+      }
 
       this.stateSubject.next(newState);
     });

@@ -83,6 +83,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   punchOutTime: string | null = null;
   isPunchSaving = false;
   punchMessage = '';
+  successMessage = '';
   attendanceStatusLabel = 'Not working';
   overtimeApproved = false;
   overtimeExtended = false;
@@ -1002,7 +1003,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.applyTodayState(state);
         this.wsShiftEndReminderActive = false;
         this.isPunchSaving = false;
+        this.successMessage = "Overtime session started successfully. You can work until 8:00 PM.";
         this.cdr.detectChanges();
+        setTimeout(() => {
+          this.successMessage = '';
+          this.cdr.detectChanges();
+        }, 4000);
       },
       error: (err) => {
         this.isPunchSaving = false;
@@ -1021,7 +1027,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.applyTodayState(state);
         this.wsOvertimeReminderActive = false;
         this.isPunchSaving = false;
+        this.successMessage = "Overtime extended successfully. You can work until 10:00 PM.";
         this.cdr.detectChanges();
+        setTimeout(() => {
+          this.successMessage = '';
+          this.cdr.detectChanges();
+        }, 4000);
       },
       error: (err) => {
         this.isPunchSaving = false;

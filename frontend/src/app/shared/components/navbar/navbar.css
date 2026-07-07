@@ -561,6 +561,18 @@ app-dropdown {
   color: #ef4444;
 }
 
+.notif-icon.shift_end_reminder {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #d97706;
+}
+
+.notif-icon.overtime_reminder {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  color: #ea580c;
+}
+
 .severity-dot {
   position: absolute;
   bottom: -2px;

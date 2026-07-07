@@ -8,6 +8,7 @@ from app.models.login_activity import LoginActivity
 from app.models.notification import Notification
 from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday, BreakPolicy, AttendancePolicy
 from app.models.approval_task import ApprovalTask
+from app.models.dashboard_cache import DashboardCache
 
 __all__ = [
     "Attendance",
@@ -32,5 +33,6 @@ __all__ = [
     "BreakPolicy",
     "AttendancePolicy",
     "ApprovalTask",
+    "DashboardCache",
 ]
 

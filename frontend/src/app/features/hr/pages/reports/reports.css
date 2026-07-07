@@ -268,31 +268,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: capitalize;
 }
 
 .badge-success {
-  background-color: hsl(150, 60%, 92%);
-  color: hsl(150, 75%, 25%);
+  background-color: #eff3f8;
+  color: #4a5568;
 }
 
 .badge-warning {
-  background-color: hsl(35, 80%, 93%);
-  color: hsl(35, 85%, 30%);
+  background-color: #fef3c7;
+  color: #b45309;
 }
 
 .badge-danger {
-  background-color: hsl(0, 75%, 94%);
-  color: hsl(0, 75%, 35%);
+  background-color: #eff3f8;
+  color: #4a5568;
 }
 
 .badge-info {
-  background-color: hsl(190, 70%, 93%);
-  color: hsl(190, 75%, 28%);
+  background-color: #e0f2fe;
+  color: #0369a1;
 }
 
 /* Alignment utilities */

@@ -97,18 +97,26 @@
                                                 <stop offset="55%" stop-color="#c2185b" />
                                                 <stop offset="100%" stop-color="#5b21b6" />
                                             </linearGradient>
+                                            <linearGradient id="overtimeProgressGradient" x1="40" y1="180" x2="180" y2="40"
+                                                gradientUnits="userSpaceOnUse">
+                                                <stop offset="0%" stop-color="#f59e0b" />
+                                                <stop offset="50%" stop-color="#d97706" />
+                                                <stop offset="100%" stop-color="#b45309" />
+                                            </linearGradient>
                                         </defs>
                                         <g transform="rotate(-90 110 110)">
                                             <circle class="ring-arc ring-arc--track" cx="110" cy="110" r="104"
                                                 fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
                                                 stroke-dasharray="100" stroke-dashoffset="0" />
-                                            <circle class="ring-arc ring-arc--progress" cx="110" cy="110" r="104"
+                                            <circle class="ring-arc ring-arc--progress"
+                                                [class.ring-arc--overtime-progress]="overtimeApproved" cx="110" cy="110" r="104"
                                                 fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
                                                 stroke-dasharray="100" [attr.stroke-dashoffset]="progressDashOffset" />
                                         </g>
                                     </svg>
                                     <button type="button" class="inner-circle"
-                                        [class.inner-circle--out-action]="isPunchedIn"
+                                        [class.inner-circle--out-action]="isPunchedIn && !overtimeApproved"
+                                        [class.inner-circle--overtime-out-action]="isPunchedIn && overtimeApproved"
                                         [class.inner-circle--in-action]="!isPunchedIn"
                                         [class.inner-circle--disabled]="isPunchDisabled" [disabled]="isPunchDisabled"
                                         (click)="togglePunch()">
@@ -122,8 +130,9 @@
                             </div>
                             <div class="attendance-live">
                                 <div class="attendance-live__status" [title]="attendanceStatusLabel"
-                                    [class.attendance-live__status--working]="isPunchedIn">
-                                    {{ attendanceStatusLabel }}
+                                    [class.attendance-live__status--working]="isPunchedIn && !overtimeApproved"
+                                    [class.attendance-live__status--overtime]="isPunchedIn && overtimeApproved">
+                                    {{ overtimeApproved ? 'Overtime Working' : attendanceStatusLabel }}
                                 </div>
                                 <div class="attendance-live__location"
                                     *ngIf="punchInTime && (punchOutAddress || punchInAddress)">
@@ -132,7 +141,7 @@
                                 </div>
                                 <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
                                 <div class="attendance-live__meta">
-                                    <span>Shift elapsed: {{ shiftElapsedDisplay }}</span>
+                                    <span>{{ overtimeApproved ? 'Overtime elapsed' : 'Shift elapsed' }}: {{ shiftElapsedDisplay }}</span>
                                     <span>Worked: {{ totalWorkedTodayDisplay }}</span>
                                 </div>
                             </div>
@@ -151,7 +160,7 @@
                                 </div>
                                 <div class="stat-box">
                                     <h2>{{ remainingHoursDisplay }}</h2>
-                                    <p>Remaining Time</p>
+                                    <p>{{ overtimeApproved ? 'Overtime Left' : 'Remaining Time' }}</p>
                                 </div>
                                 <div class="stat-box">
                                     <h2>{{ requestedTimeDisplay }}</h2>
@@ -466,4 +475,10 @@
             </button>
         </div>
     </div>
+</div>
+
+<!-- Floating Success Toast Notification -->
+<div class="save-toast" *ngIf="successMessage">
+    <i class="fas fa-check-circle"></i>
+    <span>{{ successMessage }}</span>
 </div>

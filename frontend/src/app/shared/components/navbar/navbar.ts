@@ -435,7 +435,13 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
       return 'fas fa-cog';
     }
     if (t === 'ATTENDANCE_AUTO_CHECKOUT') {
-      return 'fas fa-history';
+      return 'fas fa-sign-out-alt';
+    }
+    if (t === 'SHIFT_END_REMINDER') {
+      return 'fas fa-hourglass-end';
+    }
+    if (t === 'OVERTIME_REMINDER') {
+      return 'fas fa-exclamation-circle';
     }
     if (t === 'TIMEOFF_EXPIRED') {
       return 'fas fa-calendar-times';

@@ -9,7 +9,7 @@ class ApprovalTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     request_type = Column(String(30), nullable=False) # timeoff, regularization
     request_id = Column(Integer, nullable=False)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
     assigned_role = Column(String(20), nullable=False, default="hr")
     status = Column(String(20), nullable=False, default="pending") # pending, approved, rejected, cancelled
     priority = Column(String(20), nullable=False, default="normal")

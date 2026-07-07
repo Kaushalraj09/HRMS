@@ -126,6 +126,12 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     db.commit()
     db.refresh(new_request)
     
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
+    
     # Create unified ApprovalTask
     try:
         from app.services.approval_service import create_approval_task
@@ -237,6 +243,12 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     db.add(log)
     db.commit()
     db.refresh(req)
+    
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
     
     # Dispatch LeaveApproved or LeaveRejected domain event
     try:
@@ -382,6 +394,12 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
+    
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
 
     # Dispatch LeaveApproved domain event
     try:

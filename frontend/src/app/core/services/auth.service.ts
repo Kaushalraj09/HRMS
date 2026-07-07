@@ -4,7 +4,6 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 import { LoginRequest, LoginResponse, SessionUser, UserRole, ForgotPasswordPayload, ResetPasswordPayload, StandardResponse } from '../models/auth.model';
 import { buildApiUrl } from '../config/api.config';
-import { Phase1StoreService } from './phase1-store.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,12 +13,22 @@ export class AuthService {
   readonly currentUser$: Observable<SessionUser | null>;
 
   private readonly apiUrl = buildApiUrl('/auth');
+  
+  private readonly tokenKey = 'aivan_hrms_phase1_token_v1';
+  private readonly userKey = 'aivan_hrms_phase1_user_v1';
+  private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
 
   constructor(
-    private readonly http: HttpClient,
-    private readonly store: Phase1StoreService
+    private readonly http: HttpClient
   ) {
-    this.currentUserSubject = new BehaviorSubject<SessionUser | null>(this.store.getCurrentUser());
+    let initialUser: SessionUser | null = null;
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem(this.userKey);
+      if (stored) {
+        try { initialUser = JSON.parse(stored); } catch (e) {}
+      }
+    }
+    this.currentUserSubject = new BehaviorSubject<SessionUser | null>(initialUser);
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
 
@@ -33,31 +42,72 @@ export class AuthService {
         if (response.me && response.me.role) {
           response.me.role = response.me.role.toLowerCase() as UserRole;
         }
-        this.store.saveBackendSession(response);
+        this.saveSession(response);
         this.currentUserSubject.next(response.me || null);
       })
     );
   }
 
+  saveSession(response: LoginResponse): void {
+    if (typeof localStorage !== 'undefined') {
+      if (response.accessToken) {
+        localStorage.setItem(this.tokenKey, response.accessToken);
+      }
+      if (response.me) {
+        localStorage.setItem(this.userKey, JSON.stringify(response.me));
+        localStorage.setItem(this.sessionKey, String(response.me.id));
+      }
+    }
+  }
+
   logout(): void {
-    this.store.logout();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(this.tokenKey);
+      localStorage.removeItem(this.userKey);
+      localStorage.removeItem(this.sessionKey);
+    }
     this.currentUserSubject.next(null);
   }
 
   isLoggedIn(): boolean {
-    return this.store.isLoggedIn();
+    if (typeof localStorage !== 'undefined') {
+      return !!localStorage.getItem(this.tokenKey);
+    }
+    return false;
+  }
+
+  getToken(): string | null {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(this.tokenKey);
+    }
+    return null;
   }
 
   getCurrentUser(): SessionUser | null {
-    const latestUser = this.store.getCurrentUser();
-    if (latestUser?.id !== this.currentUserSubject.value?.id) {
-      this.currentUserSubject.next(latestUser);
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem(this.userKey);
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          if (user?.id !== this.currentUserSubject.value?.id) {
+            this.currentUserSubject.next(user);
+          }
+          return user;
+        } catch (e) {}
+      }
     }
-    return latestUser;
+    return null;
   }
 
   getLandingRoute(role: UserRole): string {
-    return this.store.getLandingRoute(role);
+    const roleLower = role?.toLowerCase();
+    if (roleLower === 'admin') {
+      return '/master';
+    } else if (roleLower === 'hr') {
+      return '/hr';
+    } else {
+      return '/employee';
+    }
   }
 
   getDisplayName(): string {
@@ -69,7 +119,7 @@ export class AuthService {
     if (user) {
       user.profileImage = imageUrl;
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('aivan_hrms_phase1_user_v1', JSON.stringify(user));
+        localStorage.setItem(this.userKey, JSON.stringify(user));
       }
       this.currentUserSubject.next(user);
     }

@@ -275,6 +275,11 @@ def punch_in(
     
     db.commit()
     db.refresh(attendance)
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
     
     log_audit_trail_sync(db, "PUNCH_IN", employee_id, f"Punched in via {work_mode} at {current.time()}")
     
@@ -382,6 +387,11 @@ def punch_out(
     
     db.commit()
     db.refresh(attendance)
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
     
     log_audit_trail_sync(db, "PUNCH_OUT", employee_id, f"Punched out via {work_mode} at {current.time()}")
     

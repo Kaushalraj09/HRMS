@@ -170,7 +170,15 @@
             <td>{{ row.date | date:'mediumDate' }}</td>
             <td>{{ row.punchIn || '--:--' }}</td>
             <td>{{ row.punchOut || '--:--' }}</td>
-            <td><span class="badge badge-danger">{{ row.status }}</span></td>
+            <td>
+              <span class="badge"
+                    [class.badge-success]="row.status === 'PRESENT' || row.status === 'Present'"
+                    [class.badge-warning]="row.status === 'HALF_DAY' || row.status === 'Half Day'"
+                    [class.badge-danger]="row.status === 'ABSENT' || row.status === 'Absent' || row.status === 'MISSED_PUNCH'"
+                    [class.badge-info]="row.status === 'LEAVE' || row.status === 'Leave'">
+                {{ formatStatusText(row.status) }}
+              </span>
+            </td>
             <td class="text-danger font-medium"><i class="fas fa-exclamation-circle mr-1"></i> {{ row.reason }}</td>
           </tr>
         </tbody>
