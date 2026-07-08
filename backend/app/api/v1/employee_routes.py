@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.models.employee import Employee
 from app.core.enums import UserRole
 from app.schemas.employee import EmployeeCreate, EmployeeCredentialsResponse, EmployeeListResponse, EmployeeResponse, EmployeeUpdate
 from app.services import employee_service
@@ -79,6 +80,47 @@ def get_employee(
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
 
+def generate_random_password(length: int = 12) -> str:
+    import secrets
+    import string
+    # Exclude characters that could cause JSON escaping or visual ambiguity
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+@router.get("/{employee_id}/credentials", response_model=EmployeeCredentialsResponse)
+def get_user_credentials(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if employee_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid employee ID")
+
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to view user credentials"
+        )
+
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+
+    return {
+        "employee_id": employee.id,
+        "employee_code": employee.employee_code,
+        "employee_name": f"{employee.first_name} {employee.last_name}",
+        "username": user.email,
+        "email": user.email,
+        "password": None,
+        "temporary_password_hint": "Passwords are encrypted in database. Use Reset Access to generate a new temporary password.",
+        "status": user.status
+    }
+
 @router.post("/{employee_id}/reset-access", response_model=EmployeeCredentialsResponse)
 def reset_user_access(
     employee_id: int,
@@ -104,7 +146,7 @@ def reset_user_access(
     if not user:
         raise HTTPException(status_code=404, detail="User account not found")
 
-    temp_password = "Employee@123"
+    temp_password = generate_random_password()
     user.password_hash = hash_password(temp_password)
     db.commit()
 
@@ -115,7 +157,7 @@ def reset_user_access(
         "username": user.email,
         "email": user.email,
         "password": temp_password,
-        "temporary_password_hint": "Default temporary password. Ask the employee to change it after login.",
+        "temporary_password_hint": "Generated secure temporary password. Ask the employee to change it immediately after login.",
         "status": user.status
     }
 

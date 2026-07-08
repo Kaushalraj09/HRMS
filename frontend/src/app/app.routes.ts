@@ -22,6 +22,8 @@ import { RegularizationComponent } from './features/emp/pages/regularization/reg
 import { RegularizationRequestsComponent } from './features/hr/pages/regularization-requests/regularization-requests';
 import { EmpTimeOffComponent } from './features/emp/pages/time-off/time-off';
 
+import { MasterDataComponent } from './features/master/pages/master-data/master-data';
+
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   {
@@ -45,7 +47,8 @@ export const routes: Routes = [
       { path: 'login-activity', component: LoginActivityList },
       { path: 'login-activity/:id', component: LoginActivityDetail },
       { path: 'regularization-requests', component: RegularizationRequestsComponent },
-      { path: 'reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) }
+      { path: 'reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) },
+
     ]
   },
   { 
@@ -75,7 +78,8 @@ export const routes: Routes = [
       { path: 'login-activity', component: LoginActivityList },
       { path: 'login-activity/:id', component: LoginActivityDetail },
       { path: 'regularization-requests', component: RegularizationRequestsComponent },
-      { path: 'reports', loadComponent: () => import('./features/master/pages/reports/reports').then(m => m.AdminReportsComponent) }
+      { path: 'reports', loadComponent: () => import('./features/master/pages/reports/reports').then(m => m.AdminReportsComponent) },
+      { path: 'master-data', component: MasterDataComponent }
     ]
   },
   { path: 'login-activity', component: LoginActivityRedirect, canActivate: [authGuard] },

@@ -277,7 +277,7 @@ def punch_in(
     db.refresh(attendance)
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
-        invalidate_dashboard_cache(db)
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
     
@@ -389,7 +389,7 @@ def punch_out(
     db.refresh(attendance)
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
-        invalidate_dashboard_cache(db)
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
     

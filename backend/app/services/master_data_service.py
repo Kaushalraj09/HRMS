@@ -8,7 +8,8 @@ def get_bootstrap_data(db: Session) -> Dict[str, Any]:
         "designations": db.query(Designation).filter(Designation.is_active == True).all(),
         "shifts": db.query(Shift).filter(Shift.is_active == True).all(),
         "workLocations": db.query(WorkLocation).filter(WorkLocation.is_active == True).all(),
-        "leaveTypes": db.query(LeaveType).filter(LeaveType.is_active == True).all()
+        "leaveTypes": db.query(LeaveType).filter(LeaveType.is_active == True).all(),
+        "holidays": db.query(Holiday).filter(Holiday.is_active == True).order_by(Holiday.holiday_date).all()
     }
 
 # Department CRUD
@@ -94,6 +95,8 @@ def create_shift(db: Session, payload) -> Shift:
         name=payload.name,
         code=payload.code,
         description=payload.description,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
         is_active=payload.is_active
     )
     db.add(db_shift)
@@ -108,6 +111,8 @@ def update_shift(db: Session, shift_id: int, payload) -> Shift:
     db_shift.name = payload.name
     db_shift.code = payload.code
     db_shift.description = payload.description
+    db_shift.start_time = payload.start_time
+    db_shift.end_time = payload.end_time
     db_shift.is_active = payload.is_active
     db.commit()
     db.refresh(db_shift)

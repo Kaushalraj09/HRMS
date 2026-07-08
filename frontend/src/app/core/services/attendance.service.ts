@@ -5,6 +5,7 @@ import { Observable, map, Subject, switchMap } from 'rxjs';
 import { buildApiUrl, buildWsUrl } from '../config/api.config';
 import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode, PaginatedResponse } from '../models/attendance.model';
 import { formatMinutesToHours } from '../utils/attendance-calc.util';
+import { TimeoffService } from './timeoff.service';
 
 interface BackendAttendanceResponse {
   id: number;
@@ -93,19 +94,22 @@ export interface TimeOffApplyResponse {
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly apiUrl = buildApiUrl('/attendance');
-  private readonly timeoffApiUrl = buildApiUrl('/timeoff');
   private readonly noCacheHeaders = new HttpHeaders({
     'Cache-Control': 'no-cache',
     Pragma: 'no-cache'
   });
   private socket: WebSocket | null = null;
   private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private timeoffUpdateSubject = new Subject<any>();
-  public timeoffUpdate$ = this.timeoffUpdateSubject.asObservable();
+  public get timeoffUpdate$() {
+    return this.timeoffService.timeoffUpdate$;
+  }
   private wsMessageSubject = new Subject<any>();
   public wsMessage$ = this.wsMessageSubject.asObservable();
 
-  constructor(private readonly http: HttpClient) { }
+  constructor(
+    private readonly http: HttpClient,
+    private readonly timeoffService: TimeoffService
+  ) { }
 
   connectWebSocket(userId: string | number) {
     const token = localStorage.getItem('aivan_hrms_phase1_token_v1') || '';
@@ -147,7 +151,7 @@ export class AttendanceService {
         const data = JSON.parse(event.data);
         this.wsMessageSubject.next(data);
         if (data.type === 'TIMEOFF_UPDATE' || data.type === 'TIMEOFF_REQUEST') {
-          this.timeoffUpdateSubject.next(data);
+          this.timeoffService.triggerTimeOffUpdate(data);
         }
       } catch (e) {
         console.error('Error parsing WebSocket message', e);
@@ -342,82 +346,7 @@ export class AttendanceService {
     });
   }
 
-  getMyTimeOffRequests(page: number = 1, pageSize: number = 10): Observable<PaginatedResponse<any>> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString())
-      .set('_ts', Date.now().toString());
-    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/requests/my`, { headers: this.noCacheHeaders, params });
-  }
 
-  requestTimeOff(
-    date: string,
-    leaveType: string,
-    startTime: string | null,
-    endTime: string | null,
-    durationHours: number,
-    reason?: string,
-    attachmentName?: string
-  ): Observable<any> {
-    return this.http.post(`${this.timeoffApiUrl}/requests`, {
-      date,
-      leave_type: leaveType,
-      start_time: startTime,
-      end_time: endTime,
-      duration_hours: durationHours,
-      reason: reason || null,
-      attachment_name: attachmentName || null
-    });
-  }
-
-  cancelTimeOffRequest(requestId: number): Observable<any> {
-    return this.http.put(`${this.timeoffApiUrl}/requests/${requestId}/cancel`, {});
-  }
-
-  /** Inline card: POST /api/v1/timeoff/apply */
-  applyTimeOffInline(payload: {
-    date: string;
-    leave_type: string;
-    start_time: string | null;
-    end_time: string | null;
-  }): Observable<TimeOffApplyResponse> {
-    return this.http.post<TimeOffApplyResponse>(`${this.timeoffApiUrl}/apply`, {
-      date: payload.date,
-      leave_type: payload.leave_type,
-      start_time: payload.start_time,
-      end_time: payload.end_time
-    });
-  }
-
-  getPendingTimeOffRequests(page: number = 1, pageSize: number = 10, search: string = '', leaveType: string = ''): Observable<PaginatedResponse<any>> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString())
-      .set('search', search.trim())
-      .set('leave_type', leaveType)
-      .set('_ts', Date.now().toString());
-    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/pending`, { headers: this.noCacheHeaders, params });
-  }
-
-  getProcessedTimeOffRequests(page: number = 1, pageSize: number = 10, search: string = '', leaveType: string = '', status: string = ''): Observable<PaginatedResponse<any>> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString())
-      .set('search', search.trim())
-      .set('leave_type', leaveType)
-      .set('status', status)
-      .set('_ts', Date.now().toString());
-    return this.http.get<PaginatedResponse<any>>(`${this.timeoffApiUrl}/history`, { headers: this.noCacheHeaders, params });
-  }
-
-  approveTimeOffRequest(requestId: number, action: string, approvedHours?: number, comments?: string): Observable<any> {
-    const decision = action.toLowerCase() === 'approve' ? 'approved' : 'rejected';
-    return this.http.post(`${this.timeoffApiUrl}/requests/${requestId}/decision`, {
-      decision,
-      comment: comments || '',
-      approvedHours: approvedHours ?? null
-    });
-  }
 
   getMyAttendanceSummary(): Observable<EmployeeAttendanceSummaryItem[]> {
     return this.http.get<EmployeeAttendanceSummaryItem[]>(`${this.apiUrl}/me/summary`, this.noCacheOptions());

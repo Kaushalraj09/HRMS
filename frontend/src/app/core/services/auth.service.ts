@@ -102,11 +102,15 @@ export class AuthService {
   getLandingRoute(role: UserRole): string {
     const roleLower = role?.toLowerCase();
     if (roleLower === 'admin') {
-      return '/master';
+      return '/master-dashboard';
     } else if (roleLower === 'hr') {
-      return '/hr';
+      const user = this.getCurrentUser();
+      if (user && user.activeDashboard === 'EMPLOYEE') {
+        return '/emp-dashboard';
+      }
+      return '/hr-dashboard';
     } else {
-      return '/employee';
+      return '/emp-dashboard';
     }
   }
 

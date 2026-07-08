@@ -338,9 +338,31 @@ def get_attendance_report_export(
     current_user: User = Depends(get_current_user)
 ):
     check_role(current_user, ["admin", "hr"])
-    return get_attendance_report(
-        startDate, endDate, department, search, page=1, limit=10000, export=export, db=db, current_user=current_user
+    result = report_service.get_attendance_summary_report(
+        db, startDate, endDate, department, search, page=1, limit=10000, export_all=True
     )
+    headers = [
+        "Employee Code", "Employee Name", "Department", "Present Days",
+        "Absent Days", "Half Days", "Leave Days", "Total Wk Hrs", "Total Ot Hrs"
+    ]
+    rows = [
+        [
+            row["employeeCode"],
+            row["employeeName"],
+            row["department"] or "",
+            str(row["presentDays"]),
+            str(row["absentDays"]),
+            str(row["halfDays"]),
+            str(row["leaveDays"]),
+            f"{row['totalWorkingMinutes'] / 60:.1f}",
+            f"{row['totalOvertimeMinutes'] / 60:.1f}"
+        ]
+        for row in result["data"]
+    ]
+    if export == "pdf":
+        return report_service.generate_report_pdf(headers, rows, f"attendance_summary_{date.today().isoformat()}.pdf")
+    return report_service.generate_report_csv(headers, rows, f"attendance_summary_{date.today().isoformat()}.csv")
+
 
 
 @router.get("/timeoff")

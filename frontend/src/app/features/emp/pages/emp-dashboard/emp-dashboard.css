@@ -1,4 +1,4 @@
-/* Layout Styling */
+
 .Emp_dashboard {
   display: flex;
   flex-direction: column;
@@ -57,11 +57,6 @@
   align-items: center;
 }
 
-/* .card:hover { 
-  transform: translateY(-3px);
-  transition: 0.2s;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-} */
 .card-header {
   padding: 12px 16px;
   font-weight: 600;
@@ -110,18 +105,6 @@
   color: #1e293b;
 }
 
-.header-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.shift-info {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
-}
-
 .status-buttons {
   display: flex;
   gap: 15px;
@@ -154,7 +137,6 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* Office (Work) active state */
 .status-btn.work.active {
   background-color: #eff6ff;
   border-color: #3b82f6;
@@ -162,7 +144,6 @@
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 }
 
-/* Remote (Break) active state */
 .status-btn.break.active {
   background-color: #fef2f2;
   border-color: #ef4444;
@@ -202,7 +183,6 @@
   position: relative;
 }
 
-/* Circular dial: segmented outer ring + solid center (reference UI) */
 .punch-dial {
   position: relative;
   width: 220px;
@@ -256,7 +236,6 @@
     background 0.3s ease;
 }
 
-/* Punched in → next action is Punch Out (coral / salmon — matches reference) */
 .inner-circle--out-action {
   background: #ff6b6b;
   box-shadow:
@@ -271,7 +250,6 @@
     0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
-/* Not punched in → next action is Punch In */
 .inner-circle--in-action {
   background: #22c55e;
   box-shadow:
@@ -327,20 +305,6 @@
   font-size: 13px;
   text-align: center;
   font-weight: 600;
-}
-
-.attendance-live__punch-time {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 8px;
-  background: #f1f5f9;
-  padding: 4px 12px;
-  border-radius: 20px;
-}
-
-.attendance-live__punch-time strong {
-  color: #1e293b;
-  font-weight: 700;
 }
 
 .attendance-live {
@@ -418,12 +382,6 @@
   flex-wrap: wrap;
 }
 
-.attendance-live__meta--secondary {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .request_time_off {
   display: flex;
   flex-direction: column;
@@ -447,41 +405,6 @@
   color: #64748b;
   margin: 0 0 10px;
   line-height: 1.45;
-}
-
-.timeoff-inline__preview {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 12px;
-}
-
-.timeoff-inline__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.timeoff-inline .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.timeoff-inline .form-group label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.timeoff-inline .form-control {
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #1e293b;
-  background: #fff;
 }
 
 .timeoff-inline__submit {
@@ -548,7 +471,6 @@
   box-shadow: 0 6px 15px rgba(225, 29, 72, 0.4);
 }
 
-/* calender */
 .calendar_body {
   display: grid;
   gap: 20px;
@@ -603,7 +525,6 @@
   text-align: center;
 }
 
-/* Timeline Styling */
 .timeline-container {
   position: relative;
 }
@@ -743,7 +664,6 @@
   background-color: #f1f5f9 !important;
 }
 
-/* Today's Date Highlight */
 ::ng-deep .cal-month-view .cal-day-cell.cal-today {
   background-color: transparent !important;
 }
@@ -794,8 +714,6 @@
   color: #cbd5e1 !important;
 }
 
-
-/* toal sheet */
 .time_sheet {
   display: grid;
   gap: 20px;
@@ -809,7 +727,6 @@
   padding: 15px;
   padding-right: 20px;
 }
-
 
 .no-data {
   padding: 40px;
@@ -878,7 +795,6 @@
   opacity: 0.5;
 }
 
-
 .status-badge {
   display: inline-block;
   padding: 4px 12px;
@@ -916,7 +832,6 @@
   background: #f1f5f9;
   color: #64748b;
 }
-
 
 .attendance_summary {
   display: grid;
@@ -983,7 +898,6 @@
   color: #111827;
   font-weight: 700;
 }
-
 
 .latest_news {
   padding: 15px 20px;
@@ -1089,7 +1003,6 @@
   font-size: 14px;
 }
 
-/* Schedule Modal Styles */
 .header-left {
   display: flex;
   flex-direction: column;
@@ -1291,7 +1204,6 @@ textarea.form-control {
   margin-top: 2px;
 }
 
-/* Location Tracking Styles */
 .location-fetching {
     display: flex;
     align-items: center;
@@ -1375,52 +1287,11 @@ textarea.form-control {
   }
 }
 
-/* ─── Punch Photo Strip ──────────────────────────────────────── */
-.punch-photos {
-  display: flex;
-  gap: 12px;
-  padding: 0 20px 20px;
-  flex-wrap: wrap;
-}
-
-.punch-photo-card {
-  flex: 1;
-  min-width: 120px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.punch-photo-label {
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #166534;
-  background: #dcfce7;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  letter-spacing: 0.3px;
-}
-
 .punch-photo-label.checkout {
   color: #7c3aed;
   background: #ede9fe;
 }
 
-.punch-photo-img {
-  width: 100%;
-  max-height: 130px;
-  object-fit: cover;
-  display: block;
-}
-
-/* ─── Camera Capture Modal ───────────────────────────────────── */
 .camera-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1503,38 +1374,6 @@ textarea.form-control {
   background: #ffffff;
 }
 
-/* Previous check-in photo row (shown during punch-out) */
-.prev-photo-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.prev-photo-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-}
-
-.prev-photo-thumb {
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid #334155;
-  margin-left: auto;
-}
-
-/* Live video wrapper */
 .video-wrapper {
   position: relative;
   width: 100%;
@@ -1669,44 +1508,6 @@ textarea.form-control {
   font-weight: 700;
 }
 
-/* Captured preview */
-.preview-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.captured-preview {
-  width: 100%;
-  display: block;
-  border-radius: 14px;
-  border: 3px solid #22c55e;
-}
-
-.capture-success-badge {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(22,101,52,0.9);
-  color: #fff;
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.capture-success-badge i {
-  color: #86efac;
-}
-
-/* Modal footer */
 .camera-modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -1732,106 +1533,9 @@ textarea.form-control {
   border: 1px solid #cbd5e1;
 }
 
-/* ─── Punch Locations Strip ────────────────────────────────────── */
-.punch-locations {
-  display: flex;
-  gap: 12px;
-  padding: 0 20px 20px;
-  flex-wrap: wrap;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.punch-location-card {
-  flex: 1;
-  min-width: 150px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.punch-location-label {
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #166534;
-  background: #dcfce7;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-
 .punch-location-label.checkout {
   color: #7c3aed;
   background: #ede9fe;
-}
-
-.punch-location-addr {
-  padding: 12px;
-  font-size: 12px;
-  color: #475569;
-  line-height: 1.45;
-  font-weight: 550;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.punch-location-addr i {
-  color: #ef4444;
-  margin-top: 2px;
-  font-size: 13px;
-}
-
-/* ─── Geolocation Verification Modal ────────────────────────────── */
-.location-verification-card {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  box-sizing: border-box;
-}
-
-.radar-container {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.radar-pulse {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: rgba(37, 99, 235, 0.2);
-  border-radius: 50%;
-  animation: radarPulse 2s infinite ease-out;
-}
-
-.radar-icon {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 24px;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
-  z-index: 2;
 }
 
 @keyframes radarPulse {
@@ -1845,99 +1549,12 @@ textarea.form-control {
   }
 }
 
-.location-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-
 .location-status-badge.success {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-.location-details {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.address-box {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 14px;
-  box-sizing: border-box;
-}
-
-.address-box label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  letter-spacing: 0.5px;
-}
-
-.address-box .address-text {
-  font-size: 13px;
-  color: #f1f5f9;
-  line-height: 1.5;
-  margin: 0;
-  font-weight: 500;
-}
-
-.address-box .address-text.loading {
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.coords-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.coord-box {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.coord-box .label {
-  font-size: 10px;
-  color: #64748b;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.coord-box .value {
-  font-size: 13px;
-  color: #e2e8f0;
-  font-weight: 600;
-  font-family: Consolas, monospace;
-}
-
-/* View-Only Banner Styling */
 .view-only-banner {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
@@ -1968,7 +1585,6 @@ textarea.form-control {
   }
 }
 
-/* Captured Location Verification Section in Modal */
 .modal-location-section {
   width: 100%;
   display: flex;
@@ -2073,7 +1689,6 @@ textarea.form-control {
   color: #d97706;
 }
 
-/* Reminder Banners (Shift End / Overtime Limit) */
 .reminder-banner-card {
   display: flex;
   align-items: center;

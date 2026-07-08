@@ -12,6 +12,12 @@ def _employee_query(db: Session):
         .join(Role, User.role_id == Role.id)
     )
 
+def generate_random_password(length: int = 12) -> str:
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
 def create_employee(db: Session, obj_in: EmployeeCreate):
     # 1. Check if the email is already registered in the users table
     existing_user = db.query(User).filter(User.email.ilike(obj_in.official_email)).first()
@@ -27,7 +33,7 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     # Note: We use the official_email as the login email
     new_user = User(
         email=obj_in.official_email,
-        password_hash=hash_password("Employee@123"), # Default password
+        password_hash=hash_password(generate_random_password()), # Default secure random password
         display_name=f"{obj_in.first_name} {obj_in.last_name}",
         role_id=emp_role.id,
         status="Active"

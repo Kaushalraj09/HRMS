@@ -11,6 +11,7 @@ import { CalendarEvent } from 'calendar-utils';
 import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
 import {
@@ -171,6 +172,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly empsidebarService: EmpSidebarService,
     private readonly router: Router,
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
     private readonly timeEngine: TimeEngineService,
     private readonly cdr: ChangeDetectorRef
@@ -707,7 +709,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
 
     this.subscriptions.add(
-      this.attendanceService
+      this.timeoffService
         .requestTimeOff(
           this.timeOffDate,
           leaveTypeBackend,
@@ -851,7 +853,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.subscriptions.add(
       forkJoin({
         timesheets: this.attendanceService.getMyTimesheets(),
-        timeoffs: this.attendanceService.getMyTimeOffRequests()
+        timeoffs: this.timeoffService.getMyTimeOffRequests()
       }).subscribe(({ timesheets, timeoffs }) => {
         const todayIso = this.toIsoDate(new Date());
         
@@ -1000,6 +1002,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.punchMessage = '';
     this.attendanceService.continueWorking().subscribe({
       next: (state) => {
+        // IMPORTANT: update the TimeEngine FIRST so its 1s tick doesn't
+        // overwrite the new overtimeApproved=true state after 1 second.
+        this.timeEngine.updateState(state);
         this.applyTodayState(state);
         this.wsShiftEndReminderActive = false;
         this.isPunchSaving = false;
@@ -1024,6 +1029,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.punchMessage = '';
     this.attendanceService.extendOvertime().subscribe({
       next: (state) => {
+        // IMPORTANT: update the TimeEngine FIRST so its 1s tick doesn't
+        // overwrite the new overtimeExtended=true state after 1 second.
+        this.timeEngine.updateState(state);
         this.applyTodayState(state);
         this.wsOvertimeReminderActive = false;
         this.isPunchSaving = false;

@@ -5,6 +5,7 @@ import { forkJoin, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { AttendanceService } from '../../../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../../../core/services/timeoff.service';
 import {
   SHIFT_TOTAL_HOURS,
   TimeSlotOption,
@@ -43,6 +44,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -290,7 +292,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     const durationBackend = this.requestedHours;
 
     const requests$ = datesToSubmit.map(dStr => 
-      this.attendanceService.requestTimeOff(
+      this.timeoffService.requestTimeOff(
         dStr,
         backendLeaveType,
         startTimeBackend,

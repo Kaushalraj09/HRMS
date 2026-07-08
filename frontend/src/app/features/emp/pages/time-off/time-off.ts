@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeOffModalComponent } from '../emp-dashboard/modals/time-off-modal/time-off-modal';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
@@ -41,6 +42,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
     private readonly cdr: ChangeDetectorRef,
     private readonly timeEngine: TimeEngineService
@@ -62,7 +64,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
 
     // WebSocket updates
     this.subscriptions.add(
-      this.attendanceService.timeoffUpdate$.subscribe(() => {
+      this.timeoffService.timeoffUpdate$.subscribe(() => {
         this.loadRequests();
         this.loadBalances();
       })
@@ -74,7 +76,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   }
 
   loadRequests(): void {
-    this.attendanceService.getMyTimeOffRequests(this.page, this.pageSize).subscribe({
+    this.timeoffService.getMyTimeOffRequests(this.page, this.pageSize).subscribe({
       next: (res) => {
         this.requests = res.items;
         this.totalItems = res.totalItems;
@@ -93,7 +95,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.attendanceService.getMyTimeOffRequests(1, 1000).subscribe({
+    this.timeoffService.getMyTimeOffRequests(1, 1000).subscribe({
       next: (res) => {
         let requested = 0;
         for (const req of res.items) {
@@ -150,7 +152,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   cancelRequest(requestId: number): void {
     if (confirm('Are you sure you want to cancel this time off request?')) {
       this.isCancelling = true;
-      this.attendanceService.cancelTimeOffRequest(requestId).subscribe({
+      this.timeoffService.cancelTimeOffRequest(requestId).subscribe({
         next: () => {
           this.isCancelling = false;
           this.closeDetailsModal();

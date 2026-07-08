@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, time
 from typing import Optional, List
 
 class DepartmentBase(BaseModel):
@@ -36,6 +36,8 @@ class ShiftBase(BaseModel):
     name: str = Field(..., max_length=100)
     code: str = Field(..., max_length=30)
     description: Optional[str] = Field(None, max_length=255)
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
     is_active: bool = True
 
 class ShiftCreate(ShiftBase):
@@ -43,6 +45,8 @@ class ShiftCreate(ShiftBase):
 
 class ShiftResponse(ShiftBase):
     id: int
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
 
     class Config:
         from_attributes = True
@@ -101,6 +105,7 @@ class MasterDataBootstrapResponse(BaseModel):
     shifts: List[ShiftResponse]
     workLocations: List[WorkLocationResponse] = Field(..., alias="workLocations")
     leaveTypes: List[LeaveTypeResponse] = Field(..., alias="leaveTypes")
+    holidays: List[HolidayResponse] = []
 
     class Config:
         populate_by_name = True

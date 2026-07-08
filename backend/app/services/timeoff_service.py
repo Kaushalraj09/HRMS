@@ -128,7 +128,7 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
-        invalidate_dashboard_cache(db)
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
     
@@ -246,7 +246,7 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
-        invalidate_dashboard_cache(db)
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
     
@@ -397,7 +397,7 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
-        invalidate_dashboard_cache(db)
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
 

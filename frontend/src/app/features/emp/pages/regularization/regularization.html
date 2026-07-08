@@ -13,49 +13,53 @@
       <h2>Submit Correction Request</h2>
       
       <form [formGroup]="regularizationForm" (ngSubmit)="onSubmit()">
-        <!-- Date Selector -->
-        <div class="form-group">
-          <label for="attendanceDate">Attendance Date *</label>
-          <input type="date" id="attendanceDate" formControlName="attendanceDate" class="form-input">
-          <div *ngIf="regularizationForm.get('attendanceDate')?.touched && regularizationForm.get('attendanceDate')?.errors" class="validation-error">
-            Attendance date is required.
-          </div>
-        </div>
-
-        <!-- Punch Times -->
-        <div class="form-row">
+        <div class="form-grid">
+          <!-- Date Selector -->
           <div class="form-group">
-            <label for="requestedPunchIn">Requested Punch In</label>
-            <input type="time" id="requestedPunchIn" formControlName="requestedPunchIn" class="form-input">
+            <label for="attendanceDate">Attendance Date *</label>
+            <input type="date" id="attendanceDate" formControlName="attendanceDate" class="form-input">
+            <div *ngIf="regularizationForm.get('attendanceDate')?.touched && regularizationForm.get('attendanceDate')?.errors" class="validation-error">
+              Attendance date is required.
+            </div>
           </div>
+
+          <!-- Reason Type Dropdown -->
           <div class="form-group">
-            <label for="requestedPunchOut">Requested Punch Out</label>
-            <input type="time" id="requestedPunchOut" formControlName="requestedPunchOut" class="form-input">
+            <label for="reasonType">Reason Type *</label>
+            <app-custom-select
+              [options]="reasonTypeOptions"
+              placeholder="Select a reason type"
+              formControlName="reasonType"
+              inputId="reasonType"
+            ></app-custom-select>
+            <div *ngIf="regularizationForm.get('reasonType')?.touched && regularizationForm.get('reasonType')?.errors" class="validation-error">
+              Please select a reason type.
+            </div>
           </div>
-        </div>
-        <p class="helper-text">Provide at least a requested punch-in time or punch-out time.</p>
 
-        <!-- Reason Type Dropdown -->
-        <div class="form-group">
-          <label for="reasonType">Reason Type *</label>
-          <app-custom-select
-            [options]="reasonTypeOptions"
-            placeholder="Select a reason type"
-            formControlName="reasonType"
-            inputId="reasonType"
-          ></app-custom-select>
-          <div *ngIf="regularizationForm.get('reasonType')?.touched && regularizationForm.get('reasonType')?.errors" class="validation-error">
-            Please select a reason type.
+          <!-- Punch Times -->
+          <div class="grid-col-2">
+            <div class="form-row" style="margin-bottom: 6px;">
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="requestedPunchIn">Requested Punch In</label>
+                <input type="time" id="requestedPunchIn" formControlName="requestedPunchIn" class="form-input">
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="requestedPunchOut">Requested Punch Out</label>
+                <input type="time" id="requestedPunchOut" formControlName="requestedPunchOut" class="form-input">
+              </div>
+            </div>
+            <p class="helper-text" style="margin: 0 0 12px 0;">Provide at least a requested punch-in time or punch-out time.</p>
           </div>
-        </div>
 
-        <!-- Explanation Textarea -->
-        <div class="form-group">
-          <label for="reasonText">Detailed Explanation *</label>
-          <textarea id="reasonText" formControlName="reasonText" class="form-input text-area" rows="4" placeholder="Explain the reason for this correction (min 10 characters)..."></textarea>
-          <div *ngIf="regularizationForm.get('reasonText')?.touched && regularizationForm.get('reasonText')?.errors" class="validation-error">
-            <span *ngIf="regularizationForm.get('reasonText')?.errors?.['required']">Explanation is required.</span>
-            <span *ngIf="regularizationForm.get('reasonText')?.errors?.['minlength']">Explanation must be at least 10 characters long.</span>
+          <!-- Explanation Textarea -->
+          <div class="form-group grid-col-2">
+            <label for="reasonText">Detailed Explanation *</label>
+            <textarea id="reasonText" formControlName="reasonText" class="form-input text-area" rows="3" placeholder="Explain the reason for this correction (min 10 characters)..."></textarea>
+            <div *ngIf="regularizationForm.get('reasonText')?.touched && regularizationForm.get('reasonText')?.errors" class="validation-error">
+              <span *ngIf="regularizationForm.get('reasonText')?.errors?.['required']">Explanation is required.</span>
+              <span *ngIf="regularizationForm.get('reasonText')?.errors?.['minlength']">Explanation must be at least 10 characters long.</span>
+            </div>
           </div>
         </div>
 
@@ -68,8 +72,8 @@
         </div>
 
         <!-- Submit Buttons -->
-        <div class="form-actions">
-          <button type="submit" [disabled]="isSubmitting" class="btn btn-primary">
+        <div class="form-actions" style="display: flex; justify-content: flex-end;">
+          <button type="submit" [disabled]="isSubmitting" class="btn btn-primary" style="width: auto; min-width: 200px;">
             <span *ngIf="isSubmitting"><i class="fas fa-spinner fa-spin"></i> Submitting...</span>
             <span *ngIf="!isSubmitting">Submit Request</span>
           </button>

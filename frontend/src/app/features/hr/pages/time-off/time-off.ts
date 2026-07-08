@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 
@@ -51,6 +52,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -64,7 +66,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
 
     // WebSocket updates
     this.subscriptions.add(
-      this.attendanceService.timeoffUpdate$.subscribe(() => {
+      this.timeoffService.timeoffUpdate$.subscribe(() => {
         this.loadPendingRequests();
         this.loadProcessedRequests();
       })
@@ -113,7 +115,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   }
 
   loadPendingRequests(): void {
-    this.attendanceService.getPendingTimeOffRequests(
+    this.timeoffService.getPendingTimeOffRequests(
       this.pendingPage,
       this.pageSize,
       this.searchTerm,
@@ -128,7 +130,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   }
 
   loadProcessedRequests(): void {
-    this.attendanceService.getProcessedTimeOffRequests(
+    this.timeoffService.getProcessedTimeOffRequests(
       this.historyPage,
       this.pageSize,
       this.searchTerm,
@@ -150,7 +152,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
       approvedHours = req?.duration_hours;
     }
 
-    this.attendanceService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
+    this.timeoffService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
       next: () => {
         this.loadPendingRequests();
         this.loadProcessedRequests();

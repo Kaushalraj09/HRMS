@@ -14,6 +14,7 @@ import { DashboardService } from '../../../../core/services/dashboard.service';
 import { AdminDashboardData } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { RegularizationService } from '../../../../core/services/regularization.service';
 
 
@@ -58,6 +59,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
     private readonly dashboardService: DashboardService,
     private readonly authService: AuthService,
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly regularizationService: RegularizationService,
     private readonly cdr: ChangeDetectorRef
   ) {
@@ -108,7 +110,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
 
     // WebSocket updates
     this.sub.add(
-      this.attendanceService.timeoffUpdate$.subscribe(() => {
+      this.timeoffService.timeoffUpdate$.subscribe(() => {
         this.loadPendingRequests();
         this.loadProcessedRequests();
         this.loadPendingRegularizations();
@@ -169,14 +171,14 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   loadPendingRequests() {
-    this.attendanceService.getPendingTimeOffRequests(1, 100).subscribe(res => {
+    this.timeoffService.getPendingTimeOffRequests(1, 100).subscribe(res => {
       this.pendingRequests = res.items || [];
       this.cdr.detectChanges();
     });
   }
 
   loadProcessedRequests() {
-    this.attendanceService.getProcessedTimeOffRequests(1, 100).subscribe(res => {
+    this.timeoffService.getProcessedTimeOffRequests(1, 100).subscribe(res => {
       this.processedRequests = res.items || [];
       this.cdr.detectChanges();
     });
@@ -189,7 +191,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
       approvedHours = req?.duration_hours;
     }
     
-    this.attendanceService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
+    this.timeoffService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
       next: () => {
         alert(`Request ${action.toLowerCase()}d successfully`);
         this.loadPendingRequests();

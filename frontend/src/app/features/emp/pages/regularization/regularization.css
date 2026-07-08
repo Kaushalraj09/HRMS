@@ -41,15 +41,37 @@
 
 /* Layout split */
 .regularization-layout {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .regularization-layout {
+/* Request Panel Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 24px;
+  row-gap: 16px;
+  margin-bottom: 16px;
+}
+
+.grid-col-2 {
+  grid-column: span 2;
+}
+
+.grid-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
     grid-template-columns: 1fr;
+    row-gap: 14px;
+  }
+  .grid-col-2 {
+    grid-column: span 1;
   }
 }
 
@@ -94,8 +116,8 @@
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: row;
   gap: 16px;
 }
 

@@ -46,7 +46,8 @@ export class MasterSidebar implements OnInit {
       groupName: 'Access Management',
       items: [
         { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
-        { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' }
+        { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' },
+        { label: 'Master Data Config', icon: 'fas fa-cogs', route: '/master-dashboard/master-data' }
       ]
     },
     {

@@ -1,0 +1,404 @@
+<div class="app-layout">
+  <!-- Sidebar -->
+  <app-master-sidebar></app-master-sidebar>
+
+  <!-- Main Content -->
+  <div class="main-content-wrapper">
+    <app-navbar></app-navbar>
+
+    <div class="content-body animate-fade-in">
+      <!-- Page Title -->
+      <div class="page-header">
+        <h1 id="page-title">Master Data Configuration</h1>
+        <p class="subtitle">Manage departments, designations, work shifts, locations, leave parameters, and holidays</p>
+      </div>
+
+      <!-- Navigation tabs -->
+      <div class="config-tabs">
+        <button class="config-tab-btn" [class.active]="activeTab === 'departments'" (click)="setActiveTab('departments')">
+          <i class="fas fa-building"></i> Departments
+        </button>
+        <button class="config-tab-btn" [class.active]="activeTab === 'designations'" (click)="setActiveTab('designations')">
+          <i class="fas fa-id-badge"></i> Designations
+        </button>
+        <button class="config-tab-btn" [class.active]="activeTab === 'shifts'" (click)="setActiveTab('shifts')">
+          <i class="fas fa-clock"></i> Shifts
+        </button>
+        <button class="config-tab-btn" [class.active]="activeTab === 'locations'" (click)="setActiveTab('locations')">
+          <i class="fas fa-map-marker-alt"></i> Locations
+        </button>
+        <button class="config-tab-btn" [class.active]="activeTab === 'leaves'" (click)="setActiveTab('leaves')">
+          <i class="fas fa-plane-departure"></i> Leave Types
+        </button>
+        <button class="config-tab-btn" [class.active]="activeTab === 'holidays'" (click)="setActiveTab('holidays')">
+          <i class="fas fa-calendar-alt"></i> Holidays
+        </button>
+      </div>
+
+      <!-- Search & Add Panel -->
+      <div class="search-add-panel">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            placeholder="Search records in active list..." 
+            class="premium-input search-input"
+          />
+        </div>
+        <button class="btn-primary" (click)="openAddModal()">
+          <i class="fas fa-plus"></i> Add {{ activeTab === 'locations' ? 'Location' : (activeTab === 'leaves' ? 'Leave Type' : activeTab.slice(0, -1) | titlecase) }}
+        </button>
+      </div>
+
+      <!-- Loader -->
+      <div class="loader-overlay" *ngIf="isDataLoading">
+        <div class="loader"></div>
+        <p>Updating configuration data...</p>
+      </div>
+
+      <!-- Active view card -->
+      <div class="glass-card table-card mt-4" *ngIf="!isDataLoading">
+        <!-- 1. Departments -->
+        <div class="table-responsive" *ngIf="activeTab === 'departments'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredDepartments" class="table-row-hover">
+                <td><span class="font-bold">{{ item.code || '-' }}</span></td>
+                <td>{{ item.name }}</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredDepartments.length === 0">
+                <td colspan="4" class="empty-state">No departments found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. Designations -->
+        <div class="table-responsive" *ngIf="activeTab === 'designations'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredDesignations" class="table-row-hover">
+                <td><span class="font-bold">{{ item.code || '-' }}</span></td>
+                <td>{{ item.name }}</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredDesignations.length === 0">
+                <td colspan="4" class="empty-state">No designations found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. Shifts -->
+        <div class="table-responsive" *ngIf="activeTab === 'shifts'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Shift Timings</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredShifts" class="table-row-hover">
+                <td><span class="font-bold">{{ item.name }}</span></td>
+                <td>{{ item.start_time }} - {{ item.end_time }}</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredShifts.length === 0">
+                <td colspan="4" class="empty-state">No shifts found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4. Locations -->
+        <div class="table-responsive" *ngIf="activeTab === 'locations'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredLocations" class="table-row-hover">
+                <td><span class="font-bold">{{ item.name }}</span></td>
+                <td>{{ item.address || '-' }}</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredLocations.length === 0">
+                <td colspan="4" class="empty-state">No work locations found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 5. Leave Types -->
+        <div class="table-responsive" *ngIf="activeTab === 'leaves'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Leave Type Name</th>
+                <th>Max Days Allowable</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredLeaves" class="table-row-hover">
+                <td><span class="badge-type">{{ item.code }}</span></td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.max_days || 'No limit' }} days</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredLeaves.length === 0">
+                <td colspan="5" class="empty-state">No leave types found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 6. Holidays -->
+        <div class="table-responsive" *ngIf="activeTab === 'holidays'">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Holiday Name</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredHolidays" class="table-row-hover">
+                <td><span class="font-bold">{{ item.name }}</span></td>
+                <td>{{ item.date | date:'longDate' }}</td>
+                <td>
+                  <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
+                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredHolidays.length === 0">
+                <td colspan="4" class="empty-state">No holidays found matching the filter criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-overlay animate-fade-in" *ngIf="isModalOpen">
+  <div class="modal-card animate-slide-up">
+    <div class="modal-header">
+      <h3>
+        <i class="fas" [class.fa-plus-circle]="modalMode === 'add'" [class.fa-edit]="modalMode === 'edit'"></i>
+        {{ modalMode === 'add' ? 'Add New' : 'Edit' }} {{ activeTab === 'locations' ? 'Location' : (activeTab === 'leaves' ? 'Leave Type' : activeTab.slice(0, -1) | titlecase) }}
+      </h3>
+      <button class="btn-close" (click)="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <form (submit)="submitForm()">
+      <div class="modal-body">
+        
+        <!-- Standard fields for Dept, Desig, Location, Leave, Holiday -->
+        <div class="form-group" *ngIf="activeTab !== 'holidays'">
+          <label for="modal-name">Name <span class="required">*</span></label>
+          <input 
+            id="modal-name"
+            type="text" 
+            [(ngModel)]="formModel.name" 
+            name="name" 
+            class="premium-input" 
+            placeholder="Enter name..."
+            required
+          />
+        </div>
+
+        <!-- Code field for Dept, Desig, Leave -->
+        <div class="form-group mt-4" *ngIf="activeTab === 'departments' || activeTab === 'designations' || activeTab === 'leaves'">
+          <label for="modal-code">Code</label>
+          <input 
+            id="modal-code"
+            type="text" 
+            [(ngModel)]="formModel.code" 
+            name="code" 
+            class="premium-input" 
+            placeholder="Enter unique code..."
+          />
+        </div>
+
+        <!-- Shift details -->
+        <div class="form-group" *ngIf="activeTab === 'shifts'">
+          <label for="modal-shift-name">Shift Name <span class="required">*</span></label>
+          <input 
+            id="modal-shift-name"
+            type="text" 
+            [(ngModel)]="formModel.name" 
+            name="name" 
+            class="premium-input" 
+            placeholder="e.g. Day Shift, Night Shift"
+            required
+          />
+        </div>
+
+        <div class="shift-times-grid mt-4" *ngIf="activeTab === 'shifts'">
+          <div class="form-group">
+            <label for="modal-start-time">Start Time</label>
+            <input 
+              id="modal-start-time"
+              type="text" 
+              [(ngModel)]="formModel.start_time" 
+              name="start_time" 
+              class="premium-input" 
+              placeholder="e.g. 09:00"
+            />
+          </div>
+          <div class="form-group">
+            <label for="modal-end-time">End Time</label>
+            <input 
+              id="modal-end-time"
+              type="text" 
+              [(ngModel)]="formModel.end_time" 
+              name="end_time" 
+              class="premium-input" 
+              placeholder="e.g. 18:00"
+            />
+          </div>
+        </div>
+
+        <!-- Location details -->
+        <div class="form-group mt-4" *ngIf="activeTab === 'locations'">
+          <label for="modal-address">Address</label>
+          <input 
+            id="modal-address"
+            type="text" 
+            [(ngModel)]="formModel.address" 
+            name="address" 
+            class="premium-input" 
+            placeholder="Enter full physical address..."
+          />
+        </div>
+
+        <!-- Leave details -->
+        <div class="form-group mt-4" *ngIf="activeTab === 'leaves'">
+          <label for="modal-max-days">Max Days allowable</label>
+          <input 
+            id="modal-max-days"
+            type="number" 
+            [(ngModel)]="formModel.max_days" 
+            name="max_days" 
+            class="premium-input" 
+            placeholder="e.g. 12"
+          />
+        </div>
+
+        <!-- Holiday details -->
+        <div class="form-group" *ngIf="activeTab === 'holidays'">
+          <label for="modal-holiday-name">Holiday Description <span class="required">*</span></label>
+          <input 
+            id="modal-holiday-name"
+            type="text" 
+            [(ngModel)]="formModel.name" 
+            name="name" 
+            class="premium-input" 
+            placeholder="e.g. Independence Day"
+            required
+          />
+        </div>
+
+        <div class="form-group mt-4" *ngIf="activeTab === 'holidays'">
+          <label for="modal-date">Date <span class="required">*</span></label>
+          <input 
+            id="modal-date"
+            type="date" 
+            [(ngModel)]="formModel.date" 
+            name="date" 
+            class="premium-input" 
+            required
+          />
+        </div>
+
+        <!-- Active check field -->
+        <div class="form-group-checkbox mt-4">
+          <input 
+            id="modal-active"
+            type="checkbox" 
+            [(ngModel)]="formModel.is_active" 
+            name="is_active" 
+            class="premium-checkbox"
+          />
+          <label for="modal-active" class="checkbox-label">Record Active</label>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </div>
+    </form>
+  </div>
+</div>
