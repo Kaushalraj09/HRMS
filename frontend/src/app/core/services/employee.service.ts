@@ -106,11 +106,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.getEmployeeById request:', normalizedId);
-
     return this.http.get<BackendEmployee>(`${this.apiUrl}/${normalizedId}`).pipe(
       map(row => {
-        console.log('EmployeeService.getEmployeeById response:', row);
         if (!row || row.id == null) {
           throw new Error('Employee detail response was empty or invalid.');
         }
@@ -134,11 +131,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.getEmployeeCredentials request:', normalizedId);
-
     return this.http.get<BackendEmployeeCredentials>(`${this.apiUrl}/${normalizedId}/credentials`).pipe(
       map(row => {
-        console.log('EmployeeService.getEmployeeCredentials response:', row);
         if (!row || row.employee_id == null) {
           throw new Error('Credentials response was empty or invalid.');
         }
@@ -179,11 +173,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.updateEmployee request:', normalizedId, payload);
-
     return this.http.put<BackendEmployee>(`${this.apiUrl}/${normalizedId}`, this.toBackendPayload(payload)).pipe(
       map(row => {
-        console.log('EmployeeService.updateEmployee response:', row);
         return { success: true, message: 'Employee updated successfully' };
       }),
       catchError(error => {
@@ -198,11 +189,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.deleteEmployee request:', normalizedId);
-
     return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${normalizedId}`).pipe(
       map(row => {
-        console.log('EmployeeService.deleteEmployee response:', row);
         return row;
       }),
       catchError(error => {

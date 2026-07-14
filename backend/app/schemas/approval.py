@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional, List, Literal
 
@@ -7,8 +7,7 @@ class ApprovalDecisionRequest(BaseModel):
     comment: Optional[str] = None
     approved_hours: Optional[float] = Field(None, alias="approvedHours")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class ApprovalItemResponse(BaseModel):
     id: int
@@ -20,9 +19,10 @@ class ApprovalItemResponse(BaseModel):
     submitted_at: datetime = Field(..., alias="submittedAt")
     priority: str
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 class ApprovalCounts(BaseModel):
     timeoff: int
@@ -47,6 +47,7 @@ class ApprovalTaskResponse(BaseModel):
     decision_comment: Optional[str] = Field(None, alias="decisionComment")
     created_at: datetime = Field(..., alias="createdAt")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )

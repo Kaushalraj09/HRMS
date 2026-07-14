@@ -229,7 +229,6 @@ export class HrDashboard implements OnInit {
   }
 
   openProfile() {
-    console.log('Opening profile');
   }
   
   projects = [

@@ -138,7 +138,6 @@ export class MasterDashboard implements OnInit, OnDestroy {
     this.searchTerm = term || '';
   }
   openProfile() {
-    console.log('Opening profile');
   }
 
   get fullDetails() {

@@ -85,7 +85,6 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   get personalInfo() { return this.form.get('personalInfo') as FormGroup; }
 
   ngOnInit(): void {
-    console.log('EmployeeEditModal: Initializing for ID:', this.employeeId);
     const employeeId = String(this.employeeId ?? '').trim();
     if (!employeeId) {
       console.warn('EmployeeEditModal: No employeeId provided');
@@ -107,14 +106,12 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
     this.subscription = this.employeeService.getEmployeeById(employeeId)
       .pipe(
         finalize(() => {
-          console.log('EmployeeEditModal: Load finished for ID:', employeeId);
           this.isLoading = false;
           this.cdr.markForCheck();
         })
       )
       .subscribe({
         next: (detail) => {
-          console.log('EmployeeEditModal: Data received:', detail);
           if (detail && detail.employee) {
             this.employeeDetail = detail;
             try {
@@ -162,7 +159,6 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    console.log('EmployeeEditModal: Component being destroyed for ID:', this.employeeId);
     if (this.subscription) {
       this.subscription.unsubscribe();
     }

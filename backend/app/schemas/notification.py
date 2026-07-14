@@ -1,4 +1,4 @@
-from pydantic import BaseModel, computed_field, model_validator
+from pydantic import BaseModel, computed_field, model_validator, ConfigDict
 from datetime import datetime
 from typing import Optional, Any, Dict
 
@@ -25,8 +25,7 @@ class NotificationEmployee(BaseModel):
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationBase(BaseModel):
     user_id: int
@@ -52,8 +51,7 @@ class NotificationResponse(NotificationBase):
     updated_at: Optional[datetime] = None
     employee: Optional[NotificationEmployee] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationUnreadCount(BaseModel):
     unread_count: int

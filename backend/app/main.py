@@ -21,10 +21,42 @@ from app.api.v1 import (
     approval_routes,
 )
 
+from contextlib import asynccontextmanager
 from app.core.websocket_manager import manager
 from app.services.scheduler_service import start_scheduler, shutdown_scheduler
 
-app = FastAPI(title=settings.PROJECT_NAME)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.domain.notifications.subscriber import register_all_listeners
+    register_all_listeners()
+
+    if settings.AUTO_CREATE_TABLES:
+        # Run Alembic migrations programmatically to set up/upgrade the database schema
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+
+    if settings.AUTO_SEED_ROLES or settings.AUTO_SEED_DEMO_DATA:
+        db = SessionLocal()
+        try:
+            if settings.AUTO_SEED_ROLES:
+                seed_roles(db)
+                seed_master_data(db)
+            if settings.AUTO_SEED_DEMO_DATA:
+                seed_users(db)
+        finally:
+            db.close()
+
+    if settings.ENABLE_SCHEDULER:
+        start_scheduler()
+
+    yield
+
+    if settings.ENABLE_SCHEDULER:
+        shutdown_scheduler()
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 
 @app.websocket("/ws/{user_id}")
@@ -56,36 +88,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
 
-@app.on_event("startup")
-def startup():
-    from app.domain.notifications.subscriber import register_all_listeners
-    register_all_listeners()
 
-    if settings.AUTO_CREATE_TABLES:
-        # Run Alembic migrations programmatically to set up/upgrade the database schema
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-
-    if settings.AUTO_SEED_ROLES or settings.AUTO_SEED_DEMO_DATA:
-        db = SessionLocal()
-        try:
-            if settings.AUTO_SEED_ROLES:
-                seed_roles(db)
-                seed_master_data(db)
-            if settings.AUTO_SEED_DEMO_DATA:
-                seed_users(db)
-        finally:
-            db.close()
-
-    if settings.ENABLE_SCHEDULER:
-        start_scheduler()
-
-@app.on_event("shutdown")
-def shutdown():
-    if settings.ENABLE_SCHEDULER:
-        shutdown_scheduler()
 
 app.add_middleware(
     CORSMiddleware,

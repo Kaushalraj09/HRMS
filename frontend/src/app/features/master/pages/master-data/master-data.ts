@@ -2,9 +2,6 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { Navbar } from '../../../../shared/components/navbar/navbar';
-import { MasterSidebar } from '../../components/master-sidebar/master-sidebar';
-import { MasterSidebarService } from '../../components/master-sidebar/master-sidebar.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { 
   Department, 
@@ -18,12 +15,11 @@ import {
 @Component({
   selector: 'app-admin-master-data',
   standalone: true,
-  imports: [CommonModule, FormsModule, Navbar, MasterSidebar],
+  imports: [CommonModule, FormsModule],
   templateUrl: './master-data.html',
   styleUrls: ['./master-data.css']
 })
 export class MasterDataComponent implements OnInit, OnDestroy {
-  isSidebarOpen$!: import('rxjs').Observable<boolean>;
   activeTab: 'departments' | 'designations' | 'shifts' | 'locations' | 'leaves' | 'holidays' = 'departments';
   
   // Data lists
@@ -49,11 +45,9 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
 
   constructor(
-    private readonly sidebarService: MasterSidebarService,
     private readonly masterDataService: MasterDataService,
     private readonly cdr: ChangeDetectorRef
   ) {
-    this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
   }
 
   ngOnInit(): void {

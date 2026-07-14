@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import date, time
 from typing import Optional, List
 
@@ -14,8 +14,7 @@ class DepartmentCreate(DepartmentBase):
 class DepartmentResponse(DepartmentBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DesignationBase(BaseModel):
     name: str = Field(..., max_length=100)
@@ -29,8 +28,7 @@ class DesignationCreate(DesignationBase):
 class DesignationResponse(DesignationBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ShiftBase(BaseModel):
     name: str = Field(..., max_length=100)
@@ -48,8 +46,7 @@ class ShiftResponse(ShiftBase):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WorkLocationBase(BaseModel):
     name: str = Field(..., max_length=150)
@@ -63,8 +60,7 @@ class WorkLocationCreate(WorkLocationBase):
 class WorkLocationResponse(WorkLocationBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LeaveTypeBase(BaseModel):
     name: str = Field(..., max_length=100)
@@ -80,8 +76,7 @@ class LeaveTypeCreate(LeaveTypeBase):
 class LeaveTypeResponse(LeaveTypeBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class HolidayBase(BaseModel):
     holiday_date: date
@@ -96,8 +91,7 @@ class HolidayCreate(HolidayBase):
 class HolidayResponse(HolidayBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MasterDataBootstrapResponse(BaseModel):
     departments: List[DepartmentResponse]
@@ -107,5 +101,4 @@ class MasterDataBootstrapResponse(BaseModel):
     leaveTypes: List[LeaveTypeResponse] = Field(..., alias="leaveTypes")
     holidays: List[HolidayResponse] = []
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)

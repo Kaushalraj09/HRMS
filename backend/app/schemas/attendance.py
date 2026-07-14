@@ -75,11 +75,6 @@ class AttendanceResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat() if v else None,
-            date: lambda v: v.isoformat() if v else None,
-            time: lambda v: v.isoformat() if v else None,
-        }
     )
 
     id: int
@@ -155,10 +150,6 @@ class TodayAttendanceState(BaseModel):
     """Current attendance state for today with working metrics and shift information."""
     model_config = ConfigDict(
         populate_by_name=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat() if v else None,
-            time: lambda v: v.isoformat() if v else None,
-        }
     )
 
     employee_id: Optional[int] = Field(default=None, alias="employeeId")

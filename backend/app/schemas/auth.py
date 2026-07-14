@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
 class LoginRequest(BaseModel):
@@ -16,8 +16,7 @@ class UserSession(BaseModel):
     activeDashboard: Optional[str] = None
     profileImage: Optional[str] = None
 
-    class Config:
-        from_attributes = True # This allows Pydantic to read SQLAlchemy models
+    model_config = ConfigDict(from_attributes=True)
 
 class LoginResponse(BaseModel):
     accessToken: Optional[str] = None

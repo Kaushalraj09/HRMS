@@ -6,6 +6,7 @@ import { buildApiUrl, buildWsUrl } from '../config/api.config';
 import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode, PaginatedResponse } from '../models/attendance.model';
 import { formatMinutesToHours } from '../utils/attendance-calc.util';
 import { TimeoffService } from './timeoff.service';
+import { environment } from '../../../environments/environment';
 
 interface BackendAttendanceResponse {
   id: number;
@@ -137,13 +138,17 @@ export class AttendanceService {
       } catch (e) {}
     }
 
-    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+    if (!environment.production) {
+      console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+    }
 
     const socket = new WebSocket(wsUrl);
     this.socket = socket;
 
     socket.onopen = () => {
-      console.log('WebSocket connection established successfully');
+      if (!environment.production) {
+        console.log('WebSocket connection established successfully');
+      }
     };
 
     socket.onmessage = (event) => {

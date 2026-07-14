@@ -126,13 +126,11 @@ export class Employees implements OnInit {
   }
 
   openEditModal(employee: Employee): void {
-    console.log('Employees: opening edit modal for employee:', employee?.id, employee);
     this.selectedEmployee = employee;
     this.activeModal = 'edit';
   }
 
   openCredentialModal(employee: Employee): void {
-    console.log('Employees: opening credential modal for employee:', employee?.id, employee);
     this.selectedEmployee = employee;
     this.activeModal = 'credential';
   }

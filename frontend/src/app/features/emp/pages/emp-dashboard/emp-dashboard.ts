@@ -223,7 +223,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   openProfile() {
-    console.log('Opening profile');
   }
 
   get punchActionLabel(): string {
