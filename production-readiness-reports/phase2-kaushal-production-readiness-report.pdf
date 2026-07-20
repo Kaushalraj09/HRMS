@@ -1,0 +1,763 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 6 /Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2402 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Phase2-kaushal Production Readiness Report) Tj
+T*
+() Tj
+T*
+(Date: 2026-07-13) Tj
+T*
+() Tj
+T*
+(Branch checked: `Phase2-kaushal`) Tj
+T*
+() Tj
+T*
+(Remote: `origin/Phase2-kaushal`) Tj
+T*
+() Tj
+T*
+(Latest checked commit: `079aaf6 feat: implement comprehensive HRMS core modules including) Tj
+T*
+(attendance, leave, and master data services with full-stack API integration.`) Tj
+T*
+() Tj
+T*
+(1. Branch Status) Tj
+T*
+() Tj
+T*
+(- `Phase2-kaushal` was already checked out locally.) Tj
+T*
+(- `git fetch origin --prune` completed successfully.) Tj
+T*
+(- `git pull --ff-only origin Phase2-kaushal` returned `Already up to date`.) Tj
+T*
+(- `Phase1-kaushal` is already included in `Phase2-kaushal`.) Tj
+T*
+(- Verification command: `git merge-base --is-ancestor origin/Phase1-kaushal HEAD`) Tj
+T*
+(- Result: exit code `0`, which means Phase 1 history is present in Phase 2.) Tj
+T*
+() Tj
+T*
+(2. Phase 1 Coverage Check) Tj
+T*
+() Tj
+T*
+(Phase 1 expected flow from the document:) Tj
+T*
+() Tj
+T*
+(- Admin login) Tj
+T*
+(- Admin dashboard) Tj
+T*
+(- Admin creates HR) Tj
+T*
+(- Admin views HR and employee list) Tj
+T*
+(- HR login) Tj
+T*
+(- HR dashboard) Tj
+T*
+(- HR creates employee with login access) Tj
+T*
+(- HR employee list/detail/edit) Tj
+T*
+(- HR attendance monitoring) Tj
+T*
+(- Employee login) Tj
+T*
+(- Employee dashboard) Tj
+T*
+(- Employee punch in/out) Tj
+T*
+(- Employee attendance history) Tj
+T*
+(- Employee profile) Tj
+T*
+(- Employee change password) Tj
+T*
+() Tj
+T*
+(Implementation status:) Tj
+T*
+() Tj
+T*
+(- Backend routes exist for auth, HR users, employees, attendance, dashboard, profile,) Tj
+T*
+(  notifications, login activity.) Tj
+T*
+(- Frontend routes exist for admin/master dashboard, HR dashboard, employee dashboard,) Tj
+T*
+(  employees, attendance, profile, change password, login activity.) Tj
+T*
+(- Phase 1 code is included in the Phase 2 branch.) Tj
+T*
+(- Functional build and automated tests pass after dependency installation and dependency) Tj
+T*
+(  hardening.) Tj
+T*
+() Tj
+T*
+(Phase 1 verdict:) Tj
+T*
+() Tj
+T*
+(- Phase 1 is functionally present in `Phase2-kaushal`.) Tj
+T*
+(- No extra Phase 1 merge was required.) Tj
+T*
+() Tj
+T*
+(3. Phase 2 Coverage Check) Tj
+T*
+() Tj
+T*
+(Phase 2 expected scope from the document:) Tj
+T*
+() Tj
+T*
+(- Time off module) Tj
+T*
+(- Approval center APIs) Tj
+T*
+(- Attendance regularization workflow) Tj
+T*
+(- Master data CRUD APIs) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 2599 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- Report and export APIs) Tj
+T*
+(- Stronger notification integration) Tj
+T*
+(- Refined login activity and security flow) Tj
+T*
+(- Server-side filtering and pagination) Tj
+T*
+() Tj
+T*
+(Implementation status:) Tj
+T*
+() Tj
+T*
+(- Backend includes `timeoff_routes.py`.) Tj
+T*
+(- Backend includes `approval_routes.py`.) Tj
+T*
+(- Backend includes `regularization_routes.py`.) Tj
+T*
+(- Backend includes `master_data_routes.py`.) Tj
+T*
+(- Backend includes `report_routes.py`.) Tj
+T*
+(- Backend includes notification and login activity routes.) Tj
+T*
+(- Frontend includes time off pages for employee and HR/master usage.) Tj
+T*
+(- Frontend includes regularization pages for employee and HR/master review.) Tj
+T*
+(- Frontend includes master data page.) Tj
+T*
+(- Frontend includes reports pages for HR and master/admin.) Tj
+T*
+(- Frontend includes navbar notification handling and WebSocket wiring.) Tj
+T*
+(- Employee, attendance, time off, and regularization APIs include pagination/filtering in) Tj
+T*
+(  multiple places.) Tj
+T*
+() Tj
+T*
+(Phase 2 verdict:) Tj
+T*
+() Tj
+T*
+(- Phase 2 structure and main modules are implemented.) Tj
+T*
+(- Automated tests pass.) Tj
+T*
+(- Remaining items are release-hardening and final server smoke checks, not missing core module) Tj
+T*
+(  scaffolding.) Tj
+T*
+() Tj
+T*
+(4. Fixes Applied During Audit) Tj
+T*
+() Tj
+T*
+(These fixes were made without changing UI screens:) Tj
+T*
+() Tj
+T*
+(- Added missing backend test dependency: `httpx2==2.5.0` in `backend/requirements.txt`.) Tj
+T*
+(- Updated Angular package ranges in `frontend/package.json` to patched Angular 21 versions.) Tj
+T*
+(- Regenerated `frontend/package-lock.json`.) Tj
+T*
+(- Reduced npm audit result from `32 vulnerabilities, 14 high` to `1 low severity) Tj
+T*
+(  vulnerability`.) Tj
+T*
+() Tj
+T*
+(Files changed:) Tj
+T*
+() Tj
+T*
+(- `backend/requirements.txt`) Tj
+T*
+(- `frontend/package.json`) Tj
+T*
+(- `frontend/package-lock.json`) Tj
+T*
+() Tj
+T*
+(5. Verification Commands And Results) Tj
+T*
+() Tj
+T*
+(Frontend:) Tj
+T*
+() Tj
+T*
+(- Command: `npm run build`) Tj
+T*
+(- Result: passed) Tj
+T*
+(- Output folder: `frontend/dist/frontend`) Tj
+T*
+() Tj
+T*
+(- Command: `npm test -- --watch=false`) Tj
+T*
+(- Result: passed) Tj
+T*
+(- Test result: `16 passed`, `17 tests passed`) Tj
+T*
+() Tj
+T*
+(- Command: `npm audit --audit-level=high`) Tj
+T*
+(- Result: passed for high severity) Tj
+T*
+(- Remaining audit item: `1 low severity vulnerability` in `esbuild`) Tj
+T*
+() Tj
+T*
+(Backend:) Tj
+T*
+() Tj
+T*
+(- Command: `DATABASE_URL='sqlite:////tmp/aivan_hrms_audit.db' JWT_SECRET_KEY='audit-secret') Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2297 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(  python3 -m compileall app`) Tj
+T*
+(- Result: passed) Tj
+T*
+() Tj
+T*
+(- Command: `DATABASE_URL='sqlite:////tmp/aivan_hrms_pytest.db' JWT_SECRET_KEY='audit-secret') Tj
+T*
+(  python -m pytest -q`) Tj
+T*
+(- Result: passed) Tj
+T*
+(- Test result: `40 passed`) Tj
+T*
+() Tj
+T*
+(- Command: `DATABASE_URL='sqlite:////tmp/aivan_hrms_startup.db' JWT_SECRET_KEY='audit-secret') Tj
+T*
+(  APP_ENV='production' AUTO_CREATE_TABLES='false' AUTO_SEED_ROLES='false') Tj
+T*
+(  AUTO_SEED_DEMO_DATA='false' ENABLE_SCHEDULER='false' EXPOSE_RESET_LINK_IN_RESPONSE='false') Tj
+T*
+(  python -c 'from app.main import app; print\(app.title\)'`) Tj
+T*
+(- Result: passed) Tj
+T*
+(- Output: `HRMS API`) Tj
+T*
+() Tj
+T*
+(- Command: `alembic heads`) Tj
+T*
+(- Result: passed) Tj
+T*
+(- Single migration head: `9c76cbfeaf96`) Tj
+T*
+() Tj
+T*
+(6. Remaining Fixes Before Final Production Deployment) Tj
+T*
+() Tj
+T*
+(P1 - Run Alembic migration smoke test on real PostgreSQL) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Local SQLite migration smoke failed because SQLite does not support the `drop_constraint`) Tj
+T*
+(  operation used in one migration.) Tj
+T*
+(- This is a SQLite limitation, not proof that PostgreSQL will fail.) Tj
+T*
+(- Production target is PostgreSQL, so the final check must be done on the real server DB.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- On server/staging PostgreSQL DB, run:) Tj
+T*
+() Tj
+T*
+(```powershell) Tj
+T*
+(cd C:\\apps\\Aivan-HRMS-Portal\\backend) Tj
+T*
+(venv\\Scripts\\activate) Tj
+T*
+(alembic upgrade head) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- Migration completes with no error.) Tj
+T*
+(- `alembic current` shows `9c76cbfeaf96`.) Tj
+T*
+() Tj
+T*
+(P1 - Configure production environment variables on server) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Backend fails fast if `DATABASE_URL` or `JWT_SECRET_KEY` is missing.) Tj
+T*
+(- This is good for production, but server setup must be correct.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- Create backend `.env` on the Windows server with production values.) Tj
+T*
+() Tj
+T*
+(Required values:) Tj
+T*
+() Tj
+T*
+(```env) Tj
+T*
+(APP_ENV=production) Tj
+T*
+(DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DB_NAME) Tj
+T*
+(JWT_SECRET_KEY=use-a-long-random-secret) Tj
+T*
+(JWT_ALGORITHM=HS256) Tj
+T*
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 2425 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(BACKEND_CORS_ORIGINS=http://YOUR_DOMAIN_OR_SERVER_IP) Tj
+T*
+(FRONTEND_URL=http://YOUR_DOMAIN_OR_SERVER_IP) Tj
+T*
+(AUTO_CREATE_TABLES=false) Tj
+T*
+(AUTO_SEED_ROLES=false) Tj
+T*
+(AUTO_SEED_DEMO_DATA=false) Tj
+T*
+(ENABLE_SCHEDULER=false) Tj
+T*
+(EXPOSE_RESET_LINK_IN_RESPONSE=false) Tj
+T*
+(```) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- `uvicorn app.main:app --host 127.0.0.1 --port 8000` starts successfully.) Tj
+T*
+(- `http://127.0.0.1:8000/health` returns status `ok`.) Tj
+T*
+() Tj
+T*
+(P1 - Create or confirm first production admin user) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Production flags should keep demo data disabled.) Tj
+T*
+(- If demo data is disabled on a fresh DB, first real admin user must still exist.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- Either create the first admin through a controlled one-time seed script.) Tj
+T*
+(- Or temporarily seed demo data only in staging, then replace demo credentials before public) Tj
+T*
+(  release.) Tj
+T*
+(- Do not leave default demo credentials active on a public server.) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- A real admin can log in.) Tj
+T*
+(- Demo credentials are removed, disabled, or changed before release.) Tj
+T*
+() Tj
+T*
+(P1 - IIS reverse proxy must support API and WebSocket traffic) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Frontend production API base is `/api/v1`.) Tj
+T*
+(- WebSocket base resolves from current host.) Tj
+T*
+(- This is correct for a same-domain IIS deployment, but IIS must forward both HTTP and) Tj
+T*
+(  WebSocket traffic to FastAPI.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- Serve Angular static files from IIS.) Tj
+T*
+(- Reverse proxy `/api/*` to `http://127.0.0.1:8000/api/*`.) Tj
+T*
+(- Reverse proxy `/ws/*` to `ws://127.0.0.1:8000/ws/*`.) Tj
+T*
+(- Enable WebSocket Protocol in Windows/IIS if notifications are required.) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- Browser can load frontend.) Tj
+T*
+(- Login API works from browser.) Tj
+T*
+(- Notifications/WebSocket connection does not fail in browser dev tools.) Tj
+T*
+() Tj
+T*
+(P2 - Remove or gate production console logs) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Multiple frontend `console.log` debug statements remain in employee services, employee) Tj
+T*
+(  modals, dashboard profile handlers, and WebSocket connect logs.) Tj
+T*
+(- These do not block deployment, but they are not polished for production.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 2265 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(Action:) Tj
+T*
+() Tj
+T*
+(- Replace debug logs with environment-gated logging or remove them.) Tj
+T*
+(- Keep `console.error` only where useful for real error diagnosis.) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- Browser console does not show routine debug logs during normal HR/employee flows.) Tj
+T*
+() Tj
+T*
+(P2 - Clean backend deprecation warnings) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- Tests pass, but warnings exist for Pydantic v2 deprecated class-based `Config`,) Tj
+T*
+(  `json_encoders`, and FastAPI `on_event`.) Tj
+T*
+(- These are not current deploy blockers.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- Move schemas to `ConfigDict`.) Tj
+T*
+(- Replace old `json_encoders` with Pydantic v2 serializers where needed.) Tj
+T*
+(- Replace FastAPI `@app.on_event` startup/shutdown with lifespan handlers.) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- `pytest -q` passes with materially fewer deprecation warnings.) Tj
+T*
+() Tj
+T*
+(P3 - Remaining low severity npm audit item) Tj
+T*
+() Tj
+T*
+(Status:) Tj
+T*
+() Tj
+T*
+(- `npm audit --audit-level=high` passes.) Tj
+T*
+(- `npm audit --audit-level=moderate` also passes for moderate/high.) Tj
+T*
+(- One low severity `esbuild` advisory remains.) Tj
+T*
+(- Advisory applies to development server file access behavior, not the generated production) Tj
+T*
+(  static bundle.) Tj
+T*
+() Tj
+T*
+(Action:) Tj
+T*
+() Tj
+T*
+(- Track and resolve when Angular build chain publishes a compatible patched dependency.) Tj
+T*
+(- Do not use `ng serve` as the production server.) Tj
+T*
+() Tj
+T*
+(Acceptance:) Tj
+T*
+() Tj
+T*
+(- Production uses IIS/static build only.) Tj
+T*
+(- Future dependency update clears `npm audit`.) Tj
+T*
+() Tj
+T*
+(7. Deployment Readiness Verdict) Tj
+T*
+() Tj
+T*
+(Current status:) Tj
+T*
+() Tj
+T*
+(- Code is much closer to production-ready after dependency hardening.) Tj
+T*
+(- Phase 1 code is present in Phase 2.) Tj
+T*
+(- Phase 2 modules are present.) Tj
+T*
+(- Frontend production build passes.) Tj
+T*
+(- Frontend tests pass.) Tj
+T*
+(- Backend tests pass.) Tj
+T*
+(- Backend app imports successfully with production-style flags.) Tj
+T*
+(- High severity npm audit findings are cleared.) Tj
+T*
+() Tj
+T*
+(Release verdict:) Tj
+T*
+() Tj
+T*
+(- Ready for staging deployment.) Tj
+T*
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 15 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 453 >>
+stream
+BT
+/F1 9 Tf
+42 800 Td
+12 TL
+(- Ready for production deployment after the P1 server checks above are completed on the actual) Tj
+T*
+(  Windows/PostgreSQL server.) Tj
+T*
+() Tj
+T*
+(Do not publish publicly until:) Tj
+T*
+() Tj
+T*
+(- PostgreSQL `alembic upgrade head` passes.) Tj
+T*
+(- Real admin login is confirmed.) Tj
+T*
+(- IIS `/api` and `/ws` proxy is confirmed.) Tj
+T*
+(- Demo credentials are not active on public production.) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000147 00000 n 
+0000000274 00000 n 
+0000002728 00000 n 
+0000002855 00000 n 
+0000005506 00000 n 
+0000005633 00000 n 
+0000007982 00000 n 
+0000008110 00000 n 
+0000010588 00000 n 
+0000010717 00000 n 
+0000013035 00000 n 
+0000013164 00000 n 
+0000013669 00000 n 
+trailer
+<< /Size 16 /Root 1 0 R >>
+startxref
+13738
+%%EOF
