@@ -70,7 +70,7 @@ class EmployeeCredentialsResponse(BaseModel):
     employee_name: str
     username: str
     email: EmailStr
-    password: Optional[str] = None
-    temporary_password_hint: str
+    activation_required: bool = True
+    temporary_password_hint: str = "The employee must set a password using the activation email."
     status: str
         

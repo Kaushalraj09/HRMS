@@ -4,6 +4,8 @@ from app.models.user import User, Role
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+import secrets
+
 from app.core.security import hash_password
 
 def _employee_query(db: Session):
@@ -29,7 +31,7 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     # Note: We use the official_email as the login email
     new_user = User(
         email=obj_in.official_email,
-        password_hash=hash_password("Employee@123"), # Default password
+        password_hash=hash_password(secrets.token_urlsafe(32)),
         display_name=f"{obj_in.first_name} {obj_in.last_name}",
         role_id=emp_role.id,
         status="Active"
@@ -47,6 +49,12 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     db.add(new_employee)
     db.commit()
     db.refresh(new_employee)
+    # Send a one-time password setup link; credentials never leave the server.
+    from app.services.auth_service import generate_reset_token
+    from app.services.mail_service import send_reset_email
+    from app.core.config import settings
+    reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
+    send_reset_email(new_user.email, new_user.display_name, reset_link)
     return new_employee
 
 def list_employees(db: Session, skip: int = 0, limit: int = 100):
@@ -134,8 +142,8 @@ def get_employee_credentials(db: Session, employee_id: int):
             "employee_name": hr.full_name,
             "username": user.email,
             "email": user.email,
-            "password": "hr1234" if user.email == "hr@hrms.com" else "Employee@123",
-            "temporary_password_hint": "Default temporary password for HR user.",
+            "activation_required": True,
+            "temporary_password_hint": "Use the password setup email to activate this account.",
             "status": user.status or hr.status or "Active",
         }
         
@@ -147,15 +155,14 @@ def get_employee_credentials(db: Session, employee_id: int):
     if not user:
         return None
 
-    default_password = "emp123" if user.email == "emp@hrms.com" else "Employee@123"
     return {
         "employee_id": employee.id,
         "employee_code": employee.employee_code,
         "employee_name": f"{employee.first_name} {employee.last_name}".strip(),
         "username": user.email,
         "email": user.email,
-        "password": default_password,
-        "temporary_password_hint": "Default temporary password. Ask the employee to change it after first login.",
+        "activation_required": True,
+        "temporary_password_hint": "Use the password setup email to activate this account.",
         "status": user.status or employee.status or "Active",
     }
 

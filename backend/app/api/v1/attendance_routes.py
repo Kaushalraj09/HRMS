@@ -11,6 +11,7 @@ from app.models.employee import Employee
 from app.core.enums import WorkMode
 from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics
 from app.services import attendance_service
+from app.core.access import resolve_attendance_employee_id
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -23,20 +24,14 @@ async def punch_in(
     """
     Punch In for the current employee or specified employee.
     """
-    if request.employee_id:
-        employee = db.query(Employee).filter(Employee.id == request.employee_id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee with ID {request.employee_id} not found"
-            )
-    else:
-        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only employees can punch attendance"
-            )
+    own_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    try:
+        employee_id = resolve_attendance_employee_id(
+            current_user, own_employee.id if own_employee else None, request.employee_id
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
     
     res = attendance_service.punch_in(
         db,
@@ -79,20 +74,14 @@ async def punch_out(
     """
     Punch Out for the current employee or specified employee.
     """
-    if request.employee_id:
-        employee = db.query(Employee).filter(Employee.id == request.employee_id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Employee with ID {request.employee_id} not found"
-            )
-    else:
-        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only employees can punch attendance"
-            )
+    own_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    try:
+        employee_id = resolve_attendance_employee_id(
+            current_user, own_employee.id if own_employee else None, request.employee_id
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
     
     res = attendance_service.punch_out(
         db,
