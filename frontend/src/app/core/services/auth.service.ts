@@ -18,12 +18,17 @@ export class AuthService {
   private readonly userKey = 'aivan_hrms_phase1_user_v1';
   private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
 
+  private get storage(): Storage | null {
+    return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+  }
+
   constructor(
     private readonly http: HttpClient
   ) {
     let initialUser: SessionUser | null = null;
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(this.userKey);
+    const storage = this.storage;
+    if (storage) {
+      const stored = storage.getItem(this.userKey);
       if (stored) {
         try { initialUser = JSON.parse(stored); } catch (e) {}
       }
@@ -49,43 +54,40 @@ export class AuthService {
   }
 
   saveSession(response: LoginResponse): void {
-    if (typeof localStorage !== 'undefined') {
+    const storage = this.storage;
+    if (storage) {
       if (response.accessToken) {
-        localStorage.setItem(this.tokenKey, response.accessToken);
+        storage.setItem(this.tokenKey, response.accessToken);
       }
       if (response.me) {
-        localStorage.setItem(this.userKey, JSON.stringify(response.me));
-        localStorage.setItem(this.sessionKey, String(response.me.id));
+        storage.setItem(this.userKey, JSON.stringify(response.me));
+        storage.setItem(this.sessionKey, String(response.me.id));
       }
     }
   }
 
   logout(): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(this.tokenKey);
-      localStorage.removeItem(this.userKey);
-      localStorage.removeItem(this.sessionKey);
+    const storage = this.storage;
+    if (storage) {
+      storage.removeItem(this.tokenKey);
+      storage.removeItem(this.userKey);
+      storage.removeItem(this.sessionKey);
     }
     this.currentUserSubject.next(null);
   }
 
   isLoggedIn(): boolean {
-    if (typeof localStorage !== 'undefined') {
-      return !!localStorage.getItem(this.tokenKey);
-    }
-    return false;
+    return !!this.storage?.getItem(this.tokenKey);
   }
 
   getToken(): string | null {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(this.tokenKey);
-    }
-    return null;
+    return this.storage?.getItem(this.tokenKey) ?? null;
   }
 
   getCurrentUser(): SessionUser | null {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(this.userKey);
+    const storage = this.storage;
+    if (storage) {
+      const stored = storage.getItem(this.userKey);
       if (stored) {
         try {
           const user = JSON.parse(stored);
@@ -122,9 +124,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (user) {
       user.profileImage = imageUrl;
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.userKey, JSON.stringify(user));
-      }
+      this.storage?.setItem(this.userKey, JSON.stringify(user));
       this.currentUserSubject.next(user);
     }
   }

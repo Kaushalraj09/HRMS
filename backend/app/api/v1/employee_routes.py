@@ -116,8 +116,8 @@ def get_user_credentials(
         "employee_name": f"{employee.first_name} {employee.last_name}",
         "username": user.email,
         "email": user.email,
-        "password": None,
-        "temporary_password_hint": "Passwords are encrypted in database. Use Reset Access to generate a new temporary password.",
+        "activation_required": True,
+        "temporary_password_hint": "Use Reset Access to send a secure password setup email. Passwords are never displayed.",
         "status": user.status
     }
 
@@ -136,8 +136,10 @@ def reset_user_access(
             detail="Only administrators and HR personnel are authorized to reset user access"
         )
 
-    # Trigger password reset and return the temporary credentials
-    from app.core.security import hash_password
+    # Trigger password reset by email. Credentials never leave the server.
+    from app.services.auth_service import generate_reset_token
+    from app.services.mail_service import send_reset_email
+    from app.core.config import settings
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
@@ -146,9 +148,8 @@ def reset_user_access(
     if not user:
         raise HTTPException(status_code=404, detail="User account not found")
 
-    temp_password = generate_random_password()
-    user.password_hash = hash_password(temp_password)
-    db.commit()
+    reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(user)}"
+    send_reset_email(user.email, user.display_name, reset_link)
 
     return {
         "employee_id": employee.id,
@@ -156,8 +157,8 @@ def reset_user_access(
         "employee_name": f"{employee.first_name} {employee.last_name}",
         "username": user.email,
         "email": user.email,
-        "password": temp_password,
-        "temporary_password_hint": "Generated secure temporary password. Ask the employee to change it immediately after login.",
+        "activation_required": True,
+        "temporary_password_hint": "Password setup email sent. No password is displayed or stored in readable form.",
         "status": user.status
     }
 
@@ -235,4 +236,3 @@ def delete_employee(
         raise HTTPException(status_code=500, detail="Failed to delete employee")
 
     return {"success": True, "message": "Employee deleted successfully"}
-

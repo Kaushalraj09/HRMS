@@ -4,6 +4,8 @@ export type LoginStatus = 'Enabled' | 'Disabled';
 export interface Employee {
   id: string;
   userId: string;
+  reportingManagerId?: string | null;
+  reportingManagerName?: string | null;
   employeeCode: string;
   name: string;
   firstName: string;
@@ -36,7 +38,6 @@ export interface PaginatedResult<T> {
 export interface EmployeePayload {
   accountAccess?: {
     loginEmail?: string;
-    temporaryPassword?: string;
     role?: 'employee';
   };
   personalInfo: {
@@ -54,6 +55,7 @@ export interface EmployeePayload {
     workLocation: string;
     shiftType: string;
     doj: string;
+    reportingManagerId?: string | null;
     employeeCode?: string;
   };
   contactInfo: {
@@ -79,7 +81,7 @@ export interface EmployeeCredentials {
   employeeName: string;
   username: string;
   email: string;
-  password: string | null;
+  activationRequired: boolean;
   temporaryPasswordHint: string;
   status: EmployeeStatus;
 }

@@ -88,14 +88,15 @@ def test_punch_in_other_attendance_forbidden(client, db_session):
 
     response = client.post("/api/v1/attendance/punch-in", json=payload)
     assert response.status_code == 403
-    assert "not authorized" in response.json()["detail"].lower()
+    assert "another employee" in response.json()["detail"].lower()
 
-def test_punch_in_other_attendance_by_hr_allowed(client, db_session):
+def test_punch_in_other_attendance_by_hr_forbidden_on_normal_punch_endpoint(client, db_session):
     # Get HR user and employee 2
     user_hr = db_session.query(User).filter(User.email == "hr@example.com").first()
     emp2 = db_session.query(Employee).filter(Employee.employee_code == "EMP002").first()
 
-    # Logged in as HR, trying to punch for Employee 2
+    # Logged in as HR, trying to punch for Employee 2 on the normal punch endpoint.
+    # HR/Admin corrections must go through explicit audited correction workflows.
     app.dependency_overrides[get_current_user] = lambda: user_hr
 
     payload = {
@@ -104,5 +105,5 @@ def test_punch_in_other_attendance_by_hr_allowed(client, db_session):
     }
 
     response = client.post("/api/v1/attendance/punch-in", json=payload)
-    assert response.status_code == 200
-    assert response.json()["employeeId"] == emp2.id
+    assert response.status_code == 403
+    assert "only employees can mark attendance" in response.json()["detail"].lower()

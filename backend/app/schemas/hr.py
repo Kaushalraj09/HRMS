@@ -8,7 +8,6 @@ class HrCreate(BaseModel):
     phone: str
     department: str
     designation: str
-    temporaryPassword: str
     status: str = "Active"
 
 class HrResponse(BaseModel):
@@ -28,4 +27,3 @@ class HrResponse(BaseModel):
 class HrListResponse(BaseModel):
     data: List[HrResponse]
     total: int
-

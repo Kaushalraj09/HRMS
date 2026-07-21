@@ -20,6 +20,5 @@ export interface CreateHrPayload {
   phone: string;
   designation: string;
   department: string;
-  temporaryPassword: string;
   status: HrStatus;
 }

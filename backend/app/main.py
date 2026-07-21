@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app import models
@@ -24,6 +25,8 @@ from app.api.v1 import (
 from contextlib import asynccontextmanager
 from app.core.websocket_manager import manager
 from app.services.scheduler_service import start_scheduler, shutdown_scheduler
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,19 +71,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
         # Validate WebSocket token
         user = get_ws_user(token=token, db=db)
         if not user or user.id != user_id:
-            print(f"WebSocket auth failed: user mismatch or invalid token for user {user_id}")
+            logger.warning("WebSocket auth failed for user_id=%s", user_id)
             await websocket.accept()  # Must accept before closing with code in some runtimes
             await websocket.close(code=4001)
             return
-    except Exception as e:
-        print(f"WebSocket auth exception for user {user_id}: {e}")
+    except Exception:
+        logger.exception("WebSocket auth exception for user_id=%s", user_id)
         await websocket.accept()
         await websocket.close(code=4001)
         return
     finally:
         db.close()
 
-    print(f"WebSocket connection attempt from user {user_id}")
+    logger.info("WebSocket connection established for user_id=%s", user_id)
     await manager.connect(websocket, user_id)
     try:
         while True:

@@ -4,6 +4,12 @@ from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.core.security import hash_password
 from datetime import date
+import os
+import secrets
+
+
+def _demo_password(env_name: str) -> str:
+    return os.getenv(env_name) or secrets.token_urlsafe(24)
 
 def seed_users(db: Session):
     # Get roles
@@ -18,14 +24,14 @@ def seed_users(db: Session):
     demo_users = [
         {
             "email": "admin@hrms.com",
-            "password": "admin123",
+            "password": _demo_password("DEMO_ADMIN_PASSWORD"),
             "display_name": "System Admin",
             "role_id": admin_role.id,
             "profile_type": "admin"
         },
         {
             "email": "hr@hrms.com",
-            "password": "hr1234",
+            "password": _demo_password("DEMO_HR_PASSWORD"),
             "display_name": "HR Manager",
             "role_id": hr_role.id,
             "profile_type": "hr",
@@ -38,7 +44,7 @@ def seed_users(db: Session):
         },
         {
             "email": "emp@hrms.com",
-            "password": "emp123",
+            "password": _demo_password("DEMO_EMPLOYEE_PASSWORD"),
             "display_name": "Kaushal Raj",
             "role_id": emp_role.id,
             "profile_type": "employee",

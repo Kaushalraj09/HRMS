@@ -1,4 +1,7 @@
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+import logging
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -9,6 +12,51 @@ from app.services import auth_service
 from app.services.login_activity_service import log_login_activity
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
+
+_attempts: dict[str, deque[datetime]] = defaultdict(deque)
+_lockouts: dict[str, datetime] = {}
+
+
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "0.0.0.0"
+
+
+def _rate_limit_key(prefix: str, request: Request, email: str) -> str:
+    return f"{prefix}:{_client_ip(request)}:{email.strip().lower()}"
+
+
+def _enforce_rate_limit(key: str, max_attempts: int, window_seconds: int, lockout_seconds: int) -> None:
+    now = datetime.now(timezone.utc)
+    locked_until = _lockouts.get(key)
+    if locked_until and locked_until > now:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Please wait before trying again.",
+        )
+    if locked_until:
+        _lockouts.pop(key, None)
+
+    window_start = now - timedelta(seconds=window_seconds)
+    attempts = _attempts[key]
+    while attempts and attempts[0] < window_start:
+        attempts.popleft()
+    if len(attempts) >= max_attempts:
+        _lockouts[key] = now + timedelta(seconds=lockout_seconds)
+        attempts.clear()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Please wait before trying again.",
+        )
+    attempts.append(now)
+
+
+def _clear_rate_limit(key: str) -> None:
+    _attempts.pop(key, None)
+    _lockouts.pop(key, None)
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
@@ -16,9 +64,11 @@ async def login(
     payload: LoginRequest,
     db: Session = Depends(get_db)
 ):
+    login_key = _rate_limit_key("login", request, payload.email)
+    _enforce_rate_limit(login_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
     result = auth_service.authenticate_user(db, payload)
     
-    ip_address = request.client.host if request.client else "0.0.0.0"
+    ip_address = _client_ip(request)
     user_agent = request.headers.get("user-agent", "Unknown Agent")
     
     if not result:
@@ -39,6 +89,7 @@ async def login(
     
     user_id = result.get("me", {}).get("id")
     if user_id and "accessToken" in result:
+        _clear_rate_limit(login_key)
         await log_login_activity(
             db=db,
             user_id=user_id,
@@ -68,8 +119,8 @@ async def login(
                         "user_agent": user_agent
                     }
                 )
-            except Exception as e:
-                print(f"Failed to create login notification: {e}")
+            except Exception:
+                logger.exception("Failed to create login notification")
         
     return result
 
@@ -85,16 +136,13 @@ def change_password(
     return result
 
 @router.post("/forgot-password", response_model=StandardResponse)
-def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    reset_link = auth_service.forgot_password(db, request)
-    if not reset_link:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Email does not exist"
-        )
+def forgot_password(payload: ForgotPasswordRequest, http_request: Request, db: Session = Depends(get_db)):
+    reset_key = _rate_limit_key("forgot-password", http_request, payload.email)
+    _enforce_rate_limit(reset_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
+    reset_link = auth_service.forgot_password(db, payload)
     if settings.EXPOSE_RESET_LINK_IN_RESPONSE:
         return {"success": True, "message": f"Password reset link generated. Reset Link: {reset_link}"}
-    return {"success": True, "message": "Password reset link generated and sent successfully."}
+    return {"success": True, "message": "If the account exists, a password reset link has been generated and sent."}
 
 @router.post("/reset-password", response_model=StandardResponse)
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
@@ -118,5 +166,4 @@ def get_me(current_user: User = Depends(get_current_user)):
         "linkedHrId": current_user.linked_hr_id,
         "status": current_user.status
     }
-
 

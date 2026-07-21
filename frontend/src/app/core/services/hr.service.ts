@@ -53,7 +53,7 @@ export class HrService {
         const hr = this.mapHr(row);
         return {
           success: true,
-          message: `${hr.fullName} created successfully as HR`,
+          message: `${hr.fullName} created successfully as HR. Password setup email has been sent.`,
           hr
         };
       })

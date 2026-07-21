@@ -18,6 +18,7 @@ class ApprovalItemResponse(BaseModel):
     status: str
     submitted_at: datetime = Field(..., alias="submittedAt")
     priority: str
+    assigned_role: str = Field("hr", alias="assignedRole")
 
     model_config = ConfigDict(
         populate_by_name=True,

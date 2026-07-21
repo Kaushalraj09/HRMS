@@ -8,6 +8,7 @@ class Employee(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    reporting_manager_id = Column(Integer, ForeignKey("employees.id"), nullable=True, index=True)
     employee_code = Column(String(50), unique=True, index=True, nullable=False)
     
     # Basic Info
@@ -39,8 +40,15 @@ class Employee(Base):
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
+    reporting_manager = relationship("Employee", remote_side=[id], foreign_keys=[reporting_manager_id])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    @property
+    def reporting_manager_name(self) -> str | None:
+        if not self.reporting_manager:
+            return None
+        return f"{self.reporting_manager.first_name or ''} {self.reporting_manager.last_name or ''}".strip()
 
 class EmployeeShift(Base):
     __tablename__ = "employee_shifts"

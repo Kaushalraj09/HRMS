@@ -4,25 +4,58 @@ from app.models.employee import Employee
 from app.models.user import User
 from app.services import timeoff_service
 from app.models.attendance import AttendanceRegularizationRequest
+from app.models.timeoff import TimeOffRequest
 from fastapi import HTTPException
 from datetime import datetime
 
 def create_approval_task(db: Session, request_type: str, request_id: int, employee_id: int, submitted_by: int) -> ApprovalTask:
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
     task = ApprovalTask(
         request_type=request_type,
         request_id=request_id,
         employee_id=employee_id,
         status="pending",
         submitted_by=submitted_by,
-        assigned_role="hr"
+        assigned_role="manager" if employee and employee.reporting_manager_id else "hr"
     )
     db.add(task)
     db.commit()
     db.refresh(task)
     return task
 
-def get_pending_tasks(db: Session) -> dict:
-    tasks = db.query(ApprovalTask).filter(ApprovalTask.status == "pending").order_by(ApprovalTask.created_at.desc()).all()
+def _role_name(user: User) -> str:
+    return user.role.name.lower() if user and user.role else ""
+
+
+def _is_assigned_manager(task: ApprovalTask, user: User) -> bool:
+    return bool(
+        task.employee
+        and task.employee.reporting_manager
+        and task.employee.reporting_manager.user_id == user.id
+    )
+
+
+def get_pending_tasks(db: Session, current_user: User) -> dict:
+    query = db.query(ApprovalTask).filter(ApprovalTask.status == "pending")
+    role = _role_name(current_user)
+    if role in {"admin", "hr"}:
+        query = query.filter(ApprovalTask.assigned_role == "hr")
+    else:
+        manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not manager_employee:
+            tasks = []
+        else:
+            query = (
+                query
+                .join(Employee, ApprovalTask.employee_id == Employee.id)
+                .filter(
+                    ApprovalTask.assigned_role == "manager",
+                    Employee.reporting_manager_id == manager_employee.id,
+                )
+            )
+            tasks = query.order_by(ApprovalTask.created_at.desc()).all()
+    if role in {"admin", "hr"}:
+        tasks = query.order_by(ApprovalTask.created_at.desc()).all()
     
     items = []
     for t in tasks:
@@ -35,12 +68,13 @@ def get_pending_tasks(db: Session) -> dict:
             "employeeName": emp_name,
             "status": t.status,
             "submittedAt": t.created_at,
-            "priority": t.priority
+            "priority": t.priority,
+            "assignedRole": t.assigned_role,
         })
         
     # Count totals
-    timeoff_count = db.query(ApprovalTask).filter(ApprovalTask.status == "pending", ApprovalTask.request_type == "timeoff").count()
-    reg_count = db.query(ApprovalTask).filter(ApprovalTask.status == "pending", ApprovalTask.request_type == "regularization").count()
+    timeoff_count = len([task for task in tasks if task.request_type == "timeoff"])
+    reg_count = len([task for task in tasks if task.request_type == "regularization"])
     
     return {
         "items": items,
@@ -75,7 +109,8 @@ def get_history_tasks(db: Session, page: int = 1, limit: int = 10, request_type:
             "employeeName": emp_name,
             "status": t.status,
             "submittedAt": t.created_at,
-            "priority": t.priority
+            "priority": t.priority,
+            "assignedRole": t.assigned_role,
         })
         
     return {
@@ -93,7 +128,33 @@ def decide_task(db: Session, task_id: int, reviewer_id: int, decision: str, comm
         
     if task.status != "pending":
         raise HTTPException(status_code=400, detail="Approval task has already been processed")
-        
+
+    reviewer = db.query(User).filter(User.id == reviewer_id).first()
+    reviewer_role = _role_name(reviewer)
+    if task.assigned_role == "manager":
+        if reviewer_role not in {"admin", "hr"} and not _is_assigned_manager(task, reviewer):
+            raise HTTPException(status_code=403, detail="Only the assigned reporting manager can review this request")
+        task.reviewed_by = reviewer_id
+        task.reviewed_at = datetime.now()
+        task.decision_comment = comment
+        if decision == "approved":
+            task.assigned_role = "hr"
+            if task.request_type == "timeoff":
+                req = db.query(TimeOffRequest).filter(TimeOffRequest.id == task.request_id).first()
+                if req:
+                    req.approval_stage = "HR"
+            elif task.request_type == "regularization":
+                reg_req = db.query(AttendanceRegularizationRequest).filter(AttendanceRegularizationRequest.id == task.request_id).first()
+                if reg_req:
+                    reg_req.manager_decision = "approved"
+                    reg_req.status = "pending_hr"
+            db.commit()
+            db.refresh(task)
+            return task
+        # Manager rejection is final.
+    elif task.assigned_role == "hr" and reviewer_role not in {"admin", "hr"}:
+        raise HTTPException(status_code=403, detail="HR/Admin approval is required for this stage")
+
     task.status = decision
     task.reviewed_by = reviewer_id
     task.reviewed_at = datetime.now()

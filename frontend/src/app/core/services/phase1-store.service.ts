@@ -396,7 +396,7 @@ export class Phase1StoreService {
       employee: employee!,
       managerName: 'Assigned HR Team',
       loginEmail: user?.email ?? employee!.officialEmail,
-      temporaryPasswordHint: 'Temp password set during account creation'
+      temporaryPasswordHint: 'Use the password setup email to activate this account.'
     };
   }
 
@@ -405,7 +405,6 @@ export class Phase1StoreService {
     const employeeId = this.createId('emp');
     const employeeCode = payload.employmentInfo.employeeCode || this.nextEmployeeCode();
     const loginEmail = payload.accountAccess?.loginEmail || payload.contactInfo.officialEmail;
-    const temporaryPassword = payload.accountAccess?.temporaryPassword || 'Employee@123';
 
     const employee: Employee = {
       id: employeeId,
@@ -437,7 +436,7 @@ export class Phase1StoreService {
     const user: UserAccountRecord = {
       id: userId,
       email: loginEmail,
-      password: temporaryPassword,
+      password: this.createId('activation'),
       displayName: employee.name,
       role: 'employee',
       status: 'Active',
@@ -519,7 +518,7 @@ export class Phase1StoreService {
     const user: UserAccountRecord = {
       id: userId,
       email: payload.email,
-      password: payload.temporaryPassword,
+      password: this.createId('activation'),
       displayName: fullName,
       role: 'hr',
       status: payload.status,
@@ -1103,7 +1102,7 @@ export class Phase1StoreService {
         {
           id: adminId,
           email: 'admin@aivan.com',
-          password: 'Admin@123',
+          password: this.createId('activation'),
           displayName: 'Master Admin',
           role: 'admin',
           status: 'Active'
@@ -1111,7 +1110,7 @@ export class Phase1StoreService {
         {
           id: hrUserId,
           email: 'hr@aivan.com',
-          password: 'Hr@12345',
+          password: this.createId('activation'),
           displayName: 'Ananya Sharma',
           role: 'hr',
           status: 'Active',
@@ -1120,7 +1119,7 @@ export class Phase1StoreService {
         {
           id: employeeOneUserId,
           email: 'kaushal@aivan.com',
-          password: 'Employee@123',
+          password: this.createId('activation'),
           displayName: 'Kaushal Raj',
           role: 'employee',
           status: 'Active',
@@ -1129,7 +1128,7 @@ export class Phase1StoreService {
         {
           id: employeeTwoUserId,
           email: 'ananya.employee@aivan.com',
-          password: 'Employee@123',
+          password: this.createId('activation'),
           displayName: 'Ananya Sharma',
           role: 'employee',
           status: 'Active',
@@ -1138,7 +1137,7 @@ export class Phase1StoreService {
         {
           id: employeeThreeUserId,
           email: 'rahul@aivan.com',
-          password: 'Employee@123',
+          password: this.createId('activation'),
           displayName: 'Rahul Verma',
           role: 'employee',
           status: 'Active',

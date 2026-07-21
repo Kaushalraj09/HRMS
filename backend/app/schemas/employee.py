@@ -26,9 +26,10 @@ class EmployeeBase(BaseModel):
     status: str = "Active"
 
 class EmployeeCreate(EmployeeBase):
-    pass
+    reporting_manager_id: Optional[int] = None
 
 class EmployeeUpdate(BaseModel):
+    reporting_manager_id: Optional[int] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     gender: Optional[str] = None
@@ -53,6 +54,8 @@ class EmployeeResponse(EmployeeBase):
     id: int
     user_id: int
     employee_code: str
+    reporting_manager_id: Optional[int] = None
+    reporting_manager_name: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

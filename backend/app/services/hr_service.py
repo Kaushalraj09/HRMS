@@ -5,6 +5,7 @@ from app.models.user import User, Role
 from app.models.hr_user import HrUser
 from app.schemas.hr import HrCreate
 from app.core.security import hash_password
+import secrets
 
 def create_hr(db: Session, obj_in: HrCreate):
     # Support either "HR" or "hr" naming in the roles table.
@@ -20,7 +21,7 @@ def create_hr(db: Session, obj_in: HrCreate):
     # 2. Create the User Login Account
     new_user = User(
         email=obj_in.email,
-        password_hash=hash_password(obj_in.temporaryPassword),
+        password_hash=hash_password(secrets.token_urlsafe(32)),
         display_name=obj_in.fullName,
         role_id=hr_role.id,
         status=obj_in.status
@@ -60,6 +61,12 @@ def create_hr(db: Session, obj_in: HrCreate):
     
     db.commit()
     db.refresh(new_employee)
+    # Send a one-time password setup link; credentials never leave the server.
+    from app.services.auth_service import generate_reset_token
+    from app.services.mail_service import send_reset_email
+    from app.core.config import settings
+    reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
+    send_reset_email(new_user.email, new_user.display_name, reset_link)
     return new_employee
 
 def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", status: str = ""):

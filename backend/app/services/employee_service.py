@@ -100,6 +100,7 @@ def list_employees(
     emp_q = db.query(
         Employee.id.label("id"),
         Employee.user_id.label("user_id"),
+        Employee.reporting_manager_id.label("reporting_manager_id"),
         Employee.employee_code.label("employee_code"),
         Employee.first_name.label("first_name"),
         Employee.last_name.label("last_name"),

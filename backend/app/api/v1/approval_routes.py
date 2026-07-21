@@ -8,17 +8,17 @@ from app.services import approval_service
 
 router = APIRouter(prefix="/approvals", tags=["Approval Center"])
 
-def check_admin_hr(user: User):
-    if not user.role or user.role.name.lower() not in ["admin", "hr"]:
+def check_approval_access(user: User):
+    if not user.role or user.role.name.lower() not in ["admin", "hr", "employee"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. HR or Admin privileges required."
+            detail="Access denied."
         )
 
 @router.get("/pending", response_model=ApprovalQueueResponse)
 def get_pending(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    check_admin_hr(current_user)
-    return approval_service.get_pending_tasks(db)
+    check_approval_access(current_user)
+    return approval_service.get_pending_tasks(db, current_user)
 
 @router.get("/history")
 def get_history(
@@ -29,7 +29,7 @@ def get_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    check_admin_hr(current_user)
+    check_approval_access(current_user)
     return approval_service.get_history_tasks(
         db, page=page, limit=pageSize, request_type=requestType, employee_id=employeeId
     )
@@ -41,7 +41,7 @@ async def decide_approval(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    check_admin_hr(current_user)
+    check_approval_access(current_user)
     
     from app.models.approval_task import ApprovalTask
     task = db.query(ApprovalTask).filter(ApprovalTask.id == approvalTaskId).first()

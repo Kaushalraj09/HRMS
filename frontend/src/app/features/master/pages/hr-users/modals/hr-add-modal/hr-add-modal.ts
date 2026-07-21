@@ -50,7 +50,6 @@ export class HrAddModalComponent {
     this.form = this.fb.group({
       accountAccess: this.fb.group({
         loginEmail: ['', [Validators.required, Validators.email]],
-        temporaryPassword: ['Hr@12345', [Validators.required, Validators.minLength(8)]],
         role: ['hr', Validators.required]
       }),
       personalInfo: this.fb.group({
@@ -104,7 +103,6 @@ export class HrAddModalComponent {
       phone: formValue.contactInfo.mobile,
       designation: formValue.employmentInfo.designation || 'HR',
       department: formValue.employmentInfo.department || 'Human Resources',
-      temporaryPassword: formValue.accountAccess.temporaryPassword || 'Hr@12345',
       status: 'Active'
     };
 

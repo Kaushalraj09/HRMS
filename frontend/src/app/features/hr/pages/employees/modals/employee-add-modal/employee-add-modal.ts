@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { EmployeeService } from '../../../../../../core/services/employee.service';
@@ -21,7 +21,7 @@ function pastDateValidator(control: AbstractControl): ValidationErrors | null {
   templateUrl: './employee-add-modal.html',
   styleUrls: ['./employee-add-modal.css']
 })
-export class EmployeeAddModalComponent {
+export class EmployeeAddModalComponent implements OnInit {
   @Output() closed = new EventEmitter<boolean>();
   
   form: FormGroup;
@@ -37,6 +37,7 @@ export class EmployeeAddModalComponent {
   shiftOptions = [{label: 'General Shift', value: 'General Shift'}, {label: 'Night Shift', value: 'Night Shift'}];
   departmentOptions = [{label: 'Engineering', value: 'Engineering'}, {label: 'Human Resources', value: 'Human Resources'}, {label: 'Finance', value: 'Finance'}];
   roleOptions = [{label: 'Employee', value: 'employee'}];
+  managerOptions: Array<{ label: string; value: string | null }> = [{ label: 'No reporting manager', value: null }];
 
   constructor(
     private fb: FormBuilder,
@@ -46,7 +47,6 @@ export class EmployeeAddModalComponent {
     this.form = this.fb.group({
       accountAccess: this.fb.group({
         loginEmail: ['', [Validators.required, Validators.email]],
-        temporaryPassword: ['Employee@123', [Validators.required, Validators.minLength(8)]],
         role: ['employee', Validators.required]
       }),
       personalInfo: this.fb.group({
@@ -63,7 +63,8 @@ export class EmployeeAddModalComponent {
         designation: [''],
         workLocation: [''],
         shiftType: [''],
-        doj: ['']
+        doj: [''],
+        reportingManagerId: [null]
       }),
       contactInfo: this.fb.group({
         officialEmail: ['', [Validators.required, Validators.email]],
@@ -74,6 +75,26 @@ export class EmployeeAddModalComponent {
         emergencyContactNumber: ['', Validators.pattern('^[0-9]{10}$')]
       })
     });
+  }
+
+  ngOnInit(): void {
+    this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
+      .subscribe({
+        next: (result) => {
+          this.managerOptions = [
+            { label: 'No reporting manager', value: null },
+            ...result.data.map(employee => ({
+              label: `${employee.name} (${employee.employeeCode})`,
+              value: employee.id
+            }))
+          ];
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.managerOptions = [{ label: 'No reporting manager', value: null }];
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   isInvalid(group: string, field: string): boolean {

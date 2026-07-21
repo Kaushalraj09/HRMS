@@ -101,6 +101,10 @@
                 <label for="doj">Date of Joining</label>
                 <input type="date" id="doj" name="doj" formControlName="doj" class="form-input" readonly>
               </div>
+              <div class="form-group">
+                <label for="reportingManagerId">Reporting Manager</label>
+                <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" placeholder="Select Manager"></app-custom-select>
+              </div>
             </div>
           </div>
 

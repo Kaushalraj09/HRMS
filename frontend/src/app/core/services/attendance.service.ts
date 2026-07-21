@@ -113,9 +113,8 @@ export class AttendanceService {
   ) { }
 
   connectWebSocket(userId: string | number) {
-    const token = localStorage.getItem('aivan_hrms_phase1_token_v1') || '';
+    const token = sessionStorage.getItem('aivan_hrms_phase1_token_v1') || '';
     if (!token) {
-      console.warn('Skipping WebSocket connection because no auth token is available.');
       return;
     }
 
@@ -138,18 +137,10 @@ export class AttendanceService {
       } catch (e) {}
     }
 
-    if (!environment.production) {
-      console.log(`Attempting WebSocket connection to: ${wsUrl}`);
-    }
-
     const socket = new WebSocket(wsUrl);
     this.socket = socket;
 
-    socket.onopen = () => {
-      if (!environment.production) {
-        console.log('WebSocket connection established successfully');
-      }
-    };
+    socket.onopen = () => {};
 
     socket.onmessage = (event) => {
       try {

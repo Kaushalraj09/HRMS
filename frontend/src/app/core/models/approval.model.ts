@@ -8,6 +8,7 @@ export interface ApprovalTask {
   details: string;
   submitted_at: string;
   status: 'Pending' | 'Approved' | 'Rejected' | string;
+  assigned_role?: 'manager' | 'hr' | string;
   comment?: string;
   reviewed_by?: number;
   reviewed_at?: string;

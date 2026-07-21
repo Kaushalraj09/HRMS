@@ -41,8 +41,10 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   shiftOptions = [{ label: 'General Shift', value: 'General Shift' }, { label: 'Night Shift', value: 'Night Shift' }];
   departmentOptions = [{ label: 'Engineering', value: 'Engineering' }, { label: 'Human Resources', value: 'Human Resources' }, { label: 'Finance', value: 'Finance' }];
   roleOptions = [{ label: 'Employee', value: 'employee' }];
+  managerOptions: Array<{ label: string; value: string | null }> = [{ label: 'No reporting manager', value: null }];
 
   private subscription?: Subscription;
+  private managerSubscription?: Subscription;
 
   constructor(
     private fb: FormBuilder,
@@ -64,7 +66,8 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
         designation: [''],
         workLocation: [''],
         shiftType: [''],
-        doj: [{ value: '', disabled: true }]
+        doj: [{ value: '', disabled: true }],
+        reportingManagerId: [null]
       }),
       contactInfo: this.fb.group({
         officialEmail: ['', [Validators.required, Validators.email]],
@@ -102,6 +105,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
     this.saveError = '';
+    this.loadManagerOptions(employeeId);
 
     this.subscription = this.employeeService.getEmployeeById(employeeId)
       .pipe(
@@ -130,7 +134,8 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
                   designation: detail.employee.designation || '',
                   workLocation: detail.employee.workLocation || '',
                   shiftType: detail.employee.shiftType || '',
-                  doj: detail.employee.doj || ''
+                  doj: detail.employee.doj || '',
+                  reportingManagerId: detail.employee.reportingManagerId || null
                 },
                 contactInfo: {
                   officialEmail: detail.employee.officialEmail || '',
@@ -162,6 +167,31 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
     if (this.subscription) {
       this.subscription.unsubscribe();
     }
+    if (this.managerSubscription) {
+      this.managerSubscription.unsubscribe();
+    }
+  }
+
+  private loadManagerOptions(currentEmployeeId: string): void {
+    this.managerSubscription = this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
+      .subscribe({
+        next: (result) => {
+          this.managerOptions = [
+            { label: 'No reporting manager', value: null },
+            ...result.data
+              .filter(employee => employee.id !== currentEmployeeId)
+              .map(employee => ({
+                label: `${employee.name} (${employee.employeeCode})`,
+                value: employee.id
+              }))
+          ];
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.managerOptions = [{ label: 'No reporting manager', value: null }];
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   save(): void {
@@ -191,7 +221,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
       employmentInfo: {
         employeeCode: this.employeeDetail.employee.employeeCode, employeeType: raw.employmentInfo.employeeType,
         department: raw.employmentInfo.department, designation: raw.employmentInfo.designation, workLocation: raw.employmentInfo.workLocation,
-        shiftType: raw.employmentInfo.shiftType, doj: raw.employmentInfo.doj
+        shiftType: raw.employmentInfo.shiftType, doj: raw.employmentInfo.doj, reportingManagerId: raw.employmentInfo.reportingManagerId
       },
       contactInfo: {
         officialEmail: raw.contactInfo.officialEmail, personalEmail: raw.contactInfo.personalEmail,

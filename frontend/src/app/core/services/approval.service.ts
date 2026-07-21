@@ -42,6 +42,7 @@ function backendItemToTask(item: BackendApprovalItem): ApprovalTask {
     details: '',
     submitted_at: item.submittedAt,
     status: item.status,
+    assigned_role: item.assignedRole,
     comment: item.decisionComment,
     reviewed_by: item.reviewedBy,
     reviewed_at: item.reviewedAt,

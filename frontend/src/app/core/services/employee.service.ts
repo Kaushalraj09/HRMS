@@ -8,6 +8,8 @@ import { Employee, EmployeeCredentials, EmployeeDetailView, EmployeePayload, Pag
 interface BackendEmployee {
   id: number;
   user_id: number;
+  reporting_manager_id?: number | null;
+  reporting_manager_name?: string | null;
   employee_code: string;
   first_name: string;
   last_name: string;
@@ -54,6 +56,7 @@ interface BackendEmployeePayload {
   alternate_mobile?: string;
   emergency_contact_name?: string;
   emergency_contact_number?: string;
+  reporting_manager_id?: number | null;
   status: 'Active' | 'Inactive';
 }
 
@@ -63,7 +66,7 @@ interface BackendEmployeeCredentials {
   employee_name: string;
   username: string;
   email: string;
-  password: string | null;
+  activation_required?: boolean;
   temporary_password_hint: string;
   status: 'Active' | 'Inactive';
 }
@@ -114,9 +117,9 @@ export class EmployeeService {
         const employee = this.mapEmployee(row);
         return {
           employee,
-          managerName: 'Assigned HR Team',
+          managerName: row.reporting_manager_name || 'Assigned HR Team',
           loginEmail: employee.officialEmail,
-          temporaryPasswordHint: 'Temp password set during account creation'
+          temporaryPasswordHint: 'Use the password setup email to activate this account.'
         };
       }),
       catchError(error => {
@@ -143,7 +146,7 @@ export class EmployeeService {
           employeeName: row.employee_name || '',
           username: row.username || row.email || '',
           email: row.email || '',
-          password: row.password || null,
+          activationRequired: row.activation_required ?? true,
           temporaryPasswordHint: row.temporary_password_hint || 'No password information available',
           status: row.status
         };
@@ -161,7 +164,7 @@ export class EmployeeService {
         const employee = this.mapEmployee(row);
         return {
           success: true,
-          message: `${employee.name} created successfully. Login email: ${employee.officialEmail}`,
+          message: `${employee.name} created successfully. Password setup email has been sent.`,
           employee
         };
       })
@@ -218,6 +221,7 @@ export class EmployeeService {
       work_location: payload.employmentInfo.workLocation || undefined,
       shift_type: payload.employmentInfo.shiftType || undefined,
       doj: payload.employmentInfo.doj || undefined,
+      reporting_manager_id: payload.employmentInfo.reportingManagerId ? Number(payload.employmentInfo.reportingManagerId) : null,
       official_email: payload.contactInfo.officialEmail,
       personal_email: payload.contactInfo.personalEmail || undefined,
       mobile: payload.contactInfo.mobile,
@@ -232,6 +236,8 @@ export class EmployeeService {
     return {
       id: String(row.id),
       userId: String(row.user_id),
+      reportingManagerId: row.reporting_manager_id != null ? String(row.reporting_manager_id) : null,
+      reportingManagerName: row.reporting_manager_name || null,
       employeeCode: row.employee_code,
       name: `${row.first_name} ${row.last_name}`.trim(),
       firstName: row.first_name,

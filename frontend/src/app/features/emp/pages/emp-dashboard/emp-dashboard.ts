@@ -719,7 +719,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
         .pipe(finalize(() => { this.isTimeOffSubmitting = false; }))
         .subscribe({
           next: () => {
-            this.timeOffInlineSuccess = 'Time off request submitted to HR for approval.';
+            this.timeOffInlineSuccess = 'Time off request submitted for manager/HR approval.';
             this.loadDashboardData();
             this.cdr.detectChanges();
             
