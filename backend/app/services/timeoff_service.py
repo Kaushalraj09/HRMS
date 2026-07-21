@@ -33,12 +33,50 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 detail="Time off can only be requested while you are working.",
             )
 
+    st = request.start_time
+    et = request.end_time
+
     if request.leave_type == "Full-Day":
         duration_hours = float(TOTAL_SHIFT_WORKING_HOURS)
+        if st is None:
+            st = SHIFT_START
+        if et is None:
+            et = SHIFT_END
     elif request.leave_type == "Half-Day":
         duration_hours = 4.0
+        if st is None or et is None:
+            st = time_type(9, 0)
+            et = time_type(13, 0)
+        is_first_half = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0)
+        is_second_half = (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
+        if not (is_first_half or is_second_half):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Half-day session must be either 09:00 AM - 01:00 PM or 02:00 PM - 06:00 PM.",
+            )
     else:
-        duration_hours = request.duration_hours
+        # Hourly request
+        if st is None or et is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="start_time and end_time are required for Hourly time off.",
+            )
+        if st.minute not in (0, 30) or et.minute not in (0, 30):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="start_time and end_time must use 30-minute intervals.",
+            )
+        if st < SHIFT_START or et > SHIFT_END:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Time off must fall within working hours 09:00–18:00.",
+            )
+        if et <= st:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="end_time must be after start_time.",
+            )
+        duration_hours = (et.hour * 60 + et.minute - (st.hour * 60 + st.minute)) / 60.0
 
     if duration_hours < 0.5 or duration_hours > float(TOTAL_SHIFT_WORKING_HOURS):
         raise HTTPException(
@@ -56,6 +94,10 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 detail=f"Requested hours exceed remaining shift balance ({remaining_hours:.2f} h left).",
             )
 
+    # Policy and overlap validation checks
+    from app.domain.attendance.validators.leave_validator import LeaveValidator
+    LeaveValidator.validate_leave(db, employee_id, request.date, st, et)
+
     existing = db.query(TimeOffRequest).filter(
         TimeOffRequest.employee_id == employee_id,
         TimeOffRequest.date == request.date,
@@ -72,16 +114,46 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         employee_id=employee_id,
         date=request.date,
         leave_type=request.leave_type,
-        start_time=request.start_time,
-        end_time=request.end_time,
+        start_time=st,
+        end_time=et,
         duration_hours=duration_hours,
-        status="Pending"
+        status="Pending",
+        reason=request.reason,
+        attachment_name=request.attachment_name
     )
     
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
     
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
+    except Exception:
+        pass
+    
+    # Create unified ApprovalTask
+    try:
+        from app.services.approval_service import create_approval_task
+        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        submitted_by = employee_obj.user_id if employee_obj else 1
+        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
+    except Exception as e:
+        print(f"Failed to create approval task: {e}")
+        
+    # Dispatch LeaveRequested domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveRequested
+        EventDispatcher.dispatch(LeaveRequested(
+            employee_id=employee_id,
+            leave_request_id=new_request.id,
+            date=new_request.date,
+            leave_type=new_request.leave_type
+        ))
+    except Exception as e:
+        print(f"Failed to dispatch LeaveRequested event: {e}")
+        
     # Add employee_name and employee_code to the response object
     resp = new_request
     resp.employee_name = f"{new_request.employee.first_name} {new_request.employee.last_name}"
@@ -146,6 +218,22 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action. Use APPROVE or REJECT.")
 
+    # Update matching ApprovalTask status if pending
+    try:
+        from app.models.approval_task import ApprovalTask
+        task = db.query(ApprovalTask).filter(
+            ApprovalTask.request_type == "timeoff",
+            ApprovalTask.request_id == req.id,
+            ApprovalTask.status == "pending"
+        ).first()
+        if task:
+            task.status = "approved" if action.upper() == "APPROVE" else "rejected"
+            task.reviewed_by = admin_user_id
+            task.reviewed_at = datetime.now()
+            task.decision_comment = comments
+    except Exception as e:
+        print(f"Failed to synchronize approval task: {e}")
+
     log = ApprovalLog(
         timeoff_request_id=req.id,
         action_by_user_id=admin_user_id,
@@ -155,10 +243,36 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
     db.add(log)
     db.commit()
     db.refresh(req)
+    
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
+    except Exception:
+        pass
+    
+    # Dispatch LeaveApproved or LeaveRejected domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveApproved, LeaveRejected
+        if action.upper() == "APPROVE":
+            EventDispatcher.dispatch(LeaveApproved(
+                employee_id=req.employee_id,
+                leave_request_id=req.id,
+                date=req.date,
+                leave_type=req.leave_type
+            ))
+        else:
+            EventDispatcher.dispatch(LeaveRejected(
+                employee_id=req.employee_id,
+                leave_request_id=req.id,
+                date=req.date
+            ))
+    except Exception as e:
+        print(f"Failed to dispatch approve/reject leave event: {e}")
+
     req.employee_name = f"{req.employee.first_name} {req.employee.last_name}"
     req.employee_code = req.employee.employee_code
     return req
-
 
 def _duration_hours_between(start: time_type, end: time_type, day: date) -> float:
     start_dt = datetime.combine(day, start)
@@ -166,18 +280,18 @@ def _duration_hours_between(start: time_type, end: time_type, day: date) -> floa
     delta = (end_dt - start_dt).total_seconds() / 3600.0
     return float(delta)
 
-
 def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) -> Tuple[TimeOffRequest, float, float, int, int]:
     """
     Validates shift bounds (09:00–18:00), quota (9h / day), 30-minute slots for hourly,
     auto-approves, returns (row, approved_hours_today, remaining_hours_today).
     """
-    today_state = get_today_state(db, employee_id)
-    if not today_state["isWorking"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Time off can only be applied while you are working."
-        )
+    if payload.date == date.today():
+        today_state = get_today_state(db, employee_id)
+        if not today_state["isWorking"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Time off can only be applied while you are working."
+            )
 
     if payload.date < date.today():
         raise HTTPException(
@@ -191,6 +305,21 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
         st = SHIFT_START
         et = SHIFT_END
         requested = float(TOTAL_SHIFT_WORKING_HOURS)
+    elif lt in ("halfday", "half-day"):
+        leave_store = "Half-Day"
+        st = payload.start_time
+        et = payload.end_time
+        if st is None or et is None:
+            st = time_type(9, 0)
+            et = time_type(13, 0)
+        is_first_half = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0)
+        is_second_half = (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
+        if not (is_first_half or is_second_half):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Half-day session must be either 09:00 AM - 01:00 PM or 02:00 PM - 06:00 PM.",
+            )
+        requested = 4.0
     elif lt == "hourly":
         leave_store = "Hourly"
         if payload.start_time is None or payload.end_time is None:
@@ -224,11 +353,12 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="leave_type must be 'Hourly' or 'Full Day'.",
+            detail="leave_type must be 'Hourly', 'Half Day', or 'Full Day'.",
         )
 
     approved_so_far = get_timeoff_duration_for_date(db, employee_id, payload.date)
     if payload.date == date.today():
+        today_state = get_today_state(db, employee_id)
         remaining_hours = today_state["remainingSeconds"] / 3600.0
     else:
         remaining_hours = max(0.0, TOTAL_SHIFT_WORKING_HOURS - approved_so_far)
@@ -248,6 +378,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 detail="For today, start time must be at or after the current time.",
             )
 
+    # Policy and overlap validation checks
+    from app.domain.attendance.validators.leave_validator import LeaveValidator
+    LeaveValidator.validate_leave(db, employee_id, payload.date, st, et)
+
     new_request = TimeOffRequest(
         employee_id=employee_id,
         date=payload.date,
@@ -260,6 +394,25 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
+    
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
+    except Exception:
+        pass
+
+    # Dispatch LeaveApproved domain event
+    try:
+        from app.domain.events.dispatcher import EventDispatcher
+        from app.domain.events.types import LeaveApproved
+        EventDispatcher.dispatch(LeaveApproved(
+            employee_id=employee_id,
+            leave_request_id=new_request.id,
+            date=new_request.date,
+            leave_type=new_request.leave_type
+        ))
+    except Exception as e:
+        print(f"Failed to dispatch LeaveApproved event: {e}")
 
     approved_today = get_timeoff_duration_for_date(db, employee_id, date.today())
     approved_seconds_today = int(round(approved_today * 3600))

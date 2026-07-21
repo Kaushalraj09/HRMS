@@ -1,0 +1,156 @@
+<div class="regularization-container">
+  <div class="regularization-header">
+    <div>
+      <span class="breadcrumb">Employee Portal / Dashboard / Regularization</span>
+      <h1>Attendance Regularization</h1>
+      <p class="subtitle">Request corrections for missing punches, system synchronization delays, or incorrect check-in/out times.</p>
+    </div>
+  </div>
+
+  <div class="regularization-layout">
+    <!-- Submit Request Panel -->
+    <div class="request-panel card bg-card-theme">
+      <h2>Submit Correction Request</h2>
+      
+      <form [formGroup]="regularizationForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <!-- Date Selector -->
+          <div class="form-group">
+            <label for="attendanceDate">Attendance Date *</label>
+            <input type="date" id="attendanceDate" formControlName="attendanceDate" class="form-input">
+            <div *ngIf="regularizationForm.get('attendanceDate')?.touched && regularizationForm.get('attendanceDate')?.errors" class="validation-error">
+              Attendance date is required.
+            </div>
+          </div>
+
+          <!-- Reason Type Dropdown -->
+          <div class="form-group">
+            <label for="reasonType">Reason Type *</label>
+            <app-custom-select
+              [options]="reasonTypeOptions"
+              placeholder="Select a reason type"
+              formControlName="reasonType"
+              inputId="reasonType"
+            ></app-custom-select>
+            <div *ngIf="regularizationForm.get('reasonType')?.touched && regularizationForm.get('reasonType')?.errors" class="validation-error">
+              Please select a reason type.
+            </div>
+          </div>
+
+          <!-- Punch Times -->
+          <div class="grid-col-2">
+            <div class="form-row" style="margin-bottom: 6px;">
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="requestedPunchIn">Requested Punch In</label>
+                <input type="time" id="requestedPunchIn" formControlName="requestedPunchIn" class="form-input">
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="requestedPunchOut">Requested Punch Out</label>
+                <input type="time" id="requestedPunchOut" formControlName="requestedPunchOut" class="form-input">
+              </div>
+            </div>
+            <p class="helper-text" style="margin: 0 0 12px 0;">Provide at least a requested punch-in time or punch-out time.</p>
+          </div>
+
+          <!-- Explanation Textarea -->
+          <div class="form-group grid-col-2">
+            <label for="reasonText">Detailed Explanation *</label>
+            <textarea id="reasonText" formControlName="reasonText" class="form-input text-area" rows="3" placeholder="Explain the reason for this correction (min 10 characters)..."></textarea>
+            <div *ngIf="regularizationForm.get('reasonText')?.touched && regularizationForm.get('reasonText')?.errors" class="validation-error">
+              <span *ngIf="regularizationForm.get('reasonText')?.errors?.['required']">Explanation is required.</span>
+              <span *ngIf="regularizationForm.get('reasonText')?.errors?.['minlength']">Explanation must be at least 10 characters long.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="errorMessage" class="alert alert-danger">
+          <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+        </div>
+        <div *ngIf="successMessage" class="alert alert-success">
+          <i class="fas fa-check-circle"></i> {{ successMessage }}
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="form-actions" style="display: flex; justify-content: flex-end;">
+          <button type="submit" [disabled]="isSubmitting" class="btn btn-primary" style="width: auto; min-width: 200px;">
+            <span *ngIf="isSubmitting"><i class="fas fa-spinner fa-spin"></i> Submitting...</span>
+            <span *ngIf="!isSubmitting">Submit Request</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- History Panel -->
+    <div class="history-panel card bg-card-theme">
+      <div class="history-header">
+        <h2>Correction History</h2>
+        
+        <!-- Tabs -->
+        <div class="tabs-container">
+          <button (click)="setTab('all')" [class.active]="activeTab === 'all'" class="tab-btn">All</button>
+          <button (click)="setTab('pending')" [class.active]="activeTab === 'pending'" class="tab-btn">Pending</button>
+          <button (click)="setTab('approved')" [class.active]="activeTab === 'approved'" class="tab-btn">Approved</button>
+          <button (click)="setTab('rejected')" [class.active]="activeTab === 'rejected'" class="tab-btn">Rejected</button>
+        </div>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="table-responsive">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Reason Type</th>
+              <th>Requested In/Out</th>
+              <th>Status</th>
+              <th>Reviewed By</th>
+              <th>Reviewer Comment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let req of pagedRequests">
+              <td><strong>{{ req.attendanceDate | date:'mediumDate' }}</strong></td>
+              <td>{{ getReasonTypeLabel(req.reasonType) }}</td>
+              <td>
+                <div class="time-block">
+                  <span class="time-label">In:</span> <span>{{ formatTime(req.requestedPunchIn) }}</span>
+                </div>
+                <div class="time-block">
+                  <span class="time-label">Out:</span> <span>{{ formatTime(req.requestedPunchOut) }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="{
+                  'badge-pending': req.status.toLowerCase() === 'pending',
+                  'badge-approved': req.status.toLowerCase() === 'approved',
+                  'badge-rejected': req.status.toLowerCase() === 'rejected'
+                }">{{ req.status | uppercase }}</span>
+              </td>
+              <td>{{ req.reviewedByName || '-' }}</td>
+              <td class="comment-cell" [title]="req.reviewComment || ''">{{ req.reviewComment || '-' }}</td>
+            </tr>
+            <tr *ngIf="pagedRequests.length === 0">
+              <td colspan="6" class="empty-state">
+                <i class="far fa-folder-open empty-icon"></i>
+                <p>No regularization requests found.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-container" *ngIf="totalPages > 1">
+        <div class="pagination-info">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ endIndex }} of {{ filteredRequests.length }} requests
+        </div>
+        <div class="pagination-controls">
+          <button (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+          <button *ngFor="let page of pageNumbers" (click)="setPage(page)" [class.active]="currentPage === page" class="page-btn">{{ page }}</button>
+          <button (click)="setPage(currentPage + 1)" [disabled]="currentPage === totalPages" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

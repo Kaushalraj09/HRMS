@@ -98,11 +98,23 @@ def get_login_activities(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     user_id: Optional[int] = None,
-    exclude_admin: bool = False
+    exclude_admin: bool = False,
+    hr_user_id: Optional[int] = None
 ) -> List[LoginActivity]:
     query = db.query(LoginActivity)
     
-    if exclude_admin:
+    if hr_user_id is not None:
+        from app.models.user import User, Role
+        from sqlalchemy import or_, func
+        query = query.join(User, LoginActivity.user_id == User.id)\
+                     .join(Role, User.role_id == Role.id)\
+                     .filter(
+                         or_(
+                             func.lower(Role.name) == "employee",
+                             LoginActivity.user_id == hr_user_id
+                         )
+                     )
+    elif exclude_admin:
         from app.models.user import User, Role
         query = query.join(User, LoginActivity.user_id == User.id)\
                      .join(Role, User.role_id == Role.id)\
@@ -134,9 +146,10 @@ def get_login_activities_with_names(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     user_id: Optional[int] = None,
-    exclude_admin: bool = False
+    exclude_admin: bool = False,
+    hr_user_id: Optional[int] = None
 ) -> List[LoginActivity]:
-    activities = get_login_activities(db, filter_type, start_date, end_date, user_id, exclude_admin)
+    activities = get_login_activities(db, filter_type, start_date, end_date, user_id, exclude_admin, hr_user_id)
     
     results = []
     for act in activities:

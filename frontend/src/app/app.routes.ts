@@ -4,21 +4,25 @@ import { ForgotPassword } from './features/auth/pages/forgot-password/forgot-pas
 import { ResetPassword } from './features/auth/pages/reset-password/reset-password';
 import { HrDashboard } from './features/hr/pages/hr-dashboard/hr-dashboard';
 import { EmpDashboard } from './features/emp/pages/emp-dashboard/emp-dashboard';
-import { MasterDashboard } from './features/master-dashboard/master-dashboard';
+import { MasterDashboard } from './features/master/pages/master-dashboard/master-dashboard';
 import { MyAttendance } from './features/emp/pages/my-attendance/my-attendance';
 import { MyProfile } from './features/emp/pages/my-profile/my-profile';
 import { ChangePasswordComponent } from './features/emp/pages/change-password/change-password';
+
 import { AttendanceComponent } from './features/hr/pages/attendance/attendance';
 import { Employees } from './features/hr/pages/employees/employees';
-import { AddEmployeeComponent } from './features/hr/pages/employees/add-employee/add-employee';
-import { EmployeeDetailComponent } from './features/hr/pages/employees/employee-detail/employee-detail';
+import { HrTimeOffComponent } from './features/hr/pages/time-off/time-off';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
-import { HrUsersComponent } from './features/admin/pages/hr-users/hr-users';
-import { AdminEmployeesComponent } from './features/admin/pages/admin-employees/admin-employees';
+import { HrUsersComponent } from './features/master/pages/hr-users/hr-users';
 import { LoginActivityList } from './features/login-activity/login-activity-list';
 import { LoginActivityDetail } from './features/login-activity/login-activity-detail';
 import { LoginActivityRedirect } from './features/login-activity/login-activity-redirect';
+import { RegularizationComponent } from './features/emp/pages/regularization/regularization';
+import { RegularizationRequestsComponent } from './features/hr/pages/regularization-requests/regularization-requests';
+import { EmpTimeOffComponent } from './features/emp/pages/time-off/time-off';
+
+import { MasterDataComponent } from './features/master/pages/master-data/master-data';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -38,9 +42,13 @@ export const routes: Routes = [
     children: [
       { path: 'attendance', component: AttendanceComponent },
       { path: 'employees', component: Employees },
+      { path: 'time-off', component: HrTimeOffComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'login-activity', component: LoginActivityList },
-      { path: 'login-activity/:id', component: LoginActivityDetail }
+      { path: 'login-activity/:id', component: LoginActivityDetail },
+      { path: 'regularization-requests', component: RegularizationRequestsComponent },
+      { path: 'reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) },
+
     ]
   },
   { 
@@ -50,8 +58,10 @@ export const routes: Routes = [
     data: { roles: ['admin', 'employee'] },
     children: [
       { path: 'my-attendance', component: MyAttendance },
+      { path: 'regularization', component: RegularizationComponent },
       { path: 'my-profile', component: MyProfile },
-      { path: 'change-password', component: ChangePasswordComponent }
+      { path: 'change-password', component: ChangePasswordComponent },
+      { path: 'time-off', component: EmpTimeOffComponent }
     ]
   },
   {
@@ -63,9 +73,13 @@ export const routes: Routes = [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
       { path: 'attendance', component: AttendanceComponent },
+      { path: 'time-off', component: HrTimeOffComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'login-activity', component: LoginActivityList },
-      { path: 'login-activity/:id', component: LoginActivityDetail }
+      { path: 'login-activity/:id', component: LoginActivityDetail },
+      { path: 'regularization-requests', component: RegularizationRequestsComponent },
+      { path: 'reports', loadComponent: () => import('./features/master/pages/reports/reports').then(m => m.AdminReportsComponent) },
+      { path: 'master-data', component: MasterDataComponent }
     ]
   },
   { path: 'login-activity', component: LoginActivityRedirect, canActivate: [authGuard] },

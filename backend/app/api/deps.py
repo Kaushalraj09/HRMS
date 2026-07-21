@@ -24,9 +24,26 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise credentials_exception
         
     user = db.query(User).filter(User.email == email).first()
-    if user is None:
+    if user is None or user.status in ["Inactive", "Deleted"]:
         raise credentials_exception
     
     # Dynamically set the active dashboard on the user object
     user.active_dashboard = active_dashboard
     return user
+
+
+def get_ws_user(db: Session, token: str | None) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        user = db.query(User).filter(User.email == email).first()
+        if user is None or user.status in ["Inactive", "Deleted"]:
+            return None
+        return user
+    except JWTError:
+        return None
+

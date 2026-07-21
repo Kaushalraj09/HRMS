@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_serializer
+from pydantic import BaseModel, EmailStr, field_serializer, ConfigDict
 from typing import Optional, List
 from datetime import date, datetime
 
@@ -60,8 +60,12 @@ class EmployeeResponse(EmployeeBase):
     def _serialize_employee_code(self, value: str) -> str:
         return normalize_employee_code(value)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmployeeListResponse(BaseModel):
+    data: List[EmployeeResponse]
+    total: int
 
 
 class EmployeeCredentialsResponse(BaseModel):

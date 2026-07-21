@@ -16,9 +16,29 @@
 
     <!-- right side -->
     <div class="rightnav">
-        <div class="searchbar">
-            <input type="text" id="navSearch" name="navSearch" aria-label="Search" placeholder="Search here" (input)="onSearch($event.target.value)" />
-            <i class="fas fa-search search-icon"></i>
+        <div class="searchbar" *ngIf="showSearch">
+            <input
+                type="search"
+                id="navSearch"
+                name="navSearch"
+                placeholder="Search dashboard"
+                [value]="searchTerm"
+                (input)="onSearchInput($event)"
+                (keydown.escape)="clearSearch($event)"
+                autocomplete="off"
+                spellcheck="false"
+            />
+            <button
+                type="button"
+                class="search-clear"
+                *ngIf="searchTerm"
+                (click)="clearSearch($event)"
+                aria-label="Clear search"
+                title="Clear search"
+            >
+                <i class="fas fa-times"></i>
+            </button>
+            <i class="fas fa-search search-icon" aria-hidden="true"></i> 
         </div>
 
         <div class="language-selector" (click)="toggleLanguageDropdown($event)">
@@ -55,27 +75,59 @@
             </div>
 
             <!-- Notifications Dropdown -->
-            <div class="notification-dropdown" *ngIf="isNotificationDropdownOpen">
+            <div class="notification-dropdown" *ngIf="isNotificationDropdownOpen" (click)="$event.stopPropagation()">
                 <div class="dropdown-header">
                     <h3>Notifications</h3>
-                    <span class="mark-all-read" *ngIf="unreadCount > 0" (click)="markAllAsRead($event)">Mark all as read</span>
+                    <div class="header-actions">
+                        <span class="mark-all-read" *ngIf="unreadCount > 0" (click)="markAllAsRead($event)">Mark all read</span>
+                    </div>
                 </div>
+
                 <div class="notification-list">
                     <div class="no-notifications" *ngIf="notifications.length === 0">
                         <i class="fas fa-bell-slash"></i>
                         <p>No notifications yet</p>
                     </div>
+
+                    <!-- Flat List -->
                     <div class="notification-item" 
                          *ngFor="let notif of notifications" 
                          [class.unread]="!notif.is_read"
                          (click)="onNotificationItemClick(notif)">
-                        <div class="notif-icon" [ngClass]="notif.type.toLowerCase()">
-                            <i [ngClass]="getIconClass(notif.type)"></i>
+                        
+                        <!-- Avatar / Icon Wrapper -->
+                        <div class="notif-icon-wrapper">
+                            <img *ngIf="notif.employee?.avatar" [src]="notif.employee.avatar" alt="Avatar" class="notif-avatar-img" />
+                            <div *ngIf="notif.employee && !notif.employee.avatar" class="notif-avatar-fallback">
+                                {{ (notif.employee.first_name[0] + notif.employee.last_name[0]).toUpperCase() }}
+                            </div>
+                            <div *ngIf="!notif.employee" class="notif-icon" [ngClass]="notif.type.toLowerCase()">
+                                <i [ngClass]="getIconClass(notif.type, notif.category)"></i>
+                            </div>
                         </div>
+
+                        <!-- Content -->
                         <div class="notif-content">
-                            <h4 class="notif-title">{{ notif.title }}</h4>
-                            <span class="notif-time">{{ notif.created_at | date:'hh:mm a - dd MMM yyyy' }}</span>
+                            <div class="notif-message-row">
+                                <span class="emp-name" *ngIf="notif.employee">{{ notif.employee.full_name }}</span>
+                                {{ notif.message }}
+                            </div>
+                            <div class="notif-meta-row">
+                                <span class="category-badge" [ngClass]="notif.category?.toLowerCase() || 'system'">
+                                    {{ notif.category || notif.type }}
+                                </span>
+                                <span class="notif-time">{{ notif.created_at | date:'hh:mm a - dd MMM yyyy' }}</span>
+                            </div>
                         </div>
+
+                        <!-- Hover Action (Delete) -->
+                        <div class="notif-item-actions" (click)="$event.stopPropagation()">
+                            <button class="action-btn delete-btn" title="Delete notification" (click)="deleteNotification($event, notif.id)">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- Unread Dot -->
                         <span class="unread-dot" *ngIf="!notif.is_read"></span>
                     </div>
                 </div>
@@ -86,7 +138,7 @@
             <div class="avatar">
                 <img *ngIf="profileImage" [src]="profileImage" alt="Avatar" class="navbar-avatar-img" />
                 <div *ngIf="!profileImage" class="navbar-avatar-fallback">{{ userInitials }}</div>
-                <span class="online-dot"></span>
+                <span class="online-dot" [class.punched-in]="isPunchedIn"></span>
             </div>
             <span class="profilename">{{ userName }}</span>
             <svg class="chevron-icon" viewBox="0 0 24 24">

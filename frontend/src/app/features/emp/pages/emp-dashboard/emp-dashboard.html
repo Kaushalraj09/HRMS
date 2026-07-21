@@ -1,348 +1,337 @@
 <div class="Emp_dashboard">
-    <app-navbar 
-        [userName]="userName" 
-        (hamburgerClick)="toggleSidebar()"
-        (searchChange)="onSearch($event)" 
-        (profileClick)="openProfile()" 
-        (notificationClick)="openNotifications()">
+    <app-navbar [userName]="userName" [searchValue]="searchTerm" (hamburgerClick)="toggleSidebar()"
+        (searchChange)="onSearch($event)" (profileClick)="openProfile()">
     </app-navbar>
     <div class="dashboard-layout">
-    <app-emp-sidebar>
-    </app-emp-sidebar>
-    <div class="main-content" [class.expanded]="!(isEmpSidebarOpen$ | async)">
-      <div class="page-content">
-        <router-outlet></router-outlet>
-        <ng-container *ngIf="isDashboardHome">
-            <div class="view-only-banner" *ngIf="isAdmin">
-                <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
-            </div>
-            <div class="card timezone">
-
-        <div class="empname">
-            Welcome, {{ userName }}
-        </div>
-        <div class="pertime">
-            {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
-        </div>
-    </div>
-
-    <!-- Mark Attendence and Request Time off -->
-    <div class="mark_attendence_request_time">
-        <div class="card Mark_attendance">
-            <div class="card-header">
-                <span>Mark Attendance</span>
-                <div class="status-buttons">
-                    <button 
-                        class="status-btn work" 
-                        [class.active]="status === 'Office'" 
-                        [disabled]="punchInTime !== null || isAdmin" 
-                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Office'"
-                        (click)="requestSwitchWorkMode('Office')"
-                    >
-                    <span class="dot"></span> Office
-                    </button>
-                    <button 
-                        class="status-btn break" 
-                        [class.active]="status === 'Remote'" 
-                        [disabled]="punchInTime !== null || isAdmin" 
-                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Remote'"
-                        (click)="requestSwitchWorkMode('Remote')"
-                    >
-                    <span class="dot"></span> Remote
-                    </button>
-                </div>
-            </div>
-            <div class="divider"></div>
-            <div class="punch-container">
-                <div class="punch-dial" [class.punch-dial--busy]="isPunchSaving">
-                    <svg class="punch-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <defs>
-                            <linearGradient id="punchProgressGradient" x1="40" y1="180" x2="180" y2="40" gradientUnits="userSpaceOnUse">
-                                <stop offset="0%" stop-color="#e11d48"/>
-                                <stop offset="55%" stop-color="#c2185b"/>
-                                <stop offset="100%" stop-color="#5b21b6"/>
-                            </linearGradient>
-                        </defs>
-                        <g transform="rotate(-90 110 110)">
-                            <circle
-                                class="ring-arc ring-arc--track"
-                                cx="110" cy="110" r="104"
-                                fill="none" stroke-width="13" stroke-linecap="round"
-                                pathLength="100"
-                                stroke-dasharray="100"
-                                stroke-dashoffset="0"/>
-                            <circle
-                                class="ring-arc ring-arc--progress"
-                                cx="110" cy="110" r="104"
-                                fill="none" stroke-width="13" stroke-linecap="round"
-                                pathLength="100"
-                                stroke-dasharray="100"
-                                [attr.stroke-dashoffset]="progressDashOffset"/>
-                        </g>
-                    </svg>
-                    <button
-                        type="button"
-                        class="inner-circle"
-                        [class.inner-circle--out-action]="isPunchedIn"
-                        [class.inner-circle--in-action]="!isPunchedIn"
-                        [class.inner-circle--disabled]="isPunchDisabled"
-                        [disabled]="isPunchDisabled"
-                        (click)="togglePunch()"
-                    >
-                        <span class="punch-text">
-                            <span class="punch-text__line">Punch</span>
-                            <span class="punch-text__line punch-text__action">{{ isPunchedIn ? 'Out' : 'In' }}</span>
-                        </span>
-                    </button>
-                </div>
-            </div>
-            <div class="attendance-live">
-                <div class="attendance-live__status" [title]="attendanceStatusLabel" [class.attendance-live__status--working]="isPunchedIn">
-                    {{ attendanceStatusLabel }}
-                </div>
-                <div class="attendance-live__location" *ngIf="punchInTime && (punchOutAddress || punchInAddress)">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ punchOutAddress || punchInAddress }}</span>
-                </div>
-                <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
-                <div class="attendance-live__meta">
-                    <span>Shift elapsed: {{ shiftElapsedDisplay }}</span>
-                    <span>Worked: {{ totalWorkedTodayDisplay }}</span>
-                </div>
-            </div>
-            <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
-
-        </div>
-        <!-- <div class="card request_time_off">
-            <div class="card-header">
-                Time Off Management
-            </div>
-            <div class="divider"></div>
-            <div class="stats">
-                <div class="stat-box">
-                    <h2>{{ approvedHoursDisplay }}</h2>
-                    <p>Approved Time</p>
-                </div>
-                <div class="stat-box">
-                    <h2>{{ remainingHoursDisplay }}</h2>
-                    <p>Remaining Time</p>
-                </div>
-                <div class="stat-box">
-                    <h2>{{ requestedTimeDisplay }}</h2>
-                    <p>Requested Time</p>
-                </div>
-            </div>
-
-            <div class="timeoff-inline">
-                <p class="timeoff-inline__hint">Shift: 9:00 AM - 6:00 PM. Time off is available only while you are marked as Working.</p>
-                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Hourly'">
-                    Requested: {{ requestedTimeDisplay }} | After request: {{ previewRemainingAfterDisplay }}
-                </p>
-                <p class="timeoff-inline__preview" *ngIf="timeOffLeaveType === 'Full Day'">
-                    Full day uses {{ requestedTimeDisplay }} of your shift balance.
-                </p>
-                <p class="punch-message" *ngIf="timeOffInlineError">{{ timeOffInlineError }}</p>
-                <div class="timeoff-success-container" *ngIf="timeOffInlineSuccess">
-                    <i class="fas fa-check-circle"></i>
-                    <span>{{ timeOffInlineSuccess }}</span>
-                </div>
-
-                <div class="timeoff-inline__grid">
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" class="form-control" [(ngModel)]="timeOffDate" [min]="todayIsoMin" (ngModelChange)="onTimeOffDateChange()" />
+        <app-emp-sidebar>
+        </app-emp-sidebar>
+        <div class="main-content" [class.expanded]="!(isEmpSidebarOpen$ | async)">
+            <div class="page-content">
+                <router-outlet></router-outlet>
+                <ng-container *ngIf="isDashboardHome">
+                    <div class="view-only-banner" *ngIf="isAdmin">
+                        <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
                     </div>
-                    <div class="form-group">
-                        <label>Leave type</label>
-                        <select class="form-control" [(ngModel)]="timeOffLeaveType" (ngModelChange)="onLeaveTypeChange()">
-                            <option value="Hourly">Hourly</option>
-                            <option value="Full Day">Full Day</option>
-                        </select>
-                    </div>
-                </div>
+                    <div class="card timezone">
 
-                <div class="timeoff-inline__grid" *ngIf="timeOffLeaveType === 'Hourly'">
-                    <div class="form-group">
-                        <label>Start time</label>
-                        <select class="form-control" [(ngModel)]="timeOffStart" (ngModelChange)="onStartTimeChange()">
-                            <option *ngFor="let s of startTimeOptions" [value]="s.value">{{ s.label }} ({{ s.value }})</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>End time</label>
-                        <select class="form-control" [(ngModel)]="timeOffEnd">
-                            <option *ngFor="let s of endTimeOptions" [value]="s.value">{{ s.label }} ({{ s.value }})</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button
-                    type="button"
-                    class="apply-btn timeoff-inline__submit"
-                    (click)="submitInlineTimeOff()"
-                    [disabled]="isTimeOffSubmitting || !canSubmitInlineTimeOff"
-                >
-                    {{ isTimeOffSubmitting ? 'Submitting…' : 'Request time off' }}
-                </button>
-            </div>
-        </div> -->
-    </div>
-    <div class="calendar_body">
-        <div class="card calender_container">
-            <div class="calendar-left">
-                <div class="calendar-header-info">
-                    <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
-                    <p>Week {{ weekNumber }}</p>
-                </div>
-                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents" (dayClicked)="isAdmin ? null : onDayClick($event.day)">
-                </mwl-calendar-month-view>
-            </div>
-            <div class="calendar-right">
-                <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
-    
-                <div class="timeline-container">
-                    <div *ngFor="let event of selectedEvents" class="event-item" [ngClass]="event.type">
-                        <div class="marker-section">
-                            <div class="dot"></div>
-                            <div class="line"></div>
+                        <div class="empname">
+                            Welcome, {{ userName }}
                         </div>
-                        <div class="event-info">
-                            <div class="time">{{ event.time }}</div>
-                            <div class="title">{{ event.title }}</div>
-                            <div class="location">{{ event.location }}</div>
+                        <div class="pertime">
+                            {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="time_sheet">
-        <div class="card recent_time">
-            <div class="card-header">
-                Time Sheets
-            </div>
-            <div class="divider"></div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Day</th>
-                            <th>Entry</th>
-                            <th>Exit</th>
-                            <th>Total</th>
-                            <th>Overtime</th>
-                            <th>Break</th>
-                            <th>Grand Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngIf="timeSheets.length === 0">
-                            <td colspan="8" class="no-data">
-                                No attendance records found
-                            </td>
-                        </tr>
-                        <tr *ngFor="let sheet of pagedTimeSheets">
-                            <td>{{ sheet.date }}</td>
-                            <td>{{ sheet.day }}</td>
-                            <td>{{ sheet.entry }}</td>
-                            <td>{{ sheet.exit }}</td>
-                            <td>{{ sheet.total }}</td>
-                            <td>{{ sheet.overtime }}</td>
-                            <td>{{ sheet.break }}</td>
-                            <td>{{ sheet.grandTotal }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="timesheet-pagination" *ngIf="timeSheets.length > 0">
-                <div class="timesheet-pagination__info">
-                    Showing <span>{{ timeSheetStartEntry }}</span> to
-                    <span>{{ timeSheetEndEntry }}</span> of
-                    <span>{{ timeSheets.length }}</span> entries
-                </div>
-                <div class="timesheet-pagination__controls" *ngIf="timeSheets.length > timeSheetPageSize">
-                    <button
-                        type="button"
-                        class="timesheet-page-btn"
-                        [disabled]="timeSheetPage === 1"
-                        (click)="setTimeSheetPage(timeSheetPage - 1)"
-                    >
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button
-                        type="button"
-                        class="timesheet-page-btn"
-                        *ngFor="let page of timeSheetPages"
-                        [class.active]="page === timeSheetPage"
-                        (click)="setTimeSheetPage(page)"
-                    >
-                        {{ page }}
-                    </button>
-                    <button
-                        type="button"
-                        class="timesheet-page-btn"
-                        [disabled]="timeSheetPage === timeSheetTotalPages"
-                        (click)="setTimeSheetPage(timeSheetPage + 1)"
-                    >
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<!-- attendence summary -->
-    <div class="attendance_summary">
-        <div class="card attendance_summary_card">
-            <div class="card-header">
-                <span>Attendance Summary</span>
-            </div>
-            <div class="divider"></div>
-            <div class="summary-content">
-                <div class="summary-item" *ngFor="let item of attendanceSummary">
-
-                    <i [class]="item.icon" class="summary-icon"></i>
-
-                    <div class="summary-text-container">
-                        <span class="summary-label">{{ item.label }}</span>
-                        <span class="summary-value">{{ item.value }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="latest_news">
-        <div class="card latest_news_card">
-            <div class="card-header">
-                <span>Latest News</span>
-            </div>
-            <div class="divider"></div>
-            <div class="latest_news_content">
-                <div *ngFor="let event of latestNews_content" class="news-item">
-                    <div class="news-icon-container">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="news-details">
-                        <div class="news-title">{{ event.heading }}</div>
-                        <div class="news-description">{{ event.contents }}</div>
-                        <div class="news-footer">
-                            <span class="news-badge" [ngClass]="event.newsType.toLowerCase()">{{ event.newsType }}</span>
-                            <span class="news-date">
-                                <i class="fas fa-calendar-alt"></i>
-                                {{ event.date | date:'MMMM dd, yyyy' }}
-                            </span>
+                    <!-- Shift End Reminder Banner -->
+                    <div class="reminder-banner-card shift-end" *ngIf="isShiftEndReminderActive">
+                        <div class="reminder-icon-container">
+                            <i class="fas fa-hourglass-end pulse-icon"></i>
+                        </div>
+                        <div class="reminder-content">
+                            <h4>Your shift has ended</h4>
+                            <p>Please punch out or request to continue working into overtime.</p>
+                        </div>
+                        <div class="reminder-actions">
+                            <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
+                                <i class="fas fa-sign-out-alt"></i> Punch Out
+                            </button>
+                            <button type="button" class="action-btn continue-working" [disabled]="isPunchSaving" (click)="handleContinueWorking()">
+                                <i class="fas fa-clock"></i> Continue Working
+                            </button>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Overtime Reminder Banner -->
+                    <div class="reminder-banner-card overtime" *ngIf="isOvertimeReminderActive">
+                        <div class="reminder-icon-container">
+                            <i class="fas fa-exclamation-circle pulse-icon"></i>
+                        </div>
+                        <div class="reminder-content">
+                            <h4>Overtime limit reached</h4>
+                            <p>Your overtime session is ending. Please punch out or extend to avoid auto checkout.</p>
+                        </div>
+                        <div class="reminder-actions">
+                            <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
+                                <i class="fas fa-sign-out-alt"></i> Punch Out
+                            </button>
+                            <button type="button" class="action-btn extend-overtime" [disabled]="isPunchSaving" (click)="handleExtendOvertime()">
+                                <i class="fas fa-angle-double-right"></i> Extend Overtime
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mark Attendence and Request Time off -->
+                    <div class="mark_attendence_request_time">
+                        <div class="card Mark_attendance">
+                            <div class="card-header">
+                                <span>Mark Attendance</span>
+                                <div class="status-buttons">
+                                    <button class="status-btn work" [class.active]="status === 'Office'"
+                                        [disabled]="punchInTime !== null || isAdmin"
+                                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Office'"
+                                        (click)="requestSwitchWorkMode('Office')">
+                                        <span class="dot"></span> Office
+                                    </button>
+                                    <button class="status-btn break" [class.active]="status === 'Remote'"
+                                        [disabled]="punchInTime !== null || isAdmin"
+                                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Remote'"
+                                        (click)="requestSwitchWorkMode('Remote')">
+                                        <span class="dot"></span> Remote
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="divider"></div>
+                            <!-- Auto Checked-out Warning Banner -->
+                            <div class="auto-checkout-banner" *ngIf="attendanceStatusLabel === 'Auto Checked-out'">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Forgot to check out yesterday. Checked out automatically. Please contact HR to correct.</span>
+                            </div>
+                            <div class="punch-container">
+                                <div class="punch-dial" [class.punch-dial--busy]="isPunchSaving">
+                                    <svg class="punch-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg"
+                                        aria-hidden="true">
+                                        <defs>
+                                            <linearGradient id="punchProgressGradient" x1="40" y1="180" x2="180" y2="40"
+                                                gradientUnits="userSpaceOnUse">
+                                                <stop offset="0%" stop-color="#e11d48" />
+                                                <stop offset="55%" stop-color="#c2185b" />
+                                                <stop offset="100%" stop-color="#5b21b6" />
+                                            </linearGradient>
+                                            <linearGradient id="overtimeProgressGradient" x1="40" y1="180" x2="180" y2="40"
+                                                gradientUnits="userSpaceOnUse">
+                                                <stop offset="0%" stop-color="#f59e0b" />
+                                                <stop offset="50%" stop-color="#d97706" />
+                                                <stop offset="100%" stop-color="#b45309" />
+                                            </linearGradient>
+                                        </defs>
+                                        <g transform="rotate(-90 110 110)">
+                                            <circle class="ring-arc ring-arc--track" cx="110" cy="110" r="104"
+                                                fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
+                                                stroke-dasharray="100" stroke-dashoffset="0" />
+                                            <circle class="ring-arc ring-arc--progress"
+                                                [class.ring-arc--overtime-progress]="overtimeApproved" cx="110" cy="110" r="104"
+                                                fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
+                                                stroke-dasharray="100" [attr.stroke-dashoffset]="progressDashOffset" />
+                                        </g>
+                                    </svg>
+                                    <button type="button" class="inner-circle"
+                                        [class.inner-circle--out-action]="isPunchedIn && !overtimeApproved"
+                                        [class.inner-circle--overtime-out-action]="isPunchedIn && overtimeApproved"
+                                        [class.inner-circle--in-action]="!isPunchedIn"
+                                        [class.inner-circle--disabled]="isPunchDisabled" [disabled]="isPunchDisabled"
+                                        (click)="togglePunch()">
+                                        <span class="punch-text">
+                                            <span class="punch-text__line">Punch</span>
+                                            <span class="punch-text__line punch-text__action">{{ isPunchedIn ? 'Out' :
+                                                'In' }}</span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="attendance-live">
+                                <div class="attendance-live__status" [title]="attendanceStatusLabel"
+                                    [class.attendance-live__status--working]="isPunchedIn && !overtimeApproved"
+                                    [class.attendance-live__status--overtime]="isPunchedIn && overtimeApproved">
+                                    {{ overtimeApproved ? 'Overtime Working' : attendanceStatusLabel }}
+                                </div>
+                                <div class="attendance-live__location"
+                                    *ngIf="punchInTime && (punchOutAddress || punchInAddress)">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ punchOutAddress || punchInAddress }}</span>
+                                </div>
+                                <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
+                                <div class="attendance-live__meta">
+                                    <span>{{ overtimeApproved ? 'Overtime elapsed' : 'Shift elapsed' }}: {{ shiftElapsedDisplay }}</span>
+                                    <span>Worked: {{ totalWorkedTodayDisplay }}</span>
+                                </div>
+                            </div>
+                            <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
+
+                        </div>
+                        <div class="card request_time_off">
+                            <div class="card-header">
+                                <span>Time Off Management</span>
+                            </div>
+                            <div class="divider"></div>
+                            <div class="stats">
+                                <div class="stat-box">
+                                    <h2>{{ approvedHoursDisplay }}</h2>
+                                    <p>Approved Time</p>
+                                </div>
+                                <div class="stat-box">
+                                    <h2>{{ remainingHoursDisplay }}</h2>
+                                    <p>{{ overtimeApproved ? 'Overtime Left' : 'Remaining Time' }}</p>
+                                </div>
+                                <div class="stat-box">
+                                    <h2>{{ requestedTimeDisplay }}</h2>
+                                    <p>Requested Time</p>
+                                </div>
+                            </div>
+
+                            <div class="timeoff-inline" style="display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
+                                <p class="timeoff-inline__hint" style="margin-bottom: 20px; font-size: 13px; color: #64748b; line-height: 1.5;">Request leaves, hourly time off, or single/multi-day leaves via formal HRMS pipelines.</p>
+                                <a routerLink="/emp-dashboard/time-off" class="apply-btn timeoff-inline__submit" style="margin-top: auto; display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box;">
+                                    Request time off
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="calendar_body">
+                        <div class="card calender_container">
+                            <div class="calendar-left">
+                                <div class="calendar-header-info">
+                                    <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
+                                    <p>Week {{ weekNumber }}</p>
+                                </div>
+                                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents"
+                                    (dayClicked)="isAdmin ? null : onDayClick($event.day)">
+                                </mwl-calendar-month-view>
+                            </div>
+                            <div class="calendar-right">
+                                <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
+
+                                <div class="timeline-container">
+                                    <div *ngFor="let event of selectedEvents" class="event-item" [ngClass]="event.type">
+                                        <div class="marker-section">
+                                            <div class="dot"></div>
+                                            <div class="line"></div>
+                                        </div>
+                                        <div class="event-info">
+                                            <div class="time">{{ event.time }}</div>
+                                            <div class="title">{{ event.title }}</div>
+                                            <div class="location">{{ event.location }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="time_sheet">
+                        <div class="card recent_time">
+                            <div class="card-header">
+                                Time Sheets
+                            </div>
+                            <div class="divider"></div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Day</th>
+                                            <th>Entry</th>
+                                            <th>Exit</th>
+                                            <th>Total</th>
+                                            <th>Overtime</th>
+                                            <th>Break</th>
+                                            <th>Grand Total</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngIf="filteredTimeSheets.length === 0">
+                                            <td colspan="9" class="no-data">
+                                                No attendance records found
+                                            </td>
+                                        </tr>
+                                        <tr *ngFor="let sheet of pagedTimeSheets">
+                                            <td>{{ sheet.date }}</td>
+                                            <td>{{ sheet.day }}</td>
+                                            <td>{{ sheet.entry }}</td>
+                                            <td>{{ sheet.exit }}</td>
+                                            <td>{{ sheet.total }}</td>
+                                            <td>{{ sheet.overtime }}</td>
+                                            <td>{{ sheet.break }}</td>
+                                            <td>{{ sheet.grandTotal }}</td>
+                                            <td>
+                                                <span *ngIf="sheet.status" class="status-badge" [title]="sheet.status" [ngClass]="sheet.status.toLowerCase()">
+                                                    {{ sheet.status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="timesheet-pagination" *ngIf="filteredTimeSheets.length > 0">
+                                <div class="timesheet-pagination__info">
+                                    Showing <span>{{ timeSheetStartEntry }}</span> to
+                                    <span>{{ timeSheetEndEntry }}</span> of
+                                    <span>{{ filteredTimeSheets.length }}</span> entries
+                                </div>
+                                <div class="timesheet-pagination__controls"
+                                    *ngIf="filteredTimeSheets.length > timeSheetPageSize">
+                                    <button type="button" class="timesheet-page-btn" [disabled]="timeSheetPage === 1"
+                                        (click)="setTimeSheetPage(timeSheetPage - 1)">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button type="button" class="timesheet-page-btn" *ngFor="let page of timeSheetPages"
+                                        [class.active]="page === timeSheetPage" (click)="setTimeSheetPage(page)">
+                                        {{ page }}
+                                    </button>
+                                    <button type="button" class="timesheet-page-btn"
+                                        [disabled]="timeSheetPage === timeSheetTotalPages"
+                                        (click)="setTimeSheetPage(timeSheetPage + 1)">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- attendence summary -->
+                    <div class="attendance_summary">
+                        <div class="card attendance_summary_card">
+                            <div class="card-header">
+                                <span>Attendance Summary</span>
+                            </div>
+                            <div class="divider"></div>
+                            <div class="summary-content">
+                                <div class="summary-item" *ngFor="let item of attendanceSummary">
+
+                                    <i [class]="item.icon" class="summary-icon"></i>
+
+                                    <div class="summary-text-container">
+                                        <span class="summary-label">{{ item.label }}</span>
+                                        <span class="summary-value">{{ item.value }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="latest_news">
+                        <div class="card latest_news_card">
+                            <div class="card-header">
+                                <span>Latest News</span>
+                            </div>
+                            <div class="divider"></div>
+                            <div class="latest_news_content">
+                                <div *ngIf="filteredLatestNews.length === 0" style="padding: 24px; color: #64748b;">
+                                    No matching news found
+                                </div>
+                                <div *ngFor="let event of filteredLatestNews" class="news-item">
+                                    <div class="news-icon-container">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="news-details">
+                                        <div class="news-title">{{ event.heading }}</div>
+                                        <div class="news-description">{{ event.contents }}</div>
+                                        <div class="news-footer">
+                                            <span class="news-badge" [ngClass]="event.newsType.toLowerCase()">{{
+                                                event.newsType }}</span>
+                                            <span class="news-date">
+                                                <i class="fas fa-calendar-alt"></i>
+                                                {{ event.date | date:'MMMM dd, yyyy' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
             </div>
         </div>
     </div>
-    </ng-container>
-</div>
-</div>
-</div>
 </div>
 
 <!-- Punch Verification Modal -->
@@ -386,6 +375,26 @@
                     </div>
                 </div>
             </ng-template>
+
+            <!-- Captured Location Verification Section -->
+            <div class="modal-location-section">
+                <div class="location-label">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Captured Location</span>
+                </div>
+                <div class="location-input-wrapper">
+                    <input type="text" [(ngModel)]="pendingPunchAddress" (ngModelChange)="onAddressManualEdit()"
+                        class="location-input" placeholder="Detecting location..." [disabled]="isLocationLoading" />
+                    <button type="button" class="location-refresh-btn" (click)="refetchLocation()"
+                        [disabled]="isLocationLoading" title="Refresh Location">
+                        <i class="fas" [class.fa-sync-alt]="!isLocationLoading" [class.fa-spinner]="isLocationLoading"
+                            [class.fa-spin]="isLocationLoading"></i>
+                    </button>
+                </div>
+                <div class="location-help-text" *ngIf="!isLocationLoading">
+                    If the detected address is incorrect, you can edit it manually before submitting.
+                </div>
+            </div>
         </div>
         <div class="camera-modal-footer">
             <button class="btn btn-secondary" (click)="closeCameraModal()">
@@ -408,19 +417,22 @@
         <div class="modal-body">
             <div class="form-group">
                 <label for="scheduleDate">Date</label>
-                <input type="date" id="scheduleDate" name="scheduleDate" [(ngModel)]="scheduleForm.date" class="form-control" />
+                <input type="date" id="scheduleDate" name="scheduleDate" [(ngModel)]="scheduleForm.date"
+                    class="form-control" />
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="scheduleTime">Time</label>
-                    <input type="time" id="scheduleTime" name="scheduleTime" [(ngModel)]="scheduleForm.startTime" class="form-control" />
+                    <input type="time" id="scheduleTime" name="scheduleTime" [(ngModel)]="scheduleForm.startTime"
+                        class="form-control" />
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="scheduleTask">Task / Important Work</label>
-                <textarea id="scheduleTask" name="scheduleTask" [(ngModel)]="scheduleForm.taskDescription" class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
+                <textarea id="scheduleTask" name="scheduleTask" [(ngModel)]="scheduleForm.taskDescription"
+                    class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -442,20 +454,31 @@
         </div>
         <div class="camera-modal-body">
             <div class="punch-out-confirm">
-                <div class="punch-out-confirm__icon" [ngStyle]="{'background': pendingWorkModeToSwitch === 'Office' ? '#fff1f2' : '#f5f3ff', 'color': pendingWorkModeToSwitch === 'Office' ? '#e11d48' : '#4c1d95', 'box-shadow': '0 10px 24px rgba(225, 29, 72, 0.12)'}">
+                <div class="punch-out-confirm__icon"
+                    [ngStyle]="{'background': pendingWorkModeToSwitch === 'Office' ? '#fff1f2' : '#f5f3ff', 'color': pendingWorkModeToSwitch === 'Office' ? '#e11d48' : '#4c1d95', 'box-shadow': '0 10px 24px rgba(225, 29, 72, 0.12)'}">
                     <i [class]="pendingWorkModeToSwitch === 'Office' ? 'fas fa-building' : 'fas fa-house-user'"></i>
                 </div>
                 <h3>Are you switching to {{ pendingWorkModeToSwitch }}?</h3>
-                <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">Please confirm that you want to change your work mode from <strong>{{ status }}</strong> to <strong>{{ pendingWorkModeToSwitch }}</strong>.</p>
+                <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">Please
+                    confirm that you want to change your work mode from <strong>{{ status }}</strong> to <strong>{{
+                        pendingWorkModeToSwitch }}</strong>.</p>
             </div>
         </div>
         <div class="camera-modal-footer">
             <button class="btn btn-secondary" (click)="closeSwitchConfirmModal()">
                 Cancel
             </button>
-            <button class="btn btn-primary" style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); border: none; box-shadow: 0 8px 18px rgba(225, 29, 72, 0.22)" (click)="confirmSwitchWorkMode()">
+            <button class="btn btn-primary"
+                style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); border: none; box-shadow: 0 8px 18px rgba(225, 29, 72, 0.22)"
+                (click)="confirmSwitchWorkMode()">
                 Confirm Switch
             </button>
         </div>
     </div>
+</div>
+
+<!-- Floating Success Toast Notification -->
+<div class="save-toast" *ngIf="successMessage">
+    <i class="fas fa-check-circle"></i>
+    <span>{{ successMessage }}</span>
 </div>

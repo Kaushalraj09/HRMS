@@ -8,6 +8,8 @@ class TimeOffRequestCreate(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     duration_hours: float
+    reason: Optional[str] = None
+    attachment_name: Optional[str] = None
 
 class TimeOffRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -22,6 +24,8 @@ class TimeOffRequestResponse(BaseModel):
     duration_hours: float
     status: str
     employee_name: Optional[str] = None
+    reason: Optional[str] = None
+    attachment_name: Optional[str] = None
 
 
 class TimeOffApplyPayload(BaseModel):
@@ -50,3 +54,17 @@ class TimeOffApplyResponse(BaseModel):
     approved_seconds_today: int
     remaining_seconds_today: int
     employee_name: Optional[str] = None
+
+class TimeOffRequestPaginatedResponse(BaseModel):
+    items: list[TimeOffRequestResponse]
+    page: int
+    pageSize: int
+    totalItems: int
+    totalPages: int
+
+
+class TimeOffDecisionRequest(BaseModel):
+    decision: str  # "approved" or "rejected"
+    comment: Optional[str] = None
+    approvedHours: Optional[float] = None
+

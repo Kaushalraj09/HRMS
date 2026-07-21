@@ -13,8 +13,15 @@ def _get_bool(name: str, default: bool) -> bool:
 class Settings:
     APP_ENV: str = os.getenv("APP_ENV", "development").strip().lower()
     PROJECT_NAME: str = os.getenv("APP_NAME", "HRMS API")
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
-    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
+    DATABASE_URL: str = os.getenv("DATABASE_URL") or ""
+    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or ""
+    
+    def __init__(self):
+        if not self.DATABASE_URL:
+            raise ValueError("DATABASE_URL is not set in the environment variables.")
+        if not self.SECRET_KEY:
+            raise ValueError("JWT_SECRET_KEY is not set in the environment variables.")
+
     ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     BACKEND_CORS_ORIGINS: list[str] = [

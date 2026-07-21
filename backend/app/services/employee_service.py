@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import literal, or_, func
 from sqlalchemy.orm import Session
 from app.models.user import User, Role
 from app.models.employee import Employee
@@ -13,8 +13,13 @@ def _employee_query(db: Session):
         db.query(Employee)
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
-        .filter(func.lower(Role.name) == "employee")
     )
+
+def generate_random_password(length: int = 12) -> str:
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 def create_employee(db: Session, obj_in: EmployeeCreate):
     # 1. Check if the email is already registered in the users table
@@ -40,7 +45,7 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     db.flush()
     
     # 3. Create the Employee Profile
-    emp_code = f"EMP-{new_user.id:04d}"
+    emp_code = f"{new_user.id:04d}"
     new_employee = Employee(
         user_id=new_user.id,
         employee_code=emp_code,
@@ -57,73 +62,109 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     send_reset_email(new_user.email, new_user.display_name, reset_link)
     return new_employee
 
-def list_employees(db: Session, skip: int = 0, limit: int = 100):
-    # Filter out shadow employee records of HR users so they aren't duplicated in the list
-    employees = (
-        db.query(Employee)
-        .join(User, Employee.user_id == User.id)
-        .join(Role, User.role_id == Role.id)
-        .filter(func.lower(Role.name) != "hr")
-        .order_by(Employee.id.desc())
-        .all()
-    )
-    hrs = db.query(HrUser).order_by(HrUser.id.desc()).all()
-    
-    for hr in hrs:
-        name_parts = hr.full_name.split(" ", 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ""
-        emp_code = f"EMP-{hr.user_id:04d}"
-        
-        simulated_emp = Employee(
-            id=hr.id + 10000,
-            user_id=hr.user_id,
-            employee_code=emp_code,
-            first_name=first_name,
-            last_name=last_name,
-            gender="Other",
-            department=hr.department or "Human Resources",
-            designation=hr.designation or "HR Manager",
-            employee_type="Full-Time",
-            work_location="Main Office",
-            shift_type="General Shift",
-            official_email=hr.email,
-            mobile=hr.phone or "0000000000",
-            status=hr.status or "Active",
-            created_at=hr.created_at
+def _matches_employee_filters(employee, search: str, department: str, employee_type: str, status: str) -> bool:
+    search_value = (search or "").strip().lower()
+    if search_value:
+        searchable_values = [
+            f"{employee.first_name or ''} {employee.last_name or ''}",
+            employee.employee_code or "",
+            employee.department or "",
+            employee.official_email or "",
+        ]
+        if not any(search_value in value.lower() for value in searchable_values):
+            return False
+
+    if department and employee.department != department:
+        return False
+    if employee_type and employee.employee_type != employee_type:
+        return False
+    if status and employee.status != status:
+        return False
+
+    return True
+
+
+def list_employees(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    search: str = "",
+    department: str = "",
+    employee_type: str = "",
+    status: str = "",
+    exclude_hr: bool = False,
+):
+    from sqlalchemy import Date, String, Integer
+
+    # Query Employee table records joining User and Role
+    emp_q = db.query(
+        Employee.id.label("id"),
+        Employee.user_id.label("user_id"),
+        Employee.employee_code.label("employee_code"),
+        Employee.first_name.label("first_name"),
+        Employee.last_name.label("last_name"),
+        Employee.gender.label("gender"),
+        Employee.dob.label("dob"),
+        Employee.marital_status.label("marital_status"),
+        Employee.blood_group.label("blood_group"),
+        Employee.department.label("department"),
+        Employee.designation.label("designation"),
+        Employee.employee_type.label("employee_type"),
+        Employee.work_location.label("work_location"),
+        Employee.shift_type.label("shift_type"),
+        Employee.doj.label("doj"),
+        Employee.official_email.label("official_email"),
+        Employee.personal_email.label("personal_email"),
+        Employee.mobile.label("mobile"),
+        Employee.alternate_mobile.label("alternate_mobile"),
+        Employee.emergency_contact_name.label("emergency_contact_name"),
+        Employee.emergency_contact_number.label("emergency_contact_number"),
+        Employee.status.label("status"),
+        Employee.created_at.label("created_at")
+    ).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
+
+    if exclude_hr:
+        emp_q = emp_q.filter(func.lower(Role.name) != "hr")
+
+    search_value = (search or "").strip()
+    if search_value:
+        like_value = f"%{search_value}%"
+        full_name = func.coalesce(Employee.first_name, "") + literal(" ") + func.coalesce(Employee.last_name, "")
+        emp_q = emp_q.filter(
+            or_(
+                Employee.first_name.ilike(like_value),
+                Employee.last_name.ilike(like_value),
+                full_name.ilike(like_value),
+                Employee.employee_code.ilike(like_value),
+                Employee.department.ilike(like_value),
+                Employee.official_email.ilike(like_value),
+            )
         )
-        employees.append(simulated_emp)
-        
-    employees.sort(key=lambda e: e.id, reverse=True)
-    return employees[skip : skip + limit]
+
+    if department:
+        emp_q = emp_q.filter(Employee.department == department)
+    if employee_type:
+        emp_q = emp_q.filter(Employee.employee_type == employee_type)
+    if status:
+        emp_q = emp_q.filter(Employee.status == status)
+    else:
+        emp_q = emp_q.filter(Employee.status != "Deleted")
+
+    total = emp_q.count()
+
+    paged_records = emp_q.order_by(Employee.id.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    paged_data = []
+    for r in paged_records:
+        r_dict = dict(r._mapping)
+        paged_data.append(r_dict)
+
+    return {
+        "data": paged_data,
+        "total": total,
+    }
 
 def get_employee_by_id(db: Session, employee_id: int):
-    if employee_id >= 10000:
-        hr_id = employee_id - 10000
-        hr = db.query(HrUser).filter(HrUser.id == hr_id).first()
-        if not hr:
-            return None
-        name_parts = hr.full_name.split(" ", 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ""
-        emp_code = f"EMP-{hr.user_id:04d}"
-        return Employee(
-            id=hr.id + 10000,
-            user_id=hr.user_id,
-            employee_code=emp_code,
-            first_name=first_name,
-            last_name=last_name,
-            gender="Other",
-            department=hr.department or "Human Resources",
-            designation=hr.designation or "HR Manager",
-            employee_type="Full-Time",
-            work_location="Main Office",
-            shift_type="General Shift",
-            official_email=hr.email,
-            mobile=hr.phone or "0000000000",
-            status=hr.status or "Active",
-            created_at=hr.created_at
-        )
     return _employee_query(db).filter(Employee.id == employee_id).first()
 
 def get_employee_credentials(db: Session, employee_id: int):
@@ -167,60 +208,6 @@ def get_employee_credentials(db: Session, employee_id: int):
     }
 
 def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
-    if employee_id >= 10000:
-        hr_id = employee_id - 10000
-        hr = db.query(HrUser).filter(HrUser.id == hr_id).first()
-        if not hr:
-            return None
-        updates = payload.model_dump(exclude_unset=True)
-        if "first_name" in updates or "last_name" in updates:
-            first_name = updates.get("first_name", hr.full_name.split(" ", 1)[0])
-            last_name = updates.get("last_name", hr.full_name.split(" ", 1)[1] if " " in hr.full_name else "")
-            hr.full_name = f"{first_name} {last_name}".strip()
-        if "department" in updates:
-            hr.department = updates["department"]
-        if "designation" in updates:
-            hr.designation = updates["designation"]
-        if "official_email" in updates:
-            hr.email = updates["official_email"]
-        if "mobile" in updates:
-            hr.phone = updates["mobile"]
-        if "status" in updates:
-            hr.status = updates["status"]
-            
-        user = db.query(User).filter(User.id == hr.user_id).first()
-        if user:
-            if "official_email" in updates:
-                user.email = updates["official_email"]
-            if "status" in updates:
-                user.status = updates["status"]
-            user.display_name = hr.full_name
-            
-        db.commit()
-        db.refresh(hr)
-        
-        name_parts = hr.full_name.split(" ", 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ""
-        emp_code = f"EMP-{hr.user_id:04d}"
-        return Employee(
-            id=hr.id + 10000,
-            user_id=hr.user_id,
-            employee_code=emp_code,
-            first_name=first_name,
-            last_name=last_name,
-            gender="Other",
-            department=hr.department or "Human Resources",
-            designation=hr.designation or "HR Manager",
-            employee_type="Full-Time",
-            work_location="Main Office",
-            shift_type="General Shift",
-            official_email=hr.email,
-            mobile=hr.phone or "0000000000",
-            status=hr.status or "Active",
-            created_at=hr.created_at
-        )
-
     employee = _employee_query(db).filter(Employee.id == employee_id).first()
     if not employee:
         return None
@@ -234,6 +221,8 @@ def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
     if user:
         if "official_email" in updates and updates["official_email"]:
             user.email = updates["official_email"]
+        if "status" in updates and updates["status"]:
+            user.status = updates["status"]
         first_name = updates.get("first_name", employee.first_name)
         last_name = updates.get("last_name", employee.last_name)
         user.display_name = f"{first_name} {last_name}".strip()
@@ -241,3 +230,18 @@ def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
     db.commit()
     db.refresh(employee)
     return employee
+
+def delete_employee(db: Session, employee_id: int) -> bool:
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        return False
+        
+    employee.status = "Deleted"
+    
+    # Update linked User account status
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if user:
+        user.status = "Deleted"
+        
+    db.commit()
+    return True

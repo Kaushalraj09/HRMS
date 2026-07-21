@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'Present' | 'Working' | 'Absent' | 'Not Marked';
+export type AttendanceStatus = 'Present' | 'Working' | 'Absent' | 'Not Marked' | 'Half Day' | 'Time Off';
 export type WorkMode = 'Office' | 'Remote' | 'Hybrid';
 
 export interface AttendanceRecord {
@@ -91,4 +91,16 @@ export interface TodayAttendanceState {
   punchOutImage?: string | null;
   attendanceStatus?: string;
   badgeColor?: string;
+  yesterdayAutoCheckedOut?: boolean;
+  requiresRegularization?: boolean;
+  overtimeApproved?: boolean;
+  overtimeExtended?: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }

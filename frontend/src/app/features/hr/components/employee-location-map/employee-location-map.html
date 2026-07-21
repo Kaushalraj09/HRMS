@@ -1,0 +1,57 @@
+<div class="location-map-container">
+  <div class="map-header">
+    <h3 class="map-title">Employee Attendance Location Map</h3>
+    <p class="map-subtitle">Live tracking of active and field employee punch-ins in India</p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-value">{{ stats.totalWorking }}</div>
+      <div class="stat-label">Punched In Today</div>
+    </div>
+    <div class="stat-card stat-active">
+      <div class="stat-value">{{ stats.currentlyActive }}</div>
+      <div class="stat-label">Working</div>
+    </div>
+    <div class="stat-card stat-late">
+      <div class="stat-value">{{ stats.lateArrivals }}</div>
+      <div class="stat-label">Late Arrivals</div>
+    </div>
+    <div class="stat-card stat-out">
+      <div class="stat-value">{{ stats.punchedOut }}</div>
+      <div class="stat-label">Punched Out</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-actions">
+    <button class="filter-btn" [class.active]="activeFilter === 'ALL'" (click)="setFilter('ALL')">All Employees</button>
+    <button class="filter-btn" [class.active]="activeFilter === 'ACTIVE'" (click)="setFilter('ACTIVE')">Currently Active</button>
+    <button class="filter-btn" [class.active]="activeFilter === 'LATE'" (click)="setFilter('LATE')">Late Employees</button>
+    <button class="filter-btn" [class.active]="activeFilter === 'PUNCHED_OUT'" (click)="setFilter('PUNCHED_OUT')">Punched Out</button>
+  </div>
+
+  <!-- Map Wrapper -->
+  <div class="map-wrapper">
+    <div #mapContainer class="map-container"></div>
+
+    <!-- Loading State -->
+    <div class="map-loader" *ngIf="loading && !error">
+      <div class="spinner"></div>
+      <p>Loading live map coordinates...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="map-error" *ngIf="error">
+      <div class="error-icon">⚠️</div>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="map-empty" *ngIf="!loading && !error && filteredLocations.length === 0">
+      <div class="empty-icon">📍</div>
+      <p>No employees match the active filter criteria.</p>
+    </div>
+  </div>
+</div>

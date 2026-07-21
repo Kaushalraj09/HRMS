@@ -32,16 +32,18 @@ export class HrService {
   constructor(private readonly http: HttpClient) {}
 
   getHrUsers(page: number, limit: number, search: string, status: string): Observable<PaginatedResult<HrUser>> {
-    return this.http.get<BackendHrUser[]>(this.apiUrl).pipe(
-      map(rows => rows.map(row => this.mapHr(row))),
-      map(rows => this.filterRows(rows, search, status)),
-      map(rows => {
-        const startIndex = (page - 1) * limit;
-        return {
-          data: rows.slice(startIndex, startIndex + limit),
-          total: rows.length
-        };
-      })
+    const params = {
+      page: String(page),
+      limit: String(limit),
+      search: search.trim(),
+      status: status
+    };
+
+    return this.http.get<{ data: BackendHrUser[], total: number }>(this.apiUrl, { params }).pipe(
+      map(res => ({
+        data: res.data.map(row => this.mapHr(row)),
+        total: res.total
+      }))
     );
   }
 

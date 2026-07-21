@@ -11,6 +11,10 @@ import { HrService } from '../app/core/services/hr.service';
 import { LoginActivityService } from '../app/core/services/login-activity.service';
 import { NotificationService } from '../app/core/services/notification.service';
 import { MyProfileService } from '../app/core/services/profile.service';
+import { TimeEngineService } from '../app/core/services/time-engine.service';
+import { TimeoffService } from '../app/core/services/timeoff.service';
+import { ApprovalService } from '../app/core/services/approval.service';
+import { MasterDataService } from '../app/core/services/master-data.service';
 
 const mockCurrentUser = {
   id: '1',
@@ -127,18 +131,57 @@ export function provideStandaloneComponentTestProviders(): any[] {
         getMyTimesheets: () => of([]),
         getMyAttendanceSummary: () => of([]),
         getAttendanceLogs: () => of({ data: [], total: 0, metrics: { present: 0, working: 0, absent: 0, notMarked: 0 } }),
-        getPendingTimeOffRequests: () => of([]),
-        getProcessedTimeOffRequests: () => of([]),
-        approveTimeOffRequest: () => of({}),
-        applyTimeOffInline: () => of({}),
-        requestTimeOff: () => of({}),
-        getMyTimeOffRequests: () => of([]),
         getIpLocation: () => of({}),
         reverseGeocode: () => of({ display_name: '' }),
         punchIn: () => of(mockTodayState),
         punchOut: () => of(mockTodayState),
         updateWorkMode: () => of(mockTodayState),
         addSchedule: () => of(void 0)
+      }
+    },
+    {
+      provide: TimeoffService,
+      useValue: {
+        timeoffUpdate$: of(null),
+        getMyTimeOffRequests: () => of({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 }),
+        requestTimeOff: () => of({}),
+        cancelTimeOffRequest: () => of({}),
+        applyTimeOffInline: () => of({}),
+        getPendingTimeOffRequests: () => of({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 }),
+        getProcessedTimeOffRequests: () => of({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 }),
+        approveTimeOffRequest: () => of({})
+      }
+    },
+    {
+      provide: ApprovalService,
+      useValue: {
+        getPendingApprovals: () => of({ timeoff: [], regularization: [], total: 0 }),
+        getApprovalHistory: () => of({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 }),
+        submitDecision: () => of({})
+      }
+    },
+    {
+      provide: MasterDataService,
+      useValue: {
+        getBootstrapData: () => of({ departments: [], designations: [], shifts: [], workLocations: [], leaveTypes: [], holidays: [] }),
+        getDepartments: () => of([]),
+        createDepartment: () => of({}),
+        updateDepartment: () => of({}),
+        getDesignations: () => of([]),
+        createDesignation: () => of({}),
+        updateDesignation: () => of({}),
+        getShifts: () => of([]),
+        createShift: () => of({}),
+        updateShift: () => of({}),
+        getWorkLocations: () => of([]),
+        createWorkLocation: () => of({}),
+        updateWorkLocation: () => of({}),
+        getLeaveTypes: () => of([]),
+        createLeaveType: () => of({}),
+        updateLeaveType: () => of({}),
+        getHolidays: () => of([]),
+        createHoliday: () => of({}),
+        updateHoliday: () => of({})
       }
     },
     {
@@ -181,6 +224,19 @@ export function provideStandaloneComponentTestProviders(): any[] {
       useValue: {
         getHistory: () => of([]),
         getDetail: () => of(null)
+      }
+    },
+    {
+      provide: TimeEngineService,
+      useValue: {
+        state$: of(mockTodayState),
+        updateState: () => undefined,
+        formatHHMMSS: (sec: number) => {
+          const h = Math.floor(sec / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          const s = sec % 60;
+          return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
+        }
       }
     }
   ];

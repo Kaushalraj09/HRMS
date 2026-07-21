@@ -75,11 +75,6 @@ class AttendanceResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat() if v else None,
-            date: lambda v: v.isoformat() if v else None,
-            time: lambda v: v.isoformat() if v else None,
-        }
     )
 
     id: int
@@ -113,6 +108,29 @@ class AttendanceResponse(BaseModel):
     late_minutes: int = Field(default=0, alias="lateMinutes")
     early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
 
+    # Enterprise checkout & overtime fields
+    flags: List[str] = Field(default=[], alias="flags")
+    checkout_source: str = Field(default="MANUAL", alias="checkoutSource")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+    overtime_start: Optional[time] = Field(default=None, alias="overtimeStart")
+    overtime_end: Optional[time] = Field(default=None, alias="overtimeEnd")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
+    @field_validator("checkout_source", mode="before")
+    @classmethod
+    def coerce_checkout_source(cls, v):
+        return "MANUAL" if v is None else v
+
     @computed_field(alias="isWorking")
     @property
     def is_working(self) -> bool:
@@ -132,10 +150,6 @@ class TodayAttendanceState(BaseModel):
     """Current attendance state for today with working metrics and shift information."""
     model_config = ConfigDict(
         populate_by_name=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat() if v else None,
-            time: lambda v: v.isoformat() if v else None,
-        }
     )
 
     employee_id: Optional[int] = Field(default=None, alias="employeeId")
@@ -164,6 +178,28 @@ class TodayAttendanceState(BaseModel):
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
 
+    # Enterprise checkout & overtime fields
+    yesterday_auto_checked_out: bool = Field(default=False, alias="yesterdayAutoCheckedOut")
+    flags: List[str] = Field(default=[], alias="flags")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+    overtime_extended: bool = Field(default=False, alias="overtimeExtended")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_extended", mode="before")
+    @classmethod
+    def coerce_overtime_extended(cls, v):
+        return False if v is None else v
+
     @computed_field(alias="attendanceStatus")
     @property
     def attendance_status(self) -> str:
@@ -172,7 +208,10 @@ class TodayAttendanceState(BaseModel):
     @computed_field(alias="badgeColor")
     @property
     def badge_color(self) -> str:
-        return "green" if self.status.lower() == "working" else "gray"
+        status_lower = self.status.lower()
+        if status_lower == "overtime working":
+            return "amber"
+        return "green" if status_lower == "working" else "gray"
 
 class AttendanceRecord(BaseModel):
     """Attendance record for list responses."""
@@ -201,6 +240,27 @@ class AttendanceRecord(BaseModel):
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")
     punch_out_image: Optional[str] = Field(default=None, alias="punchOutImage")
 
+    # Enterprise checkout & overtime fields
+    flags: List[str] = Field(default=[], alias="flags")
+    checkout_source: Optional[str] = Field(default="MANUAL", alias="checkoutSource")
+    requires_regularization: bool = Field(default=False, alias="requiresRegularization")
+    overtime_approved: bool = Field(default=False, alias="overtimeApproved")
+
+    @field_validator("requires_regularization", mode="before")
+    @classmethod
+    def coerce_requires_regularization(cls, v):
+        return False if v is None else v
+
+    @field_validator("overtime_approved", mode="before")
+    @classmethod
+    def coerce_overtime_approved(cls, v):
+        return False if v is None else v
+
+    @field_validator("checkout_source", mode="before")
+    @classmethod
+    def coerce_checkout_source(cls, v):
+        return "MANUAL" if v is None else v
+
     @computed_field(alias="isWorking")
     @property
     def is_working(self) -> bool:
@@ -217,10 +277,18 @@ class AttendanceRecord(BaseModel):
         return "green" if self.status.lower() == "working" else "gray"
 
 
+class AttendanceMetrics(BaseModel):
+    present: int
+    working: int
+    absent: int
+    not_marked: int = Field(alias="notMarked")
+
+
 class AttendanceListResponse(BaseModel):
     """List response for all attendance records."""
     data: List[AttendanceRecord]
     total: int
+    metrics: AttendanceMetrics
 
 class TodayAnalytics(BaseModel):
     punch_in: Optional[str] = Field(default=None, alias="punchIn")
@@ -244,3 +312,19 @@ class EmployeeAnalytics(BaseModel):
     department: str
     today: TodayAnalytics
     monthly: MonthlyAnalytics
+
+
+class EmployeeLocationResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    employee_id: int = Field(alias="employeeId")
+    employee_name: str = Field(alias="employeeName")
+    latitude: float
+    longitude: float
+    city: str
+    state: str
+    punch_in_time: Optional[str] = Field(default=None, alias="punchInTime")
+    punch_out_time: Optional[str] = Field(default=None, alias="punchOutTime")
+    work_mode: str = Field(alias="workMode")  # 'FIELD', 'OFFICE', 'REMOTE'
+    status: str  # 'ACTIVE', 'PUNCHED_OUT', 'LATE'
+

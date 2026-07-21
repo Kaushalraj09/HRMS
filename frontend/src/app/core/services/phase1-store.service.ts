@@ -238,7 +238,16 @@ export class Phase1StoreService {
           note: `Birthday: ${monthStr} ${dayStr}`,
           role: emp.designation || 'Employee'
         };
-      }).slice(0, 3)
+      }).slice(0, 3),
+      weeklyAttendanceTrend: [
+        { date: 'Jun 09', present: 12, absent: 2, leave: 1, wfh: 3, total: 15, percentage: 80.0 },
+        { date: 'Jun 10', present: 14, absent: 1, leave: 0, wfh: 4, total: 15, percentage: 93.3 },
+        { date: 'Jun 11', present: 13, absent: 1, leave: 1, wfh: 3, total: 15, percentage: 86.7 },
+        { date: 'Jun 12', present: 15, absent: 0, leave: 0, wfh: 5, total: 15, percentage: 100.0 },
+        { date: 'Jun 13', present: 11, absent: 3, leave: 1, wfh: 2, total: 15, percentage: 73.3 },
+        { date: 'Jun 14', present: 13, absent: 1, leave: 1, wfh: 4, total: 15, percentage: 86.7 },
+        { date: 'Jun 15', present: metrics.present + metrics.working, absent: metrics.absent, leave: metrics.notMarked, wfh: remoteCount, total: this.state.employees.length, percentage: this.state.employees.length ? Math.round((metrics.present + metrics.working) / this.state.employees.length * 100) : 0 }
+      ]
     };
   }
 

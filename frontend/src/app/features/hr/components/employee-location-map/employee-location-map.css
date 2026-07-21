@@ -1,0 +1,276 @@
+/* Glassmorphism styling */
+.location-map-container {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+}
+
+.map-header {
+  margin-bottom: 1.5rem;
+}
+
+.map-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.map-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Stats Cards Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+  color: #0f172a;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+/* Colors for stats */
+.stat-total .stat-value { color: #6366f1; }
+.stat-active .stat-value { color: #22c55e; }
+.stat-field .stat-value { color: #3b82f6; }
+.stat-late .stat-value { color: #f97316; }
+.stat-out .stat-value { color: #ef4444; }
+
+/* Filter Actions */
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 0.5rem 1rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.filter-btn.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+/* Map Wrapper */
+.map-wrapper {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.map-container {
+  height: 500px;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Loading & Empty States */
+.map-loader, .map-error, .map-empty {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-icon, .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.error-icon { color: #ef4444; }
+.empty-icon { color: #64748b; }
+
+/* Custom Marker Styling */
+.custom-div-icon {
+  background: none;
+  border: none;
+}
+
+.marker-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -15px 0 0 -15px;
+  box-shadow: -2px 2px 4px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.marker-pin::after {
+  content: '';
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  position: absolute;
+  background: white;
+  z-index: 1;
+}
+
+.marker-inner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+/* Colors for pins */
+.marker-green { background: #22c55e; }
+.marker-green .marker-inner { background: #22c55e; }
+
+.marker-red { background: #ef4444; }
+.marker-red .marker-inner { background: #ef4444; }
+
+.marker-orange { background: #f97316; }
+.marker-orange .marker-inner { background: #f97316; }
+
+.marker-blue { background: #3b82f6; }
+.marker-blue .marker-inner { background: #3b82f6; }
+
+/* Map Tooltip/Popup styling */
+.map-tooltip {
+  min-width: 200px;
+  font-family: inherit;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tooltip-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.map-tooltip .badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.map-tooltip .badge.office { background: #dcfce7; color: #166534; }
+.map-tooltip .badge.remote { background: #e0f2fe; color: #0369a1; }
+.map-tooltip .badge.field { background: #dbeafe; color: #1d4ed8; }
+
+.tooltip-body p {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.map-tooltip .status-text {
+  font-weight: 700;
+}
+
+.map-tooltip .status-text.active { color: #22c55e; }
+.map-tooltip .status-text.punched_out { color: #ef4444; }
+.map-tooltip .status-text.late { color: #f97316; }
+
+/* Leaflet Overrides */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+}

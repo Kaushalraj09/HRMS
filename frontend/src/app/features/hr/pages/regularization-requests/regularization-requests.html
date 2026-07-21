@@ -1,0 +1,168 @@
+<div class="requests-container">
+  <div class="requests-header">
+    <div>
+      <span class="breadcrumb">HR Portal / Dashboard / Regularizations</span>
+      <h1>Attendance Regularizations</h1>
+      <p class="subtitle">Review and approve regularization requests from employees to adjust incorrect attendance logs.</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-card card bg-card-theme">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label for="search">Search Employee</label>
+        <input
+          type="text"
+          id="search"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onFilterChange()"
+          placeholder="Search by name, code..."
+          class="filter-input"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label for="reasonType">Reason Type</label>
+        <app-custom-select
+          [options]="reasonTypeOptions"
+          placeholder="All Reason Types"
+          [(ngModel)]="selectedReasonType"
+          (ngModelChange)="onFilterChange()"
+          inputId="reasonType"
+        ></app-custom-select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requests Table Panel -->
+  <div class="table-panel card bg-card-theme">
+    <div class="table-header">
+      <h2>Pending Requests ({{ totalItems }})</h2>
+    </div>
+
+    <div class="table-responsive">
+      <table class="requests-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Date</th>
+            <th>Reason Type</th>
+            <th>Requested In/Out</th>
+            <th>Explanation</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let req of pendingRequests">
+            <td>
+              <div class="emp-info">
+                <span class="emp-name">{{ req.employeeName }}</span>
+                <span class="emp-code">{{ req.employeeCode }}</span>
+              </div>
+            </td>
+            <td><strong>{{ req.attendanceDate | date:'mediumDate' }}</strong></td>
+            <td>{{ getReasonTypeLabel(req.reasonType) }}</td>
+            <td>
+              <div class="time-block">
+                <span class="time-label">In:</span> <span>{{ formatTime(req.requestedPunchIn) }}</span>
+              </div>
+              <div class="time-block">
+                <span class="time-label">Out:</span> <span>{{ formatTime(req.requestedPunchOut) }}</span>
+              </div>
+            </td>
+            <td class="reason-cell" [title]="req.reasonText">{{ req.reasonText }}</td>
+            <td>
+              <button (click)="openDecisionModal(req)" class="btn-review">
+                <i class="fas fa-edit"></i> Review
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="pendingRequests.length === 0">
+            <td colspan="6" class="empty-state">
+              <i class="fas fa-check-double empty-icon"></i>
+              <p>All regularization requests have been processed!</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container" *ngIf="totalItems > pageSize">
+      <div class="pagination-info">
+        Showing {{ pendingRequests.length > 0 ? (currentPage - 1) * pageSize + 1 : 0 }} to {{ endIndex }} of {{ totalItems }} requests
+      </div>
+      <div class="pagination-controls">
+        <button (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+        <button *ngFor="let page of pageNumbers" (click)="setPage(page)" [class.active]="currentPage === page" class="page-btn">{{ page }}</button>
+        <button (click)="setPage(currentPage + 1)" [disabled]="currentPage === totalPages" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Modal -->
+  <div class="modal-backdrop" *ngIf="selectedRequest">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Review Attendance Regularization</h3>
+        <button (click)="closeDecisionModal()" class="btn-close">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Employee</span>
+            <span class="detail-val">{{ selectedRequest.employeeName }} ({{ selectedRequest.employeeCode }})</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Attendance Date</span>
+            <span class="detail-val">{{ selectedRequest.attendanceDate | date:'fullDate' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Requested Punch In</span>
+            <span class="detail-val">{{ formatTime(selectedRequest.requestedPunchIn) }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Requested Punch Out</span>
+            <span class="detail-val">{{ formatTime(selectedRequest.requestedPunchOut) }}</span>
+          </div>
+          <div class="detail-item full-width">
+            <span class="detail-label">Reason Type</span>
+            <span class="detail-val">{{ getReasonTypeLabel(selectedRequest.reasonType) }}</span>
+          </div>
+          <div class="detail-item full-width">
+            <span class="detail-label">Employee Explanation</span>
+            <span class="detail-val reason-text-val">{{ selectedRequest.reasonText }}</span>
+          </div>
+        </div>
+
+        <!-- Comment Box -->
+        <div class="form-group comment-group">
+          <label for="reviewComment">Review Comment (Required if Rejecting)</label>
+          <textarea
+            id="reviewComment"
+            [(ngModel)]="decisionComment"
+            rows="3"
+            placeholder="Provide feedback/reasons for this decision..."
+            class="modal-input"
+          ></textarea>
+        </div>
+
+        <div *ngIf="decisionError" class="alert alert-danger">
+          <i class="fas fa-exclamation-circle"></i> {{ decisionError }}
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button (click)="closeDecisionModal()" [disabled]="isSavingDecision" class="btn-modal btn-cancel">Cancel</button>
+        <button (click)="submitDecision('rejected')" [disabled]="isSavingDecision" class="btn-modal btn-reject">
+          <i class="fas fa-times"></i> Reject
+        </button>
+        <button (click)="submitDecision('approved')" [disabled]="isSavingDecision" class="btn-modal btn-approve">
+          <i class="fas fa-check"></i> Approve
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -41,7 +41,6 @@ export class EmployeeCredentialModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('EmployeeCredentialModal: Fetching credentials for ID:', employeeId);
     this.isLoading = true;
     this.errorMessage = '';
     this.credentials = null;
@@ -49,14 +48,12 @@ export class EmployeeCredentialModalComponent implements OnInit, OnDestroy {
     this.subscription = this.employeeService.getEmployeeCredentials(employeeId)
       .pipe(
         finalize(() => {
-          console.log('EmployeeCredentialModal: Load finished for ID:', employeeId);
           this.isLoading = false;
           this.cdr.markForCheck();
         })
       )
       .subscribe({
         next: (credentials) => {
-          console.log('EmployeeCredentialModal: Credentials received:', credentials);
           if (credentials) {
             this.credentials = credentials;
           } else {

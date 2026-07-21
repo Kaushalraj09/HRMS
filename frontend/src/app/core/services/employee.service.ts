@@ -30,6 +30,11 @@ interface BackendEmployee {
   status: 'Active' | 'Inactive';
 }
 
+interface BackendPaginatedEmployees {
+  data: BackendEmployee[];
+  total: number;
+}
+
 interface BackendEmployeePayload {
   first_name: string;
   last_name: string;
@@ -78,22 +83,21 @@ export class EmployeeService {
     status: string,
     excludeHr: boolean = false
   ): Observable<PaginatedResult<Employee>> {
-    return this.http.get<BackendEmployee[]>(this.apiUrl).pipe(
-      map(rows => rows.map(row => this.mapEmployee(row))),
-      map(rows => this.filterEmployees(rows, search, department, type, status)),
-      map(rows => {
-        if (excludeHr) {
-          rows = rows.filter(emp => {
-            const isHr = emp.id.startsWith('hr') || (!isNaN(Number(emp.id)) && Number(emp.id) >= 10000);
-            return !isHr;
-          });
-        }
-        const startIndex = (page - 1) * limit;
-        return {
-          data: rows.slice(startIndex, startIndex + limit),
-          total: rows.length
-        };
-      })
+    const params = {
+      page,
+      limit,
+      search: search.trim(),
+      department,
+      type,
+      status,
+      exclude_hr: excludeHr
+    };
+
+    return this.http.get<BackendPaginatedEmployees>(this.apiUrl, { params }).pipe(
+      map(result => ({
+        data: result.data.map(row => this.mapEmployee(row)),
+        total: result.total
+      }))
     );
   }
 
@@ -102,11 +106,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.getEmployeeById request:', normalizedId);
-
     return this.http.get<BackendEmployee>(`${this.apiUrl}/${normalizedId}`).pipe(
       map(row => {
-        console.log('EmployeeService.getEmployeeById response:', row);
         if (!row || row.id == null) {
           throw new Error('Employee detail response was empty or invalid.');
         }
@@ -130,11 +131,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.getEmployeeCredentials request:', normalizedId);
-
     return this.http.get<BackendEmployeeCredentials>(`${this.apiUrl}/${normalizedId}/credentials`).pipe(
       map(row => {
-        console.log('EmployeeService.getEmployeeCredentials response:', row);
         if (!row || row.employee_id == null) {
           throw new Error('Credentials response was empty or invalid.');
         }
@@ -175,11 +173,8 @@ export class EmployeeService {
     if (!normalizedId) {
       return throwError(() => new Error('Employee ID is required.'));
     }
-    console.log('EmployeeService.updateEmployee request:', normalizedId, payload);
-
     return this.http.put<BackendEmployee>(`${this.apiUrl}/${normalizedId}`, this.toBackendPayload(payload)).pipe(
       map(row => {
-        console.log('EmployeeService.updateEmployee response:', row);
         return { success: true, message: 'Employee updated successfully' };
       }),
       catchError(error => {
@@ -189,25 +184,24 @@ export class EmployeeService {
     );
   }
 
-  private normalizeEmployeeId(employeeId: string): string {
-    return String(employeeId ?? '').trim();
+  deleteEmployee(employeeId: string): Observable<{ success: boolean; message: string }> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${normalizedId}`).pipe(
+      map(row => {
+        return row;
+      }),
+      catchError(error => {
+        console.error('EmployeeService.deleteEmployee error:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
-  private filterEmployees(rows: Employee[], search: string, department: string, type: string, status: string): Employee[] {
-    return rows.filter(employee => {
-      const searchValue = search.trim().toLowerCase();
-      const matchesSearch = !searchValue
-        || employee.name.toLowerCase().includes(searchValue)
-        || employee.employeeCode.toLowerCase().includes(searchValue)
-        || employee.department.toLowerCase().includes(searchValue)
-        || employee.officialEmail.toLowerCase().includes(searchValue);
-
-      const matchesDepartment = !department || employee.department === department;
-      const matchesType = !type || employee.employeeType === type;
-      const matchesStatus = !status || employee.status === status;
-
-      return matchesSearch && matchesDepartment && matchesType && matchesStatus;
-    });
+  private normalizeEmployeeId(employeeId: string): string {
+    return String(employeeId ?? '').trim();
   }
 
   private toBackendPayload(payload: EmployeePayload): BackendEmployeePayload {

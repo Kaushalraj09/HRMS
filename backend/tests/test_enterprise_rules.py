@@ -21,11 +21,26 @@ def test_enterprise_standard_present():
     assert att.total_working_minutes == 480
     assert att.break_minutes == 60
     assert att.overtime_minutes == 0
-    assert att.status == "Present"
+    assert att.status == "PRESENT"
     
     # Late arrival and early exit checks
     assert calculate_late_minutes(att.punch_in) == 0
     assert calculate_early_exit_minutes(att.punch_out) == 0
+
+def test_enterprise_grace_period_present():
+    # Punch In at 09:15, Punch Out at 18:00
+    # Gross = 8 hours 45 minutes (525 mins)
+    # Lunch break = 60 mins
+    # Net = 7 hours 45 minutes (465 mins)
+    # Since 09:15 is within the 15-minute grace period, it should still be PRESENT
+    att = Attendance(
+        date=date(2026, 6, 4),
+        punch_in=time(9, 15),
+        punch_out=time(18, 0)
+    )
+    calculate_times(att)
+    assert att.total_working_minutes == 465
+    assert att.status == "PRESENT"
 
 def test_enterprise_late_arrival_half_day():
     # Punch In at 11:36, Punch Out at 18:35
@@ -40,7 +55,7 @@ def test_enterprise_late_arrival_half_day():
     calculate_times(att)
     assert att.total_working_minutes == 359
     assert att.break_minutes == 60
-    assert att.status == "Half Day"
+    assert att.status == "HALF_DAY"
     
     # Late: 11:36 - 09:00 = 2 hours 36 minutes (156 minutes)
     assert calculate_late_minutes(att.punch_in) == 156
@@ -59,7 +74,7 @@ def test_enterprise_early_exit_half_day():
     calculate_times(att)
     assert att.total_working_minutes == 440
     assert att.break_minutes == 60
-    assert att.status == "Half Day"
+    assert att.status == "HALF_DAY"
     
     # Late: 09:10 <= 09:15 -> 0 mins
     assert calculate_late_minutes(att.punch_in) == 0
@@ -75,23 +90,38 @@ def test_enterprise_overtime():
     att = Attendance(
         date=date(2026, 6, 4),
         punch_in=time(9, 0),
-        punch_out=time(19, 30)
+        punch_out=time(19, 30),
+        overtime_approved=True
     )
     calculate_times(att)
     assert att.total_working_minutes == 570
     assert att.overtime_minutes == 90
-    assert att.status == "Present"
+    assert att.status == "PRESENT"
 
 def test_enterprise_absent():
-    # Punch In at 09:00, Punch Out at 12:30
-    # Gross = 3h 30m (210 mins)
+    # Punch In at 09:00, Punch Out at 10:30
+    # Gross = 1h 30m (90 mins)
     # Lunch overlap = 0 (punched out before lunch start 13:00)
-    # Net = 210 mins (< 240 mins) -> Absent
+    # Net = 90 mins (< 120 mins) -> Absent
     att = Attendance(
         date=date(2026, 6, 4),
         punch_in=time(9, 0),
-        punch_out=time(12, 30)
+        punch_out=time(10, 30)
     )
     calculate_times(att)
-    assert att.total_working_minutes == 210
-    assert att.status == "Absent"
+    assert att.total_working_minutes == 90
+    assert att.status == "ABSENT"
+
+def test_enterprise_half_day_minimum_hours():
+    # Punch In at 09:00, Punch Out at 11:30
+    # Gross = 2h 30m (150 mins)
+    # Lunch overlap = 0 (punched out before lunch start 13:00)
+    # Net = 150 mins (>= 120 mins, < 480 mins) -> Half Day
+    att = Attendance(
+        date=date(2026, 6, 4),
+        punch_in=time(9, 0),
+        punch_out=time(11, 30)
+    )
+    calculate_times(att)
+    assert att.total_working_minutes == 150
+    assert att.status == "HALF_DAY"

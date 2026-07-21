@@ -57,3 +57,19 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Security & Production Deployment Guidelines
+
+### Strict Server Deployment Constraints
+> [!IMPORTANT]
+> **DO NOT run `ng serve` as a production server.**
+> 
+> The development server (`ng serve`) is built for quick local iterations and is not hardened for production exposure. In production environments, compile the application using `npm run build` and deploy the resulting static output files (located in the `dist/` folder) to a secure web server or hosting service (e.g. NGINX, Apache, AWS S3/CloudFront).
+
+### Tracked Security Advisories
+We track open dependencies vulnerabilities that cannot yet be updated due to build chain constraints.
+
+| Package | Advisory ID | Severity | Description | Mitigation / Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `esbuild` | [GHSA-g7r4-m6w7-qqqr](https://github.com/advisories/GHSA-g7r4-m6w7-qqqr) | Low | Allows arbitrary file read when running the dev server on Windows. | **No impact on production builds.** Only affects development server on local Windows environments. Will be resolved once Angular CLI bundles a patch. |
+

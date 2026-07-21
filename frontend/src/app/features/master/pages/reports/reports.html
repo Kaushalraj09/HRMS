@@ -1,0 +1,209 @@
+<div class="reports-container">
+  <!-- Header -->
+  <div class="reports-header animate-fade-in">
+    <div class="header-titles">
+      <span class="breadcrumb">Admin Dashboard / Reports</span>
+      <h1>Executive Reports</h1>
+      <p class="subtitle">Analyze HR operations, track user logins, and monitor structural employee metrics.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-export" (click)="exportCsv()" [disabled]="totalItems === 0 || isLoading">
+        <i class="fas fa-file-pdf"></i> Export to PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="reports-tabs animate-fade-in">
+    <button class="tab-btn" [class.active]="activeTab === 'workload'" (click)="switchTab('workload')">
+      <i class="fas fa-tasks"></i> HR Workload Summary
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'status'" (click)="switchTab('status')">
+      <i class="fas fa-id-card"></i> Employee Status Directory
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'login'" (click)="switchTab('login')">
+      <i class="fas fa-user-lock"></i> Login Activity Log
+    </button>
+  </div>
+
+  <!-- Dynamic Filters Panel -->
+  <div class="filters-card animate-fade-in">
+    <div class="filters-grid">
+      <!-- Search (Status tab only) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab === 'status'">
+        <label for="search">Search Employee</label>
+        <div class="input-with-icon">
+          <i class="fas fa-search"></i>
+          <input id="search" type="text" [(ngModel)]="search" placeholder="Name or Code..." (keyup.enter)="applyFilters()">
+        </div>
+      </div>
+
+      <!-- Department (Status tab only) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab === 'status'">
+        <label for="department">Department</label>
+        <select id="department" [(ngModel)]="department" (change)="applyFilters()">
+          <option value="">All Departments</option>
+          <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+        </select>
+      </div>
+
+      <!-- Status Filter (Status tab only) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab === 'status'">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter" [(ngModel)]="statusFilter" (change)="applyFilters()">
+          <option value="">All Statuses</option>
+          <option *ngFor="let stat of statuses" [value]="stat">{{ stat }}</option>
+        </select>
+      </div>
+
+      <!-- Start Date (Workload and Login tabs) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab !== 'status'">
+        <label for="startDate">Start Date</label>
+        <input id="startDate" type="date" [(ngModel)]="startDate" (change)="applyFilters()">
+      </div>
+
+      <!-- End Date (Workload and Login tabs) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab !== 'status'">
+        <label for="endDate">End Date</label>
+        <input id="endDate" type="date" [(ngModel)]="endDate" (change)="applyFilters()">
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filters-actions">
+      <button class="btn btn-primary" (click)="applyFilters()">
+        <i class="fas fa-filter"></i> Apply Filters
+      </button>
+      <button class="btn btn-secondary" (click)="clearFilters()">
+        <i class="fas fa-undo"></i> Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Retrieving admin report data...</p>
+  </div>
+
+  <!-- Report Data View -->
+  <div class="table-container card animate-fade-in" *ngIf="!isLoading">
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="totalItems === 0">
+      <i class="fas fa-folder-open empty-icon animate-pulse"></i>
+      <h3>No Records Found</h3>
+      <p>No transactions fit the selected criteria. Try resetting the filters or modifying the parameters.</p>
+      <button class="btn btn-secondary btn-sm" (click)="clearFilters()">Reset Filters</button>
+    </div>
+
+    <!-- Tables by Active Tab -->
+    <table class="report-table" *ngIf="totalItems > 0">
+      <!-- Tab 1: HR Workload Summary -->
+      <ng-container *ngIf="activeTab === 'workload'">
+        <thead>
+          <tr>
+            <th>HR Representative</th>
+            <th class="text-center">Pending Time-Off</th>
+            <th class="text-center">Pending Regularizations</th>
+            <th class="text-center">Approved/Rejected Time-Off</th>
+            <th class="text-center">Approved/Rejected Regularizations</th>
+            <th class="text-right">Total Requests Handled</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of workloadData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.hrName }}</td>
+            <td class="text-center"><span class="badge" [class.badge-warning]="row.pendingTimeoff > 0" [class.badge-secondary]="row.pendingTimeoff === 0">{{ row.pendingTimeoff }}</span></td>
+            <td class="text-center"><span class="badge" [class.badge-warning]="row.pendingRegularization > 0" [class.badge-secondary]="row.pendingRegularization === 0">{{ row.pendingRegularization }}</span></td>
+            <td class="text-center">{{ row.processedTimeoff }}</td>
+            <td class="text-center">{{ row.processedRegularization }}</td>
+            <td class="text-right font-semibold text-dark">{{ row.totalHandled }}</td>
+          </tr>
+        </tbody>
+      </ng-container>
+
+      <!-- Tab 2: Employee Status Directory -->
+      <ng-container *ngIf="activeTab === 'status'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Date of Joining</th>
+            <th>Status</th>
+            <th class="text-right">Time-Off Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of statusData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.department || '-' }}</td>
+            <td>{{ row.designation || '-' }}</td>
+            <td>{{ row.doj ? (row.doj | date:'mediumDate') : '-' }}</td>
+            <td>
+              <span class="badge" [class.badge-success]="row.status === 'Active'" [class.badge-danger]="row.status !== 'Active'">
+                {{ row.status }}
+              </span>
+            </td>
+            <td class="text-right font-medium text-primary">{{ row.timeoffBalanceHours }} hrs</td>
+          </tr>
+        </tbody>
+      </ng-container>
+
+      <!-- Tab 3: Login Activity Log -->
+      <ng-container *ngIf="activeTab === 'login'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Login Timestamp</th>
+            <th>IP Address</th>
+            <th>Browser / Platform</th>
+            <th>Device Type</th>
+            <th>Operating System</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of loginData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode || 'ADMIN' }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.email }}</td>
+            <td>{{ row.loginTime | date:'medium' }}</td>
+            <td>{{ row.ipAddress || '-' }}</td>
+            <td>{{ row.browser || '-' }}</td>
+            <td>{{ row.device || '-' }}</td>
+            <td>{{ row.operatingSystem || '-' }}</td>
+            <td>
+              <span class="badge" [class.badge-success]="row.status === 'Success'" [class.badge-danger]="row.status !== 'Success'">
+                {{ row.status }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </ng-container>
+    </table>
+
+    <!-- Pagination Footer -->
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="footer-info">
+        Showing <strong>{{ (page - 1) * pageSize + 1 }}</strong> to <strong>{{ (page * pageSize) > totalItems ? totalItems : (page * pageSize) }}</strong> of <strong>{{ totalItems }}</strong> entries
+      </div>
+      <div class="pagination-controls">
+        <button class="pag-btn" [disabled]="page === 1" (click)="onPageChange(page - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button class="pag-btn" *ngFor="let p of pageNumbers"
+          [class.active]="p === page" (click)="onPageChange(p)">
+          {{ p }}
+        </button>
+        <button class="pag-btn" [disabled]="page === totalPages" (click)="onPageChange(page + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

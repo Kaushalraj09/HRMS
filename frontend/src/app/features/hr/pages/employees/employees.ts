@@ -31,6 +31,9 @@ import { EmployeeAddModalComponent } from './modals/employee-add-modal/employee-
   styleUrl: './employees.css'
 })
 export class Employees implements OnInit {
+  currentUser: any = null;
+  deleteModalOpen = false;
+  employeeToDelete: Employee | null = null;
   searchControl = new FormControl('');
   departmentControl = new FormControl('');
   typeControl = new FormControl('');
@@ -65,7 +68,8 @@ export class Employees implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.userRoleLabel = this.authService.getCurrentUser()?.role === 'admin' ? 'Admin' : 'HR';
+    this.currentUser = this.authService.getCurrentUser();
+    this.userRoleLabel = this.currentUser?.role === 'admin' ? 'Admin' : 'HR';
     this.employeesData$ = combineLatest([
       this.searchTrigger$,
       this.pageSubject.asObservable()
@@ -122,13 +126,11 @@ export class Employees implements OnInit {
   }
 
   openEditModal(employee: Employee): void {
-    console.log('Employees: opening edit modal for employee:', employee?.id, employee);
     this.selectedEmployee = employee;
     this.activeModal = 'edit';
   }
 
   openCredentialModal(employee: Employee): void {
-    console.log('Employees: opening credential modal for employee:', employee?.id, employee);
     this.selectedEmployee = employee;
     this.activeModal = 'credential';
   }
@@ -143,5 +145,33 @@ export class Employees implements OnInit {
     if (refresh) {
       this.onSearch();
     }
+  }
+
+  confirmDelete(employee: Employee): void {
+    this.employeeToDelete = employee;
+    this.deleteModalOpen = true;
+  }
+
+  closeDeleteModal(): void {
+    this.deleteModalOpen = false;
+    this.employeeToDelete = null;
+  }
+
+  executeDelete(): void {
+    if (!this.employeeToDelete) return;
+    const employee = this.employeeToDelete;
+    this.closeDeleteModal();
+    this.isLoading$.next(true);
+    this.employeeService.deleteEmployee(employee.id).subscribe({
+      next: () => {
+        alert('Employee deleted successfully.');
+        this.onSearch();
+      },
+      error: (err) => {
+        this.isLoading$.next(false);
+        console.error('Failed to delete employee:', err);
+        alert(err?.error?.detail || 'An error occurred while deleting the employee.');
+      }
+    });
   }
 }

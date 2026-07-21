@@ -1,0 +1,235 @@
+<div class="reports-container">
+  <!-- Header -->
+  <div class="reports-header animate-fade-in">
+    <div class="header-titles">
+      <span class="breadcrumb">HR Dashboard / Reports</span>
+      <h1>Reports &amp; Exports</h1>
+      <p class="subtitle">Generate detailed logs, track metrics, and export compliance sheets.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-export" (click)="exportCsv()" [disabled]="totalItems === 0 || isLoading">
+        <i class="fas fa-file-pdf"></i> Export to PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="reports-tabs animate-fade-in">
+    <button class="tab-btn" [class.active]="activeTab === 'summary'" (click)="switchTab('summary')">
+      <i class="fas fa-chart-bar"></i> Attendance Summary
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'late'" (click)="switchTab('late')">
+      <i class="fas fa-business-time"></i> Late Arrivals
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'missing'" (click)="switchTab('missing')">
+      <i class="fas fa-exclamation-triangle"></i> Missing Punches
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'leave'" (click)="switchTab('leave')">
+      <i class="fas fa-calendar-times"></i> Leave Usage
+    </button>
+  </div>
+
+  <!-- Filters Panel -->
+  <div class="filters-card animate-fade-in">
+    <div class="filters-grid">
+      <!-- Search -->
+      <div class="filter-group">
+        <label for="search">Search Employee</label>
+        <div class="input-with-icon">
+          <i class="fas fa-search"></i>
+          <input id="search" type="text" [(ngModel)]="search" placeholder="Name or Code..." (keyup.enter)="applyFilters()">
+        </div>
+      </div>
+
+      <!-- Department -->
+      <div class="filter-group">
+        <label for="department">Department</label>
+        <select id="department" [(ngModel)]="department" (change)="applyFilters()">
+          <option value="">All Departments</option>
+          <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+        </select>
+      </div>
+
+      <!-- Start Date -->
+      <div class="filter-group">
+        <label for="startDate">Start Date</label>
+        <input id="startDate" type="date" [(ngModel)]="startDate" (change)="applyFilters()">
+      </div>
+
+      <!-- End Date -->
+      <div class="filter-group">
+        <label for="endDate">End Date</label>
+        <input id="endDate" type="date" [(ngModel)]="endDate" (change)="applyFilters()">
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filters-actions">
+      <button class="btn btn-primary" (click)="applyFilters()">
+        <i class="fas fa-filter"></i> Apply Filters
+      </button>
+      <button class="btn btn-secondary" (click)="clearFilters()">
+        <i class="fas fa-undo"></i> Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Retrieving report data...</p>
+  </div>
+
+  <!-- Report Data View -->
+  <div class="table-container card animate-fade-in" *ngIf="!isLoading">
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="totalItems === 0">
+      <i class="fas fa-folder-open empty-icon animate-pulse"></i>
+      <h3>No Records Found</h3>
+      <p>No transactions fit the selected criteria. Try resetting the filters or modifying the dates.</p>
+      <button class="btn btn-secondary btn-sm" (click)="clearFilters()">Reset Filters</button>
+    </div>
+
+    <!-- Tables by Active Tab -->
+    <table class="report-table" *ngIf="totalItems > 0">
+      <!-- Tab 1: Attendance Summary -->
+      <ng-container *ngIf="activeTab === 'summary'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th class="text-center">Present Days</th>
+            <th class="text-center">Half Days</th>
+            <th class="text-center">Absent Days</th>
+            <th class="text-center">Approved Leaves</th>
+            <th class="text-right">Worked Hours</th>
+            <th class="text-right">Overtime Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of summaryData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.department || '-' }}</td>
+            <td class="text-center"><span class="badge badge-success">{{ row.presentDays }}</span></td>
+            <td class="text-center"><span class="badge badge-warning">{{ row.halfDays }}</span></td>
+            <td class="text-center"><span class="badge badge-danger">{{ row.absentDays }}</span></td>
+            <td class="text-center"><span class="badge badge-info">{{ row.leaveDays }}</span></td>
+            <td class="text-right font-medium">{{ formatWorkingHours(row.totalWorkingMinutes) }}</td>
+            <td class="text-right text-success font-medium">{{ formatWorkingHours(row.totalOvertimeMinutes) }}</td>
+          </tr>
+        </tbody>
+      </ng-container>
+
+      <!-- Tab 2: Late Arrivals -->
+      <ng-container *ngIf="activeTab === 'late'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Date</th>
+            <th>Scheduled Start</th>
+            <th>Punch In Time</th>
+            <th class="text-right">Late Minutes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of lateData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.department || '-' }}</td>
+            <td>{{ row.date | date:'mediumDate' }}</td>
+            <td>{{ row.scheduledStart || '09:00 AM' }}</td>
+            <td class="text-danger font-medium">{{ row.punchIn }}</td>
+            <td class="text-right text-danger font-semibold">{{ row.lateMinutes }} mins</td>
+          </tr>
+        </tbody>
+      </ng-container>
+
+      <!-- Tab 3: Missing Punches -->
+      <ng-container *ngIf="activeTab === 'missing'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Date</th>
+            <th>Punch In</th>
+            <th>Punch Out</th>
+            <th>Status</th>
+            <th>Identified Failure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of missingData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.department || '-' }}</td>
+            <td>{{ row.date | date:'mediumDate' }}</td>
+            <td>{{ row.punchIn || '--:--' }}</td>
+            <td>{{ row.punchOut || '--:--' }}</td>
+            <td>
+              <span class="badge"
+                    [class.badge-success]="row.status === 'PRESENT' || row.status === 'Present'"
+                    [class.badge-warning]="row.status === 'HALF_DAY' || row.status === 'Half Day'"
+                    [class.badge-danger]="row.status === 'ABSENT' || row.status === 'Absent' || row.status === 'MISSED_PUNCH'"
+                    [class.badge-info]="row.status === 'LEAVE' || row.status === 'Leave'">
+                {{ formatStatusText(row.status) }}
+              </span>
+            </td>
+            <td class="text-danger font-medium"><i class="fas fa-exclamation-circle mr-1"></i> {{ row.reason }}</td>
+          </tr>
+        </tbody>
+      </ng-container>
+
+      <!-- Tab 4: Leave Usage -->
+      <ng-container *ngIf="activeTab === 'leave'">
+        <thead>
+          <tr>
+            <th>Employee Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Date</th>
+            <th>Leave Type</th>
+            <th class="text-center">Hours Deducted</th>
+            <th>Status</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of leaveData" class="table-row">
+            <td class="font-semibold text-primary">{{ row.employeeCode }}</td>
+            <td class="font-medium text-dark">{{ row.employeeName }}</td>
+            <td>{{ row.department || '-' }}</td>
+            <td>{{ row.date | date:'mediumDate' }}</td>
+            <td><span class="badge badge-info">{{ row.leaveType }}</span></td>
+            <td class="text-center font-medium">{{ row.durationHours }} hrs</td>
+            <td><span class="badge badge-success">{{ row.status }}</span></td>
+            <td class="reason-cell" [title]="row.reason || ''">{{ row.reason || '-' }}</td>
+          </tr>
+        </tbody>
+      </ng-container>
+    </table>
+
+    <!-- Pagination Footer -->
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="footer-info">
+        Showing <strong>{{ (page - 1) * pageSize + 1 }}</strong> to <strong>{{ (page * pageSize) > totalItems ? totalItems : (page * pageSize) }}</strong> of <strong>{{ totalItems }}</strong> entries
+      </div>
+      <div class="pagination-controls">
+        <button class="pag-btn" [disabled]="page === 1" (click)="onPageChange(page - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button class="pag-btn" *ngFor="let p of pageNumbers"
+          [class.active]="p === page" (click)="onPageChange(p)">
+          {{ p }}
+        </button>
+        <button class="pag-btn" [disabled]="page === totalPages" (click)="onPageChange(page + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

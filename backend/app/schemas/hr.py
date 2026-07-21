@@ -24,3 +24,8 @@ class HrResponse(BaseModel):
     designation: str
     status: str
     createdAt: datetime = Field(alias="created_at")
+
+class HrListResponse(BaseModel):
+    data: List[HrResponse]
+    total: int
+

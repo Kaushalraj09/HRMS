@@ -5,6 +5,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { EmployeeProfile } from '../../../../core/models/profile.model';
 import { MyProfileService } from '../../../../core/services/profile.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { AttendanceService } from '../../../../core/services/attendance.service';
 
 @Component({
   selector: 'app-my-profile',
@@ -19,6 +20,7 @@ export class MyProfile implements OnInit {
   isEditing$ = new BehaviorSubject<boolean>(false);
   saveMessage$ = new BehaviorSubject<string>('');
   profileForm!: FormGroup;
+  isPunchedIn = false;
 
   showAvatarModal = false;
   tempAvatarImage: string | null = null;
@@ -36,6 +38,7 @@ export class MyProfile implements OnInit {
     private profileService: MyProfileService,
     private fb: FormBuilder,
     private authService: AuthService,
+    private attendanceService: AttendanceService,
     private cdr: ChangeDetectorRef
   ) {
     this.initForm();
@@ -64,6 +67,11 @@ export class MyProfile implements OnInit {
     this.profileService.getProfile().pipe(take(1)).subscribe(profile => {
       this.profile$.next(profile);
       this.patchForm(profile);
+    });
+
+    this.attendanceService.getTodayAttendanceState().pipe(take(1)).subscribe(state => {
+      this.isPunchedIn = !!state?.isWorking;
+      this.cdr.detectChanges();
     });
   }
 

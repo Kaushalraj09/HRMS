@@ -1,0 +1,173 @@
+<div class="camera-modal-overlay" (click)="onOverlayClick($event)">
+  <div class="camera-modal-box" (click)="$event.stopPropagation()">
+    
+    <!-- Modal Header -->
+    <div class="camera-modal-header">
+      <span class="camera-modal-title">Request Time Off</span>
+      <button class="close-btn" (click)="closeModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="camera-modal-body">
+      <form [formGroup]="leaveForm" (ngSubmit)="submitLeaveRequest()" style="width: 100%;">
+        
+        <!-- Section 1: Leave Parameters -->
+        <h4 class="form-section-title">Leave Information</h4>
+        
+        <div class="form-grid-2">
+          <!-- Leave Type -->
+          <div class="form-field-group">
+            <label>Leave Type <span class="req-star">*</span></label>
+            <div class="select-field-box">
+              <select formControlName="leaveType" class="form-input-control select-control">
+                <option value="Hourly">Hourly Time Off</option>
+                <option value="Half Day">Half Day Leave</option>
+                <option value="Full Day">Full Day Leave</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+
+          <!-- Start Date -->
+          <div class="form-field-group">
+            <label>Start Date <span class="req-star">*</span></label>
+            <input type="date" formControlName="startDate" class="form-input-control" [min]="todayIsoMin" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <!-- Multiple Days checkbox toggle -->
+          <div class="multiple-days-toggle-row">
+            <label class="checkbox-container">
+              <input type="checkbox" formControlName="multipleDays">
+              <span class="checkmark"></span>
+              <span class="checkbox-label">Request for Multiple Days</span>
+            </label>
+          </div>
+
+          <!-- End Date (only if Multiple Days checked) -->
+          <div class="form-field-group" *ngIf="isMultipleDays">
+            <label>End Date <span class="req-star">*</span></label>
+            <div class="location-input-wrapper">
+              <input type="date" formControlName="endDate" class="form-input-control" [min]="leaveForm.value.startDate" />
+              <button type="button" class="location-refresh-btn" (click)="resetEndDate()" title="Reset End Date" style="margin-left: 8px; flex-shrink: 0;">
+                <i class="fas fa-undo-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conditional Session selection (if Half Day) -->
+        <div class="form-grid-2" *ngIf="selectedLeaveType === 'Half Day'">
+          <div class="form-field-group">
+            <label>Session <span class="req-star">*</span></label>
+            <div class="select-field-box">
+              <select formControlName="halfDaySession" class="form-input-control select-control">
+                <option value="First Half">First Half (9:00 AM - 1:00 PM)</option>
+                <option value="Second Half">Second Half (2:00 PM - 6:00 PM)</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+          <div></div> <!-- Spacer -->
+        </div>
+
+        <!-- Conditional Time selections (if Hourly) -->
+        <div class="form-grid-2" *ngIf="selectedLeaveType === 'Hourly'">
+          <div class="form-field-group">
+            <label>Start Time <span class="req-star">*</span></label>
+            <div class="select-field-box">
+              <select formControlName="startTime" (change)="onStartTimeChange()" class="form-input-control select-control">
+                <option *ngFor="let s of startTimeOptions" [value]="s.value">{{ s.label }}</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+
+          <div class="form-field-group">
+            <label>End Time <span class="req-star">*</span></label>
+            <div class="select-field-box">
+              <select formControlName="endTime" class="form-input-control select-control">
+                <option *ngFor="let s of endTimeOptions" [value]="s.value">{{ s.label }}</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Comments & Attachments -->
+        <h4 class="form-section-title">Additional Details</h4>
+
+        <!-- Reason for Leave -->
+        <div class="form-field-group" style="margin-bottom: 16px;">
+          <label>Reason for Leave <span class="req-star">*</span></label>
+          <textarea formControlName="reason" class="textarea-input" placeholder="Please specify the reason for this leave request..." rows="3"></textarea>
+          <div class="validation-error" *ngIf="leaveForm.get('reason')?.touched && leaveForm.get('reason')?.errors?.['required']">
+            Reason is required.
+          </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="form-field-group" style="margin-bottom: 8px;">
+          <label>Attachments <span class="opt-text">(Optional)</span></label>
+          <div class="drag-drop-uploader" 
+               [class.drag-active]="isDragOver"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)">
+            
+            <input type="file" id="modalFileInput" (change)="onFileSelected($event)" accept=".pdf,image/png,image/jpeg" style="display: none;">
+            
+            <label for="modalFileInput" class="uploader-label-content" *ngIf="!uploadedFileName">
+              <i class="fas fa-cloud-upload-alt upload-icon"></i>
+              <span class="upload-main-text">Drag files here or <span class="highlight">browse</span></span>
+            </label>
+
+            <!-- Uploaded file display -->
+            <div class="uploaded-file-row" *ngIf="uploadedFileName">
+              <i class="fas" [class.fa-file-pdf]="uploadedFileName.endsWith('.pdf')" [class.fa-file-image]="!uploadedFileName.endsWith('.pdf')"></i>
+              <div class="uploaded-meta">
+                <span class="file-name">{{ uploadedFileName }}</span>
+                <span class="file-size">{{ uploadedFileSize }}</span>
+              </div>
+              <button type="button" class="btn-delete-file" (click)="removeUploadedFile()">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+            
+            <!-- Progress Fill bar -->
+            <div class="upload-progress-fill" *ngIf="uploadedFileName && uploadProgress < 100">
+              <div class="progress-bar-inner" [style.width]="uploadProgress + '%'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="feedback-toast success" *ngIf="successMessage">
+          <i class="fas fa-check-circle"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+        
+        <div class="feedback-toast danger" *ngIf="errorMessage">
+          <i class="fas fa-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="camera-modal-footer">
+      <button class="btn btn-secondary" type="button" (click)="closeModal()" [disabled]="isSubmitting">
+        Cancel
+      </button>
+      <button class="btn btn-primary" type="button" (click)="submitLeaveRequest()" [disabled]="isSubmitting">
+        <span *ngIf="!isSubmitting">Submit Request</span>
+        <span *ngIf="isSubmitting"><i class="fas fa-spinner fa-spin"></i> Submitting...</span>
+      </button>
+    </div>
+
+  </div>
+</div>

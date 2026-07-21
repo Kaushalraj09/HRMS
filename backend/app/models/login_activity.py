@@ -7,9 +7,9 @@ class LoginActivity(Base):
     __tablename__ = "login_activities"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
-    login_time = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True, index=True)
+    login_time = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     browser = Column(String(100))
     device = Column(String(100))
     operating_system = Column(String(100))

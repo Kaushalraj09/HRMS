@@ -87,6 +87,10 @@
                   <button type="button" class="action-btn-link" (click)="openEditModal(emp)">Edit</button>
                   <span class="separator">&middot;</span>
                   <button type="button" class="action-btn-link" (click)="openCredentialModal(emp)">Credential</button>
+                  <ng-container *ngIf="emp.userId !== currentUser?.id">
+                    <span class="separator">&middot;</span>
+                    <button type="button" class="action-btn-link danger-link" (click)="confirmDelete(emp)">Delete</button>
+                  </ng-container>
                 </td>
               </tr>
               
@@ -165,4 +169,41 @@
     [employeeId]="selectedEmployee.id"
     (closed)="onModalClose()">
   </app-employee-credential-modal>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="camera-modal-overlay" *ngIf="deleteModalOpen" (click)="closeDeleteModal()">
+    <div class="camera-modal-box" (click)="$event.stopPropagation()">
+      <div class="camera-modal-header">
+        <div class="camera-modal-title">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Confirm Deletion</span>
+        </div>
+        <button class="close-btn" (click)="closeDeleteModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="camera-modal-body">
+        <div class="punch-out-confirm">
+          <div class="punch-out-confirm__icon">
+            <i class="fas fa-trash-alt"></i>
+          </div>
+          <h3>Delete Employee?</h3>
+          <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">
+            Are you sure you want to delete employee <strong>{{ employeeToDelete?.name }}</strong> ({{ employeeToDelete?.employeeCode }})?
+          </p>
+          <p style="margin: 5px 0 0 0; max-width: 340px; color: #94a3b8; font-size: 13px; line-height: 1.4;">
+            This will permanently disable their login and remove them from active directories.
+          </p>
+        </div>
+      </div>
+      <div class="camera-modal-footer">
+        <button class="btn btn-secondary" (click)="closeDeleteModal()">
+          Cancel
+        </button>
+        <button class="btn btn-primary" (click)="executeDelete()">
+          Delete Employee
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

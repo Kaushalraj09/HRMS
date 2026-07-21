@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { buildApiUrl } from '../config/api.config';
@@ -8,13 +8,27 @@ import { AttendanceService } from './attendance.service';
 export interface Notification {
   id: number;
   user_id: number;
-  type: 'LOGIN_ACTIVITY' | 'ATTENDANCE' | 'LEAVE' | 'SYSTEM';
+  type: string;
   title: string;
   message: string;
   reference_id?: number;
   is_read: boolean;
   created_at: string;
   read_at?: string;
+  updated_at?: string;
+  category?: string;
+  severity?: string;
+  employee_id?: number;
+  created_by?: number;
+  receiver_role?: string;
+  notification_metadata?: any;
+  employee?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    avatar?: string;
+  };
 }
 
 @Injectable({
@@ -47,9 +61,42 @@ export class NotificationService implements OnDestroy {
     });
   }
 
-  fetchNotifications(): Observable<Notification[]> {
-    return this.http.get<Notification[]>(this.apiUrl).pipe(
-      tap(notifs => this.notificationsSubject.next(notifs))
+  fetchNotifications(
+    limit: number = 50,
+    page: number = 1,
+    category?: string,
+    isRead?: boolean,
+    search?: string
+  ): Observable<Notification[]> {
+    let params = new HttpParams()
+      .set('limit', limit.toString())
+      .set('page', page.toString());
+      
+    if (category) {
+      params = params.set('category', category);
+    }
+    if (isRead !== undefined) {
+      params = params.set('is_read', isRead.toString());
+    }
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    return this.http.get<Notification[]>(this.apiUrl, { params }).pipe(
+      tap(notifs => {
+        if (page === 1) {
+          this.notificationsSubject.next(notifs);
+        } else {
+          const current = this.notificationsSubject.value;
+          const merged = [...current];
+          for (const n of notifs) {
+            if (!merged.some(item => item.id === n.id)) {
+              merged.push(n);
+            }
+          }
+          this.notificationsSubject.next(merged);
+        }
+      })
     );
   }
 
@@ -70,7 +117,6 @@ export class NotificationService implements OnDestroy {
         const currentCount = this.unreadCountSubject.value;
         this.unreadCountSubject.next(Math.max(0, currentCount - 1));
         
-        // Fetch fresh unread count from backend in the background to ensure consistency
         this.fetchUnreadCount().subscribe();
       })
     );
@@ -89,9 +135,35 @@ export class NotificationService implements OnDestroy {
     );
   }
 
+  clearAllNotifications(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/clear-all`).pipe(
+      tap(() => {
+        this.notificationsSubject.next([]);
+        this.unreadCountSubject.next(0);
+      })
+    );
+  }
+
+  deleteNotification(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`).pipe(
+      tap(() => {
+        const current = this.notificationsSubject.value;
+        const deletedNotif = current.find(n => n.id === id);
+        const updatedList = current.filter(n => n.id !== id);
+        this.notificationsSubject.next(updatedList);
+        
+        if (deletedNotif && !deletedNotif.is_read) {
+          this.unreadCountSubject.next(Math.max(0, this.unreadCountSubject.value - 1));
+        }
+        this.fetchUnreadCount().subscribe();
+      })
+    );
+  }
+
   ngOnDestroy() {
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
     }
   }
 }
+

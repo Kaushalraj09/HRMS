@@ -3,8 +3,10 @@ import { Injectable } from '@angular/core';
 import { Observable, map, Subject, switchMap } from 'rxjs';
 
 import { buildApiUrl, buildWsUrl } from '../config/api.config';
-import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode } from '../models/attendance.model';
+import { AttendanceMetrics, AttendanceRecord, EmployeeAttendanceSummaryItem, EmployeeTimesheetRow, PaginatedAttendance, TodayAttendanceState, WorkMode, PaginatedResponse } from '../models/attendance.model';
 import { formatMinutesToHours } from '../utils/attendance-calc.util';
+import { TimeoffService } from './timeoff.service';
+import { environment } from '../../../environments/environment';
 
 interface BackendAttendanceResponse {
   id: number;
@@ -44,6 +46,7 @@ interface BackendAttendanceRecord {
 interface BackendAttendanceListResponse {
   data: BackendAttendanceRecord[];
   total: number;
+  metrics: AttendanceMetrics;
 }
 
 interface BackendTodayAttendanceState {
@@ -68,6 +71,10 @@ interface BackendTodayAttendanceState {
   punchOutAddress: string | null;
   punchInImage: string | null;
   punchOutImage: string | null;
+  yesterdayAutoCheckedOut?: boolean;
+  requiresRegularization?: boolean;
+  overtimeApproved?: boolean;
+  overtimeExtended?: boolean;
 }
 
 export interface TimeOffApplyResponse {
@@ -88,24 +95,36 @@ export interface TimeOffApplyResponse {
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly apiUrl = buildApiUrl('/attendance');
-  private readonly timeoffApiUrl = buildApiUrl('/timeoff');
   private readonly noCacheHeaders = new HttpHeaders({
     'Cache-Control': 'no-cache',
     Pragma: 'no-cache'
   });
   private socket: WebSocket | null = null;
-  private timeoffUpdateSubject = new Subject<any>();
-  public timeoffUpdate$ = this.timeoffUpdateSubject.asObservable();
+  private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  public get timeoffUpdate$() {
+    return this.timeoffService.timeoffUpdate$;
+  }
   private wsMessageSubject = new Subject<any>();
   public wsMessage$ = this.wsMessageSubject.asObservable();
 
-  constructor(private readonly http: HttpClient) { }
+  constructor(
+    private readonly http: HttpClient,
+    private readonly timeoffService: TimeoffService
+  ) { }
 
   connectWebSocket(userId: string | number) {
-    const wsUrl = buildWsUrl(`/ws/${userId}`);
+    const token = localStorage.getItem('aivan_hrms_phase1_token_v1') || '';
+    if (!token) {
+      console.warn('Skipping WebSocket connection because no auth token is available.');
+      return;
+    }
+
+    this.clearReconnectTimeout();
+
+    const wsUrl = buildWsUrl(`/ws/${userId}?token=${encodeURIComponent(token)}`);
     
-    // If we already have a socket connection to this exact URL, don't reconnect
-    if (this.socket && (this.socket.url === wsUrl || this.socket.url.endsWith(`/ws/${userId}`))) {
+    // If we already have a socket connection to this exact URL, don't reconnect.
+    if (this.socket && this.socket.url === wsUrl) {
       if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
         return;
       }
@@ -119,37 +138,52 @@ export class AttendanceService {
       } catch (e) {}
     }
 
-    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+    if (!environment.production) {
+      console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+    }
 
-    this.socket = new WebSocket(wsUrl);
+    const socket = new WebSocket(wsUrl);
+    this.socket = socket;
 
-    this.socket.onopen = () => {
-      console.log('WebSocket connection established successfully');
+    socket.onopen = () => {
+      if (!environment.production) {
+        console.log('WebSocket connection established successfully');
+      }
     };
 
-    this.socket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         this.wsMessageSubject.next(data);
         if (data.type === 'TIMEOFF_UPDATE' || data.type === 'TIMEOFF_REQUEST') {
-          this.timeoffUpdateSubject.next(data);
+          this.timeoffService.triggerTimeOffUpdate(data);
         }
       } catch (e) {
         console.error('Error parsing WebSocket message', e);
       }
     };
 
-    this.socket.onerror = (error) => {
+    socket.onerror = (error) => {
       console.error('WebSocket Error:', error);
     };
 
-    this.socket.onclose = (event) => {
+    socket.onclose = (event) => {
+      if (this.socket === socket) {
+        this.socket = null;
+      }
+
+      if (event.code === 4001) {
+        console.warn('WebSocket authentication failed. Reconnect skipped until the user signs in again.');
+        return;
+      }
+
       console.warn(`WebSocket closed: ${event.code} ${event.reason}. Retrying in 5s...`);
-      setTimeout(() => this.connectWebSocket(userId), 5000);
+      this.reconnectTimeoutId = setTimeout(() => this.connectWebSocket(userId), 5000);
     };
   }
 
   disconnectWebSocket() {
+    this.clearReconnectTimeout();
     if (this.socket) {
       this.socket.onclose = () => { };
       this.socket.onerror = () => { };
@@ -157,6 +191,13 @@ export class AttendanceService {
         this.socket.close();
       } catch (e) {}
       this.socket = null;
+    }
+  }
+
+  private clearReconnectTimeout(): void {
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
     }
   }
 
@@ -179,44 +220,50 @@ export class AttendanceService {
     status: string,
     location?: string
   ): Observable<PaginatedAttendance> {
-    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, this.noCacheOptions()).pipe(
-      map(result => {
-        let rows = result.data.map(row => this.mapAttendanceRecord(row));
-        rows = this.filterAttendanceRows(rows, fromDate, toDate, search, department, status, location);
+    const options = this.noCacheOptions();
+    options.params = options.params
+      .set('page', page)
+      .set('limit', limit)
+      .set('search', search.trim())
+      .set('department', department)
+      .set('status', status)
+      .set('location', location || '');
+    if (fromDate) {
+      options.params = options.params.set('fromDate', fromDate);
+    }
+    if (toDate) {
+      options.params = options.params.set('toDate', toDate);
+    }
 
-        // Sort all rows: date descending first, then punch-in time descending (latest first)
-        rows.sort((a, b) => {
-          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-          if (dateDiff !== 0) return dateDiff;
-
-          if (a.punchIn && b.punchIn) {
-            return b.punchIn.localeCompare(a.punchIn);
-          }
-          if (b.punchIn) return 1;
-          if (a.punchIn) return -1;
-          return 0;
-        });
-
-        const metrics = this.buildMetrics(rows);
-        const startIndex = (page - 1) * limit;
-
-        return {
-          data: rows.slice(startIndex, startIndex + limit),
-          total: rows.length,
-          metrics
-        };
-      })
+    return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, options).pipe(
+      map(result => ({
+        data: result.data.map(row => this.mapAttendanceRecord(row)),
+        total: result.total,
+        metrics: result.metrics
+      }))
     );
   }
 
-  getMyTimesheets(): Observable<EmployeeTimesheetRow[]> {
-    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/my-history`, this.noCacheOptions()).pipe(
+  getMyTimesheets(fromDate: string = '', toDate: string = '', status: string = ''): Observable<EmployeeTimesheetRow[]> {
+    const options = this.noCacheOptions();
+    const trimmedStatus = status.trim();
+    if (fromDate) {
+      options.params = options.params.set('from_date', fromDate);
+    }
+    if (toDate) {
+      options.params = options.params.set('to_date', toDate);
+    }
+    if (trimmedStatus) {
+      options.params = options.params.set('status', trimmedStatus);
+    }
+
+    return this.http.get<BackendAttendanceResponse[]>(`${this.apiUrl}/me/timesheets`, options).pipe(
       map(rows => rows.map(row => this.mapTimesheet(row)))
     );
   }
 
   getTodayAttendanceState(): Observable<TodayAttendanceState> {
-    return this.http.get<BackendTodayAttendanceState>(`${this.apiUrl}/today`, this.noCacheOptions()).pipe(
+    return this.http.get<BackendTodayAttendanceState>(`${this.apiUrl}/me/today`, this.noCacheOptions()).pipe(
       map(state => ({
         isWorking: state.isWorking,
         status: state.status,
@@ -237,13 +284,17 @@ export class AttendanceService {
         punchOutLongitude: typeof state.punchOutLongitude === 'string' ? null : state.punchOutLongitude, // Safeguard against DB migration types
         punchOutAddress: state.punchOutAddress,
         punchInImage: state.punchInImage,
-        punchOutImage: state.punchOutImage
+        punchOutImage: state.punchOutImage,
+        yesterdayAutoCheckedOut: state.yesterdayAutoCheckedOut,
+        requiresRegularization: state.requiresRegularization,
+        overtimeApproved: state.overtimeApproved,
+        overtimeExtended: state.overtimeExtended
       }))
     );
   }
 
   punchIn(workMode: WorkMode, latitude?: number, longitude?: number, address?: string, image?: string | null): Observable<TodayAttendanceState> {
-    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-in`, {
+    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/me/punch`, {
       workMode,
       latitude,
       longitude,
@@ -255,7 +306,7 @@ export class AttendanceService {
   }
 
   punchOut(workMode: WorkMode, latitude?: number, longitude?: number, address?: string, image?: string | null): Observable<TodayAttendanceState> {
-    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/punch-out`, {
+    return this.http.post<BackendAttendanceResponse>(`${this.apiUrl}/me/punch`, {
       workMode,
       latitude,
       longitude,
@@ -270,6 +321,18 @@ export class AttendanceService {
     return this.http.post<TodayAttendanceState>(`${this.apiUrl}/work-mode`, {
       workMode
     });
+  }
+
+  continueWorking(): Observable<TodayAttendanceState> {
+    return this.http.post<void>(`${this.apiUrl}/continue-working`, {}).pipe(
+      switchMap(() => this.getTodayAttendanceState())
+    );
+  }
+
+  extendOvertime(): Observable<TodayAttendanceState> {
+    return this.http.post<void>(`${this.apiUrl}/extend-overtime`, {}).pipe(
+      switchMap(() => this.getTodayAttendanceState())
+    );
   }
 
   addSchedule(
@@ -288,67 +351,10 @@ export class AttendanceService {
     });
   }
 
-  getMyTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/my-requests`);
-  }
 
-  requestTimeOff(
-    date: string,
-    leaveType: string,
-    startTime: string | null,
-    endTime: string | null,
-    durationHours: number
-  ): Observable<any> {
-    return this.http.post(`${this.timeoffApiUrl}/request`, {
-      date,
-      leave_type: leaveType,
-      start_time: startTime,
-      end_time: endTime,
-      duration_hours: durationHours
-    });
-  }
-
-  /** Inline card: POST /api/v1/timeoff/apply */
-  applyTimeOffInline(payload: {
-    date: string;
-    leave_type: string;
-    start_time: string | null;
-    end_time: string | null;
-  }): Observable<TimeOffApplyResponse> {
-    return this.http.post<TimeOffApplyResponse>(`${this.timeoffApiUrl}/apply`, {
-      date: payload.date,
-      leave_type: payload.leave_type,
-      start_time: payload.start_time,
-      end_time: payload.end_time
-    });
-  }
-
-  getPendingTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/pending`);
-  }
-
-  getProcessedTimeOffRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.timeoffApiUrl}/history`);
-  }
-
-  approveTimeOffRequest(requestId: number, action: string, approvedHours?: number, comments?: string): Observable<any> {
-    let params = `?action=${action}`;
-    if (approvedHours !== undefined) params += `&approved_duration_hours=${approvedHours}`;
-    if (comments) params += `&comments=${encodeURIComponent(comments)}`;
-    return this.http.put(`${this.timeoffApiUrl}/approve/${requestId}${params}`, {});
-  }
 
   getMyAttendanceSummary(): Observable<EmployeeAttendanceSummaryItem[]> {
-    return this.getMyTimesheets().pipe(
-      map(rows => [
-        { label: 'Total Days', value: rows.length, icon: 'fas fa-calendar total blue-icon' },
-        { label: 'Worked Days', value: rows.filter(row => row.status !== 'Not Marked').length, icon: 'fas fa-calendar-check worked blue-icon' },
-        { label: 'Present', value: rows.filter(row => row.status === 'Present').length, icon: 'fas fa-check-circle blue-icon' },
-        { label: 'Working', value: rows.filter(row => row.status === 'Working').length, icon: 'fas fa-user-check blue-icon' },
-        { label: 'Absent', value: rows.filter(row => row.status === 'Absent').length, icon: 'fas fa-times-circle red-icon' },
-        { label: 'Not Marked', value: rows.filter(row => row.status === 'Not Marked').length, icon: 'fas fa-user-times unapproved gold-icon' }
-      ])
-    );
+    return this.http.get<EmployeeAttendanceSummaryItem[]>(`${this.apiUrl}/me/summary`, this.noCacheOptions());
   }
 
   private mapAttendanceRecord(row: BackendAttendanceRecord): AttendanceRecord {
@@ -409,43 +415,8 @@ export class AttendanceService {
     };
   }
 
-  private filterAttendanceRows(
-    rows: AttendanceRecord[],
-    fromDate: string,
-    toDate: string,
-    search: string,
-    department: string,
-    status: string,
-    location?: string
-  ): AttendanceRecord[] {
-    const searchValue = search.trim().toLowerCase();
-
-    return rows.filter(row => {
-      const matchesFrom = !fromDate || row.date >= fromDate;
-      const matchesTo = !toDate || row.date <= toDate;
-      const matchesSearch = !searchValue
-        || row.name.toLowerCase().includes(searchValue)
-        || row.code.toLowerCase().includes(searchValue);
-      const matchesDepartment = !department || row.department === department;
-      const normalizedStatus = this.normalizeStatus(status || '');
-      const matchesStatus = !status || row.status === normalizedStatus;
-      const matchesLocation = !location || row.workMode === location;
-
-      return matchesFrom && matchesTo && matchesSearch && matchesDepartment && matchesStatus && matchesLocation;
-    });
-  }
-
-  private buildMetrics(rows: AttendanceRecord[]): AttendanceMetrics {
-    return {
-      present: rows.filter(row => row.status === 'Present').length,
-      working: rows.filter(row => row.status === 'Working').length,
-      absent: rows.filter(row => row.status === 'Absent').length,
-      notMarked: rows.filter(row => row.status === 'Not Marked').length
-    };
-  }
-
   private normalizeStatus(status: string): AttendanceRecord['status'] {
-    const knownStatuses = ['Present', 'Working', 'Absent', 'Not Marked'];
+    const knownStatuses = ['Present', 'Working', 'Absent', 'Not Marked', 'Half Day', 'Time Off'];
     if (knownStatuses.includes(status)) {
       return status as AttendanceRecord['status'];
     }

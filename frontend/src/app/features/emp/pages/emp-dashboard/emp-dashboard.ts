@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+// Trigger dev server recompilation of dashboard component after modal import fix
+
 import { ChangeDetectorRef, Component, Injectable, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -9,6 +11,7 @@ import { CalendarEvent } from 'calendar-utils';
 import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
 import {
@@ -33,7 +36,7 @@ import {
   clampSeconds,
   formatSecondsToClock
 } from '../../../../core/utils/attendance-time.util';
-import { SharedModule } from '../../../../shared/shared-module';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
 
@@ -53,7 +56,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     MatSelectModule,
     FormsModule,
     CalendarModule,
-    SharedModule,
+    Navbar,
     RouterModule,
     EmpSidebar
   ],
@@ -74,13 +77,19 @@ export class EmpDashboard implements OnInit, OnDestroy {
   isEmpSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome = true;
   isAdmin = false;
+  searchTerm = '';
 
   isPunchedIn = false;
   punchInTime: string | null = null;
   punchOutTime: string | null = null;
   isPunchSaving = false;
   punchMessage = '';
+  successMessage = '';
   attendanceStatusLabel = 'Not working';
+  overtimeApproved = false;
+  overtimeExtended = false;
+  wsShiftEndReminderActive = false;
+  wsOvertimeReminderActive = false;
 
   approvedHours = 0;
   remainingHours = SHIFT_TOTAL_HOURS;
@@ -98,7 +107,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
   readonly allTimeSlots: TimeSlotOption[] = buildHalfHourSlots();
 
   timeOffDate = toIsoDateLocal(new Date());
-  timeOffLeaveType: 'Hourly' | 'Full Day' = 'Hourly';
+  timeOffLeaveType: 'Hourly' | 'Half Day' | 'Full Day' = 'Hourly';
+  timeOffHalfDaySession: 'First Half' | 'Second Half' = 'First Half';
   timeOffStart = '09:00';
   timeOffEnd = '10:00';
   isTimeOffSubmitting = false;
@@ -117,6 +127,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   selectedEvents: EmployeeTimelineEvent[] = [];
 
   showScheduleModal = false;
+  showTimeOffModal = false;
   scheduleForm = {
     date: new Date().toISOString().slice(0, 10),
     startTime: '09:00',
@@ -138,6 +149,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   public pendingPunchLatitude: number | undefined;
   public pendingPunchLongitude: number | undefined;
   public pendingPunchAddress: string | undefined;
+  public isLocationLoading = false;
 
   latestNews_content = [
     {
@@ -160,6 +172,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly empsidebarService: EmpSidebarService,
     private readonly router: Router,
     private readonly attendanceService: AttendanceService,
+    private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
     private readonly timeEngine: TimeEngineService,
     private readonly cdr: ChangeDetectorRef
@@ -203,16 +216,13 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.empsidebarService.toggleSidebar();
   }
 
-  onSearch(event: unknown) {
-    console.log('Search:', event);
+  onSearch(term: string) {
+    this.searchTerm = term || '';
+    this.timeSheetPage = 1;
+    this.filterEvents(this.selectedDate);
   }
 
   openProfile() {
-    console.log('Opening profile');
-  }
-
-  openNotifications() {
-    console.log('Opening notifications');
   }
 
   get punchActionLabel(): string {
@@ -254,12 +264,18 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.timeOffLeaveType === 'Full Day') {
       return SHIFT_TOTAL_HOURS;
     }
+    if (this.timeOffLeaveType === 'Half Day') {
+      return 4.0;
+    }
     return hoursBetweenSameDay(this.timeOffStart, this.timeOffEnd);
   }
 
   get previewRequestedSeconds(): number {
     if (this.timeOffLeaveType === 'Full Day') {
       return SHIFT_TOTAL_SECONDS;
+    }
+    if (this.timeOffLeaveType === 'Half Day') {
+      return 4.0 * 3600;
     }
     return clampSeconds(this.previewRequestedHours * 3600);
   }
@@ -300,8 +316,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
     return this.formatMinutesCompact(this.overtimeMinutes);
   }
 
+  get isFutureDateSelected(): boolean {
+    if (!this.timeOffDate) return false;
+    const todayStr = this.toIsoDate(new Date());
+    return this.timeOffDate > todayStr;
+  }
+
   get canSubmitInlineTimeOff(): boolean {
-    if (this.isTimeOffSubmitting || !this.isPunchedIn) {
+    if (this.isTimeOffSubmitting) {
+      return false;
+    }
+    if (this.isFutureDateSelected) {
+      if (this.timeOffLeaveType === 'Hourly') {
+        return this.previewRequestedSeconds > 0 && this.previewRequestedSeconds <= SHIFT_TOTAL_SECONDS;
+      }
+      return true;
+    }
+    if (!this.isPunchedIn) {
       return false;
     }
     if (this.timeOffLeaveType === 'Full Day') {
@@ -326,13 +357,36 @@ export class EmpDashboard implements OnInit, OnDestroy {
     });
   }
 
+  get filteredTimeSheets(): EmployeeTimesheetRow[] {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return this.sortedTimeSheets;
+    }
+
+    return this.sortedTimeSheets.filter((row) => this.matchesSearch([
+      row.date,
+      row.day,
+      row.scheduledStart,
+      row.scheduledEnd,
+      row.taskDescription,
+      row.entry,
+      row.exit,
+      row.late,
+      row.total,
+      row.overtime,
+      row.break,
+      row.grandTotal,
+      row.status
+    ]));
+  }
+
   get pagedTimeSheets(): EmployeeTimesheetRow[] {
     const start = (this.timeSheetPage - 1) * this.timeSheetPageSize;
-    return this.sortedTimeSheets.slice(start, start + this.timeSheetPageSize);
+    return this.filteredTimeSheets.slice(start, start + this.timeSheetPageSize);
   }
 
   get timeSheetTotalPages(): number {
-    return Math.ceil(this.timeSheets.length / this.timeSheetPageSize);
+    return Math.ceil(this.filteredTimeSheets.length / this.timeSheetPageSize);
   }
 
   get timeSheetPages(): number[] {
@@ -340,11 +394,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   get timeSheetStartEntry(): number {
-    return this.timeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
+    return this.filteredTimeSheets.length > 0 ? ((this.timeSheetPage - 1) * this.timeSheetPageSize) + 1 : 0;
   }
 
   get timeSheetEndEntry(): number {
-    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.timeSheets.length);
+    return Math.min(this.timeSheetPage * this.timeSheetPageSize, this.filteredTimeSheets.length);
   }
 
   setTimeSheetPage(page: number): void {
@@ -399,6 +453,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
     this.punchMessage = '';
     this.pendingPunchWorkMode = this.status;
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
+    this.pendingPunchAddress = '';
+
+    this.openCameraModal();
+    this.fetchCurrentLocation();
+  }
+
+  fetchCurrentLocation(): void {
+    this.isLocationLoading = true;
+    this.cdr.detectChanges();
 
     const fallbackToIp = () => {
       this.subscriptions.add(
@@ -417,19 +482,20 @@ export class EmpDashboard implements OnInit, OnDestroy {
               this.pendingPunchLongitude = undefined;
               this.pendingPunchAddress = 'Location Unavailable';
             }
-            this.openCameraModal();
+            this.isLocationLoading = false;
+            this.cdr.detectChanges();
           },
           error: () => {
             this.pendingPunchLatitude = undefined;
             this.pendingPunchLongitude = undefined;
             this.pendingPunchAddress = 'Location Unavailable';
-            this.openCameraModal();
+            this.isLocationLoading = false;
+            this.cdr.detectChanges();
           }
         })
       );
     };
 
-    // Capture location in the background for both punch-in and punch-out, keeping the UI focused on verification.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -438,7 +504,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
           this.attendanceService.reverseGeocode(pos.coords.latitude, pos.coords.longitude).subscribe({
             next: (geo: any) => {
               this.pendingPunchAddress = geo?.display_name || '';
-              this.openCameraModal();
+              this.isLocationLoading = false;
+              this.cdr.detectChanges();
             },
             error: () => {
               fallbackToIp();
@@ -448,11 +515,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
         () => {
           fallbackToIp();
         },
-        { timeout: 3000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
       fallbackToIp();
     }
+  }
+
+  refetchLocation(): void {
+    this.pendingPunchAddress = '';
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
+    this.fetchCurrentLocation();
+  }
+
+  onAddressManualEdit(): void {
+    this.pendingPunchLatitude = undefined;
+    this.pendingPunchLongitude = undefined;
   }
 
   openCameraModal(): void {
@@ -562,6 +641,24 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.timeOffLeaveType === 'Full Day') {
       this.timeOffStart = '09:00';
       this.timeOffEnd = '18:00';
+    } else if (this.timeOffLeaveType === 'Half Day') {
+      this.timeOffHalfDaySession = 'First Half';
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '13:00';
+    } else {
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '10:00';
+    }
+  }
+
+  onHalfDaySessionChange(): void {
+    this.timeOffInlineError = '';
+    if (this.timeOffHalfDaySession === 'First Half') {
+      this.timeOffStart = '09:00';
+      this.timeOffEnd = '13:00';
+    } else {
+      this.timeOffStart = '14:00';
+      this.timeOffEnd = '18:00';
     }
   }
 
@@ -581,21 +678,43 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.timeOffInlineError = '';
     this.timeOffInlineSuccess = '';
     if (!this.canSubmitInlineTimeOff) {
-      this.timeOffInlineError = this.isPunchedIn
-        ? 'Requested time must fit inside your remaining shift balance.'
-        : 'You can apply time off only while marked as Working.';
+      this.timeOffInlineError = this.isFutureDateSelected
+        ? 'Invalid requested time duration.'
+        : (this.isPunchedIn
+            ? 'Requested time must fit inside your remaining shift balance.'
+            : 'You can apply time off only while marked as Working.');
       return;
     }
 
     this.isTimeOffSubmitting = true;
+
+    let leaveTypeBackend = 'Hourly';
+    let startTimeBackend: string | null = this.timeOffStart;
+    let endTimeBackend: string | null = this.timeOffEnd;
+
+    if (this.timeOffLeaveType === 'Full Day') {
+      leaveTypeBackend = 'Full-Day';
+      startTimeBackend = null;
+      endTimeBackend = null;
+    } else if (this.timeOffLeaveType === 'Half Day') {
+      leaveTypeBackend = 'Half-Day';
+      if (this.timeOffHalfDaySession === 'First Half') {
+        startTimeBackend = '09:00';
+        endTimeBackend = '13:00';
+      } else {
+        startTimeBackend = '14:00';
+        endTimeBackend = '18:00';
+      }
+    }
+
     this.subscriptions.add(
-      this.attendanceService
+      this.timeoffService
         .requestTimeOff(
           this.timeOffDate,
-          this.timeOffLeaveType === 'Full Day' ? 'Full-Day' : 'Hourly',
-          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffStart,
-          this.timeOffLeaveType === 'Full Day' ? null : this.timeOffEnd,
-          this.previewRequestedSeconds / 3600
+          leaveTypeBackend,
+          startTimeBackend,
+          endTimeBackend,
+          this.timeOffLeaveType === 'Full Day' ? 9.0 : (this.timeOffLeaveType === 'Half Day' ? 4.0 : this.previewRequestedSeconds / 3600)
         )
         .pipe(finalize(() => { this.isTimeOffSubmitting = false; }))
         .subscribe({
@@ -659,8 +778,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
   filterEvents(date: Date) {
     const isoDate = this.toIsoDate(date);
     this.selectedEvents = this.timelineEvents
-      .filter((event) => event.date === isoDate)
+      .filter((event) => event.date === isoDate && this.matchesSearch([
+        event.date,
+        event.time,
+        event.title,
+        event.location,
+        event.taskDescription
+      ]))
       .sort((left, right) => this.eventSortValue(left.time) - this.eventSortValue(right.time));
+  }
+
+  get filteredLatestNews() {
+    return this.latestNews_content.filter((item) => this.matchesSearch([
+      item.heading,
+      item.contents,
+      item.newsType,
+      item.date ? new Date(item.date).toDateString() : ''
+    ]));
   }
 
   private initialize(): void {
@@ -670,6 +804,19 @@ export class EmpDashboard implements OnInit, OnDestroy {
     const user = this.authService.getCurrentUser();
     if (user) {
       this.attendanceService.connectWebSocket(user.id);
+      this.subscriptions.add(
+        this.attendanceService.wsMessage$.subscribe((msg) => {
+          if (msg && msg.type === 'SHIFT_END_REMINDER') {
+            this.wsShiftEndReminderActive = true;
+            this.cdr.detectChanges();
+          } else if (msg && msg.type === 'OVERTIME_REMINDER') {
+            this.wsOvertimeReminderActive = true;
+            this.cdr.detectChanges();
+          } else if (msg && msg.type === 'AUTO_CHECKOUT') {
+            this.loadDashboardData();
+          }
+        })
+      );
     }
 
     // this.subscriptions.add(
@@ -705,7 +852,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.subscriptions.add(
       forkJoin({
         timesheets: this.attendanceService.getMyTimesheets(),
-        timeoffs: of<any[]>([])
+        timeoffs: this.timeoffService.getMyTimeOffRequests()
       }).subscribe(({ timesheets, timeoffs }) => {
         const todayIso = this.toIsoDate(new Date());
         
@@ -755,33 +902,55 @@ export class EmpDashboard implements OnInit, OnDestroy {
           return events;
         });
 
-        // Map time-off requests to timeline events (Approved/Active/Completed)
-        const timeoffEvents: EmployeeTimelineEvent[] = timeoffs
-          .filter(req => ['Approved', 'Active', 'Completed'].includes(req.status))
-          .map(req => {
+        // Map time-off requests to timeline events (Approved/Active/Completed/Pending/Expired)
+        const timeoffEvents: EmployeeTimelineEvent[] = (timeoffs.items || [])
+          .filter((req: any) => ['Approved', 'Active', 'Completed', 'Pending', 'Expired'].includes(req.status))
+          .map((req: any) => {
             let timeLabel = 'Full Day';
             if (req.leave_type === 'Hourly' && req.start_time && req.end_time) {
+              timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
+            } else if (req.leave_type === 'Half-Day' && req.start_time && req.end_time) {
               timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
             }
             return {
               date: req.date,
               time: timeLabel,
-              title: `Time Off (${req.leave_type})`,
-              location: 'Remote',
-              type: 'time-off'
+              title: `Time Off (${req.leave_type}) - ${req.status}`,
+              location: req.status === 'Pending' ? 'Pending Approval' : (req.status === 'Expired' ? 'Expired' : 'Approved'),
+              type: 'time-off',
+              taskDescription: req.status
             };
           });
 
         this.timelineEvents = [...timesheetEvents, ...timeoffEvents];
 
-        this.calendarEvents = this.timelineEvents.map((event) => ({
-          start: new Date(`${event.date}T00:00:00`),
-          title: event.title,
-          color: {
-            primary: event.type === 'schedule' ? '#2563eb' : (event.type === 'time-off' ? '#9333ea' : '#16a34a'),
-            secondary: event.type === 'schedule' ? '#dbeafe' : (event.type === 'time-off' ? '#f3e8ff' : '#dcfce7')
+        this.calendarEvents = this.timelineEvents.map((event) => {
+          let primaryColor = '#2563eb';
+          let secondaryColor = '#dbeafe';
+          if (event.type === 'punch-in' || event.type === 'punch-out') {
+            primaryColor = '#16a34a';
+            secondaryColor = '#dcfce7';
+          } else if (event.type === 'time-off') {
+            if (event.taskDescription === 'Pending') {
+              primaryColor = '#d97706';
+              secondaryColor = '#fef3c7';
+            } else if (event.taskDescription === 'Expired') {
+              primaryColor = '#6b7280';
+              secondaryColor = '#f3f4f6';
+            } else {
+              primaryColor = '#9333ea';
+              secondaryColor = '#f3e8ff';
+            }
           }
-        }));
+          return {
+            start: new Date(`${event.date}T00:00:00`),
+            title: event.title,
+            color: {
+              primary: primaryColor,
+              secondary: secondaryColor
+            }
+          };
+        });
 
         // Map attendance summary directly from timesheets to avoid duplicate API calls
         this.attendanceSummary = [
@@ -799,6 +968,88 @@ export class EmpDashboard implements OnInit, OnDestroy {
     );
   }
 
+  get isShiftEndReminderActive(): boolean {
+    if (!this.isPunchedIn || this.overtimeApproved || this.punchOutTime) {
+      return false;
+    }
+    if (this.wsShiftEndReminderActive) {
+      return true;
+    }
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentMinutesOfDay = currentHour * 60 + currentMinute;
+    return currentMinutesOfDay >= 1085; // >= 18:05
+  }
+
+  get isOvertimeReminderActive(): boolean {
+    if (!this.isPunchedIn || !this.overtimeApproved || this.overtimeExtended || this.punchOutTime) {
+      return false;
+    }
+    if (this.wsOvertimeReminderActive) {
+      return true;
+    }
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentMinutesOfDay = currentHour * 60 + currentMinute;
+    return currentMinutesOfDay >= 1200; // >= 20:00
+  }
+
+  handleContinueWorking(): void {
+    this.isPunchSaving = true;
+    this.punchMessage = '';
+    this.attendanceService.continueWorking().subscribe({
+      next: (state) => {
+        // IMPORTANT: update the TimeEngine FIRST so its 1s tick doesn't
+        // overwrite the new overtimeApproved=true state after 1 second.
+        this.timeEngine.updateState(state);
+        this.applyTodayState(state);
+        this.wsShiftEndReminderActive = false;
+        this.isPunchSaving = false;
+        this.successMessage = "Overtime session started successfully. You can work until 8:00 PM.";
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.successMessage = '';
+          this.cdr.detectChanges();
+        }, 4000);
+      },
+      error: (err) => {
+        this.isPunchSaving = false;
+        const detail = err?.error?.detail;
+        this.punchMessage = typeof detail === 'string' ? detail : 'Unable to request overtime.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  handleExtendOvertime(): void {
+    this.isPunchSaving = true;
+    this.punchMessage = '';
+    this.attendanceService.extendOvertime().subscribe({
+      next: (state) => {
+        // IMPORTANT: update the TimeEngine FIRST so its 1s tick doesn't
+        // overwrite the new overtimeExtended=true state after 1 second.
+        this.timeEngine.updateState(state);
+        this.applyTodayState(state);
+        this.wsOvertimeReminderActive = false;
+        this.isPunchSaving = false;
+        this.successMessage = "Overtime extended successfully. You can work until 10:00 PM.";
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.successMessage = '';
+          this.cdr.detectChanges();
+        }, 4000);
+      },
+      error: (err) => {
+        this.isPunchSaving = false;
+        const detail = err?.error?.detail;
+        this.punchMessage = typeof detail === 'string' ? detail : 'Unable to request overtime extension.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   private applyTodayState(todayState: TodayAttendanceState): void {
     this.isPunchedIn = todayState.isWorking;
     this.approvedSecondsToday = todayState.approvedSeconds;
@@ -810,13 +1061,24 @@ export class EmpDashboard implements OnInit, OnDestroy {
       : 0;
     this.attendanceStatusLabel = todayState.status;
     this.status = todayState.workMode;
-    this.punchInTime = todayState.punchIn || null;
-    this.punchOutTime = todayState.punchOut || null;
+    this.punchInTime = this.formatTimeWithoutMicroseconds(todayState.punchIn);
+    this.punchOutTime = this.formatTimeWithoutMicroseconds(todayState.punchOut);
+    this.overtimeApproved = todayState.overtimeApproved || false;
+    this.overtimeExtended = todayState.overtimeExtended || false;
     // Preserve first image; only update if not already set
     if (todayState.punchInImage) { this.punchInImage = todayState.punchInImage; }
     if (todayState.punchOutImage) { this.punchOutImage = todayState.punchOutImage; }
     if (todayState.punchInAddress) { this.punchInAddress = todayState.punchInAddress; }
     if (todayState.punchOutAddress) { this.punchOutAddress = todayState.punchOutAddress; }
+  }
+
+  private formatTimeWithoutMicroseconds(timeVal: string | null | undefined): string | null {
+    if (!timeVal) return null;
+    const dotIndex = timeVal.indexOf('.');
+    if (dotIndex !== -1) {
+      return timeVal.substring(0, dotIndex);
+    }
+    return timeVal;
   }
 
   private toIsoDate(date: Date): string {
@@ -869,5 +1131,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.currentDate = new Date();
       })
     );
+  }
+
+  private matchesSearch(values: Array<string | number | undefined | null>): boolean {
+    const query = this.searchTerm.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    return values.some((value) => String(value ?? '').toLowerCase().includes(query));
   }
 }

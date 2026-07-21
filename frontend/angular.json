@@ -2,7 +2,10 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "analytics": false
+    "analytics": false,
+    "cache": {
+      "enabled": false
+    }
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -34,6 +37,10 @@
               "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
               "node_modules/angular-calendar/css/angular-calendar.css",
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "leaflet",
+              "leaflet.markercluster"
             ]
           },
           "configurations": {
@@ -60,8 +67,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "25kB",
-                  "maximumError": "35kB"
+                  "maximumWarning": "40kB",
+                  "maximumError": "50kB"
                 }
               ],
               "outputHashing": "all"

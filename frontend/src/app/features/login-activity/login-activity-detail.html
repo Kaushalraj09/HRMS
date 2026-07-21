@@ -17,7 +17,7 @@
           <i class="fas" [ngClass]="activity.status === 'Failed' ? 'fa-exclamation-triangle' : 'fa-shield-alt'"></i>
         </div>
         <div class="header-titles">
-          <h2>{{ activity.status === 'Failed' ? 'Sign-in Attempt Failed' : 'Successful Sign-in' }}</h2>
+          <h2>{{ activity.status === 'Failed' ? 'Log-in Attempt Failed' : 'Successful Log-in' }}</h2>
           <p>{{ activity.login_time | date:'dd MMMM yyyy, hh:mm:ss a' }}</p>
         </div>
         <div class="header-status">
