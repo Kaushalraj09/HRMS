@@ -36,7 +36,7 @@ class Settings:
     AUTO_SEED_ROLES: bool = _get_bool("AUTO_SEED_ROLES", APP_ENV != "production")
     AUTO_SEED_DEMO_DATA: bool = _get_bool("AUTO_SEED_DEMO_DATA", APP_ENV != "production")
     ENABLE_SCHEDULER: bool = _get_bool("ENABLE_SCHEDULER", APP_ENV != "production")
-    EXPOSE_RESET_LINK_IN_RESPONSE: bool = _get_bool("EXPOSE_RESET_LINK_IN_RESPONSE", APP_ENV != "production")
+    EXPOSE_RESET_LINK_IN_RESPONSE: bool = _get_bool("EXPOSE_RESET_LINK_IN_RESPONSE", False)
     
     # SMTP email configuration
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")

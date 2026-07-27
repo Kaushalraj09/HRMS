@@ -136,7 +136,7 @@ def generate_reset_token(user: User) -> str:
 def forgot_password(db: Session, request):
     user = db.query(User).filter(User.email.ilike(request.email)).first()
     if not user:
-        return None
+        return False
     
     from app.core.config import settings
     token = generate_reset_token(user)
@@ -147,21 +147,13 @@ def forgot_password(db: Session, request):
     from app.services.mail_service import send_reset_email
     email_sent = send_reset_email(user.email, user.display_name, reset_link)
 
-    if settings.EXPOSE_RESET_LINK_IN_RESPONSE:
-        logger.info(
-            "Password reset requested for %s | Reset link: %s | SMTP email dispatched: %s",
-            user.email,
-            reset_link,
-            "YES" if email_sent else "NO"
-        )
-    else:
-        logger.info(
-            "Password reset requested for %s | SMTP email dispatched: %s",
-            user.email,
-            "YES" if email_sent else "NO"
-        )
+    logger.info(
+        "Password reset requested for %s | SMTP email dispatched: %s",
+        user.email,
+        "YES" if email_sent else "NO"
+    )
     
-    return reset_link
+    return email_sent
 
 def reset_password(db: Session, request):
     from jose import jwt, JWTError
@@ -192,4 +184,3 @@ def reset_password(db: Session, request):
     db.commit()
     
     return {"success": True, "message": "Password reset successfully"}
-

@@ -77,3 +77,65 @@ def test_timeoff_unique_composite_index(db_session):
     
     # Ensure it works
     assert db_session.query(TimeOffRequest).count() == 1
+
+
+def test_create_hr_returns_api_response_shape_and_sends_setup_email(db_session, monkeypatch):
+    from app.schemas.hr import HrCreate, HrResponse
+    from app.services.hr_service import create_hr
+
+    sent_email = {}
+
+    def fake_send_reset_email(to_email, display_name, reset_link):
+        sent_email.update({
+            "to_email": to_email,
+            "display_name": display_name,
+            "reset_link": reset_link,
+        })
+        return True
+
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", fake_send_reset_email)
+
+    response = create_hr(
+        db_session,
+        HrCreate(
+            fullName="Observation HR",
+            email="observation.hr@example.com",
+            phone="9876543210",
+            department="Human Resources",
+            designation="HR Manager",
+            status="Active",
+        ),
+    )
+
+    validated = HrResponse.model_validate(response)
+    assert validated.email == "observation.hr@example.com"
+    assert validated.fullName == "Observation HR"
+    assert validated.hrCode
+    assert sent_email["to_email"] == "observation.hr@example.com"
+    assert "/auth/reset-password?token=" in sent_email["reset_link"]
+
+
+def test_forgot_password_returns_email_status_without_exposing_reset_link(db_session, monkeypatch):
+    from types import SimpleNamespace
+    from app.services import auth_service
+
+    sent_email = {}
+
+    def fake_send_reset_email(to_email, display_name, reset_link):
+        sent_email.update({
+            "to_email": to_email,
+            "display_name": display_name,
+            "reset_link": reset_link,
+        })
+        return True
+
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", fake_send_reset_email)
+
+    result = auth_service.forgot_password(
+        db_session,
+        SimpleNamespace(email="hr@hrms.com"),
+    )
+
+    assert result is True
+    assert sent_email["to_email"] == "hr@hrms.com"
+    assert "/auth/reset-password?token=" in sent_email["reset_link"]

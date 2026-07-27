@@ -5,7 +5,6 @@ import logging
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.core.config import settings
 from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse, ForgotPasswordRequest, ResetPasswordRequest
 from app.services import auth_service
@@ -139,10 +138,8 @@ def change_password(
 def forgot_password(payload: ForgotPasswordRequest, http_request: Request, db: Session = Depends(get_db)):
     reset_key = _rate_limit_key("forgot-password", http_request, payload.email)
     _enforce_rate_limit(reset_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
-    reset_link = auth_service.forgot_password(db, payload)
-    if settings.EXPOSE_RESET_LINK_IN_RESPONSE:
-        return {"success": True, "message": f"Password reset link generated. Reset Link: {reset_link}"}
-    return {"success": True, "message": "If the account exists, a password reset link has been generated and sent."}
+    auth_service.forgot_password(db, payload)
+    return {"success": True, "message": "If the account exists, password reset instructions have been sent to the registered email."}
 
 @router.post("/reset-password", response_model=StandardResponse)
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
@@ -166,4 +163,3 @@ def get_me(current_user: User = Depends(get_current_user)):
         "linkedHrId": current_user.linked_hr_id,
         "status": current_user.status
     }
-

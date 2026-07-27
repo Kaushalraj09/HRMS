@@ -7,6 +7,23 @@ from app.schemas.hr import HrCreate
 from app.core.security import hash_password
 import secrets
 
+
+def _employee_to_hr_response(employee: Employee) -> dict:
+    full_name = f"{employee.first_name or ''} {employee.last_name or ''}".strip()
+    return {
+        "id": employee.id,
+        "user_id": employee.user_id,
+        "hr_code": employee.employee_code,
+        "full_name": full_name,
+        "email": employee.official_email,
+        "phone": employee.mobile,
+        "department": employee.department,
+        "designation": employee.designation,
+        "status": employee.status,
+        "created_at": employee.created_at,
+    }
+
+
 def create_hr(db: Session, obj_in: HrCreate):
     # Support either "HR" or "hr" naming in the roles table.
     hr_role = db.query(Role).filter(func.lower(Role.name) == "hr").first()
@@ -67,7 +84,7 @@ def create_hr(db: Session, obj_in: HrCreate):
     from app.core.config import settings
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
     send_reset_email(new_user.email, new_user.display_name, reset_link)
-    return new_employee
+    return _employee_to_hr_response(new_employee)
 
 def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", status: str = ""):
     # Query Employee table filtered by HR role

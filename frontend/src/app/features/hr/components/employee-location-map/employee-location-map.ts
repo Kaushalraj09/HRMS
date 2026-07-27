@@ -104,6 +104,10 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit {
     });
 
     this.map.addLayer(this.markerClusterGroup);
+    this.updateMarkers();
+    if (this.filteredLocations.length === 0) {
+      this.fitIndiaView();
+    }
   }
 
   private startPolling(): void {
@@ -123,11 +127,15 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit {
           this.applyFilter(this.activeFilter);
           this.loading = false;
           this.error = '';
+          this.refreshMapSize();
         },
         error: (err) => {
           console.error('Failed to fetch today locations:', err);
-          this.error = 'Failed to load employee locations.';
+          this.error = 'Employee location data is temporarily unavailable. The map will refresh automatically.';
           this.loading = false;
+          this.filteredLocations = [];
+          this.updateMarkers();
+          this.fitIndiaView();
         }
       });
   }
@@ -164,6 +172,10 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private updateMarkers(): void {
+    if (!this.map || !this.markerClusterGroup) {
+      return;
+    }
+
     this.markerClusterGroup.clearLayers();
 
     this.filteredLocations.forEach(loc => {
@@ -208,5 +220,30 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit {
 
       this.markerClusterGroup.addLayer(marker);
     });
+
+    if (this.filteredLocations.length > 0) {
+      const bounds = this.markerClusterGroup.getBounds();
+      if (bounds.isValid()) {
+        this.map.fitBounds(bounds.pad(0.2), { maxZoom: 10 });
+      }
+    } else {
+      this.fitIndiaView();
+    }
+    this.refreshMapSize();
+  }
+
+  private fitIndiaView(): void {
+    if (!this.map) {
+      return;
+    }
+    this.map.setView([22.5937, 78.9629], 5);
+    this.refreshMapSize();
+  }
+
+  private refreshMapSize(): void {
+    if (!this.map) {
+      return;
+    }
+    setTimeout(() => this.map.invalidateSize(), 0);
   }
 }
