@@ -139,3 +139,64 @@ def test_forgot_password_returns_email_status_without_exposing_reset_link(db_ses
     assert result is True
     assert sent_email["to_email"] == "hr@hrms.com"
     assert "/auth/reset-password?token=" in sent_email["reset_link"]
+
+
+def test_testing_password_fallback_uses_first_five_email_letters():
+    from app.services.account_access_service import build_temporary_testing_password
+
+    assert build_temporary_testing_password("Vivekkumarmehta02@gmail.com") == "Vivek@1234"
+    assert build_temporary_testing_password("Anu02@gmail.com") == "Anu@1234"
+    assert build_temporary_testing_password("Chandrashekhar@gmail.com") == "Chand@1234"
+
+
+def test_employee_creation_uses_testing_password_when_email_setup_fails(db_session, monkeypatch):
+    from app.core.security import verify_password
+    from app.models.user import User
+    from app.schemas.employee import EmployeeCreate
+    from app.services.employee_service import create_employee
+
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
+
+    create_employee(
+        db_session,
+        EmployeeCreate(
+            first_name="Vivek",
+            last_name="Mehta",
+            official_email="Vivekkumarmehta02@gmail.com",
+            mobile="9876543210",
+            department="Engineering",
+            designation="Frontend Developer",
+            employee_type="Full-Time",
+            work_location="Main Office",
+            shift_type="General Shift",
+        ),
+    )
+
+    user = db_session.query(User).filter(User.email == "Vivekkumarmehta02@gmail.com").first()
+    assert user is not None
+    assert verify_password("Vivek@1234", user.password_hash)
+
+
+def test_hr_creation_uses_testing_password_when_email_setup_fails(db_session, monkeypatch):
+    from app.core.security import verify_password
+    from app.models.user import User
+    from app.schemas.hr import HrCreate
+    from app.services.hr_service import create_hr
+
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
+
+    create_hr(
+        db_session,
+        HrCreate(
+            fullName="Chandra Shekhar",
+            email="Chandrashekhar@gmail.com",
+            phone="9876543211",
+            department="Human Resources",
+            designation="HR Manager",
+            status="Active",
+        ),
+    )
+
+    user = db_session.query(User).filter(User.email == "Chandrashekhar@gmail.com").first()
+    assert user is not None
+    assert verify_password("Chand@1234", user.password_hash)

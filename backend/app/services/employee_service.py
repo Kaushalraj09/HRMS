@@ -57,9 +57,12 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
+    from app.services.account_access_service import apply_temporary_testing_password
     from app.core.config import settings
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
-    send_reset_email(new_user.email, new_user.display_name, reset_link)
+    email_sent = send_reset_email(new_user.email, new_user.display_name, reset_link)
+    if not email_sent:
+        apply_temporary_testing_password(db, new_user)
     return new_employee
 
 def _matches_employee_filters(employee, search: str, department: str, employee_type: str, status: str) -> bool:
@@ -185,7 +188,7 @@ def get_employee_credentials(db: Session, employee_id: int):
             "username": user.email,
             "email": user.email,
             "activation_required": True,
-            "temporary_password_hint": "Use the password setup email to activate this account.",
+            "temporary_password_hint": "Temporary testing password: first 5 email letters + @1234. Replace with setup email after SMTP is configured.",
             "status": user.status or hr.status or "Active",
         }
         
@@ -204,7 +207,7 @@ def get_employee_credentials(db: Session, employee_id: int):
         "username": user.email,
         "email": user.email,
         "activation_required": True,
-        "temporary_password_hint": "Use the password setup email to activate this account.",
+        "temporary_password_hint": "Temporary testing password: first 5 email letters + @1234. Replace with setup email after SMTP is configured.",
         "status": user.status or employee.status or "Active",
     }
 
