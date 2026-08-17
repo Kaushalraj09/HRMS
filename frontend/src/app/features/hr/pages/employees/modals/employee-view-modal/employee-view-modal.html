@@ -19,19 +19,25 @@
           <div class="info-item"><span class="label-text">Name</span><span>{{ detail.employee.name }}</span></div>
           <div class="info-item"><span class="label-text">Status</span><span class="status-badge" [ngClass]="detail.employee.status.toLowerCase()">{{ detail.employee.status }}</span></div>
           <div class="info-item"><span class="label-text">Work Mode</span><span>{{ detail.employee.workLocation }}</span></div>
-          <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shiftType }}</span></div>
-          <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj }}</span></div>
+          <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shift?.name || detail.employee.shiftType || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj || 'N/A' }}</span></div>
         </div>
       </div>
 
       <div class="info-section">
         <h3>Contact & Account</h3>
         <div class="info-grid">
-          <div class="info-item"><span class="label-text">Official Email</span><span>{{ detail.employee.officialEmail }}</span></div>
-          <div class="info-item"><span class="label-text">Login Email</span><span>{{ detail.loginEmail }}</span></div>
-          <div class="info-item"><span class="label-text">Mobile</span><span>{{ detail.employee.mobile }}</span></div>
+          <div class="info-item"><span class="label-text">Official Email</span><span>{{ detail.employee.officialEmail || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Login Email</span><span>{{ detail.loginEmail || 'N/A' }}</span></div>
+          <div class="info-item"><span class="label-text">Mobile</span><span>{{ detail.employee.mobile || 'N/A' }}</span></div>
           <div class="info-item"><span class="label-text">Personal Email</span><span>{{ detail.employee.personalEmail || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Emergency Contact</span><span>{{ detail.employee.emergencyContactName }} ({{ detail.employee.emergencyContactNumber }})</span></div>
+          <div class="info-item">
+            <span class="label-text">Emergency Contact</span>
+            <span *ngIf="detail.employee.emergencyContactName || detail.employee.emergencyContactNumber; else noContact">
+              {{ detail.employee.emergencyContactName }} <span *ngIf="detail.employee.emergencyContactNumber">({{ detail.employee.emergencyContactNumber }})</span>
+            </span>
+            <ng-template #noContact><span>N/A</span></ng-template>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,15 @@
 <aside class="sidebar bg-dark-theme" [class.collapsed]="!(isHrSidebarOpen$ | async)">
+  <!-- Sidebar Top Brand Header -->
+  <div class="sidebar-brand-header">
+    <div class="brand-logo-wrap">
+      <img src="assets/Logo.png" alt="AIVAN 360 SOLUTIONS" class="sidebar-brand-logo" />
+    </div>
+    <div class="brand-title-wrap">
+      <span class="brand-company-name">AIVAN 360</span>
+      <span class="brand-sub">SOLUTIONS</span>
+    </div>
+  </div>
+
   <div class="sidebar-inner menu-container scroll-enabled">
     <ng-container *ngFor="let group of menuConfig">
       <div class="menu-group">
@@ -61,6 +72,14 @@
         </ul>
       </div>
     </ng-container>
+  </div>
+
+  <!-- Sidebar Bottom Card -->
+  <div class="sidebar-bottom-card" *ngIf="(isHrSidebarOpen$ | async)">
+    <div class="bottom-card-inner">
+      <span class="bottom-brand-badge">360 HR+</span>
+      <p class="bottom-brand-sub">Complete HR Management</p>
+    </div>
   </div>
 </aside>
 

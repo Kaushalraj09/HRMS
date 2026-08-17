@@ -36,15 +36,15 @@ export class HrSidebar implements OnInit {
       { 
         groupName: 'Hr Dashboard',
         items: [ 
-              { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
-              { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
-              { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
-              { label: 'Time Off', icon: 'fas fa-calendar-times', route: '/hr-dashboard/time-off' },
-              { label: 'Regularizations', icon: 'fas fa-business-time', route: '/hr-dashboard/regularization-requests' },
-              { label: 'Reports', icon: 'fas fa-file-contract', route: '/hr-dashboard/reports' },
-              { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
-              { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },
-              { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
+          { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
+          { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
+          { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
+          { label: 'Time Off', icon: 'fas fa-calendar-times', route: '/hr-dashboard/time-off' },
+          { label: 'Regularizations', icon: 'fas fa-business-time', route: '/hr-dashboard/regularization-requests' },
+          { label: 'Reports', icon: 'fas fa-file-contract', route: '/hr-dashboard/reports' },
+          { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
+          { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },
+          { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
         ]
       }
     ];

@@ -241,33 +241,35 @@
 
 .tabs-container {
   display: flex;
-  background: hsl(210, 20%, 95%);
+  background: #f1f5f9;
   padding: 4px;
-  border-radius: 8px;
-  gap: 2px;
+  border-radius: 10px;
+  gap: 4px;
 }
 
 .tab-btn {
   font-family: inherit;
-  padding: 6px 14px;
+  padding: 7px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: hsl(210, 10%, 45%);
+  color: #64748b;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tab-btn:hover {
-  color: hsl(210, 10%, 20%);
+.tab-btn:hover:not(.active) {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .tab-btn.active {
-  background: white;
-  color: #e11d48;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 35%, #7c3aed 75%, #9333ea 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3) !important;
 }
 
 /* Table styling */

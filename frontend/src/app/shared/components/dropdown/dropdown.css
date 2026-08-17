@@ -1,13 +1,18 @@
+:host {
+  display: contents;
+}
+
 .dropdown-menu {
     position: absolute;
-    top: calc(100% + 15px); /* Position it just below the profile container */
+    top: calc(100% + 6px); /* Position it right below the profile container */
     right: 0; /* Align perfectly to the right side of the profile block */
     background: #ffffff;
-    min-width: 180px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    min-width: 190px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+    border: 1px solid #E2E8F0;
     border-radius: 12px;
     overflow: hidden;
-    z-index: 1000;
+    z-index: 1005;
     animation: fadeIn 0.15s ease-out;
 }
 
@@ -107,12 +112,14 @@
 }
 
 .yes-btn {
-  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 35%, #7C3AED 75%, #9333EA 100%);
   color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), 0 2px 6px rgba(124, 58, 237, 0.2);
 }
 
 .yes-btn:hover {
-  background: linear-gradient(90deg, #4c1d95 0%, #e11d48 100%);
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 35%, #6D28D9 75%, #7E22CE 100%);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.42), 0 3px 8px rgba(124, 58, 237, 0.3);
   transform: translateY(-2px);
 }
 

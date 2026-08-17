@@ -197,12 +197,11 @@
         class="btn btn-danger" 
         type="button" 
         [disabled]="isCancelling"
-        (click)="cancelRequest(selectedRequest.id)" 
-        style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background-color: #ef4444; color: white; border: none;">
-        <span *ngIf="!isCancelling">Cancel Request</span>
+        (click)="cancelRequest(selectedRequest.id)">
+        <span *ngIf="!isCancelling"><i class="fas fa-trash-alt"></i> Cancel Request</span>
         <span *ngIf="isCancelling">Cancelling...</span>
       </button>
-      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()">
         Close
       </button>
     </div>

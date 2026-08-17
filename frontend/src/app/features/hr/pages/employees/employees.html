@@ -1,147 +1,356 @@
 <div class="employees-wrapper">
   <div class="employees-container">
     
-    <!-- Header Section -->
-    <div class="header-section">
-      <div class="header-text">
-        <h1>Employees</h1>
-        <p>{{ userRoleLabel }} can search, manage, and maintain employee records</p>
+    <!-- 1. Header Section -->
+    <div class="employees-header-row">
+      <div class="header-titles">
+        <h1 class="page-main-title">Employees</h1>
+        <div class="breadcrumb-trail">
+        </div>
+        <p class="header-subtitle">{{ userRoleLabel }} can search, manage, and maintain employee records</p>
       </div>
-      <button type="button" class="btn-primary" (click)="openAddModal()">Add Employee</button>
+      <button type="button" class="btn-add-employee" (click)="openAddModal()">
+        <i class="fas fa-plus"></i> Add Employee
+      </button>
     </div>
 
-    <!-- Filters Section -->
-    <div class="filter-section">
-      <div class="search-container">
-        <i class="fas fa-search search-icon"></i>
-        <input type="text" id="searchQuery" name="searchQuery" autocomplete="off" aria-label="Search employees" [formControl]="searchControl" placeholder="Search employee name, email, code" class="filter-input search-input">
+    <!-- 2. Filters Card Panel -->
+    <div class="filter-card">
+      <div class="filter-search-box">
+        <i class="fas fa-search filter-search-icon"></i>
+        <input 
+          type="text" 
+          id="searchQuery"
+          name="searchQuery"
+          autocomplete="off"
+          aria-label="Search employees" 
+          [formControl]="searchControl" 
+          placeholder="Search by name, email, employee ID or code..." 
+          (keyup.enter)="onSearch()"
+          class="filter-search-input"
+        />
       </div>
-      
-      <div class="dropdown-filters">
-        <div style="min-width: 160px;">
-          <app-custom-select name="departmentFilter" inputId="departmentFilter" [formControl]="departmentControl" [options]="departmentsOptions"></app-custom-select>
+
+      <div class="filter-dropdowns-row">
+        <div class="filter-select-item">
+          <app-custom-select 
+            name="departmentFilter" 
+            inputId="departmentFilter" 
+            [formControl]="departmentControl" 
+            [options]="departmentsOptions"
+            (ngModelChange)="onSearch()">
+          </app-custom-select>
         </div>
 
-        <div style="min-width: 160px;">
-          <app-custom-select name="typeFilter" inputId="typeFilter" [formControl]="typeControl" [options]="typesOptions"></app-custom-select>
+        <div class="filter-select-item">
+          <app-custom-select 
+            name="typeFilter" 
+            inputId="typeFilter" 
+            [formControl]="typeControl" 
+            [options]="typesOptions"
+            (ngModelChange)="onSearch()">
+          </app-custom-select>
         </div>
 
-        <div style="min-width: 160px;">
-          <app-custom-select name="statusFilter" inputId="statusFilter" [formControl]="statusControl" [options]="statusOptions"></app-custom-select>
+        <div class="filter-select-item">
+          <app-custom-select 
+            name="statusFilter" 
+            inputId="statusFilter" 
+            [formControl]="statusControl" 
+            [options]="statusOptions"
+            (ngModelChange)="onSearch()">
+          </app-custom-select>
         </div>
       </div>
-      
-      <div class="filter-actions-row">
-        <button type="button" class="btn-outline" (click)="onReset()">Reset</button>
-        <button type="button" class="btn-primary" (click)="onSearch()">
+
+      <div class="filter-buttons-group">
+        <button type="button" class="btn-filter-reset" (click)="onReset()">
+          Reset
+        </button>
+        <button type="button" class="btn-filter-search" (click)="onSearch()">
           <i class="fas fa-search"></i> Search
         </button>
       </div>
     </div>
 
-    <!-- Table Section -->
-    <ng-container *ngIf="{ loading: isLoading$ | async, result: employeesData$ | async } as state">
-    <div class="table-card">
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Employee ID</th>
-              <th>Name</th>
-              <th>Department</th>
-              <th>Designation</th>
-              <th>Status</th>
-              <th>Login</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          
-          <tbody *ngIf="state.loading">
-            <tr *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
-              <td><div class="skeleton s-text"></div></td>
-              <td><div class="skeleton s-text" style="width: 80%"></div></td>
-              <td><div class="skeleton s-text" style="width: 60%"></div></td>
-              <td><div class="skeleton s-text" style="width: 70%"></div></td>
-              <td><div class="skeleton s-badge"></div></td>
-              <td><div class="skeleton s-badge"></div></td>
-              <td><div class="skeleton s-text" style="width: 100px"></div></td>
-            </tr>
-          </tbody>
+    <!-- 3. Top Metrics & Documents Overview Grid -->
+    <div class="metrics-overview-grid">
+      <!-- 4 Stat Metric Cards -->
+      <div class="stat-metrics-group">
+        <div class="kpi-mini-card total-card">
+          <div class="kpi-icon-wrap blue-wrap">
+            <i class="fas fa-user-friends"></i>
+          </div>
+          <div class="kpi-info-block">
+            <span class="kpi-value-num">{{ stats.total }}</span>
+            <span class="kpi-label-text">Total Employees</span>
+          </div>
+        </div>
 
-          <ng-container *ngIf="!state.loading && state.result as result">
-            <tbody>
-              <tr *ngFor="let emp of result.data; trackBy: trackById">
-                <td class="font-medium text-dark">{{ emp.employeeCode }}</td>
-                <td class="font-medium text-dark">{{ emp.name }}</td>
-                <td>{{ emp.department }}</td>
-                <td>{{ emp.designation }}</td>
-                <td>
-                  <span class="status-badge" [ngClass]="emp.status.toLowerCase()">{{ emp.status }}</span>
-                </td>
-                <td>
-                  <span class="login-badge" [ngClass]="emp.login.toLowerCase()">{{ emp.login }}</span>
-                </td>
-                <td class="actions-col">
-                  <button type="button" class="action-btn-link" (click)="openViewModal(emp)">View</button>
-                  <span class="separator">&middot;</span>
-                  <button type="button" class="action-btn-link" (click)="openEditModal(emp)">Edit</button>
-                  <span class="separator">&middot;</span>
-                  <button type="button" class="action-btn-link" (click)="openCredentialModal(emp)">Credential</button>
-                  <ng-container *ngIf="emp.userId !== currentUser?.id">
-                    <span class="separator">&middot;</span>
-                    <button type="button" class="action-btn-link danger-link" (click)="confirmDelete(emp)">Delete</button>
-                  </ng-container>
-                </td>
-              </tr>
-              
-              <tr *ngIf="result.data.length === 0">
-                <td colspan="7" class="empty-state">
-                  <div class="empty-content">
-                    <i class="fas fa-users-slash empty-icon"></i>
-                    <p>No employees found</p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </ng-container>
-        </table>
+        <div class="kpi-mini-card active-card">
+          <div class="kpi-icon-wrap green-wrap">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <div class="kpi-info-block">
+            <span class="kpi-value-num">{{ stats.active }}</span>
+            <span class="kpi-label-text">Active Employees</span>
+          </div>
+        </div>
+
+        <div class="kpi-mini-card onleave-card">
+          <div class="kpi-icon-wrap orange-wrap">
+            <i class="fas fa-user-clock"></i>
+          </div>
+          <div class="kpi-info-block">
+            <span class="kpi-value-num">{{ stats.onLeave }}</span>
+            <span class="kpi-label-text">On Leave</span>
+          </div>
+        </div>
+
+        <div class="kpi-mini-card inactive-card">
+          <div class="kpi-icon-wrap red-wrap">
+            <i class="fas fa-user-times"></i>
+          </div>
+          <div class="kpi-info-block">
+            <span class="kpi-value-num">{{ stats.inactive }}</span>
+            <span class="kpi-label-text">Inactive Employees</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Pagination -->
-      <div class="pagination-footer" *ngIf="!state.loading && state.result as result">
-        <div class="pagination-info">
-          Showing <span class="font-medium">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to 
-          <span class="font-medium">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of 
-          <span class="font-medium">{{ result.total }}</span> results
+      <!-- Documents Overview Card with Donut Chart -->
+      <div class="documents-overview-card">
+        <div class="doc-card-head">
+          <span class="doc-head-title">Documents Overview</span>
+          <a class="doc-view-link" href="javascript:void(0)">View Details <i class="fas fa-arrow-right"></i></a>
         </div>
-        
-        <div class="pagination-controls" *ngIf="result.total > pageSize">
-           <ng-container *ngIf="(paginationArray$ | async) as pages">
-              <button 
-                class="page-btn" 
-                [disabled]="pageSubject.value === 1"
-                (click)="setPage(pageSubject.value - 1)">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              
-              <button 
-                *ngFor="let p of pages" 
-                class="page-btn" 
-                [class.active]="p === pageSubject.value"
-                (click)="setPage(p)">
-                {{ p }}
-              </button>
-              
-              <button 
-                class="page-btn" 
-                [disabled]="pageSubject.value === pages.length"
-                (click)="setPage(pageSubject.value + 1)">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-           </ng-container>
+
+        <div class="doc-card-content">
+          <!-- SVG Donut Chart -->
+          <div class="donut-chart-container">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="36" class="donut-ring-base"></circle>
+              <!-- Complete segment ~62% (stroke-dasharray="140 226") -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-green" stroke-dasharray="140 226" stroke-dashoffset="0"></circle>
+              <!-- Partial segment ~28% (stroke-dasharray="63 226") -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-orange" stroke-dasharray="63 226" stroke-dashoffset="-140"></circle>
+              <!-- Incomplete segment ~10% (stroke-dasharray="23 226") -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-red" stroke-dasharray="23 226" stroke-dashoffset="-203"></circle>
+            </svg>
+            <div class="donut-center-text">
+              <span class="donut-ratio">8/8</span>
+            </div>
+          </div>
+
+          <!-- Legend list -->
+          <div class="doc-legend-list">
+            <div class="legend-item">
+              <span class="legend-dot dot-green"></span>
+              <span class="legend-label">Complete (8/8)</span>
+              <span class="legend-value">{{ stats.docCompletePct }}% ({{ stats.docCompleteCount }})</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot dot-orange"></span>
+              <span class="legend-label">Partial (3-7/8)</span>
+              <span class="legend-value">{{ stats.docPartialPct }}% ({{ stats.docPartialCount }})</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot dot-red"></span>
+              <span class="legend-label">Incomplete (0-2/8)</span>
+              <span class="legend-value">{{ stats.docIncompletePct }}% ({{ stats.docIncompleteCount }})</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- 4. Table Section -->
+    <ng-container *ngIf="{ loading: isLoading$ | async, result: employeesData$ | async } as state">
+      <div class="employee-table-card">
+        <div class="table-responsive">
+          <table class="modern-employee-table">
+            <thead>
+              <tr>
+                <th (click)="sort('name')">EMPLOYEE <i class="fas fa-sort sort-icon"></i></th>
+                <th (click)="sort('employeeCode')">EMPLOYEE ID <i class="fas fa-sort sort-icon"></i></th>
+                <th (click)="sort('department')">DEPARTMENT <i class="fas fa-sort sort-icon"></i></th>
+                <th (click)="sort('designation')">DESIGNATION <i class="fas fa-sort sort-icon"></i></th>
+                <th (click)="sort('status')">STATUS <i class="fas fa-sort sort-icon"></i></th>
+                <th (click)="sort('login')">LOGIN <i class="fas fa-sort sort-icon"></i></th>
+                <th>DOCUMENTS</th>
+                <th>DOC. COMPLETION</th>
+                <th class="text-center">ACTIONS</th>
+              </tr>
+            </thead>
+            
+            <tbody *ngIf="state.loading">
+              <tr *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+                <td><div class="skeleton s-avatar-row"></div></td>
+                <td><div class="skeleton s-text" style="width: 60px"></div></td>
+                <td><div class="skeleton s-text" style="width: 90px"></div></td>
+                <td><div class="skeleton s-text" style="width: 130px"></div></td>
+                <td><div class="skeleton s-badge"></div></td>
+                <td><div class="skeleton s-badge"></div></td>
+                <td><div class="skeleton s-text" style="width: 80px"></div></td>
+                <td><div class="skeleton s-text" style="width: 70px"></div></td>
+                <td><div class="skeleton s-text" style="width: 90px"></div></td>
+              </tr>
+            </tbody>
+
+            <ng-container *ngIf="!state.loading && state.result as result">
+              <tbody>
+                <tr *ngFor="let emp of result.data; trackBy: trackById" class="emp-row">
+                  <!-- Employee Name + Avatar + Email -->
+                  <td>
+                    <div class="emp-profile-cell">
+                      <div 
+                        class="emp-avatar-circle" 
+                        [style.background-color]="getAvatarColor(emp.name).bg" 
+                        [style.color]="getAvatarColor(emp.name).text">
+                        {{ getInitials(emp.name) }}
+                      </div>
+                      <div class="emp-meta-info">
+                        <span class="emp-full-name">{{ emp.name }}</span>
+                        <span class="emp-email-text">{{ emp.officialEmail || emp.personalEmail || (emp.name.toLowerCase().replace(' ', '.') + '@aivan.com') }}</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Employee ID -->
+                  <td>
+                    <span class="emp-id-text">{{ emp.employeeCode || ('000' + emp.id).slice(-4) }}</span>
+                  </td>
+
+                  <!-- Department -->
+                  <td>
+                    <span class="emp-dept-text">{{ emp.department || 'Engineering' }}</span>
+                  </td>
+
+                  <!-- Designation -->
+                  <td>
+                    <span class="emp-desig-text">{{ emp.designation || 'Operations Executive' }}</span>
+                  </td>
+
+                  <!-- Status -->
+                  <td>
+                    <span class="status-pill" [ngClass]="emp.status.toLowerCase()">
+                      {{ emp.status }}
+                    </span>
+                  </td>
+
+                  <!-- Login -->
+                  <td>
+                    <span class="login-pill" [ngClass]="emp.login.toLowerCase()">
+                      {{ emp.login }}
+                    </span>
+                  </td>
+
+                  <!-- Documents icons list -->
+                  <td>
+                    <div class="docs-icon-list">
+                      <span class="doc-icon-badge pdf" title="PDF document"><i class="fas fa-file-pdf"></i></span>
+                      <span class="doc-icon-badge word" title="Word document"><i class="fas fa-file-word"></i></span>
+                      <span class="doc-icon-badge excel" title="Excel spreadsheet"><i class="fas fa-file-excel"></i></span>
+                      <span class="doc-icon-badge image" *ngIf="getDocCountBadge(emp).hasImg" title="Image / Certificate"><i class="fas fa-file-image"></i></span>
+                      <span class="doc-count-plus" *ngIf="getDocCountBadge(emp).extra > 0">+{{ getDocCountBadge(emp).extra }}</span>
+                    </div>
+                  </td>
+
+                  <!-- Doc Completion Ring + Text -->
+                  <td>
+                    <div class="doc-completion-gauge">
+                      <div class="completion-circle-ring" [style.border-color]="getDocCompletion(emp).color">
+                        <span class="ratio-text" [style.color]="getDocCompletion(emp).color">{{ getDocCompletion(emp).count }}/{{ getDocCompletion(emp).total }}</span>
+                      </div>
+                      <span class="completion-status-lbl" [style.color]="getDocCompletion(emp).color">{{ getDocCompletion(emp).label }}</span>
+                    </div>
+                  </td>
+
+                  <!-- Action Icons Row -->
+                  <td>
+                    <div class="actions-icon-row">
+                      <button type="button" class="btn-row-action view" (click)="openViewModal(emp)" title="View Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button type="button" class="btn-row-action edit" (click)="openEditModal(emp)" title="Edit Employee">
+                        <i class="fas fa-pen"></i>
+                      </button>
+                      <button type="button" class="btn-row-action key" (click)="openCredentialModal(emp)" title="Credentials">
+                        <i class="fas fa-key"></i>
+                      </button>
+                      <button type="button" class="btn-row-action delete" (click)="confirmDelete(emp)" title="Delete Employee" *ngIf="emp.userId !== currentUser?.id">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                      <button type="button" class="btn-row-action more" title="More Options">
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr *ngIf="result.data.length === 0">
+                  <td colspan="9" class="empty-state-cell">
+                    <div class="empty-table-box">
+                      <i class="fas fa-users-slash empty-icon"></i>
+                      <h3>No matching employees found</h3>
+                      <p>Try refining your search terms or resetting the filter dropdowns.</p>
+                      <button type="button" class="btn-filter-reset" (click)="onReset()">Reset Filters</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </ng-container>
+          </table>
+        </div>
+
+        <!-- 5. Pagination Bar -->
+        <div class="pagination-bar" *ngIf="!state.loading && state.result as result">
+          <div class="pagination-counter-info">
+            Showing {{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }} to 
+            {{ ((pageSubject.value - 1) * pageSize) + result.data.length }} of 
+            {{ result.total }} employees
+          </div>
+
+          <div class="pagination-page-controls">
+            <button 
+              class="pag-btn prev-btn" 
+              [disabled]="pageSubject.value === 1" 
+              (click)="setPage(pageSubject.value - 1)"
+              aria-label="Previous Page">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <ng-container *ngIf="(paginationArray$ | async) as pages">
+              <ng-container *ngFor="let p of getVisiblePages(pages, pageSubject.value)">
+                <span class="pag-ellipsis" *ngIf="p === -1">...</span>
+                <button 
+                  *ngIf="p !== -1"
+                  class="pag-btn" 
+                  [class.active]="p === pageSubject.value"
+                  (click)="setPage(p)">
+                  {{ p }}
+                </button>
+              </ng-container>
+            </ng-container>
+
+            <button 
+              class="pag-btn next-btn" 
+              [disabled]="pageSubject.value === (paginationArray$ | async)?.length || (paginationArray$ | async)?.length === 0" 
+              (click)="setPage(pageSubject.value + 1)"
+              aria-label="Next Page">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="page-size-selector-wrap">
+            <select class="page-size-select" [value]="pageSize" (change)="onPageSizeChange($event)">
+              <option [value]="10">10 / page</option>
+              <option [value]="25">25 / page</option>
+              <option [value]="50">50 / page</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </ng-container>
     
   </div>
@@ -200,7 +409,7 @@
         <button class="btn btn-secondary" (click)="closeDeleteModal()">
           Cancel
         </button>
-        <button class="btn btn-primary" (click)="executeDelete()">
+        <button class="btn btn-danger" (click)="executeDelete()">
           Delete Employee
         </button>
       </div>

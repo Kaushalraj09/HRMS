@@ -36,6 +36,23 @@ class ShiftBase(BaseModel):
     description: Optional[str] = Field(None, max_length=255)
     start_time: Optional[time] = None
     end_time: Optional[time] = None
+    working_hours: float = 8.0
+    required_work_minutes: int = 480
+    grace_minutes: int = 30
+    lunch_duration_minutes: int = 40
+    lunch_start_time: Optional[time] = None
+    lunch_end_time: Optional[time] = None
+    half_day_hours: float = 4.0
+    minimum_half_day_minutes: int = 240
+    present_hours: float = 8.0
+    minimum_present_minutes: int = 480
+    overtime_start_time: Optional[time] = None
+    overtime_allowed: bool = True
+    max_overtime_minutes: int = 120
+    late_mark_after_minutes: int = 30
+    early_exit_before_minutes: int = 0
+    is_night_shift: bool = False
+    timezone: str = "Asia/Kolkata"
     is_active: bool = True
 
 class ShiftCreate(ShiftBase):
@@ -43,8 +60,6 @@ class ShiftCreate(ShiftBase):
 
 class ShiftResponse(ShiftBase):
     id: int
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -16,7 +16,8 @@ import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from '
   styleUrl: './navbar.css',
 })
 export class Navbar implements OnInit, OnDestroy, OnChanges {
-  @Input() userName: string = 'User';
+  @Input() userName: string = 'System Admin';
+  @Input() userRole: string = 'Software Engineer';
   @Input() showSearch: boolean = true;
   @Input() searchValue: string = '';
 
@@ -263,7 +264,7 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    if (!target.closest('.profile') && !target.closest('app-dropdown')) {
+    if (!target.closest('.profile-user-pill') && !target.closest('app-dropdown')) {
       this.isProfileDropdownOpen = false;
     }
     if (!target.closest('.notification-container')) {
@@ -291,7 +292,8 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     this.searchInput$.next('');
   }
 
-  onProfileClick() {
+  onProfileClick(event?: MouseEvent) {
+    event?.stopPropagation();
     this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
     this.isNotificationDropdownOpen = false;
     this.isLanguageDropdownOpen = false;

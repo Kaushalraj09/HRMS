@@ -78,6 +78,10 @@ def create_hr(db: Session, obj_in: HrCreate):
     
     db.commit()
     db.refresh(new_employee)
+
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
+
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
@@ -91,23 +95,30 @@ def create_hr(db: Session, obj_in: HrCreate):
 
 def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", status: str = ""):
     # Query Employee table filtered by HR role
-    query = db.query(
-        Employee.id.label("id"),
-        Employee.user_id.label("user_id"),
-        Employee.employee_code.label("hr_code"),
-        (Employee.first_name + " " + Employee.last_name).label("full_name"),
-        Employee.official_email.label("email"),
-        Employee.mobile.label("phone"),
-        Employee.department.label("department"),
-        Employee.designation.label("designation"),
-        Employee.status.label("status"),
-        Employee.created_at.label("created_at")
-    ).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) == "hr")
+    query = (
+        db.query(
+            Employee.id.label("id"),
+            Employee.user_id.label("user_id"),
+            Employee.employee_code.label("hr_code"),
+            (Employee.first_name + " " + Employee.last_name).label("full_name"),
+            Employee.official_email.label("email"),
+            Employee.mobile.label("phone"),
+            Employee.department.label("department"),
+            Employee.designation.label("designation"),
+            Employee.status.label("status"),
+            Employee.created_at.label("created_at")
+        )
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            func.lower(Role.name) == "hr",
+            Employee.status != "Deleted",
+            User.status != "Deleted"
+        )
+    )
 
     if status:
         query = query.filter(Employee.status == status)
-    else:
-        query = query.filter(Employee.status != "Deleted")
         
     search_value = (search or "").strip()
     if search_value:

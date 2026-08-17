@@ -530,13 +530,9 @@ def continue_working(
 
 
     attendance.overtime_approved = True
-
-
-
-    attendance.overtime_start = datetime.strptime("18:00", "%H:%M").time()
-
-
-
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
+    shift = ShiftRepository.get_assigned_shift(db, employee.id, today)
+    attendance.overtime_start = shift.overtime_start_time or shift.end_time or time(18, 0)
     attendance.shift_end_reminder_sent = 3 # Acknowledged/dismissed
 
 
@@ -1441,361 +1437,191 @@ def get_today_locations(
 
 
 
-    records = db.query(Attendance).join(Employee).filter(
-
-
-
+    # 1. Fetch today's punches
+    today_records = db.query(Attendance).join(Employee).filter(
         Attendance.date == today,
-
-
-
         Attendance.punch_in != None
-
-
-
     ).all()
+    punched_emp_ids = {r.employee_id for r in today_records}
 
-
-
-    # Simple helper to extract city/state from address
-
-
-
-    def extract_city_state(address: str):
-
-
-
-        if not address:
-
-
-
-            return "Unknown", "Unknown"
-
-
-
-        parts = [p.strip() for p in address.split(',')]
-
-
-
-        if len(parts) >= 3:
-
-
-
-            return parts[-3], parts[-2]
-
-
-
-        elif len(parts) == 2:
-
-
-
-            return parts[0], parts[1]
-
-
-
-        elif len(parts) == 1:
-
-
-
-            return parts[0], "India"
-
-
-
-        return "Unknown", "Unknown"
-
-
-
+    # City coordinates database
     city_coords = {
-
-
-
         "delhi": (28.6139, 77.2090),
-
-
-
         "new delhi": (28.6139, 77.2090),
-
-
-
+        "main office": (28.6139, 77.2090),
+        "head office": (28.6139, 77.2090),
         "mumbai": (19.0760, 72.8777),
-
-
-
         "bengaluru": (12.9716, 77.5946),
-
-
-
         "bangalore": (12.9716, 77.5946),
-
-
-
         "chennai": (13.0827, 80.2707),
-
-
-
         "kolkata": (22.5726, 88.3639),
-
-
-
         "hyderabad": (17.3850, 78.4867),
-
-
-
         "pune": (18.5204, 73.8567),
-
-
-
-        "ahmedabad": (23.0225, 72.5714),
-
-
-
-        "jaipur": (26.9124, 75.7873),
-
-
-
-        "lucknow": (26.8467, 80.9462),
-
-
-
+        "sasaram": (24.9538, 84.0152),
+        "rohtas": (24.9538, 84.0152),
+        "gaya": (24.7969, 85.0039),
+        "patna": (25.5941, 85.1376),
         "indore": (22.7196, 75.8577),
-
-
-
+        "indore office": (22.7196, 75.8577),
+        "bhopal": (23.2599, 77.4126),
+        "ahmedabad": (23.0225, 72.5714),
+        "jaipur": (26.9124, 75.7873),
+        "lucknow": (26.8467, 80.9462),
+        "varanasi": (25.3176, 82.9739),
+        "noida": (28.5355, 77.3910),
+        "gurugram": (28.4595, 77.0266),
+        "gurgaon": (28.4595, 77.0266),
         "kochi": (9.9312, 76.2673),
-
-
-
     }
 
-
-
-    response_data = []
-
-
-
-    if not records:
-
-
-
-        pass
-
-
-
-    else:
-
-
-
-        for r in records:
-
-
-
-            emp = r.employee
-
-
-
-            lat = r.punch_out_latitude or r.punch_in_latitude
-
-
-
-            lon = r.punch_out_longitude or r.punch_in_longitude
-
-
-
-            address = r.punch_out_address or r.punch_in_address or ""
-
-
-
-            city, state = extract_city_state(address)
-
-
-
-            # Match city in text if lat/lon not set
-
-
-
-            if lat is None or lon is None:
-
-
-
-                found = False
-
-
-
-                addr_lower = address.lower()
-
-
-
-                for name, coords in city_coords.items():
-
-
-
-                    if name in addr_lower:
-
-
-
-                        lat, lon = coords
-
-
-
-                        city = name.title()
-
-
-
-                        found = True
-
-
-
-                        break
-
-
-
-                if not found:
-
-
-
-                    # Default center coordinates: New Delhi
-
-
-
-                    lat, lon = (28.6139, 77.2090)
-
-
-
-                    city, state = "New Delhi", "Delhi"
-
-
-
-            # Parse status
-
-
-
-            # Status can be ACTIVE, PUNCHED_OUT, LATE
-
-
-
-            from app.services.time_calculator import calculate_late_minutes
-
-
-
-            if r.punch_out is not None:
-
-
-
-                status_val = "PUNCHED_OUT"
-
-
-
-            elif r.punch_in is not None and (calculate_late_minutes(r.punch_in) > 0 or "LATE_ARRIVAL" in r.flags):
-
-
-
-                status_val = "LATE"
-
-
-
-            else:
-
-
-
-                status_val = "ACTIVE"
-
-
-
-            # Parse work mode: FIELD, OFFICE, REMOTE
-
-
-
-            wm_lower = (r.work_mode or "").lower()
-
-
-
-            if "office" in wm_lower:
-
-
-
-                work_mode = "OFFICE"
-
-
-
-            elif "remote" in wm_lower:
-
-
-
-                work_mode = "REMOTE"
-
-
-
-            else:
-
-
-
-                work_mode = "FIELD"
-
-
-
-            p_in = r.punch_in.strftime("%I:%M %p") if r.punch_in else None
-
-
-
-            p_out = r.punch_out.strftime("%I:%M %p") if r.punch_out else None
-
-
-
-            response_data.append(
-
-
-
-                EmployeeLocationResponse(
-
-
-
-                    employeeId=emp.id,
-
-
-
-                    employeeName=f"{emp.first_name} {emp.last_name}",
-
-
-
-                    latitude=lat,
-
-
-
-                    longitude=lon,
-
-
-
-                    city=city,
-
-
-
-                    state=state,
-
-
-
-                    punchInTime=p_in,
-
-
-
-                    punchOutTime=p_out,
-
-
-
-                    workMode=work_mode,
-
-
-
-                    status=status_val
-
-
-
-                )
-
-
-
+    city_aliases = {
+        "main office": ("Delhi", "Delhi"),
+        "head office": ("Delhi", "Delhi"),
+        "indore office": ("Indore", "Madhya Pradesh"),
+        "sasaram": ("Sasaram", "Bihar"),
+        "rohtas": ("Sasaram", "Bihar"),
+        "dhankara": ("Sasaram", "Bihar"),
+        "gaya": ("Gaya", "Bihar"),
+        "patna": ("Patna", "Bihar"),
+        "delhi": ("Delhi", "Delhi"),
+        "new delhi": ("Delhi", "Delhi"),
+        "mumbai": ("Mumbai", "Maharashtra"),
+        "bengaluru": ("Bengaluru", "Karnataka"),
+        "bangalore": ("Bengaluru", "Karnataka"),
+        "chennai": ("Chennai", "Tamil Nadu"),
+        "kolkata": ("Kolkata", "West Bengal"),
+        "hyderabad": ("Hyderabad", "Telangana"),
+        "pune": ("Pune", "Maharashtra"),
+        "indore": ("Indore", "Madhya Pradesh"),
+        "bhopal": ("Bhopal", "Madhya Pradesh"),
+        "ahmedabad": ("Ahmedabad", "Gujarat"),
+        "jaipur": ("Jaipur", "Rajasthan"),
+        "lucknow": ("Lucknow", "Uttar Pradesh"),
+        "varanasi": ("Varanasi", "Uttar Pradesh"),
+        "noida": ("Noida", "Uttar Pradesh"),
+        "gurugram": ("Gurugram", "Haryana"),
+        "gurgaon": ("Gurugram", "Haryana"),
+        "kochi": ("Kochi", "Kerala"),
+    }
+
+    def extract_city_state(address: str, fallback_city: str = "Delhi"):
+        if not address:
+            return fallback_city, "India"
+        addr_lower = address.lower()
+        for key, (c, s) in city_aliases.items():
+            if key in addr_lower:
+                return c, s
+        parts = [p.strip() for p in address.split(',') if p.strip()]
+        if len(parts) >= 4:
+            return parts[1], parts[3] if len(parts) > 3 else "India"
+        elif len(parts) >= 2:
+            return parts[0], parts[1]
+        elif len(parts) == 1:
+            return parts[0], "India"
+        return fallback_city, "India"
+
+    # 1. Fetch today's approved/active leaves
+    from app.models.timeoff import TimeOffRequest
+    today_leaves = db.query(TimeOffRequest).filter(
+        TimeOffRequest.date == today,
+        TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+    ).all()
+    leave_emp_ids = {l.employee_id for l in today_leaves}
+
+    # Process today's punches
+    for r in today_records:
+        emp = r.employee
+        if not emp:
+            continue
+
+        lat = r.punch_out_latitude or r.punch_in_latitude
+        lon = r.punch_out_longitude or r.punch_in_longitude
+        address = r.punch_out_address or r.punch_in_address or emp.work_location or ""
+
+        city, state = extract_city_state(address, "Sasaram")
+
+        if lat is None or lon is None:
+            coords = city_coords.get(city.lower(), (24.9538, 84.0152))
+            lat, lon = coords
+
+        from app.services.time_calculator import calculate_late_minutes
+        if r.punch_out is not None:
+            status_val = "PUNCHED_OUT"
+        elif r.punch_in is not None and (calculate_late_minutes(r.punch_in) > 0 or "LATE_ARRIVAL" in (r.flags or [])):
+            status_val = "LATE"
+        else:
+            status_val = "WORKING"
+
+        wm_lower = (r.work_mode or "").lower()
+        if "office" in wm_lower:
+            work_mode = "OFFICE"
+        elif "remote" in wm_lower:
+            work_mode = "REMOTE"
+        else:
+            work_mode = "FIELD"
+
+        p_in = r.punch_in.strftime("%I:%M %p") if r.punch_in else None
+        p_out = r.punch_out.strftime("%I:%M %p") if r.punch_out else None
+
+        response_data.append(
+            EmployeeLocationResponse(
+                employeeId=emp.id,
+                employeeName=f"{emp.first_name} {emp.last_name}".strip(),
+                designation=emp.designation or "Team Member",
+                department=emp.department or "",
+                latitude=float(lat),
+                longitude=float(lon),
+                city=city,
+                state=state,
+                punchInTime=p_in,
+                punchOutTime=p_out,
+                workMode=work_mode,
+                status=status_val
             )
+        )
 
+    # Process other active employees so every employee is mapped to their location with their actual status
+    all_employees = db.query(Employee).filter(Employee.status == "Active").all()
+    for emp in all_employees:
+        if emp.id in punched_emp_ids:
+            continue
 
+        status_val = "ON_LEAVE" if emp.id in leave_emp_ids else "ABSENT"
+
+        latest_att = (
+            db.query(Attendance)
+            .filter(Attendance.employee_id == emp.id, Attendance.punch_in != None)
+            .order_by(Attendance.date.desc())
+            .first()
+        )
+        if latest_att and (latest_att.punch_in_latitude or latest_att.punch_in_address):
+            lat = latest_att.punch_in_latitude
+            lon = latest_att.punch_in_longitude
+            address = latest_att.punch_in_address or emp.work_location or ""
+            city, state = extract_city_state(address, "Delhi")
+            if lat is None or lon is None:
+                lat, lon = city_coords.get(city.lower(), (28.6139, 77.2090))
+        else:
+            address = emp.work_location or "Main Office"
+            city, state = extract_city_state(address, "Delhi")
+            lat, lon = city_coords.get(address.lower(), city_coords.get(city.lower(), (28.6139, 77.2090)))
+
+        response_data.append(
+            EmployeeLocationResponse(
+                employeeId=emp.id,
+                employeeName=f"{emp.first_name} {emp.last_name}".strip(),
+                designation=emp.designation or "Team Member",
+                department=emp.department or "",
+                latitude=float(lat),
+                longitude=float(lon),
+                city=city,
+                state=state,
+                punchInTime=None,
+                punchOutTime=None,
+                workMode=emp.shift_type or "OFFICE",
+                status=status_val
+            )
+        )
 
     return response_data
 

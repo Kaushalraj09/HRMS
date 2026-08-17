@@ -20,7 +20,6 @@ export class TimeEngineService implements OnDestroy {
       const currentState = this.stateSubject.value;
       if (!currentState) return;
 
-      // Construct Date object in Asia/Kolkata timezone to avoid client-side timezone mismatches
       const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
       const newState = { ...currentState };
 
@@ -29,12 +28,17 @@ export class TimeEngineService implements OnDestroy {
         newState.totalWorkedSeconds++;
       }
 
-      // 2. Update Shift Elapsed, Remaining Time, and Shift Total dynamically for Overtime or Standard shift
+      // 2. Dynamic shift timing evaluation
+      if (!newState.shiftStart || !newState.shiftEnd) return;
+      const shiftStart = this.parseShiftTime(now, newState.shiftStart);
+      const shiftEnd = this.parseShiftTime(now, newState.shiftEnd);
+
       if (newState.overtimeApproved) {
-        const limitHour = newState.overtimeExtended ? 22 : 20;
-        const overtimeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), limitHour, 0, 0);
-        const overtimeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-        const totalOvertimeSeconds = (limitHour - 18) * 3600;
+        const maxOtMinutes = newState.maxOvertimeMinutes || 120;
+        const overtimeStart = newState.overtimeStartTime ? this.parseShiftTime(now, newState.overtimeStartTime) : shiftEnd;
+        const multiplier = newState.overtimeExtended ? 2 : 1;
+        const overtimeEnd = new Date(overtimeStart.getTime() + (maxOtMinutes * 60 * 1000 * multiplier));
+        const totalOvertimeSeconds = Math.max(0, Math.floor((overtimeEnd.getTime() - overtimeStart.getTime()) / 1000));
 
         newState.shiftTotalSeconds = totalOvertimeSeconds;
 
@@ -49,35 +53,54 @@ export class TimeEngineService implements OnDestroy {
           newState.shiftElapsedSeconds = Math.floor((now.getTime() - overtimeStart.getTime()) / 1000);
         }
       } else {
-        newState.shiftTotalSeconds = 9 * 3600;
-        newState.shiftElapsedSeconds = this.calculateShiftElapsed(now);
-        const secondsUntilShiftEnd = this.calculateSecondsUntilShiftEnd(now);
-        newState.remainingSeconds = Math.max(0, secondsUntilShiftEnd - newState.approvedSeconds);
+        const totalSec = Math.max(0, Math.floor((shiftEnd.getTime() - shiftStart.getTime()) / 1000));
+        newState.shiftTotalSeconds = newState.shiftTotalSeconds || (totalSec > 0 ? totalSec : 28800);
+
+        if (now < shiftStart) {
+          newState.shiftElapsedSeconds = 0;
+          newState.remainingSeconds = newState.shiftTotalSeconds;
+        } else if (now > shiftEnd) {
+          newState.shiftElapsedSeconds = newState.shiftTotalSeconds;
+          newState.remainingSeconds = 0;
+        } else {
+          newState.shiftElapsedSeconds = Math.floor((now.getTime() - shiftStart.getTime()) / 1000);
+          const secondsUntilEnd = Math.max(0, Math.floor((shiftEnd.getTime() - now.getTime()) / 1000));
+          newState.remainingSeconds = Math.max(0, secondsUntilEnd - newState.approvedSeconds);
+        }
       }
 
       this.stateSubject.next(newState);
     });
   }
 
+  private parseShiftTime(referenceDate: Date, timeStr: string): Date {
+    const dt = new Date(referenceDate);
+    if (!timeStr) return dt;
+
+    let hours = 0;
+    let minutes = 0;
+
+    const ampmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (ampmMatch) {
+      hours = parseInt(ampmMatch[1], 10);
+      minutes = parseInt(ampmMatch[2], 10);
+      const mer = ampmMatch[3].toUpperCase();
+      if (mer === 'PM' && hours < 12) hours += 12;
+      if (mer === 'AM' && hours === 12) hours = 0;
+    } else {
+      const parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        hours = parseInt(parts[0], 10);
+        minutes = parseInt(parts[1], 10);
+      }
+    }
+
+    dt.setHours(hours, minutes, 0, 0);
+    return dt;
+  }
+
   public updateState(state: TodayAttendanceState) {
     this.stateSubject.next(state);
-  }
-
-  private calculateShiftElapsed(now: Date): number {
-    const shiftStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
-    const shiftEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-    const totalShiftSeconds = 9 * 3600;
-
-    if (now < shiftStart) return 0;
-    if (now > shiftEnd) return totalShiftSeconds;
-    
-    return Math.floor((now.getTime() - shiftStart.getTime()) / 1000);
-  }
-
-  private calculateSecondsUntilShiftEnd(now: Date): number {
-    const shiftEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-    if (now >= shiftEnd) return 0;
-    return Math.max(0, Math.floor((shiftEnd.getTime() - now.getTime()) / 1000));
   }
 
   public formatHHMMSS(seconds: number): string {

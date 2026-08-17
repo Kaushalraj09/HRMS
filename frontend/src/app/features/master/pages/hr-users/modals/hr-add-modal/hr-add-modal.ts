@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Output, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { HrService } from '../../../../../../core/services/hr.service';
+import { MasterDataService } from '../../../../../../core/services/master-data.service';
 import { CreateHrPayload } from '../../../../../../core/models/hr.model';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
 import { finalize } from 'rxjs';
@@ -21,7 +22,7 @@ function pastDateValidator(control: AbstractControl): ValidationErrors | null {
   templateUrl: './hr-add-modal.html',
   styleUrls: ['./hr-add-modal.css']
 })
-export class HrAddModalComponent {
+export class HrAddModalComponent implements OnInit {
   @Output() closed = new EventEmitter<boolean>();
   
   form: FormGroup;
@@ -32,7 +33,12 @@ export class HrAddModalComponent {
   // Dropdown mappings
   genderOptions = [{label: 'Male', value: 'Male'}, {label: 'Female', value: 'Female'}, {label: 'Other', value: 'Other'}];
   maritalOptions = [{label: 'Single', value: 'Single'}, {label: 'Married', value: 'Married'}];
-  bloodOptions = [{label: 'A+', value: 'A+'}, {label: 'B+', value: 'B+'}, {label: 'O+', value: 'O+'}, {label: 'AB+', value: 'AB+'}];
+  bloodOptions = [
+    {label: 'A+', value: 'A+'}, {label: 'A-', value: 'A-'},
+    {label: 'B+', value: 'B+'}, {label: 'B-', value: 'B-'},
+    {label: 'AB+', value: 'AB+'}, {label: 'AB-', value: 'AB-'},
+    {label: 'O+', value: 'O+'}, {label: 'O-', value: 'O-'}
+  ];
   empTypeOptions = [{label: 'Full-Time', value: 'Full-Time'}, {label: 'Contract', value: 'Contract'}, {label: 'Intern', value: 'Intern'}];
   shiftOptions = [{label: 'General Shift', value: 'General Shift'}, {label: 'Night Shift', value: 'Night Shift'}];
   departmentOptions = [
@@ -40,11 +46,14 @@ export class HrAddModalComponent {
     { label: 'Operations', value: 'Operations' },
     { label: 'People Success', value: 'People Success' }
   ];
+  designationOptions = [{ label: 'HR Manager', value: 'HR Manager' }, { label: 'HR Specialist', value: 'HR Specialist' }];
+  locationOptions = [{ label: 'Main Office', value: 'Main Office' }, { label: 'Remote', value: 'Remote' }];
   roleOptions = [{label: 'HR', value: 'hr'}];
 
   constructor(
     private fb: FormBuilder,
     private hrService: HrService,
+    private masterDataService: MasterDataService,
     private cdr: ChangeDetectorRef
   ) {
     this.form = this.fb.group({
@@ -76,6 +85,27 @@ export class HrAddModalComponent {
         emergencyContactName: [''],
         emergencyContactNumber: ['', Validators.pattern('^[0-9]{10}$')]
       })
+    });
+  }
+
+  ngOnInit(): void {
+    this.masterDataService.getBootstrapData().subscribe({
+      next: (res) => {
+        if (res.departments && res.departments.length > 0) {
+          this.departmentOptions = res.departments.map(d => ({ label: d.name, value: d.name }));
+        }
+        if (res.designations && res.designations.length > 0) {
+          this.designationOptions = res.designations.map(d => ({ label: d.name, value: d.name }));
+        }
+        if (res.shifts && res.shifts.length > 0) {
+          this.shiftOptions = res.shifts.map(s => ({ label: s.name, value: s.name }));
+        }
+        if (res.workLocations && res.workLocations.length > 0) {
+          this.locationOptions = res.workLocations.map(l => ({ label: l.name, value: l.name }));
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.warn('Failed to load master data for HR modal:', err)
     });
   }
 

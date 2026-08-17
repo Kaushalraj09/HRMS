@@ -1,178 +1,478 @@
 <div class="dashboard-wrapper">
-    <app-navbar 
-        [userName]="userName" 
-        [searchValue]="searchTerm"
-        (hamburgerClick)="toggleSidebar()"
-        (searchChange)="onSearch($event)" 
-        (profileClick)="openProfile()">
-    </app-navbar>
+    <app-master-sidebar></app-master-sidebar>
 
-    <div class="dashboard-layout">
-        <app-master-sidebar>
-        </app-master-sidebar>
+    <div class="dashboard-right-wrapper">
+        <app-navbar 
+            [userName]="userName" 
+            [searchValue]="searchTerm"
+            (hamburgerClick)="toggleSidebar()"
+            (searchChange)="onSearch($event)" 
+            (profileClick)="openProfile()">
+        </app-navbar>
 
         <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">
             <div class="page-content">
                 <router-outlet></router-outlet>
 
-                <div class="Emp_dashboard" *ngIf="isMainDashboardRoute()">
-                    <div class="card" *ngIf="dashboardError">
-                        {{ dashboardError }}
+                <div class="admin-dashboard-container" *ngIf="isMainDashboardRoute()">
+                    <!-- Error Notification Alert if any -->
+                    <div class="dashboard-error-banner" *ngIf="dashboardError">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>{{ dashboardError }}</span>
                     </div>
-                    <div class="card welcome-card">
-                        <div class="welcome-text">
-                            <h2 class="empname">Welcome, {{ userName }}</h2>
-                            <p class="dashboard-subtitle">Master Dashboard &bull; Admin Control Center</p>
+
+                    <!-- 1. HERO USER HEADER -->
+                    <div class="admin-hero-card">
+                        <div class="hero-left">
+                            <div class="hero-avatar">
+                                <span>{{ adminInitials }}</span>
+                            </div>
+                            <div class="hero-info">
+                                <h1 class="hero-title">{{ userName }}</h1>
+                                <p class="hero-subtitle">{{ adminCode }} &bull; {{ adminRole }} &bull; {{ adminDepartment }}</p>
+                            </div>
+                        </div>
+                        <div class="hero-right">
+                            <div class="hero-pill-badge shift-pill">
+                                <i class="far fa-clock"></i>
+                                <span>{{ adminShift }}</span>
+                            </div>
+                            <div class="hero-pill-badge status-pill">
+                                <span>{{ adminStatus }}</span>
+                            </div>
+                            <button class="hero-edit-btn" (click)="openProfile()">
+                                <i class="fas fa-pencil-alt"></i>
+                                <span>Edit Profile</span>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="full_details">
-                        <div class="full_details-content">
-                            <div class="fullDetail-item" *ngFor="let item of fullDetails">
-                                <div class="icon-circle">
-                                    <i [class]="item.icon" class="fullDetail-icon"></i>
+                    <!-- 2. TOP 4 KPI STATS CARDS -->
+                    <div class="kpi-grid">
+                        <!-- Card 1: Total Employees -->
+                        <div class="kpi-card" routerLink="/master-dashboard/employees" style="cursor: pointer;">
+                            <div class="kpi-header">
+                                <div class="kpi-icon-box icon-blue">
+                                    <i class="fas fa-users"></i>
                                 </div>
-                                <div class="full_detail-info">
-                                    <span class="fullDetail-value">{{ item.value }}</span>
-                                    <span class="fullDetail-label">{{ item.label }}</span>
+                                <div class="kpi-more">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-body">
+                                <span class="kpi-label">Total Employees</span>
+                                <h2 class="kpi-value">{{ totalEmployeesDisplay }}</h2>
+                                <div class="kpi-footer">
+                                    <span class="kpi-trend trend-up">
+                                        <i class="fas fa-arrow-up"></i> {{ employeeGrowthText }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="kpi-sparkline">
+                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
+                                    <path d="M 0 32 Q 25 15, 50 28 T 100 18 T 135 22 T 160 8" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="160" cy="8" r="3.5" fill="#3b82f6"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Attendance -->
+                        <div class="kpi-card" routerLink="/master-dashboard/attendance" style="cursor: pointer;">
+                            <div class="kpi-header">
+                                <div class="kpi-icon-box icon-green">
+                                    <i class="far fa-calendar-check"></i>
+                                </div>
+                                <div class="kpi-more">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-body">
+                                <span class="kpi-label">Attendance</span>
+                                <h2 class="kpi-value">{{ attendanceRateDisplay }}</h2>
+                                <div class="kpi-footer">
+                                    <span class="kpi-trend trend-up-green">
+                                        <i class="fas fa-arrow-up"></i> {{ attendanceGrowthText }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="kpi-sparkline">
+                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
+                                    <path d="M 0 28 Q 30 20, 60 26 T 110 14 T 140 20 T 160 6" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="160" cy="6" r="3.5" fill="#10b981"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Leave Requests -->
+                        <div class="kpi-card" (click)="scrollToOversight()" style="cursor: pointer;">
+                            <div class="kpi-header">
+                                <div class="kpi-icon-box icon-purple">
+                                    <i class="fas fa-gift"></i>
+                                </div>
+                                <div class="kpi-more">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-body">
+                                <span class="kpi-label">Leave Requests</span>
+                                <h2 class="kpi-value">{{ pendingLeavesDisplay }}</h2>
+                                <div class="kpi-footer">
+                                    <span class="kpi-trend trend-orange">
+                                        Pending approvals
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="kpi-sparkline">
+                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
+                                    <path d="M 0 30 Q 30 35, 60 20 T 110 18 T 140 28 T 160 5" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="160" cy="5" r="3.5" fill="#a855f7"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Payroll Status -->
+                        <div class="kpi-card" (click)="onQuickAction('run_payroll')" style="cursor: pointer;">
+                            <div class="kpi-header">
+                                <div class="kpi-icon-box icon-orange">
+                                    <i class="fas fa-rupee-sign"></i>
+                                </div>
+                                <div class="kpi-more">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-body">
+                                <span class="kpi-label">Payroll Status</span>
+                                <h2 class="kpi-value">{{ payrollStatusDisplay }}</h2>
+                                <div class="kpi-footer">
+                                    <span class="kpi-trend trend-muted">
+                                        {{ payrollPeriodDisplay }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="kpi-sparkline">
+                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
+                                    <path d="M 0 30 Q 30 32, 60 25 T 105 18 T 135 24 T 160 8" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="160" cy="8" r="3.5" fill="#f97316"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. MIDDLE ROW: 3 VISUAL CHARTS -->
+                    <div class="charts-grid">
+                        <!-- Chart 1: Attendance Overview -->
+                        <div class="dashboard-panel chart-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Attendance Overview</h3>
+                                <div class="panel-filter">
+                                    <select class="custom-select-sm" [(ngModel)]="attendanceFilter">
+                                        <option value="month">This Month</option>
+                                        <option value="week">This Week</option>
+                                        <option value="today">Today</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="panel-body attendance-chart-wrap">
+                                <div class="y-axis-labels">
+                                    <span>100%</span>
+                                    <span>75%</span>
+                                    <span>50%</span>
+                                    <span>25%</span>
+                                    <span>0%</span>
+                                </div>
+                                <div class="chart-canvas-area">
+                                    <!-- Dynamic Badge Point -->
+                                    <div class="chart-active-tooltip" [style.left.%]="92" [style.top.%]="15">
+                                        {{ attendanceRateDisplay }}
+                                    </div>
+                                    <svg viewBox="0 0 500 200" preserveAspectRatio="none" class="curve-chart-svg">
+                                        <defs>
+                                            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.30"/>
+                                                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+                                            </linearGradient>
+                                        </defs>
+                                        <!-- Grid Lines -->
+                                        <line x1="0" y1="20" x2="500" y2="20" stroke="#f1f5f9" stroke-width="1"/>
+                                        <line x1="0" y1="65" x2="500" y2="65" stroke="#f1f5f9" stroke-width="1"/>
+                                        <line x1="0" y1="110" x2="500" y2="110" stroke="#f1f5f9" stroke-width="1"/>
+                                        <line x1="0" y1="155" x2="500" y2="155" stroke="#f1f5f9" stroke-width="1"/>
+                                        <line x1="0" y1="195" x2="500" y2="195" stroke="#e2e8f0" stroke-width="1"/>
+
+                                        <!-- Area Fill -->
+                                        <path d="M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25 L 480 195 L 20 195 Z" fill="url(#areaGradient)"/>
+                                        
+                                        <!-- Spline Curve -->
+                                        <path d="M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25" fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+
+                                        <!-- Final Point Circle -->
+                                        <circle cx="480" cy="25" r="5" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="x-axis-labels">
+                                <span>01 May</span>
+                                <span>08 May</span>
+                                <span>15 May</span>
+                                <span>22 May</span>
+                                <span>31 May</span>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Employee Distribution -->
+                        <div class="dashboard-panel chart-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Employee Distribution</h3>
+                            </div>
+                            <div class="panel-body distribution-wrap">
+                                <div class="donut-chart-box">
+                                    <svg viewBox="0 0 100 100" class="donut-svg">
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" stroke-width="14"/>
+                                        
+                                        <!-- Dynamic Donut Segments -->
+                                        <circle 
+                                            *ngFor="let item of departmentDistribution; let idx = index" 
+                                            cx="50" 
+                                            cy="50" 
+                                            r="40" 
+                                            fill="transparent" 
+                                            [attr.stroke]="item.color" 
+                                            stroke-width="14"
+                                            [attr.stroke-dasharray]="getDonutDashArray(item.percentage)"
+                                            [attr.stroke-dashoffset]="getDonutOffset(idx)"
+                                            class="donut-segment"
+                                        />
+                                    </svg>
+                                    <div class="donut-center-info">
+                                        <span class="donut-center-val">{{ totalEmployeesDisplay }}</span>
+                                        <span class="donut-center-label">Total</span>
+                                    </div>
+                                </div>
+
+                                <div class="distribution-legend">
+                                    <div class="legend-row" *ngFor="let item of departmentDistribution">
+                                        <div class="legend-left">
+                                            <span class="legend-indicator" [style.background]="item.color"></span>
+                                            <span class="legend-text">{{ item.name }}</span>
+                                        </div>
+                                        <span class="legend-percent">{{ item.percentage }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Monthly Hiring Trend -->
+                        <div class="dashboard-panel chart-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Monthly Hiring Trend</h3>
+                                <div class="panel-filter">
+                                    <select class="custom-select-sm" [(ngModel)]="hiringFilter">
+                                        <option value="year">This Year</option>
+                                        <option value="quarter">This Quarter</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="panel-body hiring-trend-wrap">
+                                <div class="y-axis-ticks">
+                                    <span>60</span>
+                                    <span>40</span>
+                                    <span>20</span>
+                                    <span>0</span>
+                                </div>
+                                <div class="bars-container">
+                                    <div class="bar-col" *ngFor="let m of monthlyHiring" [title]="m.month + ': ' + m.count + ' hires'">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" [style.height.%]="getHiringBarHeight(m.count)"></div>
+                                        </div>
+                                        <span class="bar-month">{{ m.month }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- clients & recent projects -->
-                    <div class="project_details">
-                        <div class="card clients">
-                            <h3 class="project_title">HR Users</h3>
-                            <div class="divider"></div>
-
-                            <div class="table-responsive">
-                                <table class="client-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Department</th>
-                                            <th>Status</th>
-                                            <th class="text-center">Details</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr *ngIf="filteredHrUsers.length === 0">
-                                            <td colspan="4" class="text-center" style="padding: 24px; color: #64748b;">No matching HR users found</td>
-                                        </tr>
-                                        <tr *ngFor="let client of filteredHrUsers">
-                                            <td class="name-cell">
-                                                <div class="avatar_client">
-                                                    <i class="fas fa-user-shield"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="name">{{ client.primary }}</div>
-                                                    <div class="role">{{ client.secondary }}</div>
-                                                </div>
-                                            </td>
-
-                                            <td>{{ client.tertiary }}</td>
-
-                                            <td>
-                                                <span class="status">{{ client.status }}</span>
-                                            </td>
-
-                                            <td class="text-center">
-                                                <a routerLink="/master-dashboard/hr-users" class="action-icon">View list</a>
-                                            </td>
-
-                                        </tr>
-                                    </tbody>
-                                </table>
+                    <!-- 4. BOTTOM ROW: 4 DASHBOARD WIDGETS -->
+                    <div class="widgets-grid">
+                        <!-- Widget 1: Recent Joiners -->
+                        <div class="dashboard-panel widget-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Recent Joiners</h3>
+                                <a routerLink="/master-dashboard/employees" class="view-all-link">View all</a>
                             </div>
-                            <div class="footer">
-                                <a routerLink="/master-dashboard/hr-users">View all HR users</a>
+                            <div class="panel-body widget-list-wrap">
+                                <div class="list-item" *ngFor="let item of recentJoiners">
+                                    <div class="item-avatar avatar-blue">
+                                        {{ item.initials }}
+                                    </div>
+                                    <div class="item-details">
+                                        <h4 class="item-name">{{ item.name }}</h4>
+                                        <p class="item-sub">{{ item.designation }}</p>
+                                    </div>
+                                    <span class="item-meta">{{ item.doj }}</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="card recent_projects">
-                            <h3 class="project_title">Recent Employees</h3>
-                            <div class="divider"></div>
-                            <div class="table-responsive">
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Email</th>
-                                            <th>Status</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr *ngIf="filteredEmployees.length === 0">
-                                            <td colspan="4" class="text-center" style="padding: 24px; color: #64748b;">No matching employees found</td>
-                                        </tr>
-                                        <tr *ngFor="let project of filteredEmployees">
-                                            <td>
-                                                <div class="project-info">
-                                                    <strong>{{ project.primary }}</strong>
-                                                    <p>{{ project.tertiary }}</p>
-                                                </div>
-                                            </td>
-                                            <td>{{ project.secondary }}</td>
-                                            <td>
-                                                <span class="status-badge" [ngClass]="project.status?.toLowerCase() || ''">
-                                                    {{ project.status }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <a routerLink="/master-dashboard/employees" class="action-link">View list</a>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+
+                        <!-- Widget 2: Today's Birthdays -->
+                        <div class="dashboard-panel widget-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Today's Birthdays</h3>
+                                <a routerLink="/master-dashboard/employees" class="view-all-link">View all</a>
                             </div>
+                            <div class="panel-body widget-list-wrap">
+                                <div class="list-item" *ngFor="let item of todayBirthdays">
+                                    <div class="item-avatar avatar-photo">
+                                        {{ item.initials }}
+                                    </div>
+                                    <div class="item-details">
+                                        <h4 class="item-name">{{ item.name }}</h4>
+                                        <p class="item-sub">{{ item.designation }}</p>
+                                    </div>
+                                    <div class="gift-box-icon" title="Birthday Today / Upcoming">
+                                        <i class="fas fa-gift"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- Widget 3: Pending Approvals -->
+                        <div class="dashboard-panel widget-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Pending Approvals</h3>
+                                <a (click)="scrollToOversight()" class="view-all-link" style="cursor: pointer;">View all</a>
+                            </div>
+                            <div class="panel-body approvals-list-wrap">
+                                <div class="approval-row" (click)="openPendingApprovalsTab('timeoff')" style="cursor: pointer;">
+                                    <div class="approval-left">
+                                        <div class="approval-icon icon-light-blue">
+                                            <i class="fas fa-user-friends"></i>
+                                        </div>
+                                        <span class="approval-label">Leave Requests</span>
+                                    </div>
+                                    <span class="approval-badge badge-blue">{{ pendingApprovalsSummary.leaveRequests }}</span>
+                                </div>
 
-                            <div class="footer">
-                                <a routerLink="/master-dashboard/employees">View all employees</a>
+                                <div class="approval-row" (click)="openPendingApprovalsTab('timeoff')" style="cursor: pointer;">
+                                    <div class="approval-left">
+                                        <div class="approval-icon icon-light-purple">
+                                            <i class="far fa-clock"></i>
+                                        </div>
+                                        <span class="approval-label">Time Off Requests</span>
+                                    </div>
+                                    <span class="approval-badge badge-purple">{{ pendingApprovalsSummary.timeOffRequests }}</span>
+                                </div>
+
+                                <div class="approval-row" (click)="openPendingApprovalsTab('regularization')" style="cursor: pointer;">
+                                    <div class="approval-left">
+                                        <div class="approval-icon icon-light-lavender">
+                                            <i class="fas fa-id-card"></i>
+                                        </div>
+                                        <span class="approval-label">Regularization Requests</span>
+                                    </div>
+                                    <span class="approval-badge badge-lavender">{{ pendingApprovalsSummary.regularizationRequests }}</span>
+                                </div>
+
+                                <div class="approval-row" (click)="openPendingApprovalsTab('timeoff')" style="cursor: pointer;">
+                                    <div class="approval-left">
+                                        <div class="approval-icon icon-light-green">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        </div>
+                                        <span class="approval-label">Expense Claims</span>
+                                    </div>
+                                    <span class="approval-badge badge-green">{{ pendingApprovalsSummary.expenseClaims }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Widget 4: Quick Actions -->
+                        <div class="dashboard-panel widget-panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Quick Actions</h3>
+                            </div>
+                            <div class="panel-body quick-actions-grid">
+                                <button class="action-card" (click)="onQuickAction('add_employee')">
+                                    <div class="action-icon-wrap action-green">
+                                        <i class="fas fa-user-plus"></i>
+                                    </div>
+                                    <span class="action-title">Add Employee</span>
+                                </button>
+
+                                <button class="action-card" (click)="onQuickAction('approve_leave')">
+                                    <div class="action-icon-wrap action-blue">
+                                        <i class="fas fa-envelope-open-text"></i>
+                                    </div>
+                                    <span class="action-title">Approve Leave</span>
+                                </button>
+
+                                <button class="action-card" (click)="onQuickAction('mark_attendance')">
+                                    <div class="action-icon-wrap action-teal">
+                                        <i class="far fa-clock"></i>
+                                    </div>
+                                    <span class="action-title">Mark Attendance</span>
+                                </button>
+
+                                <button class="action-card" (click)="onQuickAction('run_payroll')">
+                                    <div class="action-icon-wrap action-orange">
+                                        <i class="fas fa-calculator"></i>
+                                    </div>
+                                    <span class="action-title">Run Payroll</span>
+                                </button>
+
+                                <button class="action-card" (click)="onQuickAction('recruit_candidate')">
+                                    <div class="action-icon-wrap action-purple">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <span class="action-title">Recruit Candidate</span>
+                                </button>
+
+                                <button class="action-card" (click)="onQuickAction('generate_report')">
+                                    <div class="action-icon-wrap action-pink">
+                                        <i class="far fa-file-alt"></i>
+                                    </div>
+                                    <span class="action-title">Generate Report</span>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Admin Approval Oversight Screen -->
-                    <div class="project_details" style="grid-template-columns: 1fr; margin-top: 20px;">
-                        <div class="card recent_projects" style="width: 100%;">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-                                <div style="display: flex; gap: 16px; align-items: center;">
-                                    <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'timeoff'" (click)="activeCategoryTab = 'timeoff'">
+                    <!-- 5. ADMIN APPROVAL OVERSIGHT & DECISION LOGS -->
+                    <div class="oversight-section" id="admin-oversight-section">
+                        <div class="dashboard-panel">
+                            <div class="oversight-header">
+                                <div class="oversight-tabs">
+                                    <button class="tab-btn" [class.active]="activeCategoryTab === 'timeoff'" (click)="activeCategoryTab = 'timeoff'">
                                         Time Off Requests
+                                        <span class="tab-count" *ngIf="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
                                     </button>
-                                    <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'regularization'" (click)="activeCategoryTab = 'regularization'">
+                                    <button class="tab-btn" [class.active]="activeCategoryTab === 'regularization'" (click)="activeCategoryTab = 'regularization'">
                                         Regularization Requests
+                                        <span class="tab-count" *ngIf="pendingRegularizations.length > 0">{{ pendingRegularizations.length }}</span>
                                     </button>
                                 </div>
-                                <div style="display: flex; gap: 12px; align-items: center;">
-                                    <span class="status-badge working" *ngIf="activeCategoryTab === 'timeoff' && pendingRequests.length > 0">
-                                        {{ pendingRequests.length }} Pending Requests
+                                <div class="oversight-status-summary">
+                                    <span class="status-indicator-tag" *ngIf="activeCategoryTab === 'timeoff' && pendingRequests.length > 0">
+                                        <i class="fas fa-clock"></i> {{ pendingRequests.length }} Pending Action
                                     </span>
-                                    <span class="status-badge time-off" *ngIf="activeCategoryTab === 'timeoff' && processedRequests.length > 0">
-                                        {{ processedRequests.length }} Decisions Logged
-                                    </span>
-                                    <span class="status-badge working" *ngIf="activeCategoryTab === 'regularization' && pendingRegularizations.length > 0">
-                                        {{ pendingRegularizations.length }} Pending Requests
+                                    <span class="status-indicator-tag" *ngIf="activeCategoryTab === 'regularization' && pendingRegularizations.length > 0">
+                                        <i class="fas fa-clock"></i> {{ pendingRegularizations.length }} Pending Regularization
                                     </span>
                                 </div>
                             </div>
-                            <div class="divider"></div>
 
-                            <!-- Tabs for Pending Approvals vs Decision Logs (Only for Time Off) -->
-                            <div *ngIf="activeCategoryTab === 'timeoff'" style="display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
-                                <button class="dashboard-tab-btn" [class.active]="activeOversightTab === 'pending'" (click)="setOversightTab('pending')">
+                            <!-- Sub Tabs for Timeoff (Pending vs History) -->
+                            <div class="oversight-subtabs" *ngIf="activeCategoryTab === 'timeoff'">
+                                <button class="subtab-btn" [class.active]="activeOversightTab === 'pending'" (click)="setOversightTab('pending')">
                                     Pending Approvals ({{ pendingRequests.length }})
                                 </button>
-                                <button class="dashboard-tab-btn" [class.active]="activeOversightTab === 'history'" (click)="setOversightTab('history')">
+                                <button class="subtab-btn" [class.active]="activeOversightTab === 'history'" (click)="setOversightTab('history')">
                                     Decision Logs ({{ processedRequests.length }})
                                 </button>
                             </div>
 
-                            <div class="table-responsive" style="padding: 12px;">
-                                <!-- PENDING TIMEOFF APPROVALS -->
-                                <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'pending'">
+                            <!-- Table Container -->
+                            <div class="table-responsive oversight-table-wrap">
+                                <!-- TIMEOFF PENDING TABLE -->
+                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'pending'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -185,23 +485,26 @@
                                     </thead>
                                     <tbody>
                                         <tr *ngIf="pendingRequests.length === 0">
-                                            <td colspan="6" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                                <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px; margin-right: 8px;"></i>
-                                                No pending approval requests volume
+                                            <td colspan="6" class="table-empty-cell">
+                                                <i class="fas fa-check-circle empty-icon"></i>
+                                                <span>All pending time-off approvals are cleared.</span>
                                             </td>
                                         </tr>
                                         <tr *ngFor="let req of pendingRequests">
                                             <td>
-                                                <div class="project-info">
-                                                    <strong>{{ req.employee_name || '—' }}</strong>
-                                                    <p>{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</p>
+                                                <div class="table-user-info">
+                                                    <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
+                                                    <div>
+                                                        <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
+                                                        <span class="user-subcode">{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="status-badge" [ngClass]="{
-                                                    'hourly-badge': req.leave_type === 'Hourly',
-                                                    'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
-                                                    'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
+                                                <span class="badge-leave-type" [ngClass]="{
+                                                    'type-hourly': req.leave_type === 'Hourly',
+                                                    'type-halfday': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
+                                                    'type-fullday': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                                                 }">{{ req.leave_type }}</span>
                                             </td>
                                             <td>{{ req.date | date:'dd MMM yyyy' }}</td>
@@ -209,17 +512,17 @@
                                                 <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
                                                 <span *ngIf="!req.start_time">Full Day</span>
                                             </td>
-                                            <td>{{ req.duration_hours }} hrs</td>
+                                            <td><strong>{{ req.duration_hours }}</strong> hrs</td>
                                             <td>
-                                                <div style="display: flex; gap: 8px;">
-                                                    <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRequestDetails(req)">
-                                                        View
+                                                <div class="table-actions-group">
+                                                    <button class="btn-action btn-view" (click)="viewRequestDetails(req)" title="View Details">
+                                                        <i class="fas fa-eye"></i> View
                                                     </button>
-                                                    <button class="status-btn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRequest(req.id, 'APPROVE')">
-                                                        Approve (Step-in)
+                                                    <button class="btn-action btn-approve" (click)="processRequest(req.id, 'APPROVE')" title="Approve">
+                                                        <i class="fas fa-check"></i> Approve
                                                     </button>
-                                                    <button class="status-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRequest(req.id, 'REJECT')">
-                                                        Reject (Step-in)
+                                                    <button class="btn-action btn-reject" (click)="processRequest(req.id, 'REJECT')" title="Reject">
+                                                        <i class="fas fa-times"></i> Reject
                                                     </button>
                                                 </div>
                                             </td>
@@ -227,8 +530,8 @@
                                     </tbody>
                                 </table>
 
-                                <!-- DECISION LOGS -->
-                                <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'history'">
+                                <!-- TIMEOFF DECISION LOGS TABLE -->
+                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'history'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -242,22 +545,25 @@
                                     </thead>
                                     <tbody>
                                         <tr *ngIf="processedRequests.length === 0">
-                                            <td colspan="7" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                                No processed decision logs found
+                                            <td colspan="7" class="table-empty-cell">
+                                                <span>No processed decision logs found.</span>
                                             </td>
                                         </tr>
                                         <tr *ngFor="let req of processedRequests">
                                             <td>
-                                                <div class="project-info">
-                                                    <strong>{{ req.employee_name || '—' }}</strong>
-                                                    <p>{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</p>
+                                                <div class="table-user-info">
+                                                    <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
+                                                    <div>
+                                                        <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
+                                                        <span class="user-subcode">{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="status-badge" [ngClass]="{
-                                                    'hourly-badge': req.leave_type === 'Hourly',
-                                                    'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
-                                                    'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
+                                                <span class="badge-leave-type" [ngClass]="{
+                                                    'type-hourly': req.leave_type === 'Hourly',
+                                                    'type-halfday': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
+                                                    'type-fullday': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                                                 }">{{ req.leave_type }}</span>
                                             </td>
                                             <td>{{ req.date | date:'dd MMM yyyy' }}</td>
@@ -265,24 +571,24 @@
                                                 <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
                                                 <span *ngIf="!req.start_time">Full Day</span>
                                             </td>
-                                            <td>{{ req.duration_hours }} hrs</td>
+                                            <td><strong>{{ req.duration_hours }}</strong> hrs</td>
                                             <td>
-                                                <span class="status-badge" [ngClass]="{
-                                                    'present': req.status === 'Approved',
-                                                    'absent': req.status === 'Rejected'
+                                                <span class="status-tag" [ngClass]="{
+                                                    'tag-approved': req.status === 'Approved',
+                                                    'tag-rejected': req.status === 'Rejected'
                                                 }">{{ req.status }}</span>
                                             </td>
                                             <td>
-                                                <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRequestDetails(req)">
-                                                    View
+                                                <button class="btn-action btn-view" (click)="viewRequestDetails(req)">
+                                                    <i class="fas fa-eye"></i> View
                                                 </button>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
 
-                                <!-- REGULARIZATION REQUESTS -->
-                                <table class="modern-table" *ngIf="activeCategoryTab === 'regularization'">
+                                <!-- REGULARIZATION REQUESTS TABLE -->
+                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'regularization'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -295,36 +601,37 @@
                                     </thead>
                                     <tbody>
                                         <tr *ngIf="pendingRegularizations.length === 0">
-                                            <td colspan="6" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                                <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px; margin-right: 8px;"></i>
-                                                No pending regularization requests found
+                                            <td colspan="6" class="table-empty-cell">
+                                                <i class="fas fa-check-circle empty-icon"></i>
+                                                <span>No pending regularization requests found.</span>
                                             </td>
                                         </tr>
                                         <tr *ngFor="let req of pendingRegularizations">
                                             <td>
-                                                <div class="project-info">
-                                                    <strong>{{ req.employeeName || '—' }}</strong>
-                                                    <p>{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</p>
+                                                <div class="table-user-info">
+                                                    <div class="user-avatar-sm">{{ (req.employeeName || 'EM').slice(0,2).toUpperCase() }}</div>
+                                                    <div>
+                                                        <strong class="user-fullname">{{ req.employeeName || '—' }}</strong>
+                                                        <span class="user-subcode">{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>{{ req.attendanceDate | date:'dd MMM yyyy' }}</td>
-                                            <td>{{ formatTime(req.requestedPunchIn) }}</td>
-                                            <td>{{ formatTime(req.requestedPunchOut) }}</td>
+                                            <td><strong>{{ formatTime(req.requestedPunchIn) }}</strong></td>
+                                            <td><strong>{{ formatTime(req.requestedPunchOut) }}</strong></td>
                                             <td>
-                                                <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">
-                                                    {{ getReasonTypeLabel(req.reasonType) }}
-                                                </span>
+                                                <span class="badge-reason">{{ getReasonTypeLabel(req.reasonType) }}</span>
                                             </td>
                                             <td>
-                                                <div style="display: flex; gap: 8px;">
-                                                    <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRegularizationDetails(req)">
-                                                        View
+                                                <div class="table-actions-group">
+                                                    <button class="btn-action btn-view" (click)="viewRegularizationDetails(req)">
+                                                        <i class="fas fa-eye"></i> View
                                                     </button>
-                                                    <button class="status-btn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'approved')">
-                                                        Approve
+                                                    <button class="btn-action btn-approve" (click)="processRegularization(req.id, 'approved')">
+                                                        <i class="fas fa-check"></i> Approve
                                                     </button>
-                                                    <button class="status-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'rejected')">
-                                                        Reject
+                                                    <button class="btn-action btn-reject" (click)="processRegularization(req.id, 'rejected')">
+                                                        <i class="fas fa-times"></i> Reject
                                                     </button>
                                                 </div>
                                             </td>
@@ -335,150 +642,178 @@
                         </div>
                     </div>
 
+                    <!-- 6. CLEAN MODERN FOOTER -->
+                    <footer class="dashboard-footer">
+                        <div class="footer-left">
+                            <span>&copy; 2026 AIVAN 360 Solutions Pvt. Ltd. All rights reserved.</span>
+                        </div>
+                        <div class="footer-right">
+                            <span>Version 1.0.0</span>
+                            <span class="footer-sep">|</span>
+                            <a href="javascript:void(0)" class="footer-link">Privacy Policy</a>
+                            <span class="footer-sep">|</span>
+                            <a href="javascript:void(0)" class="footer-link">Support</a>
+                        </div>
+                    </footer>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Request Details Modal -->
-<div class="camera-modal-overlay" *ngIf="selectedRequest" (click)="closeDetailsModal()">
-  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-    <div class="camera-modal-header">
-      <span class="camera-modal-title">Time Off Request Details</span>
-      <button class="close-btn" (click)="closeDetailsModal()" aria-label="Close">
+<!-- Details Modal for Time Off -->
+<div class="custom-modal-backdrop" *ngIf="selectedRequest" (click)="closeDetailsModal()">
+  <div class="custom-modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-card-header">
+      <h3 class="modal-card-title">Time Off Request Details</h3>
+      <button class="modal-close-btn" (click)="closeDetailsModal()" aria-label="Close">
         <i class="fas fa-times"></i>
       </button>
     </div>
-    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
-          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.employee_name || '—' }} ({{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }})</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Leave Type</strong>
-            <span class="status-badge" [ngClass]="{
-              'hourly-badge': selectedRequest.leave_type === 'Hourly',
-              'halfday-badge': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
-              'fullday-badge': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
-            }">{{ selectedRequest.leave_type }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Duration</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.duration_hours }} hrs</span>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Date</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Time Slot</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">
-              <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
-              <span *ngIf="!selectedRequest.start_time">Full Day</span>
-            </span>
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason for Leave</strong>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
-            {{ selectedRequest.reason || 'No reason specified.' }}
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attachments</strong>
-          <div *ngIf="selectedRequest.attachment_name" style="display: flex; align-items: center; gap: 8px; background: #ede9fe; border: 1px solid #ddd6fe; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #4c1d95; cursor: pointer;" (click)="downloadAttachment(selectedRequest.attachment_name)">
-            <i class="fas" [class.fa-file-pdf]="selectedRequest.attachment_name.endsWith('.pdf')" [class.fa-file-image]="!selectedRequest.attachment_name.endsWith('.pdf')" style="font-size: 16px;"></i>
-            <span>{{ selectedRequest.attachment_name }}</span>
-            <i class="fas fa-download" style="margin-left: auto; color: #7c3aed;"></i>
-          </div>
-          <div *ngIf="!selectedRequest.attachment_name" style="color: #94a3b8; font-size: 13px; font-style: italic;">
-            No attachments uploaded.
-          </div>
-        </div>
-        <div *ngIf="selectedRequest.status !== 'Pending'">
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Request Status</strong>
-          <span class="status-badge" [ngClass]="{
-            'present': selectedRequest.status === 'Approved',
-            'absent': selectedRequest.status === 'Rejected'
-          }">{{ selectedRequest.status }}</span>
+    <div class="modal-card-body">
+      <div class="modal-detail-row">
+        <label>Employee</label>
+        <div class="modal-emp-info">
+            <strong>{{ selectedRequest.employee_name || '—' }}</strong>
+            <span>{{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }}</span>
         </div>
       </div>
+      <div class="modal-detail-grid">
+        <div>
+          <label>Date</label>
+          <span class="val-text">{{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
+        </div>
+        <div>
+          <label>Leave Type</label>
+          <span class="badge-leave-type" [ngClass]="{
+            'type-hourly': selectedRequest.leave_type === 'Hourly',
+            'type-halfday': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
+            'type-fullday': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
+          }">{{ selectedRequest.leave_type }}</span>
+        </div>
+      </div>
+      <div class="modal-detail-grid">
+        <div>
+          <label>Time Slot</label>
+          <span class="val-text">
+            <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
+            <span *ngIf="!selectedRequest.start_time">Full Day</span>
+          </span>
+        </div>
+        <div>
+          <label>Duration</label>
+          <span class="val-text"><strong>{{ selectedRequest.duration_hours }}</strong> hrs</span>
+        </div>
+      </div>
+      <div class="modal-detail-row">
+        <label>Reason</label>
+        <div class="modal-reason-box">
+          {{ selectedRequest.reason || 'No reason specified.' }}
+        </div>
+      </div>
+      <div class="modal-detail-row">
+        <label>Attachment</label>
+        <div *ngIf="selectedRequest.attachment_name" class="modal-attachment-chip" (click)="downloadAttachment(selectedRequest.attachment_name)">
+          <i class="fas fa-file-pdf"></i>
+          <span>{{ selectedRequest.attachment_name }}</span>
+          <i class="fas fa-download ml-auto"></i>
+        </div>
+        <span *ngIf="!selectedRequest.attachment_name" class="val-muted">No attachment uploaded.</span>
+      </div>
     </div>
-    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
-        Close
-      </button>
+    <div class="modal-card-footer">
+      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()">Close</button>
       <ng-container *ngIf="selectedRequest.status === 'Pending'">
-        <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center;" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
-          Reject (Step-in)
+        <button class="btn btn-danger" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
+          <i class="fas fa-times"></i> Reject
         </button>
-        <button class="btn btn-primary" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none; display: inline-flex; align-items: center; justify-content: center;">
-          Approve (Step-in)
+        <button class="btn btn-primary" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')">
+          <i class="fas fa-check"></i> Approve
         </button>
       </ng-container>
     </div>
   </div>
 </div>
 
-<!-- Regularization Details Modal -->
-<div class="camera-modal-overlay" *ngIf="selectedRegularization" (click)="closeRegularizationModal()">
-  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-    <div class="camera-modal-header">
-      <span class="camera-modal-title">Regularization Request Details</span>
-      <button class="close-btn" (click)="closeRegularizationModal()" aria-label="Close">
+<!-- Details Modal for Regularization -->
+<div class="custom-modal-backdrop" *ngIf="selectedRegularization" (click)="closeRegularizationModal()">
+  <div class="custom-modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-card-header">
+      <h3 class="modal-card-title">Regularization Request Details</h3>
+      <button class="modal-close-btn" (click)="closeRegularizationModal()" aria-label="Close">
         <i class="fas fa-times"></i>
       </button>
     </div>
-    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
-      <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div class="modal-card-body">
+      <div class="modal-detail-row">
+        <label>Employee</label>
+        <div class="modal-emp-info">
+            <strong>{{ selectedRegularization.employeeName || '—' }}</strong>
+            <span>{{ selectedRegularization.employeeCode || ('EMP-' + ('0000' + selectedRegularization.employeeId).slice(-4)) }}</span>
+        </div>
+      </div>
+      <div class="modal-detail-grid">
         <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
-          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRegularization.employeeName || '—' }} ({{ selectedRegularization.employeeCode || ('EMP-' + ('0000' + selectedRegularization.employeeId).slice(-4)) }})</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attendance Date</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRegularization.attendanceDate | date:'dd MMM yyyy' }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Type</strong>
-            <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">{{ getReasonTypeLabel(selectedRegularization.reasonType) }}</span>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch In</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchIn) }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch Out</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchOut) }}</span>
-          </div>
+          <label>Attendance Date</label>
+          <span class="val-text">{{ selectedRegularization.attendanceDate | date:'dd MMM yyyy' }}</span>
         </div>
         <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Text</strong>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
-            {{ selectedRegularization.reasonText || 'No reason specified.' }}
-          </div>
+          <label>Reason Type</label>
+          <span class="badge-reason">{{ getReasonTypeLabel(selectedRegularization.reasonType) }}</span>
+        </div>
+      </div>
+      <div class="modal-detail-grid">
+        <div>
+          <label>Requested Punch In</label>
+          <span class="val-text"><strong>{{ formatTime(selectedRegularization.requestedPunchIn) }}</strong></span>
+        </div>
+        <div>
+          <label>Requested Punch Out</label>
+          <span class="val-text"><strong>{{ formatTime(selectedRegularization.requestedPunchOut) }}</strong></span>
+        </div>
+      </div>
+      <div class="modal-detail-row">
+        <label>Reason Text</label>
+        <div class="modal-reason-box">
+          {{ selectedRegularization.reasonText || 'No reason specified.' }}
         </div>
       </div>
     </div>
-    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeRegularizationModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
-        Close
+    <div class="modal-card-footer">
+      <button class="btn btn-secondary" type="button" (click)="closeRegularizationModal()">Close</button>
+      <button class="btn btn-danger" (click)="processRegularizationFromModal(selectedRegularization.id, 'rejected')">
+        <i class="fas fa-times"></i> Reject
       </button>
-      <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center;" (click)="processRegularizationFromModal(selectedRegularization.id, 'rejected')">
-        Reject
-      </button>
-      <button class="btn btn-primary" (click)="processRegularizationFromModal(selectedRegularization.id, 'approved')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none; display: inline-flex; align-items: center; justify-content: center;">
-        Approve
+      <button class="btn btn-primary" (click)="processRegularizationFromModal(selectedRegularization.id, 'approved')">
+        <i class="fas fa-check"></i> Approve
       </button>
     </div>
   </div>
 </div>
 
+<!-- Payroll Modal -->
+<div class="custom-modal-backdrop" *ngIf="showPayrollModal" (click)="closePayrollModal()">
+  <div class="custom-modal-card" (click)="$event.stopPropagation()" style="max-width: 460px;">
+    <div class="modal-card-header">
+      <h3 class="modal-card-title">Run Payroll Cycle</h3>
+      <button class="modal-close-btn" (click)="closePayrollModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-card-body">
+      <div style="text-align: center; padding: 12px 0;">
+        <div class="action-icon-wrap action-orange" style="margin: 0 auto 16px auto; width: 64px; height: 64px; font-size: 28px; display: flex; align-items: center; justify-content: center; border-radius: 16px;">
+          <i class="fas fa-calculator"></i>
+        </div>
+        <h4 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Process Payroll for {{ payrollPeriodDisplay }}</h4>
+        <p style="font-size: 13.5px; color: #64748b; line-height: 1.5;">This will calculate salary slips, attendance deductions, and tax withholdings for all active employees across departments.</p>
+      </div>
+    </div>
+    <div class="modal-card-footer">
+      <button class="btn btn-secondary" type="button" (click)="closePayrollModal()">Cancel</button>
+      <button class="btn btn-primary" (click)="executePayroll()">
+        <i class="fas fa-check"></i> Confirm & Run
+      </button>
+    </div>
+  </div>
+</div>

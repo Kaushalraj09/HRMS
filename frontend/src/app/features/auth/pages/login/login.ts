@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../../../core/services/auth.service';
@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
 })
@@ -21,6 +21,7 @@ export class Login {
   tempCredentials: { email: string; password: string } | null = null;
   timeoutRef: any;
   showPassword = false;
+  rememberMe = false;
 
   // Forgot Password Modal Fields
   showForgotPasswordModal = false;
@@ -30,6 +31,17 @@ export class Login {
   showForgotPopup: boolean = false;
   forgotToken: string = '';
   forgotTimeoutRef: any;
+
+  onSsoLogin() {
+    this.message = 'Redirecting to Enterprise Single Sign-On...';
+    this.messageType = 'success';
+    this.showPopup = true;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.showPopup = false;
+      this.cdr.detectChanges();
+    }, 2000);
+  }
 
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;

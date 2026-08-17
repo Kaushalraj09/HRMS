@@ -22,6 +22,8 @@ interface BackendEmployee {
   employee_type?: string | null;
   work_location?: string | null;
   shift_type?: string | null;
+  shift_id?: number | null;
+  shift?: { id: number, name: string, code: string } | null;
   doj?: string | null;
   official_email: string;
   personal_email?: string | null;
@@ -49,6 +51,7 @@ interface BackendEmployeePayload {
   employee_type?: string;
   work_location?: string;
   shift_type?: string;
+  shift_id?: number | null;
   doj?: string;
   official_email: string;
   personal_email?: string;
@@ -220,6 +223,7 @@ export class EmployeeService {
       employee_type: payload.employmentInfo.employeeType || undefined,
       work_location: payload.employmentInfo.workLocation || undefined,
       shift_type: payload.employmentInfo.shiftType || undefined,
+      shift_id: payload.employmentInfo.shiftId ? Number(payload.employmentInfo.shiftId) : undefined,
       doj: payload.employmentInfo.doj || undefined,
       reporting_manager_id: payload.employmentInfo.reportingManagerId ? Number(payload.employmentInfo.reportingManagerId) : null,
       official_email: payload.contactInfo.officialEmail,
@@ -259,6 +263,8 @@ export class EmployeeService {
       bloodGroup: row.blood_group || '',
       workLocation: row.work_location || '',
       shiftType: row.shift_type || '',
+      shiftId: row.shift_id ?? null,
+      shift: row.shift || null,
       doj: row.doj || ''
     };
   }

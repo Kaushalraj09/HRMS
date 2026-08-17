@@ -343,15 +343,15 @@
       </div>
     </div>
     <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()">
         Close
       </button>
       <ng-container *ngIf="selectedRequest.status === 'Pending'">
-        <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none;" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
-          Reject
+        <button class="btn btn-danger" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
+          <i class="fas fa-times"></i> Reject
         </button>
-        <button class="btn btn-primary" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none;">
-          Approve
+        <button class="btn btn-primary" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')">
+          <i class="fas fa-check"></i> Approve
         </button>
       </ng-container>
     </div>

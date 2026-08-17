@@ -21,6 +21,7 @@ export class MyProfile implements OnInit {
   saveMessage$ = new BehaviorSubject<string>('');
   profileForm!: FormGroup;
   isPunchedIn = false;
+  readonly bloodOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
   showAvatarModal = false;
   tempAvatarImage: string | null = null;

@@ -44,16 +44,76 @@ def seed_master_data(db: Session):
             print(f"Added designation: {ds['name']}")
             
     # 3. Shifts
+    from datetime import time
     shifts = [
-        {"name": "General Shift (9 to 6)", "code": "GEN_SHIFT"},
-        {"name": "Morning Shift (8 to 5)", "code": "MORN_SHIFT"},
-        {"name": "Night Shift (10 to 7)", "code": "NIGHT_SHIFT"},
-        {"name": "Flexible Shift", "code": "FLEX_SHIFT"}
+        {
+            "name": "General Shift",
+            "code": "GEN_SHIFT",
+            "start_time": time(9, 0),
+            "end_time": time(18, 0),
+            "working_hours": 8.0,
+            "required_work_minutes": 480,
+            "grace_minutes": 15,
+            "lunch_duration_minutes": 60,
+            "half_day_hours": 4.0,
+            "minimum_half_day_minutes": 240,
+            "present_hours": 8.0,
+            "minimum_present_minutes": 480,
+            "late_mark_after_minutes": 15,
+            "is_night_shift": False,
+            "overtime_allowed": True,
+            "max_overtime_minutes": 120,
+        },
+        {
+            "name": "Evening Shift",
+            "code": "EVE_SHIFT",
+            "start_time": time(14, 0),
+            "end_time": time(23, 0),
+            "working_hours": 8.0,
+            "required_work_minutes": 480,
+            "grace_minutes": 20,
+            "lunch_duration_minutes": 30,
+            "half_day_hours": 4.0,
+            "minimum_half_day_minutes": 240,
+            "present_hours": 8.0,
+            "minimum_present_minutes": 480,
+            "late_mark_after_minutes": 20,
+            "is_night_shift": False,
+            "overtime_allowed": True,
+            "max_overtime_minutes": 120,
+        },
+        {
+            "name": "Night Shift",
+            "code": "NIGHT_SHIFT",
+            "start_time": time(22, 0),
+            "end_time": time(7, 0),
+            "working_hours": 8.0,
+            "required_work_minutes": 480,
+            "grace_minutes": 30,
+            "lunch_duration_minutes": 40,
+            "half_day_hours": 4.0,
+            "minimum_half_day_minutes": 240,
+            "present_hours": 8.0,
+            "minimum_present_minutes": 480,
+            "late_mark_after_minutes": 30,
+            "is_night_shift": True,
+            "overtime_allowed": True,
+            "max_overtime_minutes": 120,
+        }
     ]
     for s in shifts:
-        if not db.query(Shift).filter(Shift.code == s["code"]).first():
-            db.add(Shift(name=s["name"], code=s["code"]))
+        existing = db.query(Shift).filter(Shift.code == s["code"]).first()
+        if not existing:
+            # Also try matching by name in case record exists without code
+            existing = db.query(Shift).filter(Shift.name == s["name"]).first()
+        if not existing:
+            db.add(Shift(**s))
             print(f"Added shift: {s['name']}")
+        else:
+            for k, v in s.items():
+                setattr(existing, k, v)
+            print(f"Updated shift: {s['name']}")
+
 
     # 4. Work Locations
     locations = [

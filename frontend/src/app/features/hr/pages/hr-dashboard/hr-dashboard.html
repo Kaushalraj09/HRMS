@@ -1,587 +1,635 @@
-<div class="Hr_dashboard">
-  <app-navbar 
-    [userName]="userName" 
-    [searchValue]="searchTerm"
-    (hamburgerClick)="toggleSidebar()"
-    (searchChange)="onSearch($event)" 
-    (profileClick)="openProfile()">
-  </app-navbar>
-  <div class="dashboard-layout">
-    <app-hr-sidebar>
-    </app-hr-sidebar>
+<div class="hr-dashboard-layout">
+  <!-- Sidebar -->
+  <app-hr-sidebar></app-hr-sidebar>
+
+  <!-- Right Wrapper -->
+  <div class="dashboard-right-wrapper">
+    <!-- Navbar -->
+    <app-navbar 
+      [userName]="userName" 
+      [searchValue]="searchTerm"
+      (hamburgerClick)="toggleSidebar()"
+      (searchChange)="onSearch($event)" 
+      (profileClick)="openProfile()">
+    </app-navbar>
+
+    <!-- Main Content -->
     <div class="main-content" [class.expanded]="!(isHrSidebarOpen$ | async)">
       <div class="page-content">
         <router-outlet></router-outlet>
-    <ng-container *ngIf="isDashboardHome">
-      <div class="view-only-banner" *ngIf="isAdmin">
-        <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
-      </div>
-      <div class="card" *ngIf="dashboardError">
-        {{ dashboardError }}
-      </div>
-
-        <!-- Dashboard content -->
-        <div class="dashboard-content-A">
-          <div class="dashboard-content" style="min-width: 200px;">
-            <label for="project">Department</label>
-            <app-custom-select inputId="project" [options]="projectOptions"></app-custom-select>
-          </div>
-          <div class="dashboard-content" style="min-width: 200px;">
-            <label for="client">Work Mode</label>
-            <app-custom-select inputId="client" [options]="clientOptions"></app-custom-select>
-          </div>
-        </div>
-        <!-- count box -->
-
-        <div class="count-box">
-          <div class="card total_project">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[0]?.label }}</p>
-                <h2>{{ kpis[0]?.value }}</h2>
-              </div>
-              <i class="fas fa-users"></i>
-            </div>
-          </div>
-          <div class="card total_clients">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[1]?.label }}</p>
-                <h2>{{ kpis[1]?.value }}</h2>
-              </div>
-              <i class="fas fa-user-clock"></i>
-            </div>
-          </div>
-          <div class="card total_emp">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[2]?.label }}</p>
-                <h2>{{ kpis[2]?.value }}</h2>
-              </div>
-              <i class="fas fa-user-check"></i>
-            </div>
-          </div>
-          <div class="card present_emp">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[3]?.label }}</p>
-                <h2>{{ kpis[3]?.value }}</h2>
-              </div>
-              <i class="fas fa-user-times"></i>
-            </div>
-          </div>
-          <div class="card absent_emp">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[4]?.label }}</p>
-                <h2>{{ kpis[4]?.value }}</h2>
-              </div>
-              <i class="fas fa-minus-circle"></i>
-            </div>
-          </div>
-          <div class="card unschegule_abs">
-            <div class="card-content">
-              <div>
-                <p class="title">{{ kpis[5]?.label }}</p>
-                <h2>{{ kpis[5]?.value }}</h2>
-              </div>
-              <i class="fas fa-building"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- chart data -->
-        <div class="chart_data">
-          <div class="card work_breakdown">
-            <div class="card-header">
-              Work Location Breakdown
-            </div>
-            <div class="divider"></div>
-            <div class="chart-workContainers">
-              <canvas baseChart [data]="pieChartData" [type]="pieChartType" [options]="pieChartOptions"
-                [plugins]="pieChartPlugins">
-              </canvas>
-              <div class="center-text">
-                <p>Total</p>
-                <h2>{{ total }}</h2>
+        
+        <ng-container *ngIf="isDashboardHome">
+          
+          <!-- TOP HEADER & BREADCRUMBS -->
+          <div class="hr-page-header">
+            <div class="header-left">
+              <h1 class="page-title">HR Dashboard</h1>
+              <div class="breadcrumbs">
+                <span class="breadcrumb-item">Dashboard</span>
+                <i class="fas fa-chevron-right breadcrumb-separator"></i>
+                <span class="breadcrumb-item active">HR Dashboard</span>
               </div>
             </div>
           </div>
 
-          <div class="card gender_breakdown">
-            <div class="card-header">
-              Gender Breakdown
-            </div>
-            <div class="divider"></div>
-            <div class="chart-genderContainers">
-              <canvas baseChart [data]="pieChartData2" [type]="pieChartType2" [options]="pieChartOptions2"
-                [plugins]="pieChartPlugins">
-              </canvas>
-              <div class="center-text">
-                <p>Total</p>
-                <h2>{{ gendertotal }}</h2>
-              </div>
-            </div>
-
-          </div>
-          <div class="card upcoming_events">
-            <div class="card-header">
-              Upcoming Events
-            </div>
-            <div class="divider"></div>
-            <div class="event-list">
-              <div class="event-item" *ngIf="filteredEvents.length === 0" style="padding: 24px; color: #64748b;">
-                No matching events found
-              </div>
-              <div class="event-item" *ngFor="let event of filteredEvents">
-                <div class="event-icon">
-                  <i id="cakei" class="fas fa-birthday-cake blue-icon"></i>
+          <!-- FILTER TOOLBAR CARD -->
+          <div class="hr-filter-toolbar">
+            <div class="filter-fields-group">
+              <div class="filter-field">
+                <label class="filter-label">Department</label>
+                <div class="select-wrapper">
+                  <select [(ngModel)]="selectedDepartment" class="filter-select">
+                    <option *ngFor="let opt of departmentOptions" [value]="opt">{{ opt }}</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-chevron"></i>
                 </div>
-                <div class="event-info">
-                  <p class="event-name">{{ event.name }}</p>
-                  <p class="event-note">{{ event.note }}</p>
-                  <p class="event-role">{{ event.role }}</p>
+              </div>
+
+              <div class="filter-field">
+                <label class="filter-label">Work Mode</label>
+                <div class="select-wrapper">
+                  <select [(ngModel)]="selectedWorkMode" class="filter-select">
+                    <option *ngFor="let opt of workModeOptions" [value]="opt">{{ opt }}</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-chevron"></i>
+                </div>
+              </div>
+
+              <div class="filter-field">
+                <label class="filter-label">Location</label>
+                <div class="select-wrapper">
+                  <select [(ngModel)]="selectedLocation" class="filter-select">
+                    <option *ngFor="let opt of locationOptions" [value]="opt">{{ opt }}</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-chevron"></i>
+                </div>
+              </div>
+
+              <div class="filter-field">
+                <label class="filter-label">Date Range</label>
+                <div class="select-wrapper">
+                  <select [(ngModel)]="selectedDateRange" class="filter-select">
+                    <option *ngFor="let opt of dateRangeOptions" [value]="opt">{{ opt }}</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-chevron"></i>
                 </div>
               </div>
             </div>
+
+            <div class="filter-actions-group">
+              <button type="button" class="btn-filter-reset" (click)="resetFilters()">Reset</button>
+              <button type="button" class="btn-filter-apply" (click)="applyFilters()">Apply Filters</button>
+            </div>
           </div>
-        </div>
 
-        <!-- map -->
-        <div class="map_data">
-          <app-employee-location-map></app-employee-location-map>
-        </div>
-        <!-- absent tate and quick stats -->
 
-        <div class="abs_and_stats">
-          <div class="card workforce-analytics">
-            <div class="workforce-header">
-              <div class="workforce-title-area">
-                <h3 class="workforce-title">Workforce Analytics</h3>
-                <span class="workforce-subtitle">Last 7 Days</span>
+          <!-- ROW 1: TOP 6 KPI METRIC CARDS WITH SPARKLINES -->
+          <div class="top-6-kpis-grid">
+            <div class="hr-kpi-card" *ngFor="let kpi of kpis">
+              <div class="kpi-top-row">
+                <div class="kpi-icon-circle" [ngClass]="kpi.iconBgClass">
+                  <i [class]="kpi.icon" [ngClass]="kpi.iconColorClass"></i>
+                </div>
+                <div class="kpi-info-col">
+                  <span class="kpi-val">{{ kpi.value }}</span>
+                  <span class="kpi-lbl">{{ kpi.label }}</span>
+                </div>
               </div>
-              <div class="workforce-actions">
-                <button class="refresh-btn" (click)="loadDashboardData()" title="Reload Analytics">
-                  <i class="fas fa-sync-alt" [class.fa-spin]="isDataLoading"></i>
-                </button>
+              
+              <div class="kpi-bottom-row">
+                <span class="kpi-trend-text" [ngClass]="kpi.isPositive ? 'trend-green' : 'trend-red'">
+                  {{ kpi.change }}
+                </span>
+              </div>
+
+              <div class="kpi-sparkline-wrapper">
+                <svg viewBox="0 0 180 24" class="kpi-sparkline-svg" preserveAspectRatio="none">
+                  <path [attr.d]="kpi.sparklineD" fill="none" [attr.stroke]="kpi.sparklineColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
               </div>
             </div>
+          </div>
+
+
+          <!-- ROW 2: 3 CARDS (WORK LOCATION, GENDER DISTRIBUTION & EMPLOYEE ATTENDANCE LOCATION MAP) -->
+          <div class="analytics-row-top-grid">
             
-            <!-- KPI Cards Row -->
-            <div class="kpi-grid">
-              <!-- KPI: Present Today -->
-              <div class="kpi-glass-card present">
-                <div class="kpi-card-header">
-                  <span class="kpi-label">Present Today</span>
-                  <div class="kpi-icon-wrapper bg-green-light">
-                    <i class="fas fa-user-check text-green"></i>
+            <!-- Card 1: Work Location Distribution -->
+            <div class="hr-card card-distribution-widget card-location-dist">
+              <div class="dist-card-header">
+                <div class="dist-title-group">
+                  <div class="dist-icon-badge loc-badge">
+                    <i class="fas fa-building-user"></i>
+                  </div>
+                  <div class="dist-title-text">
+                    <h3 class="card-title">Work Location</h3>
+                    <p class="card-subtitle">Attendance distribution</p>
                   </div>
                 </div>
-                <div class="kpi-value-area">
-                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayPresent }}</h4>
-                  <!-- <span class="kpi-trend text-green" title="Employees currently marked present">
-                    Active Workforce
-                  </span> -->
+                <div class="dist-total-pill loc-pill">
+                  <span class="pulse-dot bg-cyan-pulse"></span>
+                  <span class="dist-pill-text">{{ locTotal }} Total</span>
                 </div>
               </div>
 
-              <!-- KPI: Attendance Rate -->
-              <div class="kpi-glass-card rate">
-                <div class="kpi-card-header">
-                  <span class="kpi-label">Attendance Rate</span>
-                  <div class="kpi-icon-wrapper bg-blue-light">
-                    <i class="fas fa-chart-line text-blue"></i>
-                  </div>
-                </div>
-                <div class="kpi-value-area">
-                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayAttendanceRate + '%' }}</h4>
-                  <!-- <span class="kpi-trend" [ngClass]="trendDirection === 'increasing' ? 'text-green' : (trendDirection === 'decreasing' ? 'text-red' : 'text-slate')">
-                    <i class="fas" [ngClass]="trendDirection === 'increasing' ? 'fa-arrow-up' : (trendDirection === 'decreasing' ? 'fa-arrow-down' : 'fa-minus')"></i>
-                    {{ trendDirection === 'increasing' ? 'Upward' : (trendDirection === 'decreasing' ? 'Downward' : 'Stable') }} trend
-                  </span> -->
-                </div>
-              </div>
-
-              <!-- KPI: Employees on Leave -->
-              <div class="kpi-glass-card leave">
-                <div class="kpi-card-header">
-                  <span class="kpi-label">On Leave</span>
-                  <div class="kpi-icon-wrapper bg-amber-light">
-                    <i class="fas fa-calendar-times text-amber"></i>
-                  </div>
-                </div>
-                <div class="kpi-value-area">
-                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayLeave }}</h4>
-                  <!-- <span class="kpi-trend text-amber" title="Employees on approved leave today">
-                    Excused Absences
-                  </span> -->
-                </div>
-              </div>
-
-              <!-- KPI: Work From Home -->
-              <div class="kpi-glass-card wfh">
-                <div class="kpi-card-header">
-                  <span class="kpi-label">Work From Home</span>
-                  <div class="kpi-icon-wrapper bg-purple-light">
-                    <i class="fas fa-home text-purple"></i>
-                  </div>
-                </div>
-                <div class="kpi-value-area">
-                  <h4 class="kpi-value">{{ isDataLoading ? '...' : todayWfh }}</h4>
-                  <!-- <span class="kpi-trend text-purple" title="Employees working remotely today">
-                    Remote Office
-                  </span> -->
-                </div>
-              </div>
-            </div>
-
-            <!-- Chart Section -->
-            <div class="chart-section">
-              <!-- Loading Skeleton -->
-              <div class="skeleton-container" *ngIf="isDataLoading">
-                <div class="skeleton-chart-line"></div>
-                <div class="skeleton-chart-grid">
-                  <div class="skeleton-grid-bar" style="height: 40%"></div>
-                  <div class="skeleton-grid-bar" style="height: 60%"></div>
-                  <div class="skeleton-grid-bar" style="height: 50%"></div>
-                  <div class="skeleton-grid-bar" style="height: 75%"></div>
-                  <div class="skeleton-grid-bar" style="height: 90%"></div>
-                  <div class="skeleton-grid-bar" style="height: 85%"></div>
-                  <div class="skeleton-grid-bar" style="height: 95%"></div>
-                </div>
-              </div>
-
-              <!-- Empty State -->
-              <div class="empty-state-container" *ngIf="!isDataLoading && !hasAttendanceData">
-                <div class="empty-state-graphic">
-                  <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="60" r="50" fill="rgba(241, 245, 249, 0.5)" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 4"/>
-                    <path d="M40 70C40 58.9543 48.9543 50 60 50C71.0457 50 80 58.9543 80 70" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-                    <circle cx="50" cy="65" r="3" fill="#64748b"/>
-                    <circle cx="70" cy="65" r="3" fill="#64748b"/>
-                    <rect x="48" y="40" width="24" height="6" rx="3" fill="#e2e8f0"/>
-                    <path d="M35 85H85" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-                  </svg>
-                </div>
-                <p class="empty-state-message">No attendance records available for the selected period</p>
-                <span class="empty-state-subtext">New entries will automatically populate the visualization.</span>
-              </div>
-
-              <!-- Line Chart Canvas -->
-              <div class="chart-canvas-wrapper" *ngIf="!isDataLoading && hasAttendanceData">
-                <canvas baseChart 
-                  [data]="absenceChartData" 
-                  [type]="absenceChartType" 
-                  [options]="absenceChartOptions">
-                </canvas>
-              </div>
-            </div>
-
-            <!-- Insights Footer Section -->
-            <!-- <div class="insights-footer">
-              <div class="insight-metric">
-                <span class="insight-label">Avg Attendance</span>
-                <span class="insight-value">{{ isDataLoading ? '...' : averageWeeklyAttendance + '%' }}</span>
-              </div>
-              <div class="insight-divider"></div>
-              <div class="insight-metric">
-                <span class="insight-label">Best Attendance Day</span>
-                <span class="insight-value text-green-dark">{{ isDataLoading ? '...' : bestAttendanceDay }}</span>
-              </div>
-              <div class="insight-divider"></div>
-              <div class="insight-metric">
-                <span class="insight-label">Lowest Attendance Day</span>
-                <span class="insight-value text-red-dark">{{ isDataLoading ? '...' : lowestAttendanceDay }}</span>
-              </div>
-              <div class="insight-divider"></div>
-              <div class="insight-metric">
-                <span class="insight-label">Weekly Trend</span>
-                <div class="insight-trend-indicator" [ngClass]="trendDirection">
-                  <i class="fas" [ngClass]="trendDirection === 'increasing' ? 'fa-chart-line text-green' : (trendDirection === 'decreasing' ? 'fa-chart-line text-red' : 'fa-minus text-slate')"></i>
-                  <span class="trend-text">{{ trendDirection === 'increasing' ? 'Increasing' : (trendDirection === 'decreasing' ? 'Decreasing' : 'Stable') }}</span>
-                </div>
-              </div>
-            </div> -->
-          </div>
-          <div class="card quick_Stats">
-            <div class="card-header">
-              Quick Stats
-            </div>
-            <div class="divider"></div>
-            <div class="quick_stats">
-              <div class="quick_stats-item" *ngFor="let event of stats">
-                <div class="quick_stats-info">
-                  <p class="quick_stats-total">{{ event.total }}</p>
-                  <p class="quick_stats-name">{{ event.name }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Approval Oversight Section -->
-        <div class="project_details" style="grid-template-columns: 1fr; margin-top: 20px; margin-bottom: 20px;">
-            <div class="card recent_projects" style="width: 100%;">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-                    <div style="display: flex; gap: 16px; align-items: center;">
-                        <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'timeoff'" (click)="activeCategoryTab = 'timeoff'">
-                            Time Off Requests
-                        </button>
-                        <button class="dashboard-tab-btn" [class.active]="activeCategoryTab === 'regularization'" (click)="activeCategoryTab = 'regularization'">
-                            Regularization Requests
-                        </button>
+              <div class="dist-card-body">
+                <!-- Top: Donut Chart Visual -->
+                <div class="dist-donut-container">
+                  <div class="donut-visual-wrap">
+                    <svg viewBox="0 0 120 120" class="donut-svg">
+                      <defs>
+                        <linearGradient id="locOfficeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#3B82F6"/>
+                          <stop offset="100%" stop-color="#1D4ED8"/>
+                        </linearGradient>
+                        <linearGradient id="locRemoteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#06B6D4"/>
+                          <stop offset="100%" stop-color="#0891B2"/>
+                        </linearGradient>
+                        <linearGradient id="locHybridGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#F59E0B"/>
+                          <stop offset="100%" stop-color="#D97706"/>
+                        </linearGradient>
+                        <filter id="donutShadow" x="-10%" y="-10%" width="120%" height="120%">
+                          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.08"/>
+                        </filter>
+                      </defs>
+                      <!-- Track background -->
+                      <circle cx="60" cy="60" r="48" fill="none" stroke="#F1F5F9" stroke-width="12"/>
+                      <!-- Hybrid / Field -->
+                      <circle *ngIf="locHybridPct > 0" cx="60" cy="60" r="48" fill="none" stroke="url(#locHybridGrad)" stroke-width="12"
+                              [attr.stroke-dasharray]="locHybridDashArray" [attr.stroke-dashoffset]="locHybridOffset"
+                              stroke-linecap="round" class="donut-slice" filter="url(#donutShadow)"/>
+                      <!-- Remote -->
+                      <circle *ngIf="locRemotePct > 0" cx="60" cy="60" r="48" fill="none" stroke="url(#locRemoteGrad)" stroke-width="12"
+                              [attr.stroke-dasharray]="locRemoteDashArray" [attr.stroke-dashoffset]="locRemoteOffset"
+                              stroke-linecap="round" class="donut-slice" filter="url(#donutShadow)"/>
+                      <!-- Office -->
+                      <circle *ngIf="locOfficePct > 0" cx="60" cy="60" r="48" fill="none" stroke="url(#locOfficeGrad)" stroke-width="12"
+                              [attr.stroke-dasharray]="locOfficeDashArray" [attr.stroke-dashoffset]="locOfficeOffset"
+                              stroke-linecap="round" class="donut-slice" filter="url(#donutShadow)"/>
+                    </svg>
+                    <div class="donut-center-label">
+                      <span class="center-number">{{ locTotal.toLocaleString() }}</span>
+                      <span class="center-sub">TOTAL</span>
                     </div>
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <span class="status-badge working" *ngIf="activeCategoryTab === 'timeoff' && pendingRequests.length > 0">
-                            {{ pendingRequests.length }} Pending Requests
-                        </span>
-                        <span class="status-badge time-off" *ngIf="activeCategoryTab === 'timeoff' && processedRequests.length > 0">
-                            {{ processedRequests.length }} Decisions Logged
-                        </span>
-                        <span class="status-badge working" *ngIf="activeCategoryTab === 'regularization' && pendingRegularizations.length > 0">
-                            {{ pendingRegularizations.length }} Pending Requests
-                        </span>
-                    </div>
-                </div>
-                <div class="divider"></div>
-
-                <!-- Tabs for Pending Approvals vs Decision Logs (Only for Time Off) -->
-                <div *ngIf="activeCategoryTab === 'timeoff'" style="display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
-                    <button class="btn" [ngStyle]="{'background': activeOversightTab === 'pending' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeOversightTab === 'pending' ? '#ffffff' : '#64748b', 'border': activeOversightTab === 'pending' ? 'none' : '1px solid #cbd5e1'}" (click)="setOversightTab('pending')" style="height: 36px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                        Pending Approvals ({{ pendingRequests.length }})
-                    </button>
-                    <button class="btn" [ngStyle]="{'background': activeOversightTab === 'history' ? 'linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)' : '#ffffff', 'color': activeOversightTab === 'history' ? '#ffffff' : '#64748b', 'border': activeOversightTab === 'history' ? 'none' : '1px solid #cbd5e1'}" (click)="setOversightTab('history')" style="height: 36px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                        Decision Logs ({{ processedRequests.length }})
-                    </button>
+                  </div>
                 </div>
 
-                <div class="table-responsive" style="padding: 12px;">
-                    <!-- PENDING TIMEOFF APPROVALS -->
-                    <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'pending'">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Leave Type</th>
-                                <th>Date</th>
-                                <th>Time Slot</th>
-                                <th>Duration</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngIf="pendingRequests.length === 0">
-                                <td colspan="6" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px; margin-right: 8px;"></i>
-                                    No pending approval requests
-                                </td>
-                            </tr>
-                            <tr *ngFor="let req of pendingRequests">
-                                <td>
-                                    <div class="project-info">
-                                        <strong>{{ req.employee_name || '—' }}</strong>
-                                        <p>{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</p>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="status-badge" [ngClass]="{
-                                        'hourly-badge': req.leave_type === 'Hourly',
-                                        'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
-                                        'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
-                                    }">{{ req.leave_type }}</span>
-                                </td>
-                                <td>{{ req.date | date:'dd MMM yyyy' }}</td>
-                                <td>
-                                    <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                                    <span *ngIf="!req.start_time">Full Day</span>
-                                </td>
-                                <td>{{ req.duration_hours }} hrs</td>
-                                <td>
-                                    <div style="display: flex; gap: 8px;">
-                                        <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRequestDetails(req)">
-                                            View
-                                        </button>
-                                        <button class="status-btn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRequest(req.id, 'APPROVE')">
-                                            Approve
-                                        </button>
-                                        <button class="status-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRequest(req.id, 'REJECT')">
-                                            Reject
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- DECISION LOGS -->
-                    <table class="modern-table" *ngIf="activeCategoryTab === 'timeoff' && activeOversightTab === 'history'">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Leave Type</th>
-                                <th>Date</th>
-                                <th>Time Slot</th>
-                                <th>Duration</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngIf="processedRequests.length === 0">
-                                <td colspan="7" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                    No processed decision logs found
-                                </td>
-                            </tr>
-                            <tr *ngFor="let req of processedRequests">
-                                <td>
-                                    <div class="project-info">
-                                        <strong>{{ req.employee_name || '—' }}</strong>
-                                        <p>{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</p>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="status-badge" [ngClass]="{
-                                        'hourly-badge': req.leave_type === 'Hourly',
-                                        'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
-                                        'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
-                                    }">{{ req.leave_type }}</span>
-                                </td>
-                                <td>{{ req.date | date:'dd MMM yyyy' }}</td>
-                                <td>
-                                    <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                                    <span *ngIf="!req.start_time">Full Day</span>
-                                </td>
-                                <td>{{ req.duration_hours }} hrs</td>
-                                <td>
-                                    <span class="status-badge" [ngClass]="{
-                                        'present': req.status === 'Approved',
-                                        'absent': req.status === 'Rejected'
-                                    }">{{ req.status }}</span>
-                                </td>
-                                <td>
-                                    <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRequestDetails(req)">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- REGULARIZATION REQUESTS -->
-                    <table class="modern-table" *ngIf="activeCategoryTab === 'regularization'">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Attendance Date</th>
-                                <th>Requested Punch In</th>
-                                <th>Requested Punch Out</th>
-                                <th>Reason Type</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngIf="pendingRegularizations.length === 0">
-                                <td colspan="6" class="text-center" style="padding: 32px; color: #64748b; font-weight: 550;">
-                                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px; margin-right: 8px;"></i>
-                                    No pending regularization requests found
-                                </td>
-                            </tr>
-                            <tr *ngFor="let req of pendingRegularizations">
-                                <td>
-                                    <div class="project-info">
-                                        <strong>{{ req.employeeName || '—' }}</strong>
-                                        <p>{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</p>
-                                    </div>
-                                </td>
-                                <td>{{ req.attendanceDate | date:'dd MMM yyyy' }}</td>
-                                <td>{{ formatTime(req.requestedPunchIn) }}</td>
-                                <td>{{ formatTime(req.requestedPunchOut) }}</td>
-                                <td>
-                                    <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">
-                                        {{ getReasonTypeLabel(req.reasonType) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 8px;">
-                                        <button class="status-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="viewRegularizationDetails(req)">
-                                            View
-                                        </button>
-                                        <button class="status-btn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'approved')">
-                                            Approve
-                                        </button>
-                                        <button class="status-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer;" (click)="processRegularization(req.id, 'rejected')">
-                                            Reject
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- sheets -->
-        <div class="time_sheet">
-          <div class="card recent_time">
-            <div class="card-header">
-              Recent Time Sheets
-            </div>
-            <div class="divider"></div>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Emp ID</th>
-                    <th>Employee</th>
-                    <th>Date</th>
-                    <th>Punch In</th>
-                    <th>Punch Out</th>
-                    <th>Break Time</th>
-                    <th>Overtime</th>
-                    <th>Total Hours</th>
-                    <th>Status</th>
-                    <th>Live Image</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngIf="filteredRecentTimeSheets.length === 0">
-                    <td colspan="10" style="padding: 24px; text-align: center; color: #64748b;">No matching time sheets found</td>
-                  </tr>
-                  <tr *ngFor="let sheet of filteredRecentTimeSheets">
-                    <td><span style="color: #64748b; font-weight: 500;">{{ sheet.employeeCode }}</span></td>
-                    <td>{{ sheet.employee }}</td>
-                    <td>{{ sheet.date }}</td>
-                    <td>{{ sheet.punchIn }}</td>
-                    <td>{{ sheet.punchOut }}</td>
-                    <td>{{ sheet.breakTime }}</td>
-                    <td>{{ sheet.overtime }}</td>
-                    <td>{{ sheet.totalHours }}</td>
-                    <td><span class="status-badge" [title]="sheet.status" [ngClass]="sheet.status?.toLowerCase() || ''">
-                        {{ sheet.status }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="live-image-cell">
-                        <div class="avatar-wrapper" *ngIf="sheet.punchIn !== '-'; else noImage">
-                          <img *ngIf="sheet.punchInImage" [src]="sheet.punchInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(sheet.punchInImage, sheet.employee)" />
-                          <div *ngIf="!sheet.punchInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;width:36px;height:36px;border-radius:50%;">
-                            <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
-                          </div>
-                          <span class="verified-badge" title="Attendance recorded">
-                            <i class="fas fa-check" style="font-size:7px"></i>
-                          </span>
-                        </div>
-                        <ng-template #noImage>
-                          <span style="color:#d1d5db;font-size:13px">—</span>
-                        </ng-template>
+                <!-- Bottom: Category Breakdown List with Progress Bars -->
+                <div class="dist-breakdown-list">
+                  <!-- Office Row -->
+                  <div class="dist-breakdown-item" [class.item-active]="locOffice > 0">
+                    <div class="dist-item-top">
+                      <div class="dist-item-meta">
+                        <span class="dist-category-dot dot-office"></span>
+                        <span class="dist-category-name">Office</span>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                      <div class="dist-item-stats">
+                        <span class="dist-item-count">{{ locOffice }}</span>
+                        <span class="dist-item-pct badge-office">{{ locOfficePct }}%</span>
+                      </div>
+                    </div>
+                    <div class="dist-bar-track">
+                      <div class="dist-bar-fill fill-office" [style.width.%]="locOfficePct"></div>
+                    </div>
+                  </div>
+
+                  <!-- Remote Row -->
+                  <div class="dist-breakdown-item" [class.item-active]="locRemote > 0">
+                    <div class="dist-item-top">
+                      <div class="dist-item-meta">
+                        <span class="dist-category-dot dot-remote"></span>
+                        <span class="dist-category-name">Remote (WFH)</span>
+                      </div>
+                      <div class="dist-item-stats">
+                        <span class="dist-item-count">{{ locRemote }}</span>
+                        <span class="dist-item-pct badge-remote">{{ locRemotePct }}%</span>
+                      </div>
+                    </div>
+                    <div class="dist-bar-track">
+                      <div class="dist-bar-fill fill-remote" [style.width.%]="locRemotePct"></div>
+                    </div>
+                  </div>
+
+                  <!-- Hybrid Row -->
+                  <div class="dist-breakdown-item" [class.item-active]="locHybrid > 0">
+                    <div class="dist-item-top">
+                      <div class="dist-item-meta">
+                        <span class="dist-category-dot dot-hybrid"></span>
+                        <span class="dist-category-name">Hybrid / Field</span>
+                      </div>
+                      <div class="dist-item-stats">
+                        <span class="dist-item-count">{{ locHybrid }}</span>
+                        <span class="dist-item-pct badge-hybrid">{{ locHybridPct }}%</span>
+                      </div>
+                    </div>
+                    <div class="dist-bar-track">
+                      <div class="dist-bar-fill fill-hybrid" [style.width.%]="locHybridPct"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <!-- Card 2: Gender Distribution -->
+            <div class="hr-card card-distribution-widget card-gender-dist">
+              <div class="dist-card-header">
+                <div class="dist-title-group">
+                  <div class="dist-icon-badge gender-badge">
+                    <i class="fas fa-venus-mars"></i>
+                  </div>
+                  <div class="dist-title-text">
+                    <h3 class="card-title">Gender Distribution</h3>
+                    <p class="card-subtitle">Workforce demographics</p>
+                  </div>
+                </div>
+                <div class="dist-total-pill gender-pill">
+                  <span class="pulse-dot bg-pink-pulse"></span>
+                  <span class="dist-pill-text">{{ genderTotal }} Total</span>
+                </div>
+              </div>
+
+              <div class="dist-card-body">
+                <!-- Top: Donut Chart Visual -->
+                <div class="dist-donut-container">
+                  <div class="donut-visual-wrap">
+                    <svg viewBox="0 0 120 120" class="donut-svg">
+                      <defs>
+                        <linearGradient id="genderMaleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#3B82F6"/>
+                          <stop offset="100%" stop-color="#1D4ED8"/>
+                        </linearGradient>
+                        <linearGradient id="genderFemaleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#EC4899"/>
+                          <stop offset="100%" stop-color="#BE185D"/>
+                        </linearGradient>
+                        <filter id="genderShadow" x="-10%" y="-10%" width="120%" height="120%">
+                          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.08"/>
+                        </filter>
+                      </defs>
+                      <!-- Track background -->
+                      <circle cx="60" cy="60" r="48" fill="none" stroke="#F1F5F9" stroke-width="12"/>
+                      <!-- Female -->
+                      <circle *ngIf="genderFemalePct > 0" cx="60" cy="60" r="48" fill="none" stroke="url(#genderFemaleGrad)" stroke-width="12"
+                              [attr.stroke-dasharray]="genderFemaleDashArray" [attr.stroke-dashoffset]="genderFemaleOffset"
+                              stroke-linecap="round" class="donut-slice" filter="url(#genderShadow)"/>
+                      <!-- Male -->
+                      <circle *ngIf="genderMalePct > 0" cx="60" cy="60" r="48" fill="none" stroke="url(#genderMaleGrad)" stroke-width="12"
+                              [attr.stroke-dasharray]="genderMaleDashArray" [attr.stroke-dashoffset]="genderMaleOffset"
+                              stroke-linecap="round" class="donut-slice" filter="url(#genderShadow)"/>
+                    </svg>
+                    <div class="donut-center-label">
+                      <span class="center-number">{{ genderTotal.toLocaleString() }}</span>
+                      <span class="center-sub">TOTAL</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bottom: Category Breakdown List with Progress Bars -->
+                <div class="dist-breakdown-list">
+                  <!-- Male Row -->
+                  <div class="dist-breakdown-item" [class.item-active]="genderMale > 0">
+                    <div class="dist-item-top">
+                      <div class="dist-item-meta">
+                        <span class="dist-category-dot dot-male"></span>
+                        <span class="dist-category-name">Male</span>
+                      </div>
+                      <div class="dist-item-stats">
+                        <span class="dist-item-count">{{ genderMale }}</span>
+                        <span class="dist-item-pct badge-male">{{ genderMalePct }}%</span>
+                      </div>
+                    </div>
+                    <div class="dist-bar-track">
+                      <div class="dist-bar-fill fill-male" [style.width.%]="genderMalePct"></div>
+                    </div>
+                  </div>
+
+                  <!-- Female Row -->
+                  <div class="dist-breakdown-item" [class.item-active]="genderFemale > 0">
+                    <div class="dist-item-top">
+                      <div class="dist-item-meta">
+                        <span class="dist-category-dot dot-female"></span>
+                        <span class="dist-category-name">Female</span>
+                      </div>
+                      <div class="dist-item-stats">
+                        <span class="dist-item-count">{{ genderFemale }}</span>
+                        <span class="dist-item-pct badge-female">{{ genderFemalePct }}%</span>
+                      </div>
+                    </div>
+                    <div class="dist-bar-track">
+                      <div class="dist-bar-fill fill-female" [style.width.%]="genderFemalePct"></div>
+                    </div>
+                  </div>
+
+                  <!-- Ratio Summary Row (Item 3 in Card 2 for perfect symmetry) -->
+                  <div class="dist-ratio-row">
+                    <div class="dist-ratio-left">
+                      <span class="dist-category-dot dot-purple"></span>
+                      <span class="dist-category-name">Ratio: <strong>{{ genderMale }}:{{ genderFemale }}</strong></span>
+                    </div>
+                    <div class="dist-ratio-right">
+                      <span class="dist-item-pct badge-purple">{{ genderMale >= genderFemale ? 'Male Majority' : 'Female Majority' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Employee Attendance Location (India Map) -->
+            <div class="hr-card card-location-map">
+              <div class="map-card-header">
+                <div>
+                  <h3 class="card-title">Employee Attendance Location</h3>
+                  <p class="card-subtitle">Live location of employees based on attendance punches</p>
+                </div>
+              </div>
+
+              <div class="map-top-counters-strip">
+                <div class="map-counter-pill mc-green" [class.active]="selectedMapFilter === 'PRESENT'" (click)="setMapFilter('PRESENT')" title="Click to filter Present employees on map">
+                  <span class="mc-val">{{ kpis[1].value }}</span>
+                  <span class="mc-lbl">Present</span>
+                </div>
+                <div class="map-counter-pill mc-blue" [class.active]="selectedMapFilter === 'WORKING'" (click)="setMapFilter('WORKING')" title="Click to filter Working employees on map">
+                  <span class="mc-val">{{ wfPresent }}</span>
+                  <span class="mc-lbl">Working</span>
+                </div>
+                <div class="map-counter-pill mc-orange" [class.active]="selectedMapFilter === 'ON_LEAVE'" (click)="setMapFilter('ON_LEAVE')" title="Click to filter On Leave employees on map">
+                  <span class="mc-val">{{ kpis[2].value }}</span>
+                  <span class="mc-lbl">On Leave</span>
+                </div>
+                <div class="map-counter-pill mc-red" [class.active]="selectedMapFilter === 'ABSENT'" (click)="setMapFilter('ABSENT')" title="Click to filter Absent employees on map">
+                  <span class="mc-val">{{ kpis[3].value }}</span>
+                  <span class="mc-lbl">Absent</span>
+                </div>
+              </div>
+
+              <div class="map-container-wrapper">
+                <app-employee-location-map [filter]="selectedMapFilter" (filterChange)="selectedMapFilter = $event"></app-employee-location-map>
+              </div>
+            </div>
+
           </div>
-        </div>
+
+
+          <!-- ROW 3: WORKFORCE ANALYTICS, HR QUICK STATS & UPCOMING EVENTS (DOWN TO MAP & SIDE-BY-SIDE) -->
+          <div class="analytics-row-bottom-grid">
+            
+            <!-- Col 1: Workforce Analytics -->
+            <div class="hr-card card-workforce-analytics">
+              <div class="card-head-row-between">
+                <h3 class="card-title">Workforce Analytics</h3>
+                <div class="period-pill-dropdown">
+                  <span>{{ workforcePeriod }}</span>
+                  <i class="fas fa-chevron-down pill-chevron"></i>
+                </div>
+              </div>
+
+              <div class="wf-metrics-horizontal-strip">
+                <div class="wf-stat-col">
+                  <span class="wf-lbl">Present Today</span>
+                  <span class="wf-val">{{ wfPresent }}</span>
+                </div>
+                <div class="wf-stat-col">
+                  <span class="wf-lbl">Attendance Rate</span>
+                  <span class="wf-val">{{ wfAttendanceRate }}</span>
+                </div>
+                <div class="wf-stat-col">
+                  <span class="wf-lbl">On Leave</span>
+                  <span class="wf-val">{{ wfOnLeave }}</span>
+                </div>
+                <div class="wf-stat-col">
+                  <span class="wf-lbl">Work From Home</span>
+                  <span class="wf-val">{{ wfWfh }}</span>
+                </div>
+              </div>
+
+              <div class="wf-chart-container">
+                <div class="wf-chart-main">
+                  <div class="wf-y-axis">
+                    <span class="wf-axis-title">Attendance Trend</span>
+                    <span>100%</span>
+                    <span>75%</span>
+                    <span>50%</span>
+                    <span>25%</span>
+                    <span>0%</span>
+                  </div>
+
+                  <div class="wf-svg-wrapper">
+                    <svg viewBox="0 0 460 100" class="wf-spline-svg" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="wfGradientBlue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.28"/>
+                          <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.0"/>
+                        </linearGradient>
+                      </defs>
+
+                      <!-- Grid Lines -->
+                      <line x1="0" y1="15" x2="460" y2="15" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                      <line x1="0" y1="38" x2="460" y2="38" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                      <line x1="0" y1="62" x2="460" y2="62" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                      <line x1="0" y1="85" x2="460" y2="85" stroke="#F1F5F9" stroke-width="1"/>
+
+                      <!-- Area Fill -->
+                      <path [attr.d]="wfGradientAreaD" fill="url(#wfGradientBlue)"/>
+
+                      <!-- Spline Curved Line -->
+                      <path [attr.d]="wfSplinePathD" fill="none" stroke="#2563EB" stroke-width="2.8" stroke-linecap="round"/>
+
+                      <!-- Data Points with Tooltips -->
+                      <g *ngFor="let pt of wfDataPoints">
+                        <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2" class="wf-circle-point">
+                          <title>{{ pt.day }}: {{ pt.pct }}%</title>
+                        </circle>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="wf-x-axis">
+                  <span *ngFor="let pt of wfDataPoints">{{ pt.day }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 2: HR Quick Stats (2x3 Grid) -->
+            <div class="hr-card card-quick-stats">
+              <div class="card-head-simple">
+                <h3 class="card-title">HR Quick Stats</h3>
+              </div>
+
+              <div class="quick-stats-2x3-grid">
+                <div class="quick-stat-box" *ngFor="let stat of quickStatsList" [ngClass]="stat.bgClass">
+                  <div class="quick-stat-icon-wrap" [ngClass]="stat.iconClass">
+                    <i [class]="stat.icon"></i>
+                  </div>
+                  <div class="quick-stat-info">
+                    <span class="quick-stat-val" [ngClass]="stat.textClass">{{ stat.value }}</span>
+                    <span class="quick-stat-lbl">{{ stat.label }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 3: Upcoming Events (Down to the Map & Beside HR Quick Stats) -->
+            <div class="hr-card card-upcoming-events">
+              <div class="card-head-simple">
+                <h3 class="card-title">Upcoming Events</h3>
+              </div>
+              <div class="upcoming-events-list">
+                <div class="event-item-row" *ngFor="let ev of upcomingEventsList">
+                  <div class="event-date-badge">
+                    <span class="ed-day">{{ ev.day }}</span>
+                    <span class="ed-month">{{ ev.month }}</span>
+                  </div>
+                  <div class="event-icon-box" [ngClass]="ev.iconBgClass">
+                    <i [class]="ev.icon" [ngClass]="ev.iconColorClass"></i>
+                  </div>
+                  <div class="event-details">
+                    <span class="event-person-name">{{ ev.name }}</span>
+                    <span class="event-type-sub">{{ ev.type }}</span>
+                  </div>
+                </div>
+
+                <div class="empty-state-text" *ngIf="upcomingEventsList.length === 0">
+                  <i class="far fa-calendar-check"></i>
+                  <span>No upcoming events scheduled</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+
+          <!-- ROW 4: LEAVE & TIME-OFF REQUESTS & RECENT ATTENDANCE -->
+          <div class="oversight-row-4-grid">
+            
+            <!-- Col 1: Leave & Time-off Requests Table -->
+            <div class="hr-card card-requests-table">
+              <div class="card-head-row-between">
+                <h3 class="card-title">Leave & Time-off Requests</h3>
+                <div class="request-tabs-pill-group">
+                  <button type="button" class="tab-pill-btn" [class.active]="activeRequestTab === 'pending'" (click)="setActiveRequestTab('pending')">
+                    Pending ({{ pendingTimeoffCount }})
+                  </button>
+                  <button type="button" class="tab-pill-btn" [class.active]="activeRequestTab === 'regularization'" (click)="setActiveRequestTab('regularization')">
+                    Regularization ({{ pendingRegularizationCount }})
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive-clean">
+                <table class="clean-oversight-table">
+                  <thead>
+                    <tr>
+                      <th>EMPLOYEE</th>
+                      <th>TYPE</th>
+                      <th>DATE</th>
+                      <th>DURATION</th>
+                      <th>STATUS</th>
+                      <th>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let req of displayLeaveRequests">
+                      <td>
+                        <div class="employee-cell">
+                          <div class="avatar-initials">{{ req.initials }}</div>
+                          <span class="emp-name-text">{{ req.name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="type-text">{{ req.type }}</span>
+                      </td>
+                      <td>
+                        <span class="date-text">{{ req.date }}</span>
+                      </td>
+                      <td>
+                        <span class="duration-text">{{ req.duration }}</span>
+                      </td>
+                      <td>
+                        <span class="status-pill status-amber">{{ req.status }}</span>
+                      </td>
+                      <td>
+                        <div class="action-dropdown-btn-wrap">
+                          <button type="button" class="btn-action-pill" (click)="approveRequest(req.id)">
+                            <span>Approve</span>
+                            <i class="fas fa-check action-chevron"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="displayLeaveRequests.length === 0">
+                      <td colspan="6" class="empty-table-cell">
+                        <span>No pending requests found</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Col 2: Recent Attendance Table -->
+            <div class="hr-card card-recent-attendance">
+              <div class="card-head-row-between">
+                <h3 class="card-title">Recent Attendance</h3>
+                <a routerLink="/hr-dashboard/attendance" class="view-all-link">View All Attendance →</a>
+              </div>
+
+              <div class="table-responsive-clean">
+                <table class="clean-oversight-table">
+                  <thead>
+                    <tr>
+                      <th>EMPLOYEE</th>
+                      <th>DATE</th>
+                      <th>IN TIME</th>
+                      <th>OUT TIME</th>
+                      <th>TOTAL HOURS</th>
+                      <th>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let att of displayRecentAttendance">
+                      <td>
+                        <div class="employee-cell">
+                          <div class="avatar-photo-circle" *ngIf="att.avatarUrl; else noPhoto">
+                            <img [src]="att.avatarUrl" [alt]="att.name" class="avatar-img" (click)="openPhotoModal(att.avatarUrl, att.name)" />
+                          </div>
+                          <ng-template #noPhoto>
+                            <div class="avatar-initials avatar-photo-placeholder">{{ att.initials }}</div>
+                          </ng-template>
+                          <span class="emp-name-text">{{ att.name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="date-text">{{ att.date }}</span>
+                      </td>
+                      <td>
+                        <span class="time-text">{{ att.inTime }}</span>
+                      </td>
+                      <td>
+                        <span class="time-text">{{ att.outTime }}</span>
+                      </td>
+                      <td>
+                        <span class="hours-text">{{ att.totalHours }}</span>
+                      </td>
+                      <td>
+                        <span class="status-pill status-green">{{ att.status }}</span>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="displayRecentAttendance.length === 0">
+                      <td colspan="6" class="empty-table-cell">
+                        <span>No recent attendance records found</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
 
         </ng-container>
 
@@ -602,146 +650,3 @@
     </div>
   </div>
 </div>
-
-<!-- Time Off Request Details Modal -->
-<div class="camera-modal-overlay" *ngIf="selectedRequest" (click)="closeDetailsModal()">
-  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-    <div class="camera-modal-header">
-      <span class="camera-modal-title">Time Off Request Details</span>
-      <button class="close-btn" (click)="closeDetailsModal()" aria-label="Close">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
-          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.employee_name || '—' }} ({{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }})</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Leave Type</strong>
-            <span class="status-badge" [ngClass]="{
-              'hourly-badge': selectedRequest.leave_type === 'Hourly',
-              'halfday-badge': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
-              'fullday-badge': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
-            }">{{ selectedRequest.leave_type }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Duration</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.duration_hours }} hrs</span>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Date</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Time Slot</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">
-              <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
-              <span *ngIf="!selectedRequest.start_time">Full Day</span>
-            </span>
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason for Leave</strong>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
-            {{ selectedRequest.reason || 'No reason specified.' }}
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attachments</strong>
-          <div *ngIf="selectedRequest.attachment_name" style="display: flex; align-items: center; gap: 8px; background: #ede9fe; border: 1px solid #ddd6fe; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #4c1d95; cursor: pointer;" (click)="downloadAttachment(selectedRequest.attachment_name)">
-            <i class="fas" [class.fa-file-pdf]="selectedRequest.attachment_name.endsWith('.pdf')" [class.fa-file-image]="!selectedRequest.attachment_name.endsWith('.pdf')" style="font-size: 16px;"></i>
-            <span>{{ selectedRequest.attachment_name }}</span>
-            <i class="fas fa-download" style="margin-left: auto; color: #7c3aed;"></i>
-          </div>
-          <div *ngIf="!selectedRequest.attachment_name" style="color: #94a3b8; font-size: 13px; font-style: italic;">
-            No attachments uploaded.
-          </div>
-        </div>
-        <div *ngIf="selectedRequest.status !== 'Pending'">
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Request Status</strong>
-          <span class="status-badge" [ngClass]="{
-            'present': selectedRequest.status === 'Approved',
-            'absent': selectedRequest.status === 'Rejected'
-          }">{{ selectedRequest.status }}</span>
-        </div>
-      </div>
-    </div>
-    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
-        Close
-      </button>
-      <ng-container *ngIf="selectedRequest.status === 'Pending'">
-        <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center;" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
-          Reject
-        </button>
-        <button class="btn btn-primary" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none; display: inline-flex; align-items: center; justify-content: center;">
-          Approve
-        </button>
-      </ng-container>
-    </div>
-  </div>
-</div>
-
-<!-- Regularization Details Modal -->
-<div class="camera-modal-overlay" *ngIf="selectedRegularization" (click)="closeRegularizationModal()">
-  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-    <div class="camera-modal-header">
-      <span class="camera-modal-title">Regularization Request Details</span>
-      <button class="close-btn" (click)="closeRegularizationModal()" aria-label="Close">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
-          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRegularization.employeeName || '—' }} ({{ selectedRegularization.employeeCode || ('EMP-' + ('0000' + selectedRegularization.employeeId).slice(-4)) }})</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attendance Date</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRegularization.attendanceDate | date:'dd MMM yyyy' }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Type</strong>
-            <span class="status-badge working" style="background: #e0f2fe; color: #0369a1;">{{ getReasonTypeLabel(selectedRegularization.reasonType) }}</span>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch In</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchIn) }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Requested Punch Out</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ formatTime(selectedRegularization.requestedPunchOut) }}</span>
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason Text</strong>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
-            {{ selectedRegularization.reasonText || 'No reason specified.' }}
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeRegularizationModal()" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
-        Close
-      </button>
-      <button class="btn" style="background: #ef4444; color: white; height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center;" (click)="processRegularizationFromModal(selectedRegularization.id, 'rejected')">
-        Reject
-      </button>
-      <button class="btn btn-primary" (click)="processRegularizationFromModal(selectedRegularization.id, 'approved')" style="height: 38px; padding: 0 16px; font-weight: 600; border-radius: 6px; cursor: pointer; background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); color: white; border: none; display: inline-flex; align-items: center; justify-content: center;">
-        Approve
-      </button>
-    </div>
-  </div>
-</div>
-
-

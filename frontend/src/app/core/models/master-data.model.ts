@@ -24,6 +24,23 @@ export interface Shift {
   start_time: string;
   /** HH:MM format */
   end_time: string;
+  working_hours?: number;
+  required_work_minutes?: number;
+  grace_minutes?: number;
+  lunch_duration_minutes?: number;
+  lunch_start_time?: string;
+  lunch_end_time?: string;
+  half_day_hours?: number;
+  minimum_half_day_minutes?: number;
+  present_hours?: number;
+  minimum_present_minutes?: number;
+  overtime_start_time?: string;
+  overtime_allowed?: boolean;
+  max_overtime_minutes?: number;
+  late_mark_after_minutes?: number;
+  early_exit_before_minutes?: number;
+  is_night_shift?: boolean;
+  timezone?: string;
   is_active: boolean;
 }
 

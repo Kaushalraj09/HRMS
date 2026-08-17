@@ -13,21 +13,21 @@
 .sidebar {
   width: 100%;
   height: 100%;
-  background-color: #2a3542;
-  color: #aeb2b7;
+  background-color: #030c22;
+  color: #a0aec0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1000;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.25);
 }
 
 .menu-container {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 0;
+  padding: 12px 0;
 }
 
 /* Scrollbar styling */
@@ -46,18 +46,19 @@
 }
 
 .menu-group {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .group-title {
-  padding: 12px 20px 5px 20px;
+  padding: 16px 20px 6px 20px;
   font-size: 13px;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
+  color: #ffffff;
   margin: 0;
   display: flex;
   align-items: center;
   position: relative;
+  letter-spacing: 0.2px;
 }
 
 .collapsed-title-icon {
@@ -87,41 +88,49 @@
 .menu-link {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
-  color: #aeb2b7;
+  margin: 3px 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #a0aec0;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   cursor: pointer;
   position: relative;
 }
 
 .menu-link:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .menu-link.active {
-  color: #ff3b30;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-left: 3px solid #ff3b30;
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-left: none !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  font-weight: 600;
 }
 
 .menu-link.active-parent {
-  color: #ff3b30;
-  border-left: 3px solid #ff3b30;
-  background-color: rgba(0, 0, 0, 0.1);
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-left: none !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  font-weight: 600;
 }
 
 .menu-link.active .menu-icon,
 .menu-link.active-parent .menu-icon,
 .menu-link.active .menu-arrow,
 .menu-link.active-parent .menu-arrow {
-  color: #ff3b30;
+  color: #ffffff !important;
 }
 
 .menu-icon {
   font-size: 16px;
-  width: 30px;
+  width: 28px;
   text-align: center;
   margin-right: 10px;
   transition: color 0.2s;
@@ -135,8 +144,8 @@
 
 .menu-text {
   flex: 1;
-  font-size: 15px;
-  font-weight: 400;
+  font-size: 14.5px;
+  font-weight: 500;
   white-space: nowrap;
   transition: opacity 0.3s ease;
 }
@@ -168,9 +177,9 @@
 
 .sub-menu {
   list-style: none;
-  padding: 0;
+  padding: 2px 0;
   margin: 0;
-  background-color: #242c36;
+  background-color: transparent;
   overflow: hidden;
   transition: max-height 0.3s ease-in-out;
 }
@@ -185,26 +194,32 @@
 
 .sub-menu-link {
   display: block;
-  padding: 10px 20px 10px 58px;
-  color: #aeb2b7;
+  margin: 2px 12px 2px 20px;
+  padding: 8px 14px 8px 44px;
+  border-radius: 8px;
+  color: #a0aec0;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13.5px;
   transition: all 0.2s;
 }
 
 .sub-menu-link:hover {
-  color: #fff;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .sub-menu-link.active {
-  color: #ff3b30;
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #1b64f2 0%, #7e22ce 100%) !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(27, 100, 242, 0.3);
 }
 
-/* Red dot for active parent item */
+/* White dot for active parent item */
 .notification-dot {
   width: 8px;
   height: 8px;
-  background-color: #ff3b30;
+  background-color: #ffffff;
   border-radius: 50%;
   display: inline-block;
   margin-right: 8px;
@@ -258,7 +273,7 @@
 
 .yes-btn, .no-btn {
   padding: 10px 30px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -267,12 +282,14 @@
 }
 
 .yes-btn {
-  background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 35%, #7C3AED 75%, #9333EA 100%);
   color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), 0 2px 6px rgba(124, 58, 237, 0.2);
 }
 
 .yes-btn:hover {
-  background: linear-gradient(90deg, #4c1d95 0%, #e11d48 100%);
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 35%, #6D28D9 75%, #7E22CE 100%);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.42), 0 3px 8px rgba(124, 58, 237, 0.3);
   transform: translateY(-2px);
 }
 
@@ -313,3 +330,67 @@
     transform: translateX(-100%);
   }
 }
+
+.sidebar-brand-header {
+  height: 64px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  background: #030c22;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-title-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-company-name {
+  font-size: 16px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+.brand-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.sidebar-bottom-card {
+  padding: 12px 16px;
+  margin: 12px;
+  background: rgba(27, 100, 242, 0.12);
+  border: 1px solid rgba(126, 34, 206, 0.25);
+  border-radius: 12px;
+  text-align: left;
+}
+
+.bottom-brand-badge {
+  font-size: 14px;
+  font-weight: 800;
+  color: #60A5FA;
+  display: block;
+}
+
+.bottom-brand-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 2px 0 0 0;
+}
+

@@ -11,8 +11,9 @@ class Attendance(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=True, index=True)
     date = Column(Date, nullable=False, server_default=func.current_date(), index=True)
-    
+
     scheduled_start = Column(Time, nullable=True)
     scheduled_end = Column(Time, nullable=True)
     task_description = Column(String(255), nullable=True)
@@ -57,6 +58,7 @@ class Attendance(Base):
 
     # Relationships
     employee = relationship("Employee", backref="attendance_records")
+    shift = relationship("Shift", foreign_keys=[shift_id])
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

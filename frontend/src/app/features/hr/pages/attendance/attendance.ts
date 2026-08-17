@@ -7,6 +7,8 @@ import { AttendanceRecord, PaginatedAttendance } from '../../../../core/models/a
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 
+import { MasterDataService } from '../../../../core/services/master-data.service';
+
 @Component({
   selector: 'app-attendance',
   standalone: true,
@@ -57,7 +59,11 @@ export class AttendanceComponent implements OnInit {
     this.selectedPhotoEmployeeName = '';
   }
 
-  constructor(private fb: FormBuilder, private attendanceService: AttendanceService) {
+  constructor(
+    private fb: FormBuilder, 
+    private attendanceService: AttendanceService,
+    private masterDataService: MasterDataService
+  ) {
     this.filterForm = this.fb.group({
       fromDate: [''],
       toDate: [''],
@@ -83,6 +89,17 @@ export class AttendanceComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.masterDataService.getBootstrapData().subscribe({
+      next: (res) => {
+        if (res.departments && res.departments.length > 0) {
+          this.departments = res.departments.map(d => d.name);
+        }
+        if (res.workLocations && res.workLocations.length > 0) {
+          this.locations = res.workLocations.map(l => l.name);
+        }
+      },
+      error: (err) => console.warn('Failed to load master data for attendance filter:', err)
+    });
     
     this.attendanceData$ = combineLatest([
       this.searchTrigger$,

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../../../core/services/report.service';
 import { AttendanceSummaryRow, LateArrivalRow, MissingPunchRow, LeaveUsageRow } from '../../../../core/models/report.model';
 
+import { MasterDataService } from '../../../../core/services/master-data.service';
+
 @Component({
   selector: 'app-hr-reports',
   standalone: true,
@@ -38,6 +40,7 @@ export class HRReportsComponent implements OnInit {
 
   constructor(
     private readonly reportService: ReportService,
+    private readonly masterDataService: MasterDataService,
     private readonly cdr: ChangeDetectorRef
   ) {
     const today = new Date();
@@ -49,6 +52,15 @@ export class HRReportsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.masterDataService.getDepartments().subscribe({
+      next: (depts) => {
+        if (depts && depts.length > 0) {
+          this.departments = depts.map(d => d.name);
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err) => console.warn('Failed to load departments for HR report filter:', err)
+    });
     this.loadReport();
   }
 

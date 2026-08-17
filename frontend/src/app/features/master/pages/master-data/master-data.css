@@ -350,25 +350,43 @@
 .modal-overlay {
   position: fixed;
   top: 0;
-  left: 0;
-  width: 100vw;
+  left: 250px; /* offset by sidebar width */
+  width: calc(100vw - 250px);
   height: 100vh;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(6px);
   z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .modal-card {
   background: #ffffff;
   border-radius: 1.25rem;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
+  max-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+}
+
+/* Wider card for the shift form */
+.modal-card.shift-modal-card {
+  max-width: 680px;
+}
+
+/* Form inside modal must flex so footer pins to bottom */
+.modal-card form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -422,6 +440,9 @@
 
 .modal-body {
   padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .form-group label {
@@ -488,6 +509,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .btn-secondary {
@@ -505,4 +527,133 @@
 .btn-secondary:hover {
   background-color: #f1f5f9;
   color: #0f172a;
+}
+
+/* ─── Shift Form Layout ─────────────────────────────────────── */
+.shift-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shift-full-row {
+  width: 100%;
+}
+
+.shift-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.shift-row-mixed {
+  align-items: center;
+}
+
+/* Auto-calculated field badge */
+.field-auto-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-radius: 20px;
+  vertical-align: middle;
+}
+
+/* Read-only / auto-computed input */
+.input-readonly {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  cursor: not-allowed !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Toggle pill checkbox */
+.shift-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.shift-toggle-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.toggle-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.toggle-pill:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.toggle-pill input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #6366f1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-pill .toggle-track {
+  display: none; /* reserved for future custom toggle */
+}
+
+.toggle-pill .toggle-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.text-muted {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Compact overrides inside shift modal for better fit */
+.shift-modal-card .modal-body {
+  padding: 1.1rem 1.3rem;
+}
+
+.shift-modal-card .form-group label {
+  font-size: 0.8rem;
+  margin-bottom: 0.28rem;
+}
+
+.shift-modal-card .premium-input {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.6rem;
+}
+
+.shift-modal-card .toggle-pill {
+  padding: 0.45rem 0.75rem;
+}
+
+
+/* Responsive: stack shift rows on small screens */
+@media (max-width: 520px) {
+  .shift-row {
+    grid-template-columns: 1fr;
+  }
 }

@@ -8,11 +8,15 @@ import secrets
 
 from app.core.security import hash_password
 
+from sqlalchemy.orm import joinedload
+
 def _employee_query(db: Session):
     return (
         db.query(Employee)
+        .options(joinedload(Employee.shift))
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
+        .filter(Employee.status != "Deleted", User.status != "Deleted")
     )
 
 def generate_random_password(length: int = 12) -> str:
@@ -54,6 +58,10 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     db.add(new_employee)
     db.commit()
     db.refresh(new_employee)
+
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
+
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
@@ -66,6 +74,8 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     return new_employee
 
 def _matches_employee_filters(employee, search: str, department: str, employee_type: str, status: str) -> bool:
+    if employee.status == "Deleted":
+        return False
     search_value = (search or "").strip().lower()
     if search_value:
         searchable_values = [
@@ -100,32 +110,42 @@ def list_employees(
     from sqlalchemy import Date, String, Integer
 
     # Query Employee table records joining User and Role
-    emp_q = db.query(
-        Employee.id.label("id"),
-        Employee.user_id.label("user_id"),
-        Employee.reporting_manager_id.label("reporting_manager_id"),
-        Employee.employee_code.label("employee_code"),
-        Employee.first_name.label("first_name"),
-        Employee.last_name.label("last_name"),
-        Employee.gender.label("gender"),
-        Employee.dob.label("dob"),
-        Employee.marital_status.label("marital_status"),
-        Employee.blood_group.label("blood_group"),
-        Employee.department.label("department"),
-        Employee.designation.label("designation"),
-        Employee.employee_type.label("employee_type"),
-        Employee.work_location.label("work_location"),
-        Employee.shift_type.label("shift_type"),
-        Employee.doj.label("doj"),
-        Employee.official_email.label("official_email"),
-        Employee.personal_email.label("personal_email"),
-        Employee.mobile.label("mobile"),
-        Employee.alternate_mobile.label("alternate_mobile"),
-        Employee.emergency_contact_name.label("emergency_contact_name"),
-        Employee.emergency_contact_number.label("emergency_contact_number"),
-        Employee.status.label("status"),
-        Employee.created_at.label("created_at")
-    ).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
+    emp_q = (
+        db.query(
+            Employee.id.label("id"),
+            Employee.user_id.label("user_id"),
+            Employee.reporting_manager_id.label("reporting_manager_id"),
+            Employee.employee_code.label("employee_code"),
+            Employee.first_name.label("first_name"),
+            Employee.last_name.label("last_name"),
+            Employee.gender.label("gender"),
+            Employee.dob.label("dob"),
+            Employee.marital_status.label("marital_status"),
+            Employee.blood_group.label("blood_group"),
+            Employee.department.label("department"),
+            Employee.designation.label("designation"),
+            Employee.employee_type.label("employee_type"),
+            Employee.work_location.label("work_location"),
+            Employee.shift_type.label("shift_type"),
+            Employee.shift_id.label("shift_id"),
+            Employee.doj.label("doj"),
+            Employee.official_email.label("official_email"),
+            Employee.personal_email.label("personal_email"),
+            Employee.mobile.label("mobile"),
+            Employee.alternate_mobile.label("alternate_mobile"),
+            Employee.emergency_contact_name.label("emergency_contact_name"),
+            Employee.emergency_contact_number.label("emergency_contact_number"),
+            Employee.status.label("status"),
+            Employee.created_at.label("created_at")
+        )
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            func.lower(Role.name) != "admin",
+            Employee.status != "Deleted",
+            User.status != "Deleted"
+        )
+    )
 
     if exclude_hr:
         emp_q = emp_q.filter(func.lower(Role.name) != "hr")
@@ -151,16 +171,19 @@ def list_employees(
         emp_q = emp_q.filter(Employee.employee_type == employee_type)
     if status:
         emp_q = emp_q.filter(Employee.status == status)
-    else:
-        emp_q = emp_q.filter(Employee.status != "Deleted")
 
     total = emp_q.count()
 
     paged_records = emp_q.order_by(Employee.id.desc()).offset((page - 1) * limit).limit(limit).all()
 
     paged_data = []
+    from app.models.master_data import Shift
     for r in paged_records:
         r_dict = dict(r._mapping)
+        if r_dict.get("shift_id"):
+            s_obj = db.query(Shift).filter(Shift.id == r_dict["shift_id"]).first()
+            if s_obj:
+                r_dict["shift"] = s_obj
         paged_data.append(r_dict)
 
     return {
@@ -178,7 +201,7 @@ def get_employee_credentials(db: Session, employee_id: int):
         if not hr:
             return None
         user = db.query(User).filter(User.id == hr.user_id).first()
-        if not user:
+        if not user or user.status == "Deleted":
             return None
         emp_code = f"EMP-{hr.user_id:04d}"
         return {
@@ -197,7 +220,7 @@ def get_employee_credentials(db: Session, employee_id: int):
         return None
 
     user = db.query(User).filter(User.id == employee.user_id).first()
-    if not user:
+    if not user or user.status == "Deleted":
         return None
 
     return {
@@ -233,6 +256,10 @@ def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
 
     db.commit()
     db.refresh(employee)
+
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
+
     return employee
 
 def delete_employee(db: Session, employee_id: int) -> bool:
@@ -248,4 +275,8 @@ def delete_employee(db: Session, employee_id: int) -> bool:
         user.status = "Deleted"
         
     db.commit()
+
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
+
     return True

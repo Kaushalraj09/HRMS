@@ -9,12 +9,11 @@ from app.models.approval_log import ApprovalLog
 from app.schemas.timeoff import TimeOffRequestCreate, TimeOffApplyPayload
 from app.services.attendance_service import (
     get_timeoff_duration_for_date,
-    TOTAL_SHIFT_WORKING_HOURS,
     get_today_state,
 )
+from app.domain.attendance.repositories.shift_repository import ShiftRepository
+from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
 
-SHIFT_START = time_type(9, 0)
-SHIFT_END = time_type(18, 0)
 
 def get_timeoff_by_date(db: Session, employee_id: int, target_date: date):
     return db.query(TimeOffRequest).filter(
@@ -33,27 +32,27 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 detail="Time off can only be requested while you are working.",
             )
 
+    shift = ShiftRepository.get_assigned_shift(db, employee_id, request.date)
+    eff_shift = ShiftCalculationService.get_effective_shift(shift)
+    shift_start = eff_shift.start_time or time_type(9, 0)
+    shift_end = eff_shift.end_time or time_type(18, 0)
+    total_shift_working_hours = float(eff_shift.working_hours or 9.0)
+    
     st = request.start_time
     et = request.end_time
 
     if request.leave_type == "Full-Day":
-        duration_hours = float(TOTAL_SHIFT_WORKING_HOURS)
+        duration_hours = total_shift_working_hours
         if st is None:
-            st = SHIFT_START
+            st = shift_start
         if et is None:
-            et = SHIFT_END
+            et = shift_end
     elif request.leave_type == "Half-Day":
-        duration_hours = 4.0
+        duration_hours = total_shift_working_hours / 2
+        # Use provided times if any, otherwise fallback for half-day logic
         if st is None or et is None:
-            st = time_type(9, 0)
-            et = time_type(13, 0)
-        is_first_half = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0)
-        is_second_half = (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
-        if not (is_first_half or is_second_half):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Half-day session must be either 09:00 AM - 01:00 PM or 02:00 PM - 06:00 PM.",
-            )
+            st = shift_start
+            et = eff_shift.lunch_start_time or time_type(13, 0)
     else:
         # Hourly request
         if st is None or et is None:
@@ -66,11 +65,6 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="start_time and end_time must use 30-minute intervals.",
             )
-        if st < SHIFT_START or et > SHIFT_END:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Time off must fall within working hours 09:00–18:00.",
-            )
         if et <= st:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -78,10 +72,10 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
             )
         duration_hours = (et.hour * 60 + et.minute - (st.hour * 60 + st.minute)) / 60.0
 
-    if duration_hours < 0.5 or duration_hours > float(TOTAL_SHIFT_WORKING_HOURS):
+    if duration_hours < 0.5 or duration_hours > total_shift_working_hours:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Requested time should be between 30 minutes (0.5 hrs) and {TOTAL_SHIFT_WORKING_HOURS:.0f} hours."
+            detail=f"Requested time should be between 30 minutes (0.5 hrs) and {total_shift_working_hours:.0f} hours."
         )
 
     # Prevent requesting more than remaining shift balance for today.
@@ -203,8 +197,8 @@ def approve_request(db: Session, request_id: int, action: str, admin_user_id: in
         
         # Override duration if custom/partial approval is provided
         if approved_duration_hours is not None:
-            if approved_duration_hours <= 0 or approved_duration_hours > 8:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Approved duration must be > 0 and <= 8.")
+            if approved_duration_hours <= 0 or approved_duration_hours > 24:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Approved duration must be > 0 and <= 24.")
             req.duration_hours = approved_duration_hours
             
         current_balance = employee.timeoff_balance_hours if employee.timeoff_balance_hours is not None else 80.0
@@ -299,12 +293,18 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
             detail="Cannot request time off for a past date.",
         )
 
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
+    from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
+    shift = ShiftRepository.get_assigned_shift(db, employee_id, payload.date)
+    eff_shift = ShiftCalculationService.get_effective_shift(shift)
+    total_shift_working_hours = float(eff_shift.working_hours or 9.0)
+
     lt = (payload.leave_type or "").strip().lower().replace(" ", "")
     if lt in ("fullday", "full-day"):
         leave_store = "Full-Day"
-        st = SHIFT_START
-        et = SHIFT_END
-        requested = float(TOTAL_SHIFT_WORKING_HOURS)
+        st = eff_shift.start_time
+        et = eff_shift.end_time
+        requested = total_shift_working_hours
     elif lt in ("halfday", "half-day"):
         leave_store = "Half-Day"
         st = payload.start_time
@@ -334,10 +334,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="start_time and end_time must use 30-minute intervals.",
             )
-        if st < SHIFT_START or et > SHIFT_END:
+        if st < eff_shift.start_time or et > eff_shift.end_time:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Time off must fall within working hours 09:00–18:00.",
+                detail=f"Time off must fall within working hours {eff_shift.start_time}–{eff_shift.end_time}.",
             )
         if et <= st:
             raise HTTPException(
@@ -345,10 +345,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 detail="end_time must be after start_time.",
             )
         requested = _duration_hours_between(st, et, payload.date)
-        if requested <= 0 or requested > TOTAL_SHIFT_WORKING_HOURS:
+        if requested <= 0 or requested > total_shift_working_hours:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid requested duration.",
+                detail=f"Hourly request must be between >0 and {total_shift_working_hours} hrs.",
             )
     else:
         raise HTTPException(
@@ -357,11 +357,7 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
         )
 
     approved_so_far = get_timeoff_duration_for_date(db, employee_id, payload.date)
-    if payload.date == date.today():
-        today_state = get_today_state(db, employee_id)
-        remaining_hours = today_state["remainingSeconds"] / 3600.0
-    else:
-        remaining_hours = max(0.0, TOTAL_SHIFT_WORKING_HOURS - approved_so_far)
+    remaining_hours = max(0.0, total_shift_working_hours - approved_so_far)
 
     if requested > remaining_hours + 1e-6:
         raise HTTPException(

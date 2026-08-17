@@ -25,6 +25,7 @@ class Employee(Base):
     employee_type = Column(String(50)) # Full-Time, Contract, etc.
     work_location = Column(String(150))
     shift_type = Column(String(50))
+    shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=True, index=True)
     doj = Column(Date)
     
     # Contact Info
@@ -41,6 +42,7 @@ class Employee(Base):
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
     reporting_manager = relationship("Employee", remote_side=[id], foreign_keys=[reporting_manager_id])
+    shift = relationship("Shift", foreign_keys=[shift_id])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

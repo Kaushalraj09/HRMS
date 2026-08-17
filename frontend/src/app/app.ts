@@ -10,5 +10,5 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   styleUrls: ['./app.css']
 })
 export class App {
-  protected readonly title = signal('frontend');
+  protected readonly title = signal('HRMS');
 }

@@ -150,6 +150,40 @@
   100% { background-position: -200% 0; }
 }
 
+.btn-action {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.btn-delete-sm {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
+}
+
+.btn-delete-sm:hover {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.btn-delete-sm:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.2);
+}
+
 .action-btn-link {
   background: none;
   border: none;

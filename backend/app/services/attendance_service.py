@@ -21,14 +21,7 @@ from app.utils.employee_code import normalize_employee_code
 from app.services.time_calculator import get_attendance_status
 
 # Shift Configuration
-TOTAL_SHIFT_WORKING_HOURS = 9.0  # 09:00 – 18:00
-FIXED_BREAK_MINUTES = 60  # Fixed lunch break
-REQUIRED_SHIFT_MINUTES = 540  # 9 hours = 540 minutes
-
-SHIFT_START = time(9, 0)
-SHIFT_END = time(18, 0)
 APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
-SHIFT_TOTAL_SECONDS = int(TOTAL_SHIFT_WORKING_HOURS * 3600)
 
 
 def calculate_attendance_metrics(attendance: Attendance) -> None:
@@ -42,26 +35,30 @@ def calculate_attendance_metrics(attendance: Attendance) -> None:
 
 
 
-def _shift_elapsed_seconds(now: datetime | None = None) -> int:
+def _shift_elapsed_seconds(now: datetime | None, start_t: time, end_t: time) -> int:
     """
     Calculate elapsed seconds in shift from start to current time.
-    
-    Args:
-        now: Current datetime (default: now in APP_TIMEZONE)
-        
-    Returns:
-        int: Seconds elapsed in shift, capped at shift total
     """
     current = now or datetime.now(APP_TIMEZONE)
     current_seconds = current.hour * 3600 + current.minute * 60 + current.second
-    shift_start_seconds = SHIFT_START.hour * 3600 + SHIFT_START.minute * 60
-    shift_end_seconds = SHIFT_END.hour * 3600 + SHIFT_END.minute * 60
+    shift_start_seconds = start_t.hour * 3600 + start_t.minute * 60
+    shift_end_seconds = end_t.hour * 3600 + end_t.minute * 60
 
-    if current_seconds <= shift_start_seconds:
+    if shift_end_seconds < shift_start_seconds:
+        # Crosses midnight
+        total_sec = (86400 - shift_start_seconds) + shift_end_seconds
+        if current_seconds >= shift_start_seconds:
+            return min(total_sec, current_seconds - shift_start_seconds)
+        elif current_seconds <= shift_end_seconds:
+            return min(total_sec, (86400 - shift_start_seconds) + current_seconds)
         return 0
-    if current_seconds >= shift_end_seconds:
-        return SHIFT_TOTAL_SECONDS
-    return current_seconds - shift_start_seconds
+    else:
+        total_sec = shift_end_seconds - shift_start_seconds
+        if current_seconds <= shift_start_seconds:
+            return 0
+        if current_seconds >= shift_end_seconds:
+            return total_sec
+        return current_seconds - shift_start_seconds
 
 
 def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, punch_in_time, punch_out_time, record_date: date, current_dt=None) -> str:
@@ -399,10 +396,13 @@ def punch_out(
 
 def get_today_state(db: Session, employee_id: int) -> dict:
     """
-    Get current attendance state for today.
+    Get current attendance state for today using assigned Shift Master data.
     """
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
     current = datetime.now(APP_TIMEZONE)
     today = current.date()
+    
+    shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
     
     attendance = (
         db.query(Attendance)
@@ -411,39 +411,47 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     )
     
     if not attendance:
-        # Automatically register that the employee has logged in today by creating a pre-punch record
+        # Automatically register pre-punch record
         attendance = Attendance(
             employee_id=employee_id,
+            shift_id=shift.id,
             date=today,
             is_working=0,
             work_mode="Office",
-            status=get_attendance_status(None, None, today, current),
+            status=get_attendance_status(None, None, today, current, shift=shift),
         )
         db.add(attendance)
         db.commit()
         db.refresh(attendance)
+    elif not attendance.shift_id:
+        attendance.shift_id = shift.id
+        db.commit()
         
     # Calculate total worked seconds
     worked_seconds = 0
     if attendance and attendance.punch_in and attendance.punch_out:
-        # Full session completed
         check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
         check_out_dt = datetime.combine(today, attendance.punch_out, tzinfo=APP_TIMEZONE)
         worked_seconds = int((check_out_dt - check_in_dt).total_seconds())
     elif attendance and attendance.punch_in and attendance.is_working:
-        # Active session - calculate time from check_in to now
         check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
         worked_seconds = int((current - check_in_dt).total_seconds())
     
-    # Get approved time-off hours
     approved_hours = get_timeoff_duration_today(db, employee_id)
     approved_seconds = int(round(approved_hours * 3600))
     
-    # Calculate remaining seconds = shift total - worked - approved
-    remaining_seconds = max(0, SHIFT_TOTAL_SECONDS - worked_seconds - approved_seconds)
+    shift_total_seconds = (shift.required_work_minutes or 480) * 60
+    remaining_seconds = max(0, shift_total_seconds - worked_seconds - approved_seconds)
     
-    # Calculate shift elapsed time
-    shift_elapsed_seconds = _shift_elapsed_seconds(current)
+    # Strict reliance on assigned shift timings
+    shift_start_time = shift.start_time
+    shift_end_time = shift.end_time
+    if not shift_start_time or not shift_end_time:
+        # Fallback only for data integrity issues, but logic demands shift times
+        shift_start_time = shift_start_time or time(9, 0)
+        shift_end_time = shift_end_time or time(18, 0)
+        
+    shift_elapsed_seconds = _shift_elapsed_seconds(current, shift_start_time, shift_end_time)
     
     # Check if yesterday was auto checked out and has not yet been regularized
     from datetime import timedelta
@@ -456,8 +464,6 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     yesterday_auto_checked_out = False
     if yesterday_rec and yesterday_rec.requires_regularization and "AUTO_CHECKOUT" in yesterday_rec.flags:
         yesterday_auto_checked_out = True
-        
-        # Suppress banner if regularization request is already pending
         from app.models.attendance import AttendanceRegularizationRequest
         pending_request = (
             db.query(AttendanceRegularizationRequest)
@@ -471,7 +477,10 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         if pending_request:
             yesterday_auto_checked_out = False
     
-    # Prepare response
+    # Calculate lunch timings
+    from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
+    lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(shift)
+
     return {
         "employeeId": employee_id,
         "isWorking": bool(attendance and attendance.is_working),
@@ -479,10 +488,16 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "totalWorkedSeconds": worked_seconds,
         "approvedSeconds": approved_seconds,
         "remainingSeconds": remaining_seconds,
-        "shiftTotalSeconds": SHIFT_TOTAL_SECONDS,
+        "shiftTotalSeconds": shift_total_seconds,
         "shiftElapsedSeconds": shift_elapsed_seconds,
-        "shiftStart": SHIFT_START.strftime("%I:%M %p"),
-        "shiftEnd": SHIFT_END.strftime("%I:%M %p"),
+        "shiftStart": shift_start_time.strftime("%I:%M %p"),
+        "shiftEnd": shift_end_time.strftime("%I:%M %p"),
+        "shiftName": shift.name,
+        "shiftCode": shift.code,
+        "lunchStart": lunch_start.strftime("%I:%M %p"),
+        "lunchEnd": lunch_end.strftime("%I:%M %p"),
+        "graceMinutes": shift.grace_minutes or 30,
+        "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
         "workMode": attendance.work_mode if attendance else "Office",
         "punchIn": attendance.punch_in if attendance else None,
         "punchOut": attendance.punch_out if attendance else None,
@@ -499,6 +514,9 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "requiresRegularization": attendance.requires_regularization if attendance else False,
         "overtimeApproved": attendance.overtime_approved if attendance else False,
         "overtimeExtended": attendance.overtime_extended if attendance else False,
+        "maxOvertimeMinutes": shift.max_overtime_minutes or 120,
+        "overtimeAllowed": shift.overtime_allowed if shift.overtime_allowed is not None else True,
+        "overtimeStartTime": (shift.overtime_start_time or shift_end_time).strftime("%I:%M %p"),
     }
 
 def _normalize_attendance_status(status: str) -> str:
@@ -594,20 +612,51 @@ def get_my_history(
 
 def to_attendance_response(record: Attendance, db: Session = None) -> AttendanceResponse:
     """
-    Convert attendance record to response schema.
+    Convert attendance record to response schema with dynamic shift information.
     """
     calculate_attendance_metrics(record)
     
-    # Calculate late minutes and early exit minutes
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
     from app.services.time_calculator import calculate_late_minutes, calculate_early_exit_minutes
-    late_minutes = calculate_late_minutes(record.punch_in)
-    early_exit_minutes = calculate_early_exit_minutes(record.punch_out)
-    
+
+    shift_obj = record.shift
+    if not shift_obj and db:
+        shift_obj = ShiftRepository.get_assigned_shift(db, record.employee_id, record.date)
+
+    late_minutes = calculate_late_minutes(record.punch_in, shift_obj)
+    early_exit_minutes = calculate_early_exit_minutes(record.punch_out, shift_obj)
     status_val = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
     
+    emp_name = None
+    if record.employee:
+        emp_name = f"{record.employee.first_name} {record.employee.last_name}".strip()
+    elif db:
+        emp = db.query(Employee).filter(Employee.id == record.employee_id).first()
+        if emp:
+            emp_name = f"{emp.first_name} {emp.last_name}".strip()
+
+    shift_dict = None
+    if shift_obj:
+        shift_dict = {
+            "id": shift_obj.id,
+            "name": shift_obj.name,
+            "code": shift_obj.code,
+            "start_time": shift_obj.start_time.strftime("%H:%M") if shift_obj.start_time else "09:00",
+            "end_time": shift_obj.end_time.strftime("%H:%M") if shift_obj.end_time else "18:00",
+            "working_hours": float(shift_obj.working_hours or 8.0),
+            "grace_minutes": shift_obj.grace_minutes or 30,
+            "lunch_duration": shift_obj.lunch_duration_minutes or 40,
+            "half_day_hours": float(shift_obj.half_day_hours or 4.0),
+            "present_hours": float(shift_obj.present_hours or 8.0),
+            "is_night_shift": bool(shift_obj.is_night_shift),
+        }
+
     return AttendanceResponse(
         id=record.id,
         employee_id=record.employee_id,
+        shift_id=shift_obj.id if shift_obj else None,
+        employee=emp_name or f"Employee #{record.employee_id}",
+        shift=shift_dict,
         date=record.date,
         scheduled_start=record.scheduled_start,
         scheduled_end=record.scheduled_end,
@@ -1033,7 +1082,11 @@ def get_employee_analytics(db: Session) -> list[dict]:
         db.query(Employee)
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
-        .filter(func.lower(Role.name).in_(["employee", "hr"]))
+        .filter(
+            func.lower(Role.name).in_(["employee", "hr"]),
+            Employee.status != "Deleted",
+            User.status != "Deleted"
+        )
         .all()
     )
     

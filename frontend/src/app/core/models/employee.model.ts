@@ -27,6 +27,8 @@ export interface Employee {
   bloodGroup: string;
   workLocation: string;
   shiftType: string;
+  shiftId?: number | null;
+  shift?: { id: number, name: string, code: string } | null;
   doj: string;
 }
 
@@ -54,6 +56,7 @@ export interface EmployeePayload {
     designation: string;
     workLocation: string;
     shiftType: string;
+    shiftId?: number | null;
     doj: string;
     reportingManagerId?: string | null;
     employeeCode?: string;

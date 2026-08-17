@@ -79,6 +79,9 @@ class AttendanceResponse(BaseModel):
 
     id: int
     employee_id: int = Field(alias="employeeId")
+    shift_id: Optional[int] = Field(default=None, alias="shiftId")
+    employee: Optional[str] = Field(default=None)
+    shift: Optional[dict] = Field(default=None)
     date: date
     scheduled_start: Optional[time] = Field(default=None, alias="scheduledStart")
     scheduled_end: Optional[time] = Field(default=None, alias="scheduledEnd")
@@ -162,6 +165,12 @@ class TodayAttendanceState(BaseModel):
     shift_elapsed_seconds: int = Field(alias="shiftElapsedSeconds")
     shift_start: str = Field(alias="shiftStart")
     shift_end: str = Field(alias="shiftEnd")
+    shift_name: Optional[str] = Field(default=None, alias="shiftName")
+    shift_code: Optional[str] = Field(default=None, alias="shiftCode")
+    lunch_start: Optional[str] = Field(default=None, alias="lunchStart")
+    lunch_end: Optional[str] = Field(default=None, alias="lunchEnd")
+    grace_minutes: Optional[int] = Field(default=None, alias="graceMinutes")
+    lunch_duration_minutes: Optional[int] = Field(default=None, alias="lunchDurationMinutes")
     work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
     
     # Optional punch times and location
@@ -184,6 +193,9 @@ class TodayAttendanceState(BaseModel):
     requires_regularization: bool = Field(default=False, alias="requiresRegularization")
     overtime_approved: bool = Field(default=False, alias="overtimeApproved")
     overtime_extended: bool = Field(default=False, alias="overtimeExtended")
+    max_overtime_minutes: Optional[int] = Field(default=120, alias="maxOvertimeMinutes")
+    overtime_allowed: bool = Field(default=True, alias="overtimeAllowed")
+    overtime_start_time: Optional[str] = Field(default=None, alias="overtimeStartTime")
 
     @field_validator("requires_regularization", mode="before")
     @classmethod
@@ -319,6 +331,8 @@ class EmployeeLocationResponse(BaseModel):
 
     employee_id: int = Field(alias="employeeId")
     employee_name: str = Field(alias="employeeName")
+    designation: Optional[str] = Field(default="Team Member", alias="designation")
+    department: Optional[str] = Field(default="", alias="department")
     latitude: float
     longitude: float
     city: str
@@ -326,5 +340,5 @@ class EmployeeLocationResponse(BaseModel):
     punch_in_time: Optional[str] = Field(default=None, alias="punchInTime")
     punch_out_time: Optional[str] = Field(default=None, alias="punchOutTime")
     work_mode: str = Field(alias="workMode")  # 'FIELD', 'OFFICE', 'REMOTE'
-    status: str  # 'ACTIVE', 'PUNCHED_OUT', 'LATE'
+    status: str  # 'ACTIVE', 'WORKING', 'PUNCHED_OUT', 'LATE', 'ON_LEAVE', 'ABSENT'
 

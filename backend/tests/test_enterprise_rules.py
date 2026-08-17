@@ -117,10 +117,27 @@ def test_enterprise_half_day_minimum_hours():
     # Gross = 2h 30m (150 mins)
     # Lunch overlap = 0 (punched out before lunch start 13:00)
     # Net = 150 mins (>= 120 mins, < 480 mins) -> Half Day
+    from app.models.master_data import Shift
+    custom_shift = Shift(
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+        working_hours=8.0,
+        required_work_minutes=480,
+        grace_minutes=15,
+        lunch_duration_minutes=60,
+        half_day_hours=2.0,
+        minimum_half_day_minutes=120,
+        present_hours=8.0,
+        minimum_present_minutes=480,
+        late_mark_after_minutes=15,
+        early_exit_before_minutes=0,
+        is_night_shift=False
+    )
     att = Attendance(
         date=date(2026, 6, 4),
         punch_in=time(9, 0),
-        punch_out=time(11, 30)
+        punch_out=time(11, 30),
+        shift=custom_shift
     )
     calculate_times(att)
     assert att.total_working_minutes == 150

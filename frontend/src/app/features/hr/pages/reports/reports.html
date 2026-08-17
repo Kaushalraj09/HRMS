@@ -2,13 +2,13 @@
   <!-- Header -->
   <div class="reports-header animate-fade-in">
     <div class="header-titles">
-      <span class="breadcrumb">HR Dashboard / Reports</span>
+      <span class="page-kicker"><i class="fas fa-chart-line"></i> Workforce intelligence</span>
       <h1>Reports &amp; Exports</h1>
       <p class="subtitle">Generate detailed logs, track metrics, and export compliance sheets.</p>
     </div>
     <div class="header-actions">
       <button class="btn btn-export" (click)="exportCsv()" [disabled]="totalItems === 0 || isLoading">
-        <i class="fas fa-file-pdf"></i> Export to PDF
+        <i class="fas fa-file-export"></i> Export report
       </button>
     </div>
   </div>
@@ -31,6 +31,13 @@
 
   <!-- Filters Panel -->
   <div class="filters-card animate-fade-in">
+    <div class="filters-heading">
+      <div>
+        <span class="section-label">Refine results</span>
+        <p>Choose a date range, department, or employee to focus the report.</p>
+      </div>
+      <i class="fas fa-sliders-h"></i>
+    </div>
     <div class="filters-grid">
       <!-- Search -->
       <div class="filter-group">

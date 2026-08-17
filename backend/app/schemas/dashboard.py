@@ -12,10 +12,77 @@ class DashboardRecentItem(BaseModel):
     tertiary: str
     status: str
 
+class DepartmentDistributionItem(BaseModel):
+    name: str
+    count: int
+    percentage: float
+    color: str
+
+class MonthlyHiringItem(BaseModel):
+    month: str
+    count: int
+
+class AttendanceOverviewPoint(BaseModel):
+    date: str
+    percentage: float
+    present: int
+    total: int
+
+class RecentJoinerItem(BaseModel):
+    id: int
+    name: str
+    designation: str
+    department: str
+    doj: str
+    avatar: Optional[str] = None
+    initials: str
+
+class BirthdayItem(BaseModel):
+    id: int
+    name: str
+    designation: str
+    department: str
+    dob: str
+    avatar: Optional[str] = None
+    initials: str
+    isToday: bool = False
+
+class PendingApprovalsSummary(BaseModel):
+    leaveRequests: int
+    timeOffRequests: int
+    regularizationRequests: int
+    expenseClaims: int
+
+class AdminProfileInfo(BaseModel):
+    name: str
+    code: str
+    role: str
+    department: str
+    shift: str
+    status: str
+
 class AdminDashboardData(BaseModel):
     cards: List[DashboardCard]
     hrUsers: List[DashboardRecentItem]
     employees: List[DashboardRecentItem]
+    
+    # Enhanced dynamic fields
+    totalEmployees: Optional[int] = None
+    employeeGrowthCount: Optional[int] = None
+    employeeGrowthRate: Optional[float] = None
+    attendanceRate: Optional[float] = None
+    attendanceGrowthRate: Optional[float] = None
+    pendingLeavesCount: Optional[int] = None
+    payrollStatus: Optional[str] = None
+    payrollPeriod: Optional[str] = None
+    
+    adminProfile: Optional[AdminProfileInfo] = None
+    attendanceOverview: Optional[List[AttendanceOverviewPoint]] = None
+    departmentDistribution: Optional[List[DepartmentDistributionItem]] = None
+    monthlyHiringTrend: Optional[List[MonthlyHiringItem]] = None
+    recentJoiners: Optional[List[RecentJoinerItem]] = None
+    todayBirthdays: Optional[List[BirthdayItem]] = None
+    pendingApprovals: Optional[PendingApprovalsSummary] = None
 
 class QuickStat(BaseModel):
     total: int

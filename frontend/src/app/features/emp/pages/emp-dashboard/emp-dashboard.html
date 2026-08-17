@@ -1,25 +1,22 @@
 <div class="Emp_dashboard">
-    <app-navbar [userName]="userName" [searchValue]="searchTerm" (hamburgerClick)="toggleSidebar()"
-        (searchChange)="onSearch($event)" (profileClick)="openProfile()">
-    </app-navbar>
-    <div class="dashboard-layout">
-        <app-emp-sidebar>
-        </app-emp-sidebar>
+    <!-- Left Sidebar: Full Height (0 to 100vh) starting from top left screen -->
+    <app-emp-sidebar></app-emp-sidebar>
+
+    <!-- Right Content Wrapper: Navbar + Dashboard Page Content -->
+    <div class="dashboard-right-wrapper">
+        <app-navbar [userName]="userName" [searchValue]="searchTerm" (hamburgerClick)="toggleSidebar()"
+            (searchChange)="onSearch($event)" (profileClick)="openProfile()">
+        </app-navbar>
+
         <div class="main-content" [class.expanded]="!(isEmpSidebarOpen$ | async)">
             <div class="page-content">
                 <router-outlet></router-outlet>
+                
                 <ng-container *ngIf="isDashboardHome">
+                    
+                    <!-- Admin View-Only Banner -->
                     <div class="view-only-banner" *ngIf="isAdmin">
                         <i class="fas fa-eye"></i> View-Only Mode (Admin Reference)
-                    </div>
-                    <div class="card timezone">
-
-                        <div class="empname">
-                            Welcome, {{ userName }}
-                        </div>
-                        <div class="pertime">
-                            {{ currentDate | date:'EEEE, MMMM d, y \'at\' hh:mm:ss a':'Asia/Kolkata' }}
-                        </div>
                     </div>
 
                     <!-- Shift End Reminder Banner -->
@@ -60,425 +57,670 @@
                         </div>
                     </div>
 
-                    <!-- Mark Attendence and Request Time off -->
-                    <div class="mark_attendence_request_time">
-                        <div class="card Mark_attendance">
-                            <div class="card-header">
-                                <span>Mark Attendance</span>
-                                <div class="status-buttons">
-                                    <button class="status-btn work" [class.active]="status === 'Office'"
-                                        [disabled]="punchInTime !== null || isAdmin"
-                                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Office'"
-                                        (click)="requestSwitchWorkMode('Office')">
-                                        <span class="dot"></span> Office
-                                    </button>
-                                    <button class="status-btn break" [class.active]="status === 'Remote'"
-                                        [disabled]="punchInTime !== null || isAdmin"
-                                        [title]="punchInTime !== null ? 'Working mode is locked after punch-in' : isAdmin ? 'View-Only Mode' : 'Set to Remote'"
-                                        (click)="requestSwitchWorkMode('Remote')">
-                                        <span class="dot"></span> Remote
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="divider"></div>
-                            <!-- Auto Checked-out Warning Banner -->
-                            <div class="auto-checkout-banner" *ngIf="attendanceStatusLabel === 'Auto Checked-out'">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span>Forgot to check out yesterday. Checked out automatically. Please contact HR to correct.</span>
-                            </div>
-                            <div class="punch-container">
-                                <div class="punch-dial" [class.punch-dial--busy]="isPunchSaving">
-                                    <svg class="punch-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg"
-                                        aria-hidden="true">
-                                        <defs>
-                                            <linearGradient id="punchProgressGradient" x1="40" y1="180" x2="180" y2="40"
-                                                gradientUnits="userSpaceOnUse">
-                                                <stop offset="0%" stop-color="#e11d48" />
-                                                <stop offset="55%" stop-color="#c2185b" />
-                                                <stop offset="100%" stop-color="#5b21b6" />
-                                            </linearGradient>
-                                            <linearGradient id="overtimeProgressGradient" x1="40" y1="180" x2="180" y2="40"
-                                                gradientUnits="userSpaceOnUse">
-                                                <stop offset="0%" stop-color="#f59e0b" />
-                                                <stop offset="50%" stop-color="#d97706" />
-                                                <stop offset="100%" stop-color="#b45309" />
-                                            </linearGradient>
-                                        </defs>
-                                        <g transform="rotate(-90 110 110)">
-                                            <circle class="ring-arc ring-arc--track" cx="110" cy="110" r="104"
-                                                fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
-                                                stroke-dasharray="100" stroke-dashoffset="0" />
-                                            <circle class="ring-arc ring-arc--progress"
-                                                [class.ring-arc--overtime-progress]="overtimeApproved" cx="110" cy="110" r="104"
-                                                fill="none" stroke-width="13" stroke-linecap="round" pathLength="100"
-                                                stroke-dasharray="100" [attr.stroke-dashoffset]="progressDashOffset" />
-                                        </g>
-                                    </svg>
-                                    <button type="button" class="inner-circle"
-                                        [class.inner-circle--out-action]="isPunchedIn && !overtimeApproved"
-                                        [class.inner-circle--overtime-out-action]="isPunchedIn && overtimeApproved"
-                                        [class.inner-circle--in-action]="!isPunchedIn"
-                                        [class.inner-circle--disabled]="isPunchDisabled" [disabled]="isPunchDisabled"
-                                        (click)="togglePunch()">
-                                        <span class="punch-text">
-                                            <span class="punch-text__line">Punch</span>
-                                            <span class="punch-text__line punch-text__action">{{ isPunchedIn ? 'Out' :
-                                                'In' }}</span>
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="attendance-live">
-                                <div class="attendance-live__status" [title]="attendanceStatusLabel"
-                                    [class.attendance-live__status--working]="isPunchedIn && !overtimeApproved"
-                                    [class.attendance-live__status--overtime]="isPunchedIn && overtimeApproved">
-                                    {{ overtimeApproved ? 'Overtime Working' : attendanceStatusLabel }}
-                                </div>
-                                <div class="attendance-live__location"
-                                    *ngIf="punchInTime && (punchOutAddress || punchInAddress)">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span>{{ punchOutAddress || punchInAddress }}</span>
-                                </div>
-                                <div class="attendance-live__timer">{{ liveTimerDisplay }}</div>
-                                <div class="attendance-live__meta">
-                                    <span>{{ overtimeApproved ? 'Overtime elapsed' : 'Shift elapsed' }}: {{ shiftElapsedDisplay }}</span>
-                                    <span>Worked: {{ totalWorkedTodayDisplay }}</span>
-                                </div>
-                            </div>
-                            <p class="punch-message" *ngIf="punchMessage">{{ punchMessage }}</p>
+                    <!-- Global Punch / Action Alert Toast -->
+                    <div class="punch-alert-toast" *ngIf="punchMessage && !showCameraModal">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>{{ punchMessage }}</span>
+                        <button type="button" class="close-toast-btn" (click)="punchMessage = ''" aria-label="Close message"><i class="fas fa-times"></i></button>
+                    </div>
 
-                        </div>
-                        <div class="card request_time_off">
-                            <div class="card-header">
-                                <span>Time Off Management</span>
-                            </div>
-                            <div class="divider"></div>
-                            <div class="stats">
-                                <div class="stat-box">
-                                    <h2>{{ approvedHoursDisplay }}</h2>
-                                    <p>Approved Time</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h2>{{ remainingHoursDisplay }}</h2>
-                                    <p>{{ overtimeApproved ? 'Overtime Left' : 'Remaining Time' }}</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h2>{{ requestedTimeDisplay }}</h2>
-                                    <p>Requested Time</p>
-                                </div>
-                            </div>
-
-                            <div class="timeoff-inline" style="display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
-                                <p class="timeoff-inline__hint" style="margin-bottom: 20px; font-size: 13px; color: #64748b; line-height: 1.5;">Request leaves, hourly time off, or single/multi-day leaves via formal HRMS pipelines.</p>
-                                <a routerLink="/emp-dashboard/time-off" class="apply-btn timeoff-inline__submit" style="margin-top: auto; display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box;">
-                                    Request time off
-                                </a>
+                    <!-- TOP GREETING HEADER -->
+                    <div class="greeting-header-bar">
+                        <div class="greeting-left">
+                            <h2 class="greeting-title">Good {{ greetingTime }}, {{ userName || 'Employee' }} 👋</h2>
+                            <div class="greeting-date-row">
+                                <span class="current-date-text">{{ currentDate | date:'EEEE, d MMMM yyyy':'Asia/Kolkata' }}</span>
+                                <span class="working-day-badge" [class.off-day-badge]="!isTodayWorkingDay">{{ isTodayWorkingDay ? 'Working Day' : 'Weekly Off / Holiday' }}</span>
                             </div>
                         </div>
                     </div>
-                    <div class="calendar_body">
-                        <div class="card calender_container">
-                            <div class="calendar-left">
-                                <div class="calendar-header-info">
-                                    <h2>{{ viewDate | date:'MMMM yyyy' }}</h2>
-                                    <p>Week {{ weekNumber }}</p>
-                                </div>
-                                <mwl-calendar-month-view [viewDate]="viewDate" [events]="calendarEvents"
-                                    (dayClicked)="isAdmin ? null : onDayClick($event.day)">
-                                </mwl-calendar-month-view>
-                            </div>
-                            <div class="calendar-right">
-                                <h3>Schedule for {{ selectedDate | date:'EEE, MMM d' }}</h3>
 
-                                <div class="timeline-container">
-                                    <div *ngFor="let event of selectedEvents" class="event-item" [ngClass]="event.type">
-                                        <div class="marker-section">
-                                            <div class="dot"></div>
-                                            <div class="line"></div>
+                    <!-- TOP 5 KPI METRICS ROW -->
+                    <div class="top-kpi-row">
+                        <!-- Card 1: Today's Attendance -->
+                        <div class="kpi-metric-card">
+                            <div class="kpi-icon-wrap blue-theme">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            </div>
+                            <div class="kpi-info-wrap">
+                                <span class="kpi-label">Today's Attendance</span>
+                                <div class="kpi-value-row">
+                                    <span class="kpi-main-val">{{ punchInTime || 'Not Marked' }}</span>
+                                    <span class="kpi-pill-badge" [ngClass]="isPunchedIn ? 'green-pill' : 'gray-pill'">{{ isPunchedIn ? 'Working' : 'Not Marked' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Today's Work Hours -->
+                        <div class="kpi-metric-card">
+                            <div class="kpi-icon-wrap green-theme">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            </div>
+                            <div class="kpi-info-wrap">
+                                <span class="kpi-label">Today's Work Hours</span>
+                                <div class="kpi-value-row">
+                                    <span class="kpi-main-val">{{ totalWorkedTodayDisplay }}</span>
+                                </div>
+                                <div class="target-progress-bar">
+                                    <div class="progress-track"><div class="progress-fill" [style.width.%]="workProgressPercent"></div></div>
+                                    <span class="target-text">Target: 09h 00m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: This Month Attendance -->
+                        <div class="kpi-metric-card">
+                            <div class="kpi-icon-wrap purple-theme">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            </div>
+                            <div class="kpi-info-wrap">
+                                <span class="kpi-label">This Month Attendance</span>
+                                <div class="kpi-value-row">
+                                    <span class="kpi-main-val">{{ monthPresentDays }} / {{ monthTotalWorkingDays }} Days</span>
+                                </div>
+                                <span class="kpi-subtext purple-text">{{ monthAttendancePercentage }}%</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Leave Balance -->
+                        <div class="kpi-metric-card">
+                            <div class="kpi-icon-wrap orange-theme">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            </div>
+                            <div class="kpi-info-wrap">
+                                <span class="kpi-label">Leave Balance</span>
+                                <div class="kpi-value-row">
+                                    <span class="kpi-main-val">{{ leaveBalanceDays }} Days</span>
+                                </div>
+                                <span class="kpi-subtext gray-text">Available</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 5: Pending Requests -->
+                        <div class="kpi-metric-card">
+                            <div class="kpi-icon-wrap red-theme">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            </div>
+                            <div class="kpi-info-wrap">
+                                <span class="kpi-label">Pending Requests</span>
+                                <div class="kpi-value-row">
+                                    <span class="kpi-main-val">{{ pendingRequestsCount }}</span>
+                                </div>
+                                <span class="kpi-subtext gray-text">Awaiting approval</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- ROW 2: ATTENDANCE PUNCH | TODAY'S SCHEDULE | LEAVE BALANCE -->
+                    <div class="dashboard-grid-row row-2">
+                        
+                        <!-- Col 1: Today's Attendance Arc Punch Card -->
+                        <div class="dashboard-card col-punch">
+                            <div class="card-head-row">
+                                <span class="card-head-title">Today's Attendance</span>
+                                <div class="work-mode-pill-toggle">
+                                    <button type="button" class="mode-pill-btn office-btn" [class.active]="status === 'Office'" (click)="requestSwitchWorkMode('Office')">
+                                        <span class="mode-dot"></span> Office
+                                    </button>
+                                    <button type="button" class="mode-pill-btn remote-btn" [class.active]="status === 'Remote'" (click)="requestSwitchWorkMode('Remote')">
+                                        <span class="mode-dot"></span> Remote
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="punch-arc-center-container">
+                                <div class="punch-dial-wrapper">
+                                    <svg class="punch-arc-svg" viewBox="0 0 200 200">
+                                        <path class="arc-bg" d="M 30 170 A 90 90 0 1 1 170 170" fill="none" stroke="#F1F5F9" stroke-width="14" stroke-linecap="round"/>
+                                        <path class="arc-progress" d="M 30 170 A 90 90 0 1 1 170 170" fill="none" stroke="url(#arcBluePurple)" stroke-width="14" stroke-linecap="round" stroke-dasharray="424" [attr.stroke-dashoffset]="arcDashOffset"/>
+                                        <defs>
+                                            <linearGradient id="arcBluePurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#2563EB" />
+                                                <stop offset="60%" stop-color="#7C3AED" />
+                                                <stop offset="100%" stop-color="#C026D3" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                    <button type="button" class="punch-inner-btn" (click)="togglePunch()" [disabled]="isPunchDisabled">
+                                        <div class="fingerprint-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="1.8"><path d="M12 12c0-3 2.5-5.5 5.5-5.5S23 9 23 12c0 4.5-3 7.5-6.5 10.5"/><path d="M12 12c0-3-2.5-5.5-5.5-5.5S1 9 1 12c0 4.5 3 7.5 6.5 10.5"/><path d="M12 7c0-2 1.5-3.5 3.5-3.5S19 5 19 7c0 3.5-2 6-4.5 8.5"/><path d="M12 7c0-2-1.5-3.5-3.5-3.5S5 5 5 7c0 3.5 2 6 4.5 8.5"/><path d="M12 2v2"/></svg>
                                         </div>
-                                        <div class="event-info">
-                                            <div class="time">{{ event.time }}</div>
-                                            <div class="title">{{ event.title }}</div>
-                                            <div class="location">{{ event.location }}</div>
-                                        </div>
+                                        <span class="punch-label-action">{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</span>
+                                        <span class="punch-label-status">{{ attendanceStatusLabel || (isPunchedIn ? 'Punched In' : 'Not Marked') }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="shift-time-centered">
+                                <span class="shift-lbl">Shift Time</span>
+                                <span class="shift-val">{{ shiftStart }} – {{ shiftEnd }}</span>
+                            </div>
+
+                            <div class="punch-footer-strip">
+                                <div class="shift-stats-divider">
+                                    <div class="stat-col left-col">
+                                        <span class="sc-lbl">Shift Elapsed</span>
+                                        <span class="sc-val">{{ shiftElapsedDisplay }}</span>
+                                    </div>
+                                    <div class="stat-col right-col">
+                                        <span class="sc-lbl">Worked</span>
+                                        <span class="sc-val">{{ totalWorkedTodayDisplay }}</span>
+                                    </div>
+                                </div>
+                                <div class="location-verified-bar">
+                                    <div class="loc-left-wrap">
+                                        <span class="loc-label"><i class="fas fa-map-marker-alt"></i> Location</span>
+                                        <span class="loc-text"><i class="fas fa-map-marker-alt"></i> {{ punchInAddress || 'AiVan 360 Office, Delhi' }}</span>
+                                    </div>
+                                    <span class="loc-badge">Location Verified</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2: Today's Schedule -->
+                        <div class="dashboard-card col-schedule">
+                            <div class="card-head-row">
+                                <span class="card-head-title">{{ isSelectedDateToday ? "Today's Schedule" : ("Schedule – " + (selectedDate | date:'dd MMM yyyy')) }}</span>
+                                <a routerLink="/emp-dashboard/my-attendance" class="card-head-link">View Full Schedule →</a>
+                            </div>
+
+                            <div class="schedule-timeline-list">
+                                <div class="schedule-item">
+                                    <span class="sch-time">{{ shiftStart }}</span>
+                                    <div class="sch-track">
+                                        <div class="sch-line line-down"></div>
+                                        <span class="sch-dot blue-dot"></span>
+                                    </div>
+                                    <div class="sch-details">
+                                        <span class="sch-title">{{ shiftName || 'General Shift' }}</span>
+                                        <span class="sch-sub">{{ status || 'Office' }}</span>
+                                    </div>
+                                    <span class="sch-span">{{ shiftStart }} - {{ lunchStart }}</span>
+                                </div>
+
+                                <div class="schedule-item">
+                                    <span class="sch-time">{{ lunchStart }}</span>
+                                    <div class="sch-track">
+                                        <div class="sch-line line-both"></div>
+                                        <span class="sch-dot orange-dot"></span>
+                                    </div>
+                                    <div class="sch-details">
+                                        <span class="sch-title">Lunch Break</span>
+                                    </div>
+                                    <span class="sch-span">{{ lunchStart }} - {{ lunchEnd }}</span>
+                                </div>
+
+                                <div class="schedule-item">
+                                    <span class="sch-time">{{ lunchEnd }}</span>
+                                    <div class="sch-track">
+                                        <div class="sch-line line-both"></div>
+                                        <span class="sch-dot blue-dot"></span>
+                                    </div>
+                                    <div class="sch-details">
+                                        <span class="sch-title">{{ shiftName || 'General Shift' }}</span>
+                                        <span class="sch-sub">{{ status || 'Office' }}</span>
+                                    </div>
+                                    <span class="sch-span">{{ lunchEnd }} - {{ shiftEnd }}</span>
+                                </div>
+
+                                <div class="schedule-item">
+                                    <span class="sch-time">{{ shiftEnd }}</span>
+                                    <div class="sch-track">
+                                        <div class="sch-line line-up"></div>
+                                        <span class="sch-dot purple-dot"></span>
+                                    </div>
+                                    <div class="sch-details">
+                                        <span class="sch-title">Overtime <span class="sch-title-muted">(If Required)</span></span>
+                                    </div>
+                                    <span class="sch-span">{{ shiftEnd }} Onwards</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 3: Leave Balance -->
+                        <div class="dashboard-card col-leave-balance">
+                            <div class="card-head-row">
+                                <span class="card-head-title">Leave Balance</span>
+                                <a routerLink="/emp-dashboard/time-off" class="card-head-link">Apply Leave →</a>
+                            </div>
+
+                            <div class="leave-balance-rows">
+                                <div class="lb-row-item">
+                                    <div class="lb-left">
+                                        <div class="lb-icon-circle blue-icon">C</div>
+                                        <span class="lb-name">Casual Leave</span>
+                                    </div>
+                                    <span class="lb-days-val blue-days">{{ formatTwoDigits(casualLeaveBalanceDays) }} <small>Days</small></span>
+                                </div>
+
+                                <div class="lb-row-item">
+                                    <div class="lb-left">
+                                        <div class="lb-icon-circle green-icon">S</div>
+                                        <span class="lb-name">Sick Leave</span>
+                                    </div>
+                                    <span class="lb-days-val green-days">{{ formatTwoDigits(sickLeaveBalanceDays) }} <small>Days</small></span>
+                                </div>
+
+                                <div class="lb-row-item">
+                                    <div class="lb-left">
+                                        <div class="lb-icon-circle orange-icon">E</div>
+                                        <span class="lb-name">Earned Leave</span>
+                                    </div>
+                                    <span class="lb-days-val orange-days">{{ formatTwoDigits(earnedLeaveBalanceDays) }} <small>Days</small></span>
+                                </div>
+                            </div>
+
+                            <div class="leave-balance-footer-total">
+                                <span class="total-lbl">Total Available</span>
+                                <span class="total-val">{{ formatTwoDigits(totalAvailableLeaveDays) }} <small>Days</small></span>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- ROW 3: CALENDAR | ATTENDANCE TREND | MY RECENT REQUESTS -->
+                    <div class="dashboard-grid-row row-3">
+                        
+                        <!-- Col 1: My Attendance Calendar -->
+                        <div class="dashboard-card col-calendar">
+                            <div class="card-head-row">
+                                <span class="card-head-title"><i class="far fa-calendar-alt calendar-head-icon"></i> My Attendance – {{ viewDate | date:'MMMM yyyy' }}</span>
+                                <div class="cal-nav-btns">
+                                    <button type="button" class="cal-arrow-btn" (click)="prevMonth()" title="Previous Month">&lt;</button>
+                                    <button type="button" class="cal-arrow-btn" (click)="nextMonth()" title="Next Month">&gt;</button>
+                                </div>
+                            </div>
+
+                            <div class="mini-calendar-grid">
+                                <div class="cal-day-header">SUN</div>
+                                <div class="cal-day-header">MON</div>
+                                <div class="cal-day-header">TUE</div>
+                                <div class="cal-day-header">WED</div>
+                                <div class="cal-day-header">THU</div>
+                                <div class="cal-day-header">FRI</div>
+                                <div class="cal-day-header">SAT</div>
+
+                                <div *ngFor="let day of calendarDays" 
+                                     class="cal-date-cell" 
+                                     [class.prev-month]="!day.isCurrentMonth && day.statusClass === 'prev-month'"
+                                     [class.next-month]="!day.isCurrentMonth && day.statusClass === 'next-month'"
+                                     [class.active-today]="day.isToday && day.isCurrentMonth"
+                                     [class.selected-day]="day.isSelected && !(day.isToday && day.isCurrentMonth)"
+                                     [class.wfh-num]="day.isCurrentMonth && (day.status === 'WFH' || (day.dayNumber === 1 && day.isCurrentMonth))"
+                                     [class.dimmed-by-filter]="selectedStatusFilter && day.isCurrentMonth && day.status !== selectedStatusFilter"
+                                     [class.highlighted-by-filter]="selectedStatusFilter && day.isCurrentMonth && day.status === selectedStatusFilter"
+                                     (click)="onSelectCalendarDay(day)"
+                                     [title]="day.title">
+                                    <span class="day-num">{{ day.dayNumber }}</span>
+                                    <span class="status-dot" *ngIf="day.isCurrentMonth && day.status" [ngClass]="{
+                                        'dot-present': day.status === 'Present',
+                                        'dot-leave': day.status === 'Leave',
+                                        'dot-absent': day.status === 'Absent',
+                                        'dot-holiday': day.status === 'Holiday',
+                                        'dot-not-marked': day.status === 'Not Marked',
+                                        'dot-wfh': day.status === 'WFH'
+                                    }"></span>
+                                </div>
+                            </div>
+
+                            <div class="cal-legend-footer-clean">
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('Present')" [class.active-filter]="selectedStatusFilter === 'Present'" title="Filter Present days">
+                                    <span class="c-dot dot-present"></span>
+                                    <span class="c-lbl">Present</span>
+                                </div>
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('Leave')" [class.active-filter]="selectedStatusFilter === 'Leave'" title="Filter Leave days">
+                                    <span class="c-dot dot-leave"></span>
+                                    <span class="c-lbl">Leave</span>
+                                </div>
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('Absent')" [class.active-filter]="selectedStatusFilter === 'Absent'" title="Filter Absent days">
+                                    <span class="c-dot dot-absent"></span>
+                                    <span class="c-lbl">Absent</span>
+                                </div>
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('Holiday')" [class.active-filter]="selectedStatusFilter === 'Holiday'" title="Filter Holidays">
+                                    <span class="c-dot dot-holiday"></span>
+                                    <span class="c-lbl">Holiday</span>
+                                </div>
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('Not Marked')" [class.active-filter]="selectedStatusFilter === 'Not Marked'" title="Filter Not Marked days">
+                                    <span class="c-dot dot-not-marked"></span>
+                                    <span class="c-lbl">Not Marked</span>
+                                </div>
+                                <div class="clean-leg-item" (click)="toggleStatusFilter('WFH')" [class.active-filter]="selectedStatusFilter === 'WFH'" title="Filter WFH days">
+                                    <span class="c-dot dot-wfh"></span>
+                                    <span class="c-lbl">WFH</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2: Attendance Trend Chart -->
+                        <div class="dashboard-card col-trend">
+                            <div class="card-head-row">
+                                <span class="card-head-title">Attendance Trend</span>
+                                <div class="filter-pill-dropdown-wrap">
+                                    <button type="button" class="filter-pill-dropdown" (click)="toggleTrendDropdown($event)">
+                                        <span>{{ trendPeriod }}</span>
+                                        <i class="fas fa-chevron-down pill-chevron"></i>
+                                    </button>
+                                    <div class="trend-dropdown-menu" *ngIf="showTrendDropdown" (click)="$event.stopPropagation()">
+                                        <div class="trend-dropdown-item" [class.active]="trendPeriod === 'This Week'" (click)="setTrendPeriod('This Week')">This Week</div>
+                                        <div class="trend-dropdown-item" [class.active]="trendPeriod === 'Last Week'" (click)="setTrendPeriod('Last Week')">Last Week</div>
+                                        <div class="trend-dropdown-item" [class.active]="trendPeriod === 'This Month'" (click)="setTrendPeriod('This Month')">This Month</div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="trend-chart-container">
+                                <div class="trend-chart-main">
+                                    <div class="trend-y-axis">
+                                        <span>100%</span>
+                                        <span>75%</span>
+                                        <span>50%</span>
+                                        <span>25%</span>
+                                        <span>0%</span>
+                                    </div>
+                                    <div class="trend-svg-wrapper">
+                                        <svg viewBox="0 0 320 100" class="trend-line-svg" preserveAspectRatio="none">
+                                            <defs>
+                                                <linearGradient id="trendGradientFill" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.22"/>
+                                                    <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.0"/>
+                                                </linearGradient>
+                                            </defs>
+                                            
+                                            <!-- Grid lines -->
+                                            <line x1="0" y1="10" x2="320" y2="10" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                                            <line x1="0" y1="28.75" x2="320" y2="28.75" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                                            <line x1="0" y1="47.5" x2="320" y2="47.5" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                                            <line x1="0" y1="66.25" x2="320" y2="66.25" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3 3"/>
+                                            <line x1="0" y1="85" x2="320" y2="85" stroke="#F1F5F9" stroke-width="1"/>
+
+                                            <!-- Dynamic Area fill -->
+                                            <path [attr.d]="trendAreaPathD" fill="url(#trendGradientFill)"/>
+
+                                            <!-- Dynamic Curved Line -->
+                                            <path [attr.d]="trendLinePathD" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+
+                                            <!-- Dynamic Data point dots with tooltips -->
+                                            <g *ngFor="let pt of trendDataPoints">
+                                                <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#2563EB" stroke="#FFFFFF" stroke-width="1.8" class="trend-circle-point">
+                                                    <title>{{ pt.day }} ({{ pt.dateStr }}): {{ pt.label }}</title>
+                                                </circle>
+                                            </g>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="trend-x-axis">
+                                    <span *ngFor="let pt of trendDataPoints">{{ pt.day }}</span>
+                                </div>
+                            </div>
+
+                            <div class="trend-stats-three">
+                                <div class="stat-mini-box box-blue">
+                                    <span class="sm-lbl">Avg. {{ trendPeriod }}</span>
+                                    <span class="sm-val blue-text">{{ trendAvgThisWeek }}</span>
+                                </div>
+                                <div class="stat-mini-box box-green">
+                                    <span class="sm-lbl">Best Day</span>
+                                    <span class="sm-val green-text">{{ trendBestDay }} <small class="day-hint">{{ trendBestDayName }}</small></span>
+                                </div>
+                                <div class="stat-mini-box box-red">
+                                    <span class="sm-lbl">Lowest Day</span>
+                                    <span class="sm-val red-text">{{ trendLowestDay }} <small class="day-hint red">{{ trendLowestDayName }}</small></span>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Col 3: My Recent Requests -->
+                        <div class="dashboard-card col-requests">
+                            <div class="card-head-row">
+                                <span class="card-head-title">My Recent Requests</span>
+                                <a routerLink="/emp-dashboard/time-off" class="card-head-link">View All Requests →</a>
+                            </div>
+
+                            <div class="requests-table-list">
+                                <div class="req-header-row">
+                                    <span>REQUEST</span>
+                                    <span>DATE</span>
+                                    <span>TYPE</span>
+                                    <span>STATUS</span>
+                                </div>
+
+                                <div class="req-data-row" *ngFor="let req of recentRequestsList">
+                                    <div class="req-name-cell">
+                                        <div class="req-icon-box" [ngClass]="req.iconBgClass">
+                                            <i [class]="req.icon" [ngClass]="req.iconColorClass"></i>
+                                        </div>
+                                        <span class="req-name-text">{{ req.title }}</span>
+                                    </div>
+                                    <span class="req-date">{{ req.date }}</span>
+                                    <span class="req-type">{{ req.type }}</span>
+                                    <span class="req-status-pill" [ngClass]="req.statusClass">{{ req.status }}</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div class="time_sheet">
-                        <div class="card recent_time">
-                            <div class="card-header">
-                                Time Sheets
+
+                    <!-- ROW 4: MY TIMESHEET | MY DOCUMENTS | LATEST NEWS -->
+                    <div class="dashboard-grid-row row-4">
+                        
+                        <!-- Col 1: My Timesheet -->
+                        <div class="dashboard-card col-timesheet">
+                            <div class="card-head-row">
+                                <span class="card-head-title">My Timesheet</span>
+                                <a routerLink="/emp-dashboard/my-attendance" class="card-head-link">View Full Timesheet →</a>
                             </div>
-                            <div class="divider"></div>
-                            <div class="table-container">
-                                <table>
+
+                            <div class="table-responsive-wrapper">
+                                <table class="timesheet-mini-table">
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
-                                            <th>Day</th>
-                                            <th>Entry</th>
-                                            <th>Exit</th>
-                                            <th>Total</th>
-                                            <th>Overtime</th>
-                                            <th>Break</th>
-                                            <th>Grand Total</th>
-                                            <th>Status</th>
+                                            <th>DATE</th>
+                                            <th>DAY</th>
+                                            <th>IN</th>
+                                            <th>OUT</th>
+                                            <th>WORK HOURS</th>
+                                            <th>BREAK</th>
+                                            <th>OT</th>
+                                            <th>STATUS</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr *ngIf="filteredTimeSheets.length === 0">
-                                            <td colspan="9" class="no-data">
-                                                No attendance records found
-                                            </td>
-                                        </tr>
-                                        <tr *ngFor="let sheet of pagedTimeSheets">
-                                            <td>{{ sheet.date }}</td>
-                                            <td>{{ sheet.day }}</td>
-                                            <td>{{ sheet.entry }}</td>
-                                            <td>{{ sheet.exit }}</td>
-                                            <td>{{ sheet.total }}</td>
-                                            <td>{{ sheet.overtime }}</td>
-                                            <td>{{ sheet.break }}</td>
-                                            <td>{{ sheet.grandTotal }}</td>
+                                        <tr *ngFor="let sheet of displayTimesheetRows">
+                                            <td class="ts-date-cell">{{ sheet.date }}</td>
+                                            <td class="ts-day-cell">{{ sheet.day }}</td>
+                                            <td class="ts-time-cell">{{ sheet.inTime }}</td>
+                                            <td class="ts-time-cell">{{ sheet.outTime }}</td>
+                                            <td class="ts-time-cell">{{ sheet.workHours }}</td>
+                                            <td class="ts-time-cell">{{ sheet.breakTime }}</td>
+                                            <td class="ts-time-cell">{{ sheet.overtime }}</td>
                                             <td>
-                                                <span *ngIf="sheet.status" class="status-badge" [title]="sheet.status" [ngClass]="sheet.status.toLowerCase()">
-                                                    {{ sheet.status }}
-                                                </span>
+                                                <span class="status-pill" [ngClass]="sheet.statusClass">{{ sheet.status }}</span>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="timesheet-pagination" *ngIf="filteredTimeSheets.length > 0">
-                                <div class="timesheet-pagination__info">
-                                    Showing <span>{{ timeSheetStartEntry }}</span> to
-                                    <span>{{ timeSheetEndEntry }}</span> of
-                                    <span>{{ filteredTimeSheets.length }}</span> entries
-                                </div>
-                                <div class="timesheet-pagination__controls"
-                                    *ngIf="filteredTimeSheets.length > timeSheetPageSize">
-                                    <button type="button" class="timesheet-page-btn" [disabled]="timeSheetPage === 1"
-                                        (click)="setTimeSheetPage(timeSheetPage - 1)">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
-                                    <button type="button" class="timesheet-page-btn" *ngFor="let page of timeSheetPages"
-                                        [class.active]="page === timeSheetPage" (click)="setTimeSheetPage(page)">
-                                        {{ page }}
-                                    </button>
-                                    <button type="button" class="timesheet-page-btn"
-                                        [disabled]="timeSheetPage === timeSheetTotalPages"
-                                        (click)="setTimeSheetPage(timeSheetPage + 1)">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
-                    </div>
 
-                    <!-- attendence summary -->
-                    <div class="attendance_summary">
-                        <div class="card attendance_summary_card">
-                            <div class="card-header">
-                                <span>Attendance Summary</span>
+                        <!-- Col 2: My Documents -->
+                        <div class="dashboard-card col-documents">
+                            <div class="card-head-row">
+                                <span class="card-head-title"><i class="far fa-file-alt doc-head-icon"></i> My Documents</span>
+                                <a routerLink="/emp-dashboard/my-profile" class="card-head-link">View Documents →</a>
                             </div>
-                            <div class="divider"></div>
-                            <div class="summary-content">
-                                <div class="summary-item" *ngFor="let item of attendanceSummary">
 
-                                    <i [class]="item.icon" class="summary-icon"></i>
+                            <div class="documents-body">
+                                <div class="doc-donut-gauge">
+                                    <svg viewBox="0 0 36 36" class="doc-donut-svg">
+                                        <!-- Orange arc (12.5% uncompleted top segment) -->
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F59E0B" stroke-width="4.2"/>
+                                        <!-- Green arc (87.5% completed segment) -->
+                                        <path stroke-dasharray="87.5, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="4.2" stroke-linecap="round"/>
+                                    </svg>
+                                    <div class="doc-gauge-center">
+                                        <span class="doc-count">7 / 8</span>
+                                        <span class="doc-sub">Complete</span>
+                                        <span class="doc-pct"><i class="far fa-dot-circle"></i> 87.5%</span>
+                                    </div>
+                                </div>
 
-                                    <div class="summary-text-container">
-                                        <span class="summary-label">{{ item.label }}</span>
-                                        <span class="summary-value">{{ item.value }}</span>
+                                <div class="doc-checklist-wrapper">
+                                    <div class="doc-checklist-single">
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Aadhaar Card</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>PAN Card</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Passport Photo</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Address Proof</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Educational Certificate</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Experience Letter</span></div>
+                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Bank Details</span></div>
+                                        <div class="doc-item warning"><i class="fas fa-exclamation-circle doc-warn-ic"></i> <span>Emergency Contact</span></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="latest_news">
-                        <div class="card latest_news_card">
-                            <div class="card-header">
-                                <span>Latest News</span>
+
+                        <!-- Col 3: Latest News -->
+                        <div class="dashboard-card col-news">
+                            <div class="card-head-row">
+                                <span class="card-head-title">Latest News</span>
+                                <a routerLink="/emp-dashboard" class="card-head-link">View All News →</a>
                             </div>
-                            <div class="divider"></div>
-                            <div class="latest_news_content">
-                                <div *ngIf="filteredLatestNews.length === 0" style="padding: 24px; color: #64748b;">
-                                    No matching news found
-                                </div>
-                                <div *ngFor="let event of filteredLatestNews" class="news-item">
-                                    <div class="news-icon-container">
-                                        <i class="fas fa-info-circle"></i>
+
+                            <div class="news-feed-list">
+                                <div class="news-item">
+                                    <div class="news-icon-circle blue-ic-bg">
+                                        <i class="fas fa-info"></i>
                                     </div>
-                                    <div class="news-details">
-                                        <div class="news-title">{{ event.heading }}</div>
-                                        <div class="news-description">{{ event.contents }}</div>
-                                        <div class="news-footer">
-                                            <span class="news-badge" [ngClass]="event.newsType.toLowerCase()">{{
-                                                event.newsType }}</span>
-                                            <span class="news-date">
-                                                <i class="fas fa-calendar-alt"></i>
-                                                {{ event.date | date:'MMMM dd, yyyy' }}
-                                            </span>
+                                    <div class="news-content">
+                                        <h5 class="news-heading">Welcome to AiVan ERP System</h5>
+                                        <p class="news-text">We are excited to announce the launch of our new ERP system.</p>
+                                        <div class="news-meta">
+                                            <span class="news-date">10 Aug 2026</span>
+                                            <span class="news-type-pill general-pill">GENERAL</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="news-item">
+                                    <div class="news-icon-circle green-ic-bg">
+                                        <i class="far fa-calendar-check"></i>
+                                    </div>
+                                    <div class="news-content">
+                                        <h5 class="news-heading">Independence Day Holiday</h5>
+                                        <p class="news-text">Office will remain closed on 15th August 2026.</p>
+                                        <div class="news-meta">
+                                            <span class="news-date">09 Aug 2026</span>
+                                            <span class="news-type-pill holiday-pill">HOLIDAY</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="news-item">
+                                    <div class="news-icon-circle orange-ic-bg">
+                                        <i class="fas fa-bullhorn"></i>
+                                    </div>
+                                    <div class="news-content">
+                                        <h5 class="news-heading">New Leave Policy Updated</h5>
+                                        <p class="news-text">Please review the updated leave policy.</p>
+                                        <div class="news-meta">
+                                            <span class="news-date">08 Aug 2026</span>
+                                            <span class="news-type-pill update-pill">UPDATE</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                     </div>
+
                 </ng-container>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Punch Verification Modal -->
+<!-- Camera & Location Verification Punch Modal -->
 <div class="camera-modal-overlay" *ngIf="showCameraModal" (click)="closeCameraModal()">
-    <div class="camera-modal-box" (click)="$event.stopPropagation()">
-        <div class="camera-modal-header">
-            <div class="camera-modal-title">
-                <i [class]="isPunchedIn ? 'fas fa-sign-out-alt' : 'fas fa-camera'"></i>
-                <span>{{ isPunchedIn ? 'Confirm Punch Out' : 'Camera Verification' }}</span>
-            </div>
-            <button class="close-btn" (click)="closeCameraModal()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="camera-modal-body">
-            <ng-container *ngIf="!isPunchedIn; else punchOutConfirm">
-                <div class="camera-live-card">
-                    <div class="video-wrapper">
-                        <video id="cameraFeed" class="camera-feed" autoplay playsinline muted></video>
-                        <div class="face-guide-ring"></div>
-                        <div class="camera-live-badge">
-                            <span class="dot"></span>
-                            Live camera
-                        </div>
-                    </div>
-                    <div class="camera-helper">
-                        <strong>Ready to punch in</strong>
-                        <span>Keep your face visible and confirm to start your work session.</span>
-                    </div>
-                </div>
-            </ng-container>
-
-            <ng-template #punchOutConfirm>
-                <div class="punch-out-confirm">
-                    <div class="punch-out-confirm__icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <h3>Are you sure you want to punch out?</h3>
-                    <p>Your working session will be closed and today's timesheet will be calculated.</p>
-                    <div class="punch-out-confirm__meta">
-                        <span>Started: {{ punchInTime || '-' }}</span>
-                        <span>Worked: {{ totalWorkedTodayDisplay }}</span>
-                    </div>
-                </div>
-            </ng-template>
-
-            <!-- Captured Location Verification Section -->
-            <div class="modal-location-section">
-                <div class="location-label">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>Captured Location</span>
-                </div>
-                <div class="location-input-wrapper">
-                    <input type="text" [(ngModel)]="pendingPunchAddress" (ngModelChange)="onAddressManualEdit()"
-                        class="location-input" placeholder="Detecting location..." [disabled]="isLocationLoading" />
-                    <button type="button" class="location-refresh-btn" (click)="refetchLocation()"
-                        [disabled]="isLocationLoading" title="Refresh Location">
-                        <i class="fas" [class.fa-sync-alt]="!isLocationLoading" [class.fa-spinner]="isLocationLoading"
-                            [class.fa-spin]="isLocationLoading"></i>
-                    </button>
-                </div>
-                <div class="location-help-text" *ngIf="!isLocationLoading">
-                    If the detected address is incorrect, you can edit it manually before submitting.
-                </div>
-            </div>
-        </div>
-        <div class="camera-modal-footer">
-            <button class="btn btn-secondary" (click)="closeCameraModal()">
-                Cancel
-            </button>
-            <button class="btn btn-primary" (click)="confirmPhoto()">
-                <i class="fas fa-check-circle"></i> {{ isPunchedIn ? 'Yes, Punch Out' : 'Confirm & Punch In' }}
-            </button>
-        </div>
+  <div class="camera-modal-box" (click)="$event.stopPropagation()">
+    <div class="camera-modal-header">
+      <span class="camera-modal-title">
+        <i class="fas fa-camera"></i> {{ isPunchedIn ? 'Punch Out Verification' : 'Punch In Verification' }}
+      </span>
+      <button class="close-btn" (click)="closeCameraModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
+
+    <div class="camera-modal-body">
+      <!-- Punch Details Row -->
+      <div class="punch-modal-info-bar">
+        <span class="info-pill"><i class="fas fa-briefcase"></i> Mode: <strong>{{ pendingPunchWorkMode }}</strong></span>
+        <span class="info-pill"><i class="fas fa-clock"></i> Action: <strong>{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</strong></span>
+      </div>
+
+      <!-- Camera Feed or Captured Photo -->
+      <div class="camera-feed-container" *ngIf="!isPunchedIn">
+        <video id="cameraFeed" autoplay playsinline muted *ngIf="!capturedImage" class="camera-video"></video>
+        <img [src]="capturedImage" *ngIf="capturedImage" alt="Captured Photo" class="camera-photo-preview" />
+        <div class="camera-overlay-badge" *ngIf="!capturedImage && cameraStream">
+          <i class="fas fa-circle live-dot"></i> LIVE CAMERA
+        </div>
+      </div>
+
+      <!-- Location Verification Section -->
+      <div class="location-section-box">
+        <div class="loc-box-header">
+          <span><i class="fas fa-map-marker-alt"></i> Location Verification</span>
+          <button type="button" class="refetch-btn" (click)="refetchLocation()" [disabled]="isLocationLoading">
+            <i class="fas fa-sync-alt" [class.fa-spin]="isLocationLoading"></i> Refresh
+          </button>
+        </div>
+        <div class="loc-input-group">
+          <input
+            type="text"
+            class="loc-input"
+            [(ngModel)]="pendingPunchAddress"
+            (input)="onAddressManualEdit()"
+            placeholder="Fetching location..."
+          />
+        </div>
+      </div>
+
+      <!-- Warning/Error message inside modal -->
+      <div class="modal-alert-error" *ngIf="punchMessage">
+        <i class="fas fa-exclamation-triangle"></i> {{ punchMessage }}
+      </div>
+    </div>
+
+    <div class="camera-modal-footer">
+      <button class="btn btn-secondary" (click)="closeCameraModal()">Cancel</button>
+      <button class="btn btn-primary-gradient" (click)="confirmPhoto()" [disabled]="isPunchSaving">
+        <i class="fas fa-check-circle"></i> {{ isPunchSaving ? 'Recording...' : (isPunchedIn ? 'Confirm Punch Out' : 'Confirm Punch In') }}
+      </button>
+    </div>
+  </div>
 </div>
 
-<!-- Schedule Modal -->
-<div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeScheduleModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-            <h2>Add Task</h2>
-            <button class="close-btn" (click)="closeScheduleModal()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="scheduleDate">Date</label>
-                <input type="date" id="scheduleDate" name="scheduleDate" [(ngModel)]="scheduleForm.date"
-                    class="form-control" />
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="scheduleTime">Time</label>
-                    <input type="time" id="scheduleTime" name="scheduleTime" [(ngModel)]="scheduleForm.startTime"
-                        class="form-control" />
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="scheduleTask">Task / Important Work</label>
-                <textarea id="scheduleTask" name="scheduleTask" [(ngModel)]="scheduleForm.taskDescription"
-                    class="form-control" placeholder="What are you planning to do?" rows="3"></textarea>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="closeScheduleModal()">Cancel</button>
-            <button class="btn btn-primary" (click)="saveSchedule()">Save Schedule</button>
-        </div>
-    </div>
-</div>
-
-<!-- Work Mode Switch Confirmation Modal -->
+<!-- Switch Work Mode Confirmation Modal -->
 <div class="camera-modal-overlay" *ngIf="showSwitchConfirmModal" (click)="closeSwitchConfirmModal()">
-    <div class="camera-modal-box" (click)="$event.stopPropagation()">
-        <div class="camera-modal-header" style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%)">
-            <div class="camera-modal-title">
-                <i [class]="pendingWorkModeToSwitch === 'Office' ? 'fas fa-building' : 'fas fa-house-user'"></i>
-                <span>Confirm Work Mode Switch</span>
-            </div>
-            <button class="close-btn" (click)="closeSwitchConfirmModal()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="camera-modal-body">
-            <div class="punch-out-confirm">
-                <div class="punch-out-confirm__icon"
-                    [ngStyle]="{'background': pendingWorkModeToSwitch === 'Office' ? '#fff1f2' : '#f5f3ff', 'color': pendingWorkModeToSwitch === 'Office' ? '#e11d48' : '#4c1d95', 'box-shadow': '0 10px 24px rgba(225, 29, 72, 0.12)'}">
-                    <i [class]="pendingWorkModeToSwitch === 'Office' ? 'fas fa-building' : 'fas fa-house-user'"></i>
-                </div>
-                <h3>Are you switching to {{ pendingWorkModeToSwitch }}?</h3>
-                <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">Please
-                    confirm that you want to change your work mode from <strong>{{ status }}</strong> to <strong>{{
-                        pendingWorkModeToSwitch }}</strong>.</p>
-            </div>
-        </div>
-        <div class="camera-modal-footer">
-            <button class="btn btn-secondary" (click)="closeSwitchConfirmModal()">
-                Cancel
-            </button>
-            <button class="btn btn-primary"
-                style="background: linear-gradient(90deg, #e11d48 0%, #4c1d95 100%); border: none; box-shadow: 0 8px 18px rgba(225, 29, 72, 0.22)"
-                (click)="confirmSwitchWorkMode()">
-                Confirm Switch
-            </button>
-        </div>
+  <div class="camera-modal-box switch-mode-box" (click)="$event.stopPropagation()">
+    <div class="camera-modal-header">
+      <span class="camera-modal-title"><i class="fas fa-exchange-alt"></i> Switch Work Mode</span>
+      <button class="close-btn" (click)="closeSwitchConfirmModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
-</div>
-
-<!-- Floating Success Toast Notification -->
-<div class="save-toast" *ngIf="successMessage">
-    <i class="fas fa-check-circle"></i>
-    <span>{{ successMessage }}</span>
+    <div class="camera-modal-body text-center">
+      <p style="font-size: 15px; color: #334155; margin: 16px 0;">
+        Are you sure you want to switch your work mode to <strong>{{ pendingWorkModeToSwitch }}</strong>?
+      </p>
+    </div>
+    <div class="camera-modal-footer">
+      <button class="btn btn-secondary" (click)="closeSwitchConfirmModal()">Cancel</button>
+      <button class="btn btn-primary-gradient" (click)="confirmSwitchWorkMode()">Confirm Switch</button>
+    </div>
+  </div>
 </div>

@@ -122,14 +122,22 @@
               <tr>
                 <th>Name</th>
                 <th>Shift Timings</th>
+                <th>Work Hours</th>
+                <th>Grace Mins</th>
+                <th>Lunch Mins</th>
+                <th>Night Shift</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let item of filteredShifts" class="table-row-hover">
-                <td><span class="font-bold">{{ item.name }}</span></td>
+                <td><span class="font-bold">{{ item.name }}</span> <span class="code-badge ml-2" *ngIf="item.code">{{ item.code }}</span></td>
                 <td>{{ item.start_time }} - {{ item.end_time }}</td>
+                <td>{{ item.working_hours || 8 }} hrs</td>
+                <td>{{ item.grace_minutes || 30 }} mins</td>
+                <td>{{ item.lunch_duration_minutes || 40 }} mins</td>
+                <td><span class="badge-type">{{ item.is_night_shift ? 'Yes' : 'No' }}</span></td>
                 <td>
                   <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
                     {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -140,7 +148,7 @@
                 </td>
               </tr>
               <tr *ngIf="filteredShifts.length === 0">
-                <td colspan="4" class="empty-state">No shifts found matching the filter criteria.</td>
+                <td colspan="8" class="empty-state">No shifts found matching the filter criteria.</td>
               </tr>
             </tbody>
           </table>
@@ -244,7 +252,7 @@
 
 <!-- CONFIG MODAL -->
 <div class="modal-overlay animate-fade-in" *ngIf="isModalOpen">
-  <div class="modal-card animate-slide-up">
+  <div class="modal-card animate-slide-up" [class.shift-modal-card]="activeTab === 'shifts'">
     <div class="modal-header">
       <h3>
         <i class="fas" [class.fa-plus-circle]="modalMode === 'add'" [class.fa-edit]="modalMode === 'edit'"></i>
@@ -256,7 +264,7 @@
       <div class="modal-body">
         
         <!-- Standard fields for Dept, Desig, Location, Leave, Holiday -->
-        <div class="form-group" *ngIf="activeTab !== 'holidays'">
+        <div class="form-group" *ngIf="activeTab !== 'holidays' && activeTab !== 'shifts'">
           <label for="modal-name">Name <span class="required">*</span></label>
           <input 
             id="modal-name"
@@ -278,47 +286,214 @@
             [(ngModel)]="formModel.code" 
             name="code" 
             class="premium-input" 
+            [class.input-readonly]="modalMode === 'edit'"
+            [readonly]="modalMode === 'edit'"
             placeholder="Enter unique code..."
           />
         </div>
 
         <!-- Shift details -->
-        <div class="form-group" *ngIf="activeTab === 'shifts'">
-          <label for="modal-shift-name">Shift Name <span class="required">*</span></label>
-          <input 
-            id="modal-shift-name"
-            type="text" 
-            [(ngModel)]="formModel.name" 
-            name="name" 
-            class="premium-input" 
-            placeholder="e.g. Day Shift, Night Shift"
-            required
-          />
-        </div>
+        <div class="shift-form-section" *ngIf="activeTab === 'shifts'">
 
-        <div class="shift-times-grid mt-4" *ngIf="activeTab === 'shifts'">
-          <div class="form-group">
-            <label for="modal-start-time">Start Time</label>
-            <input 
-              id="modal-start-time"
-              type="text" 
-              [(ngModel)]="formModel.start_time" 
-              name="start_time" 
-              class="premium-input" 
-              placeholder="e.g. 09:00"
-            />
+          <!-- Row 1: Shift Name | Shift Code -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-shift-name">Shift Name <span class="required">*</span></label>
+              <input 
+                id="modal-shift-name"
+                type="text" 
+                [(ngModel)]="formModel.name" 
+                name="name" 
+                class="premium-input" 
+                placeholder="e.g. General Shift"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-shift-code">Shift Code <span class="required">*</span></label>
+              <input 
+                id="modal-shift-code"
+                type="text" 
+                [(ngModel)]="formModel.code" 
+                name="code" 
+                class="premium-input" 
+                [class.input-readonly]="modalMode === 'edit'"
+                [readonly]="modalMode === 'edit'"
+                placeholder="e.g. GEN_SHIFT"
+                required
+              />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="modal-end-time">End Time</label>
-            <input 
-              id="modal-end-time"
-              type="text" 
-              [(ngModel)]="formModel.end_time" 
-              name="end_time" 
-              class="premium-input" 
-              placeholder="e.g. 18:00"
-            />
+
+          <!-- Row 2: Start Time | End Time -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-start-time">Start Time <span class="required">*</span></label>
+              <input 
+                id="modal-start-time"
+                type="time" 
+                [(ngModel)]="formModel.start_time" 
+                name="start_time" 
+                class="premium-input"
+                (change)="autoCalcWorkingHours()"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-end-time">End Time <span class="required">*</span></label>
+              <input 
+                id="modal-end-time"
+                type="time" 
+                [(ngModel)]="formModel.end_time" 
+                name="end_time" 
+                class="premium-input"
+                (change)="autoCalcWorkingHours()"
+              />
+            </div>
           </div>
+
+          <!-- Row 3: Working Hours (auto-calc, read-only) | Grace Time -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-work-hours">
+                Working Hours
+                <span class="field-auto-badge">Auto</span>
+              </label>
+              <input 
+                id="modal-work-hours"
+                type="number" 
+                step="0.5"
+                min="0"
+                [value]="formModel.working_hours"
+                readonly
+                class="premium-input input-readonly"
+                placeholder="Calculated from timings"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-grace">Grace Time (mins)</label>
+              <input 
+                id="modal-grace"
+                type="number" 
+                min="0"
+                [(ngModel)]="formModel.grace_minutes" 
+                name="grace_minutes" 
+                class="premium-input" 
+                placeholder="e.g. 30"
+              />
+            </div>
+          </div>
+
+          <!-- Row 4: Late Mark After | Early Exit Before -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-late-mark">Late Mark After (mins)</label>
+              <input 
+                id="modal-late-mark"
+                type="number" 
+                min="0"
+                [(ngModel)]="formModel.late_mark_after_minutes" 
+                name="late_mark_after_minutes" 
+                class="premium-input" 
+                placeholder="e.g. 30"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-early-exit">Early Exit Before (mins)</label>
+              <input 
+                id="modal-early-exit"
+                type="number" 
+                min="0"
+                [(ngModel)]="formModel.early_exit_before_minutes" 
+                name="early_exit_before_minutes" 
+                class="premium-input" 
+                placeholder="e.g. 0"
+              />
+            </div>
+          </div>
+
+          <!-- Row 5: Lunch Duration | Lunch Start -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-lunch-duration">Lunch Duration (mins)</label>
+              <input 
+                id="modal-lunch-duration"
+                type="number" 
+                min="0"
+                [(ngModel)]="formModel.lunch_duration_minutes" 
+                name="lunch_duration_minutes" 
+                class="premium-input" 
+                placeholder="e.g. 40"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-lunch-start">Lunch Start <small class="text-muted">(optional)</small></label>
+              <input 
+                id="modal-lunch-start"
+                type="time" 
+                [(ngModel)]="formModel.lunch_start_time" 
+                name="lunch_start_time" 
+                class="premium-input"
+              />
+            </div>
+          </div>
+
+          <!-- Row 6: Lunch End | Half Day Hours -->
+          <div class="shift-row">
+            <div class="form-group">
+              <label for="modal-lunch-end">Lunch End <small class="text-muted">(optional)</small></label>
+              <input 
+                id="modal-lunch-end"
+                type="time" 
+                [(ngModel)]="formModel.lunch_end_time" 
+                name="lunch_end_time" 
+                class="premium-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-half-day">Half Day Hours</label>
+              <input 
+                id="modal-half-day"
+                type="number" 
+                step="0.5"
+                min="0"
+                [(ngModel)]="formModel.half_day_hours" 
+                name="half_day_hours" 
+                class="premium-input" 
+                placeholder="e.g. 4"
+              />
+            </div>
+          </div>
+
+          <!-- Row 7: Minimum Present Hours | Night Shift toggle -->
+          <div class="shift-row shift-row-mixed">
+            <div class="form-group">
+              <label for="modal-present-hours">Min. Present Hours</label>
+              <input 
+                id="modal-present-hours"
+                type="number" 
+                step="0.5"
+                min="0"
+                [(ngModel)]="formModel.present_hours" 
+                name="present_hours" 
+                class="premium-input" 
+                placeholder="e.g. 8"
+              />
+            </div>
+            <div class="form-group shift-checkbox-group">
+              <label class="shift-toggle-label">Shift Type</label>
+              <label class="toggle-pill" for="modal-night-shift">
+                <input 
+                  id="modal-night-shift"
+                  type="checkbox" 
+                  [(ngModel)]="formModel.is_night_shift" 
+                  name="is_night_shift"
+                />
+                <span class="toggle-track"></span>
+                <span class="toggle-text">Night Shift (Crosses Midnight)</span>
+              </label>
+            </div>
+          </div>
+
         </div>
 
         <!-- Location details -->
@@ -392,4 +567,10 @@
       </div>
     </form>
   </div>
+</div>
+
+<!-- Floating Toast Notification -->
+<div class="save-toast" [class.error-toast]="isErrorToast" *ngIf="toastMessage">
+    <i class="fas" [class.fa-check-circle]="!isErrorToast" [class.fa-exclamation-circle]="isErrorToast"></i>
+    <span>{{ toastMessage }}</span>
 </div>

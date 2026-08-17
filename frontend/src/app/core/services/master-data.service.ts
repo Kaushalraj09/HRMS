@@ -66,21 +66,19 @@ function workLocationFromBackend(item: any): WorkLocation {
 }
 
 function shiftToBackend(payload: Partial<Shift>, existingCode?: string): Record<string, unknown> {
+  const { id, ...rest } = payload as any;
   return {
-    name: payload.name,
-    code: existingCode ?? (payload as any).code ?? generateCode('SHIFT'),
-    description: (payload as any).description ?? null,
-    start_time: payload.start_time ?? null,
-    end_time: payload.end_time ?? null,
-    is_active: payload.is_active ?? true,
+    ...rest,
+    code: existingCode ?? rest.code ?? generateCode('SHIFT'),
+    start_time: rest.start_time ?? null,
+    end_time: rest.end_time ?? null,
+    is_active: rest.is_active ?? true,
   };
 }
 
 function shiftFromBackend(item: any): Shift {
   return {
-    id: item.id,
-    name: item.name,
-    code: item.code,
+    ...item,
     start_time: item.start_time ?? '',
     end_time: item.end_time ?? '',
     is_active: item.is_active ?? true,

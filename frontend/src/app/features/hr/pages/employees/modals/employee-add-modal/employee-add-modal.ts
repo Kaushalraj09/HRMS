@@ -2,6 +2,7 @@ import { Component, EventEmitter, OnInit, Output, ChangeDetectorRef } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { EmployeeService } from '../../../../../../core/services/employee.service';
+import { MasterDataService } from '../../../../../../core/services/master-data.service';
 import { EmployeePayload } from '../../../../../../core/models/employee.model';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
 import { finalize } from 'rxjs';
@@ -32,16 +33,24 @@ export class EmployeeAddModalComponent implements OnInit {
   // Dropdown mappings
   genderOptions = [{label: 'Male', value: 'Male'}, {label: 'Female', value: 'Female'}, {label: 'Other', value: 'Other'}];
   maritalOptions = [{label: 'Single', value: 'Single'}, {label: 'Married', value: 'Married'}];
-  bloodOptions = [{label: 'A+', value: 'A+'}, {label: 'B+', value: 'B+'}, {label: 'O+', value: 'O+'}, {label: 'AB+', value: 'AB+'}];
+  bloodOptions = [
+    {label: 'A+', value: 'A+'}, {label: 'A-', value: 'A-'},
+    {label: 'B+', value: 'B+'}, {label: 'B-', value: 'B-'},
+    {label: 'AB+', value: 'AB+'}, {label: 'AB-', value: 'AB-'},
+    {label: 'O+', value: 'O+'}, {label: 'O-', value: 'O-'}
+  ];
   empTypeOptions = [{label: 'Full-Time', value: 'Full-Time'}, {label: 'Contract', value: 'Contract'}, {label: 'Intern', value: 'Intern'}];
   shiftOptions = [{label: 'General Shift', value: 'General Shift'}, {label: 'Night Shift', value: 'Night Shift'}];
   departmentOptions = [{label: 'Engineering', value: 'Engineering'}, {label: 'Human Resources', value: 'Human Resources'}, {label: 'Finance', value: 'Finance'}];
+  designationOptions = [{label: 'Software Engineer', value: 'Software Engineer'}, {label: 'QA Engineer', value: 'QA Engineer'}];
+  locationOptions = [{label: 'Main Office', value: 'Main Office'}, {label: 'Remote', value: 'Remote'}];
   roleOptions = [{label: 'Employee', value: 'employee'}];
   managerOptions: Array<{ label: string; value: string | null }> = [{ label: 'No reporting manager', value: null }];
 
   constructor(
     private fb: FormBuilder,
     private employeeService: EmployeeService,
+    private masterDataService: MasterDataService,
     private cdr: ChangeDetectorRef
   ) {
     this.form = this.fb.group({
@@ -63,6 +72,7 @@ export class EmployeeAddModalComponent implements OnInit {
         designation: [''],
         workLocation: [''],
         shiftType: [''],
+        shiftId: [null],
         doj: [''],
         reportingManagerId: [null]
       }),
@@ -78,6 +88,7 @@ export class EmployeeAddModalComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Load reporting managers
     this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
       .subscribe({
         next: (result) => {
@@ -95,6 +106,29 @@ export class EmployeeAddModalComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+
+    // Sync master data
+    this.masterDataService.getBootstrapData().subscribe({
+      next: (res) => {
+        if (res.departments && res.departments.length > 0) {
+          this.departmentOptions = res.departments.map(d => ({ label: d.name, value: d.name }));
+        }
+        if (res.designations && res.designations.length > 0) {
+          this.designationOptions = res.designations.map(d => ({ label: d.name, value: d.name }));
+        }
+        if (res.shifts && res.shifts.length > 0) {
+          this.shiftOptions = res.shifts.map(s => ({ 
+            label: `${s.name} (${s.start_time} - ${s.end_time})`, 
+            value: s.id as any 
+          }));
+        }
+        if (res.workLocations && res.workLocations.length > 0) {
+          this.locationOptions = res.workLocations.map(l => ({ label: l.name, value: l.name }));
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.warn('Failed to load master data for employee add modal:', err)
+    });
   }
 
   isInvalid(group: string, field: string): boolean {

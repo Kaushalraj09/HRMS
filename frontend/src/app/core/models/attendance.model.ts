@@ -51,6 +51,7 @@ export interface EmployeeTimesheetRow {
   break: string;
   grandTotal: string;
   status: AttendanceStatus;
+  workMode?: WorkMode;
 }
 
 export interface EmployeeAttendanceSummaryItem {
@@ -78,6 +79,12 @@ export interface TodayAttendanceState {
   shiftElapsedSeconds: number;
   shiftStart: string;
   shiftEnd: string;
+  shiftName?: string;
+  shiftCode?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
+  graceMinutes?: number;
+  lunchDurationMinutes?: number;
   workMode: WorkMode;
   punchIn?: string | null;
   punchOut?: string | null;
@@ -95,6 +102,9 @@ export interface TodayAttendanceState {
   requiresRegularization?: boolean;
   overtimeApproved?: boolean;
   overtimeExtended?: boolean;
+  maxOvertimeMinutes?: number;
+  overtimeAllowed?: boolean;
+  overtimeStartTime?: string;
 }
 
 export interface PaginatedResponse<T> {

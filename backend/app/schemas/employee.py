@@ -4,6 +4,8 @@ from datetime import date, datetime
 
 from app.utils.employee_code import normalize_employee_code
 
+from app.schemas.master_data import ShiftResponse
+
 class EmployeeBase(BaseModel):
     first_name: str
     last_name: str
@@ -16,6 +18,7 @@ class EmployeeBase(BaseModel):
     employee_type: Optional[str] = None
     work_location: Optional[str] = None
     shift_type: Optional[str] = None
+    shift_id: Optional[int] = None
     doj: Optional[date] = None
     official_email: EmailStr
     personal_email: Optional[EmailStr] = None
@@ -41,6 +44,7 @@ class EmployeeUpdate(BaseModel):
     employee_type: Optional[str] = None
     work_location: Optional[str] = None
     shift_type: Optional[str] = None
+    shift_id: Optional[int] = None
     doj: Optional[date] = None
     official_email: Optional[EmailStr] = None
     personal_email: Optional[EmailStr] = None
@@ -56,6 +60,7 @@ class EmployeeResponse(EmployeeBase):
     employee_code: str
     reporting_manager_id: Optional[int] = None
     reporting_manager_name: Optional[str] = None
+    shift: Optional[ShiftResponse] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

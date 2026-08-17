@@ -62,7 +62,9 @@
                 <td><span class="status-badge" [ngClass]="hr.status.toLowerCase()">{{ hr.status }}</span></td>
                 <td>
                   <ng-container *ngIf="hr.userId !== currentUser?.id">
-                    <button type="button" class="action-btn-link danger-link" (click)="confirmDelete(hr)">Delete</button>
+                    <button type="button" class="btn-action btn-delete-sm" (click)="confirmDelete(hr)" title="Delete HR User">
+                      <i class="fas fa-trash-alt"></i> Delete
+                    </button>
                   </ng-container>
                 </td>
               </tr>

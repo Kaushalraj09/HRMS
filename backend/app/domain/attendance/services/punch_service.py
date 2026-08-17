@@ -81,9 +81,24 @@ class PunchService:
                     )
             
             # Create or update record
+            shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
+            
+            # Prevent punching in before shift starts
+            if shift and shift.start_time:
+                # Format times for comparison (ignoring date)
+                if current.time() < shift.start_time:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "message": f"Cannot punch in before your shift starts at {shift.start_time.strftime('%I:%M %p')}.",
+                            "code": "TOO_EARLY",
+                        }
+                    )
+            
             if not attendance:
                 attendance = Attendance(
                     employee_id=employee_id,
+                    shift_id=shift.id if shift else None,
                     date=today,
                     is_working=1,
                     work_mode=work_mode,
@@ -95,6 +110,8 @@ class PunchService:
                 attendance.is_working = 1
                 attendance.work_mode = work_mode
                 attendance.status = "WORKING"
+                if not attendance.shift_id:
+                    attendance.shift_id = shift.id
                 
             attendance.punch_in = current.time()
             attendance.punch_in_latitude = latitude
@@ -229,8 +246,15 @@ class PunchService:
                 
             net_working_minutes = max(0, gross - unpaid_break - timeoff_overlap_minutes)
             
-            # Overtime check - payable ONLY if approved OvertimeRequest exists
+            from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
             approved_ot_minutes = OvertimeService.get_approved_overtime_minutes(db, employee_id, attendance.id)
+            if not approved_ot_minutes and attendance.overtime_approved:
+                approved_ot_minutes = ShiftCalculationService.calculate_overtime_minutes(
+                    attendance.punch_in,
+                    attendance.punch_out,
+                    shift,
+                    net_working_minutes=net_working_minutes
+                )
             
             attendance.total_working_minutes = net_working_minutes
             attendance.overtime_minutes = approved_ot_minutes

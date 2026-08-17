@@ -37,7 +37,8 @@ def generate_report_pdf(headers: list[str], rows: list[list[str]], filename: str
     from reportlab.lib import colors
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    title = filename.replace('.pdf', '').replace('_', ' ').title()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36, title=title)
     elements = []
     
     styles = getSampleStyleSheet()
@@ -50,7 +51,6 @@ def generate_report_pdf(headers: list[str], rows: list[list[str]], filename: str
         textColor=colors.HexColor('#1E3A8A')
     )
     
-    title = filename.replace('.pdf', '').replace('_', ' ').title()
     elements.append(Paragraph(title, title_style))
     elements.append(Spacer(1, 10))
     
@@ -110,6 +110,7 @@ def generate_report_pdf(headers: list[str], rows: list[list[str]], filename: str
 def _apply_employee_filters(query, start_date: date | None, end_date: date | None, department: str | None, search: str | None, join_role: bool = False):
     if join_role:
         query = query.join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
+    query = query.filter(Employee.status != "Deleted", User.status != "Deleted")
     if department:
         query = query.filter(Employee.department == department)
     if search:
@@ -492,7 +493,16 @@ def get_employee_status_report(
     limit: int = 10,
     export_all: bool = False
 ):
-    query = db.query(Employee).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin")
+    query = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            func.lower(Role.name) != "admin",
+            Employee.status != "Deleted",
+            User.status != "Deleted"
+        )
+    )
     if department:
         query = query.filter(Employee.department == department)
     if status:

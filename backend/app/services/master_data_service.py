@@ -2,6 +2,13 @@ from sqlalchemy.orm import Session
 from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday
 from typing import List, Dict, Any
 
+def _invalidate_cache(db: Session):
+    try:
+        from app.services.dashboard_service import invalidate_dashboard_cache
+        invalidate_dashboard_cache(db)
+    except Exception:
+        pass
+
 def get_bootstrap_data(db: Session) -> Dict[str, Any]:
     return {
         "departments": db.query(Department).filter(Department.is_active == True).all(),
@@ -29,6 +36,7 @@ def create_department(db: Session, payload) -> Department:
     db.add(db_dept)
     db.commit()
     db.refresh(db_dept)
+    _invalidate_cache(db)
     return db_dept
 
 def update_department(db: Session, dept_id: int, payload) -> Department:
@@ -41,6 +49,7 @@ def update_department(db: Session, dept_id: int, payload) -> Department:
     db_dept.is_active = payload.is_active
     db.commit()
     db.refresh(db_dept)
+    _invalidate_cache(db)
     return db_dept
 
 def change_department_status(db: Session, dept_id: int, is_active: bool) -> Department:
@@ -50,6 +59,7 @@ def change_department_status(db: Session, dept_id: int, is_active: bool) -> Depa
     db_dept.is_active = is_active
     db.commit()
     db.refresh(db_dept)
+    _invalidate_cache(db)
     return db_dept
 
 # Designation CRUD
@@ -69,6 +79,7 @@ def create_designation(db: Session, payload) -> Designation:
     db.add(db_designation)
     db.commit()
     db.refresh(db_designation)
+    _invalidate_cache(db)
     return db_designation
 
 def update_designation(db: Session, designation_id: int, payload) -> Designation:
@@ -81,6 +92,7 @@ def update_designation(db: Session, designation_id: int, payload) -> Designation
     db_designation.is_active = payload.is_active
     db.commit()
     db.refresh(db_designation)
+    _invalidate_cache(db)
     return db_designation
 
 # Shift CRUD
@@ -91,31 +103,23 @@ def list_shifts(db: Session, active_only: bool = False) -> List[Shift]:
     return query.order_by(Shift.name).all()
 
 def create_shift(db: Session, payload) -> Shift:
-    db_shift = Shift(
-        name=payload.name,
-        code=payload.code,
-        description=payload.description,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        is_active=payload.is_active
-    )
+    shift_data = payload.model_dump()
+    db_shift = Shift(**shift_data)
     db.add(db_shift)
     db.commit()
     db.refresh(db_shift)
+    _invalidate_cache(db)
     return db_shift
 
 def update_shift(db: Session, shift_id: int, payload) -> Shift:
     db_shift = db.query(Shift).filter(Shift.id == shift_id).first()
     if not db_shift:
         return None
-    db_shift.name = payload.name
-    db_shift.code = payload.code
-    db_shift.description = payload.description
-    db_shift.start_time = payload.start_time
-    db_shift.end_time = payload.end_time
-    db_shift.is_active = payload.is_active
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(db_shift, field, value)
     db.commit()
     db.refresh(db_shift)
+    _invalidate_cache(db)
     return db_shift
 
 # WorkLocation CRUD
@@ -135,6 +139,7 @@ def create_work_location(db: Session, payload) -> WorkLocation:
     db.add(db_loc)
     db.commit()
     db.refresh(db_loc)
+    _invalidate_cache(db)
     return db_loc
 
 def update_work_location(db: Session, loc_id: int, payload) -> WorkLocation:
@@ -147,6 +152,7 @@ def update_work_location(db: Session, loc_id: int, payload) -> WorkLocation:
     db_loc.is_active = payload.is_active
     db.commit()
     db.refresh(db_loc)
+    _invalidate_cache(db)
     return db_loc
 
 # LeaveType CRUD
@@ -168,6 +174,7 @@ def create_leave_type(db: Session, payload) -> LeaveType:
     db.add(db_lt)
     db.commit()
     db.refresh(db_lt)
+    _invalidate_cache(db)
     return db_lt
 
 def update_leave_type(db: Session, lt_id: int, payload) -> LeaveType:
@@ -182,6 +189,7 @@ def update_leave_type(db: Session, lt_id: int, payload) -> LeaveType:
     db_lt.is_active = payload.is_active
     db.commit()
     db.refresh(db_lt)
+    _invalidate_cache(db)
     return db_lt
 
 # Holiday CRUD
@@ -202,6 +210,7 @@ def create_holiday(db: Session, payload) -> Holiday:
     db.add(db_holiday)
     db.commit()
     db.refresh(db_holiday)
+    _invalidate_cache(db)
     return db_holiday
 
 def update_holiday(db: Session, h_id: int, payload) -> Holiday:
@@ -215,4 +224,5 @@ def update_holiday(db: Session, h_id: int, payload) -> Holiday:
     db_holiday.is_active = payload.is_active
     db.commit()
     db.refresh(db_holiday)
+    _invalidate_cache(db)
     return db_holiday

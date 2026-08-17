@@ -65,7 +65,6 @@ export class MasterSidebar implements OnInit {
         { label: 'Employee Dashboard', icon: 'fas fa-user-circle', route: '/emp-dashboard' }
       ]
     },
-
     {
       groupName: 'Pages',
       items: [

@@ -402,7 +402,8 @@ export class AttendanceService {
       overtime: punchOut ? formatMinutesToHours(overtimeMinutes) : '-',
       break: punchOut ? formatMinutesToHours(breakMinutes) : '-',
       grandTotal: punchOut ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
-      status: this.normalizeStatus(row.status)
+      status: this.normalizeStatus(row.status),
+      workMode: row.workMode || 'Office'
     };
   }
 

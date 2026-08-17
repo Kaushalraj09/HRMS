@@ -35,7 +35,7 @@ export class EmpSidebar implements OnInit {
       { 
         groupName: 'Employee Dashboard',
         items: [ 
-              { label: 'Employee Dashboard',icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
+              { label: 'Employee Dashboard', icon: 'fas fa-tachometer-alt', route: '/emp-dashboard' },
               { label: 'My Attendance', icon: 'fas fa-calendar-check', route: '/emp-dashboard/my-attendance' },
               { label: 'Time Off', icon: 'fas fa-clock', route: '/emp-dashboard/time-off' },
               { label: 'Regularization', icon: 'fas fa-business-time', route: '/emp-dashboard/regularization' },

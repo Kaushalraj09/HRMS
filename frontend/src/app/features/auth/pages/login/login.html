@@ -1,69 +1,540 @@
-<div class="login-container">
-  <!-- LEFT SIDE -->
-  <div class="login-card-wrapper">
-    <div class="login-card">
-      <div class="logo-area">
-        <img src="assets/AivanLogo.png" alt="AIVAN Logo" class="logo-img" />
-        <h2 class="company-name">AIVAN ERP</h2>
-        <p class="login-subtitle">LOGIN</p>
-      </div>
-
-
-      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-        <div class="form-group">
-          <label for="emailInput">Username</label>
-          <input type="email" id="emailInput" name="email" formControlName="email" placeholder="name@aivan.com" />
-
-          <small *ngIf="f['email'].touched && f['email'].errors">
-            <span *ngIf="f['email'].errors['required']">Email is required</span>
-            <span *ngIf="f['email'].errors['email']">Invalid email format</span>
-          </small>
+<div class="login-page-root">
+  <div class="login-wrapper-card">
+    
+    <!-- LEFT LOGIN PANEL (~32%) -->
+    <div class="login-left-panel">
+      
+      <!-- Top Section Container -->
+      <div class="left-top-section">
+        <!-- Logo Area -->
+        <div class="brand-logo-container">
+          <img src="assets/Logo.png" alt="AIVAN 360 Solutions Logo" class="app-logo" />
         </div>
 
-        <div class="form-group">
-          <label for="passwordInput">Password</label>
-          <div class="password-input-wrapper">
-            <input [type]="showPassword ? 'text' : 'password'" id="passwordInput" name="password" formControlName="password" placeholder="********" />
-            <button type="button" class="toggle-password-btn" (click)="togglePasswordVisibility()" aria-label="Toggle Password Visibility">
-              <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-svg">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
+        <!-- Branding Headings -->
+        <div class="brand-header">
+          <h1 class="brand-title">360 HR<span class="brand-plus">+</span></h1>
+          <p class="brand-tagline">Complete Human Resource<br/>Management Platform</p>
+        </div>
+
+        <!-- Left Aligned Welcome Header -->
+        <div class="welcome-block">
+          <h2 class="welcome-heading">Welcome Back!</h2>
+          <p class="welcome-subtext">Sign in to continue to 360 HR+</p>
+        </div>
+
+        <!-- Login Form -->
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="auth-form">
+          
+          <!-- Username Field -->
+          <div class="form-group">
+            <label for="emailInput" class="form-label">USERNAME</label>
+            <div class="input-with-icon">
+              <svg class="input-left-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-svg">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-              </svg>
-            </button>
+              <input 
+                type="email" 
+                id="emailInput" 
+                name="email" 
+                formControlName="email" 
+                placeholder="Enter your username"
+                class="form-control"
+              />
+            </div>
+            <small class="error-msg" *ngIf="f['email'].touched && f['email'].errors">
+              <span *ngIf="f['email'].errors['required']">Username is required</span>
+              <span *ngIf="f['email'].errors['email']">Invalid email format</span>
+            </small>
           </div>
 
-          <small *ngIf="f['password'].touched && f['password'].errors">
-            <span *ngIf="f['password'].errors['required']">Password is required</span>
-            <span *ngIf="f['password'].errors['minlength']">
-              Password must be at least 6 characters
-            </span>
-          </small>
+          <!-- Password Field -->
+          <div class="form-group">
+            <label for="passwordInput" class="form-label">PASSWORD</label>
+            <div class="input-with-icon password-group">
+              <svg class="input-left-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input 
+                [type]="showPassword ? 'text' : 'password'" 
+                id="passwordInput" 
+                name="password" 
+                formControlName="password" 
+                placeholder="Enter your password"
+                class="form-control"
+              />
+              <button type="button" class="toggle-password-btn" (click)="togglePasswordVisibility()" aria-label="Toggle Password Visibility">
+                <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+                <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <small class="error-msg" *ngIf="f['password'].touched && f['password'].errors">
+              <span *ngIf="f['password'].errors['required']">Password is required</span>
+              <span *ngIf="f['password'].errors['minlength']">Password must be at least 6 characters</span>
+            </small>
+          </div>
+
+          <!-- Remember Me & Forgot Password -->
+          <div class="form-options-row">
+            <label class="checkbox-container">
+              <input type="checkbox" [(ngModel)]="rememberMe" [ngModelOptions]="{standalone: true}" />
+              <span class="checkbox-text">Remember Me</span>
+            </label>
+            <a (click)="openForgotPasswordModal()" class="forgot-password-link">Forgot Password?</a>
+          </div>
+
+          <!-- Sign In Button -->
+          <button type="submit" class="cta-sign-in-btn" [disabled]="loginForm.invalid">
+            <span>Sign In</span>
+            <svg class="btn-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+        </form>
+
+        <!-- SSO Section -->
+        <div class="sso-divider-wrapper">
+          <div class="sso-divider-line"></div>
+          <span class="sso-divider-text">or</span>
+          <div class="sso-divider-line"></div>
         </div>
 
-        <div class="remember">
-          <input type="checkbox" id="rememberMe" />
-          <label for="rememberMe">Remember Me</label>
-          <a (click)="openForgotPasswordModal()" class="link-text" style="cursor: pointer;">
-            Forgot Password
-          </a>
-        </div>
+        <button type="button" class="sso-outlined-btn" (click)="onSsoLogin()">
+          <svg class="sso-shield-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Sign in with SSO</span>
+        </button>
+      </div>
 
-        <button type="submit" class="login-btn" [disabled]="loginForm.invalid">Login</button>
-      </form>
+      <!-- Left Panel Footer -->
+      <footer class="left-panel-footer">
+        <p class="copyright-text">© 2026 AIVAN 360 Solutions Pvt. Ltd. All rights reserved.</p>
+        <div class="footer-meta-links">
+          <span>Version 1.0.0</span>
+          <span class="bullet-sep">|</span>
+          <a href="javascript:void(0)" class="footer-link">Privacy Policy</a>
+          <span class="bullet-sep">|</span>
+          <a href="javascript:void(0)" class="footer-link">Support</a>
+        </div>
+      </footer>
     </div>
-  </div>
 
-  <!-- RIGHT SIDE -->
-  <div class="login-image">
-    <img src="assets/login-bg.png" alt="login illustration" />
+
+    <!-- RIGHT PROMOTIONAL PANEL (~68%) -->
+    <div class="login-right-panel">
+      <!-- Background Wave Overlay SVGs -->
+      <svg class="ambient-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+        <path d="M-100,200 C150,100 350,400 600,250 C850,100 1000,300 1100,200" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+        <path d="M-100,350 C200,200 400,500 700,300 C900,150 1050,400 1150,300" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+      </svg>
+      <div class="ambient-dots-pattern"></div>
+
+      <!-- Hero Heading -->
+      <div class="right-hero-header">
+        <h1 class="hero-title">Manage People. Empower Growth.</h1>
+        <p class="hero-subtitle">
+          A complete HR solution to streamline your workforce operations and drive organizational success.
+        </p>
+      </div>
+
+      <!-- Mockup HRMS Dashboard Preview Container -->
+      <div class="dashboard-preview-window">
+        <!-- Sidebar Navigation -->
+        <div class="mock-sidebar">
+          <div class="mock-sidebar-brand">
+            <img src="assets/Logo.png" alt="Logo" class="sidebar-logo-img" />
+            <span class="brand-name">360 HR+</span>
+          </div>
+
+          <ul class="mock-nav-list">
+            <li class="mock-nav-item active">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+              <span>Dashboard</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              <span>Employees</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Attendance</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+              <span>Leave</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg>
+              <span>Payroll</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              <span>Performance</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line></svg>
+              <span>Recruitment</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Training</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              <span>Assets</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>Reports</span>
+            </li>
+            <li class="mock-nav-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span>Settings</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Main Dashboard View Mockup -->
+        <div class="mock-main-content">
+          
+          <!-- Dashboard Header -->
+          <div class="mock-header">
+            <h2 class="mock-page-title">Dashboard</h2>
+            <div class="mock-header-right">
+              <button type="button" class="mock-icon-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </button>
+              <button type="button" class="mock-icon-btn has-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span class="badge-num">3</span>
+              </button>
+              <div class="mock-user-pill">
+                <div class="mock-avatar-img">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="#3B82F6"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>
+                </div>
+                <span class="mock-user-label">Admin</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 KPI Cards Grid -->
+          <div class="mock-kpi-grid">
+            
+            <div class="mock-kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-title">Total Employees</span>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="kpi-value">1,248</div>
+              <div class="kpi-trend green-text">
+                <span>↑ 12.5%</span> <span class="trend-sub">vs last month</span>
+              </div>
+            </div>
+
+            <div class="mock-kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-title">Present Today</span>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="kpi-value">985</div>
+              <div class="kpi-trend green-text">
+                <span>↑ 8.4%</span> <span class="trend-sub">vs yesterday</span>
+              </div>
+            </div>
+
+            <div class="mock-kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-title">On Leave</span>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="kpi-value">63</div>
+              <div class="kpi-trend red-text">
+                <span>↓ 3.2%</span> <span class="trend-sub">vs yesterday</span>
+              </div>
+            </div>
+
+            <div class="mock-kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-title">New Joiners</span>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="kpi-value">24</div>
+              <div class="kpi-trend green-text">
+                <span>↑ 20%</span> <span class="trend-sub">vs last month</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Charts Row -->
+          <div class="mock-charts-row">
+            
+            <!-- Employee Distribution Donut Chart -->
+            <div class="mock-chart-card flex-1">
+              <div class="chart-header">
+                <h4 class="chart-title">Employee Distribution</h4>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="donut-chart-body">
+                <div class="donut-svg-wrapper">
+                  <svg viewBox="0 0 36 36" class="donut-svg">
+                    <path class="donut-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#EBF1F9" stroke-width="5"/>
+                    <!-- Administration 40% (Blue #2563EB) -->
+                    <path class="donut-segment" stroke-dasharray="40, 100" stroke-dashoffset="0" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2563EB" stroke-width="5"/>
+                    <!-- Operations 30% (Purple #7C3AED) -->
+                    <path class="donut-segment" stroke-dasharray="30, 100" stroke-dashoffset="-40" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#7C3AED" stroke-width="5"/>
+                    <!-- IT 20% (Orange #F59E0B) -->
+                    <path class="donut-segment" stroke-dasharray="20, 100" stroke-dashoffset="-70" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F59E0B" stroke-width="5"/>
+                    <!-- Finance 10% (Teal #10B981) -->
+                    <path class="donut-segment" stroke-dasharray="10, 100" stroke-dashoffset="-90" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="5"/>
+                  </svg>
+                  <div class="donut-center-text">
+                    <span class="donut-total">1,248</span>
+                    <span class="donut-label">Total</span>
+                  </div>
+                </div>
+
+                <div class="donut-legend">
+                  <div class="legend-item"><span class="dot" style="background:#2563EB"></span> <span class="leg-name">Administration</span> <span class="pct">40%</span></div>
+                  <div class="legend-item"><span class="dot" style="background:#7C3AED"></span> <span class="leg-name">Operations</span> <span class="pct">30%</span></div>
+                  <div class="legend-item"><span class="dot" style="background:#F59E0B"></span> <span class="leg-name">IT</span> <span class="pct">20%</span></div>
+                  <div class="legend-item"><span class="dot" style="background:#10B981"></span> <span class="leg-name">Finance</span> <span class="pct">10%</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attendance Overview Line Chart -->
+            <div class="mock-chart-card flex-14">
+              <div class="chart-header">
+                <h4 class="chart-title">Attendance Overview</h4>
+                <div class="chart-filter-pill">This Month ▾</div>
+              </div>
+              <div class="line-chart-body">
+                <div class="y-axis-labels">
+                  <span>100%</span>
+                  <span>75%</span>
+                  <span>50%</span>
+                  <span>25%</span>
+                  <span>0%</span>
+                </div>
+                <div class="line-graph-area">
+                  <svg viewBox="0 0 260 70" class="line-chart-svg" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="blueAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2563EB" stop-opacity="0.2"/>
+                        <stop offset="100%" stop-color="#2563EB" stop-opacity="0.0"/>
+                      </linearGradient>
+                    </defs>
+
+                    <!-- Horizontal grid lines -->
+                    <line x1="0" y1="0" x2="260" y2="0" stroke="#F1F5F9" stroke-width="1"/>
+                    <line x1="0" y1="17.5" x2="260" y2="17.5" stroke="#F1F5F9" stroke-width="1"/>
+                    <line x1="0" y1="35" x2="260" y2="35" stroke="#F1F5F9" stroke-width="1"/>
+                    <line x1="0" y1="52.5" x2="260" y2="52.5" stroke="#F1F5F9" stroke-width="1"/>
+                    <line x1="0" y1="70" x2="260" y2="70" stroke="#F1F5F9" stroke-width="1"/>
+
+                    <!-- Area fill -->
+                    <path d="M10,40 Q30,60 50,35 T90,55 T130,20 T170,30 T210,45 T245,15 L245,70 L10,70 Z" fill="url(#blueAreaGrad)" />
+
+                    <!-- Line Path with Dots -->
+                    <path d="M10,40 Q30,60 50,35 T90,55 T130,20 T170,30 T210,45 T245,15" fill="none" stroke="#2563EB" stroke-width="2"/>
+                    <circle cx="10" cy="40" r="2.5" fill="#2563EB"/>
+                    <circle cx="50" cy="35" r="2.5" fill="#2563EB"/>
+                    <circle cx="90" cy="55" r="2.5" fill="#2563EB"/>
+                    <circle cx="130" cy="20" r="2.5" fill="#2563EB"/>
+                    <circle cx="170" cy="30" r="2.5" fill="#2563EB"/>
+                    <circle cx="210" cy="45" r="2.5" fill="#2563EB"/>
+                    <circle cx="245" cy="15" r="2.5" fill="#2563EB"/>
+                  </svg>
+                  <!-- Badge overlay at peak point (85%) -->
+                  <div class="peak-badge-85">85%</div>
+                </div>
+              </div>
+              <div class="line-chart-x-axis">
+                <span>01 May</span>
+                <span>08 May</span>
+                <span>15 May</span>
+                <span>22 May</span>
+                <span>31 May</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom 3 Cards Grid -->
+          <div class="mock-bottom-grid">
+            
+            <!-- Payroll Summary -->
+            <div class="mock-mini-card">
+              <div class="mini-card-header">
+                <span class="mini-card-title">Payroll Summary</span>
+                <span class="mini-filter">May 2026 ▾</span>
+              </div>
+              <div class="payroll-amount">₹ 2,45,80,000</div>
+              <span class="payroll-sub">Total Payroll</span>
+              <div class="mini-bar-chart">
+                <div class="bar" style="height: 35%; background: #93C5FD;"></div>
+                <div class="bar" style="height: 50%; background: #2563EB;"></div>
+                <div class="bar" style="height: 40%; background: #93C5FD;"></div>
+                <div class="bar" style="height: 65%; background: #2563EB;"></div>
+                <div class="bar" style="height: 45%; background: #93C5FD;"></div>
+                <div class="bar" style="height: 80%; background: #2563EB;"></div>
+                <div class="bar" style="height: 55%; background: #93C5FD;"></div>
+                <div class="bar active" style="height: 95%; background: #1D4ED8;"></div>
+              </div>
+            </div>
+
+            <!-- Leave Overview -->
+            <div class="mock-mini-card">
+              <div class="mini-card-header">
+                <span class="mini-card-title">Leave Overview</span>
+                <span class="mini-filter">This Month ▾</span>
+              </div>
+              <div class="leave-progress-list">
+                <div class="progress-item">
+                  <span class="v-line" style="background:#2563EB"></span>
+                  <span class="p-name">Casual Leave</span>
+                  <div class="progress-bar-bg"><div class="progress-fill" style="width: 65%; background: #60A5FA;"></div></div>
+                  <span class="p-val">120</span>
+                </div>
+                <div class="progress-item">
+                  <span class="v-line" style="background:#0284C7"></span>
+                  <span class="p-name">Sick Leave</span>
+                  <div class="progress-bar-bg"><div class="progress-fill" style="width: 35%; background: #38BDF8;"></div></div>
+                  <span class="p-val">45</span>
+                </div>
+                <div class="progress-item">
+                  <span class="v-line" style="background:#9333EA"></span>
+                  <span class="p-name">Earned Leave</span>
+                  <div class="progress-bar-bg"><div class="progress-fill" style="width: 80%; background: #C084FC;"></div></div>
+                  <span class="p-val">230</span>
+                </div>
+                <div class="progress-item">
+                  <span class="v-line" style="background:#06B6D4"></span>
+                  <span class="p-name">Maternity Leave</span>
+                  <div class="progress-bar-bg"><div class="progress-fill" style="width: 15%; background: #22D3EE;"></div></div>
+                  <span class="p-val">12</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="mock-mini-card">
+              <div class="mini-card-header">
+                <span class="mini-card-title">Recent Activities</span>
+                <svg class="kpi-corner-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </div>
+              <div class="activity-feed">
+                <div class="activity-item">
+                  <div class="act-user-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#2563EB"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>
+                  </div>
+                  <div class="act-details">
+                    <span class="act-name">Rohit Sharma</span>
+                    <span class="act-desc">Approved Leave Request</span>
+                  </div>
+                  <span class="act-time">2m ago</span>
+                </div>
+
+                <div class="activity-item">
+                  <div class="act-user-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#6366F1"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>
+                  </div>
+                  <div class="act-details">
+                    <span class="act-name">Neha Verma</span>
+                    <span class="act-desc">Attendance Marked</span>
+                  </div>
+                  <span class="act-time">15m ago</span>
+                </div>
+
+                <div class="activity-item">
+                  <div class="act-user-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#0EA5E9"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>
+                  </div>
+                  <div class="act-details">
+                    <span class="act-name">Ankit Gupta</span>
+                    <span class="act-desc">Onboarded New Employee</span>
+                  </div>
+                  <span class="act-time">1h ago</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Feature Strip Card at Bottom of Right Panel (Solid White Horizontal Card) -->
+      <div class="feature-strip-white-card">
+        
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <span class="strip-label">Employee<br/>Management</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><circle cx="12" cy="15" r="1.5"></circle></svg>
+          </div>
+          <span class="strip-label">Attendance &<br/>Leave</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
+          <span class="strip-label">Payroll<br/>Management</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          </div>
+          <span class="strip-label">Performance<br/>Evaluation</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          </div>
+          <span class="strip-label">Recruitment &<br/>Onboarding</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+          </div>
+          <span class="strip-label">Reports &<br/>Analytics</span>
+        </div>
+
+        <div class="strip-feature-column">
+          <div class="strip-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <span class="strip-label">Employee<br/>Self Service</span>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- CENTER POPUP -->
+<!-- CENTER POPUP TOAST -->
 <div *ngIf="showPopup" class="popup-overlay">
   <div class="popup-box" [ngClass]="messageType">
     <p>{{ message }}</p>
@@ -79,52 +550,54 @@
     <div class="dashboard-options">
       <button class="dashboard-option-btn hr-mode" (click)="selectDashboard('HR')">
         <div class="option-icon-wrapper">
-          <i class="fas fa-user-shield"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         </div>
         <span class="option-title">Continue as HR</span>
-        <i class="fas fa-chevron-right arrow-icon"></i>
+        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
       
       <button class="dashboard-option-btn emp-mode" (click)="selectDashboard('EMPLOYEE')">
         <div class="option-icon-wrapper">
-          <i class="fas fa-user"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         </div>
         <span class="option-title">Continue as Employee</span>
-        <i class="fas fa-chevron-right arrow-icon"></i>
+        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
     </div>
   </div>
 </div>
 
-<!-- FORGOT PASSWORD BLURRY GLASSMORPHIC POPUP MODAL -->
+<!-- FORGOT PASSWORD MODAL -->
 <div *ngIf="showForgotPasswordModal" class="modal-backdrop-blur" (click)="closeForgotPasswordModal()">
   <div class="modal-card" (click)="$event.stopPropagation()">
     <button type="button" class="close-modal-btn" (click)="closeForgotPasswordModal()" aria-label="Close modal">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
     
-    <div class="logo-area">
-      <img src="assets/AivanLogo.png" alt="AIVAN Logo" class="logo-img" />
-      <h2 class="company-name">AIVAN ERP</h2>
+    <div class="brand-logo-container" style="justify-content: center;">
+      <img src="assets/Logo.png" alt="360 HR+ Logo" class="app-logo" style="max-height: 48px;" />
     </div>
     
     <div class="forgot-header">
       <h3 class="forgot-title">Reset your password</h3>
-      <p class="forgot-subtitle">Enter your official email and we'll help you recover access.</p>
+      <p class="forgot-subtitle">Enter your official username or email to receive password recovery instructions.</p>
     </div>
 
     <form [formGroup]="forgotPasswordForm" (ngSubmit)="onForgotPassword()">
       <div class="form-group" style="margin-bottom: 24px; text-align: left;">
-        <label class="forgot-label" for="forgotEmail">OFFICIAL EMAIL</label>
-        <input type="email" id="forgotEmail" name="email" formControlName="email" placeholder="abc@aivan.com" class="forgot-input" />
+        <label class="form-label" for="forgotEmail">OFFICIAL EMAIL / USERNAME</label>
+        <div class="input-with-icon">
+          <svg class="input-left-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <input type="email" id="forgotEmail" name="email" formControlName="email" placeholder="name@aivan.com" class="form-control" />
+        </div>
 
-        <small *ngIf="forgotF['email'].touched && forgotF['email'].errors" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: block;">
+        <small class="error-msg" *ngIf="forgotF['email'].touched && forgotF['email'].errors">
           <span *ngIf="forgotF['email'].errors['required']">Email is required</span>
           <span *ngIf="forgotF['email'].errors['email']">Invalid email format</span>
         </small>
       </div>
 
-      <button type="submit" class="forgot-password-btn" [disabled]="forgotPasswordForm.invalid">Send Reset Link</button>
+      <button type="submit" class="cta-sign-in-btn" [disabled]="forgotPasswordForm.invalid">Send Reset Link</button>
       
       <div class="back-link-container">
         <a (click)="closeForgotPasswordModal()" class="back-link" style="cursor: pointer;">Back to login</a>
@@ -139,3 +612,6 @@
     <p>{{ forgotMessage }}</p>
   </div>
 </div>
+
+
+

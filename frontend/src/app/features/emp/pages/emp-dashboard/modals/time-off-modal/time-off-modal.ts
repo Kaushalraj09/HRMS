@@ -7,7 +7,6 @@ import { finalize } from 'rxjs/operators';
 import { AttendanceService } from '../../../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../../../core/services/timeoff.service';
 import {
-  SHIFT_TOTAL_HOURS,
   TimeSlotOption,
   buildHalfHourSlots,
   filterSlotsNotBeforeNow,

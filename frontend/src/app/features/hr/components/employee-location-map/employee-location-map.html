@@ -1,57 +1,33 @@
-<div class="location-map-container">
-  <div class="map-header">
-    <h3 class="map-title">Employee Attendance Location Map</h3>
-    <p class="map-subtitle">Live tracking of active and field employee punch-ins in India</p>
+<div class="map-wrapper compact-mode">
+  <div #mapContainer class="map-container"></div>
+
+  <!-- Active Filter Badge Pill (Top-Right of Map) -->
+  <div class="map-filter-indicator" *ngIf="filter !== 'ALL'">
+    <span class="filter-indicator-dot" [ngClass]="getFilterColorClass()"></span>
+    <span class="filter-indicator-text">{{ getFilterLabel() }}: <strong>{{ filteredLocations.length }}</strong></span>
+    <button type="button" class="btn-clear-map-filter" (click)="clearFilter()" title="Show All Employees">
+      <i class="fas fa-times"></i>
+    </button>
   </div>
 
-  <!-- Stats Grid -->
-  <div class="stats-grid">
-    <div class="stat-card stat-total">
-      <div class="stat-value">{{ stats.totalWorking }}</div>
-      <div class="stat-label">Punched In Today</div>
-    </div>
-    <div class="stat-card stat-active">
-      <div class="stat-value">{{ stats.currentlyActive }}</div>
-      <div class="stat-label">Working</div>
-    </div>
-    <div class="stat-card stat-late">
-      <div class="stat-value">{{ stats.lateArrivals }}</div>
-      <div class="stat-label">Late Arrivals</div>
-    </div>
-    <div class="stat-card stat-out">
-      <div class="stat-value">{{ stats.punchedOut }}</div>
-      <div class="stat-label">Punched Out</div>
+  <!-- Empty State Overlay when no employees match filter -->
+  <div class="map-empty-overlay" *ngIf="filteredLocations.length === 0 && !loading && !error">
+    <div class="map-empty-box">
+      <i class="fas fa-user-slash empty-map-icon"></i>
+      <p>No employees matching <strong>{{ getFilterLabel() }}</strong></p>
+      <button type="button" class="btn-reset-map-filter" (click)="clearFilter()">Show All Employees</button>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="filter-actions">
-    <button class="filter-btn" [class.active]="activeFilter === 'ALL'" (click)="setFilter('ALL')">All Employees</button>
-    <button class="filter-btn" [class.active]="activeFilter === 'ACTIVE'" (click)="setFilter('ACTIVE')">Currently Active</button>
-    <button class="filter-btn" [class.active]="activeFilter === 'LATE'" (click)="setFilter('LATE')">Late Employees</button>
-    <button class="filter-btn" [class.active]="activeFilter === 'PUNCHED_OUT'" (click)="setFilter('PUNCHED_OUT')">Punched Out</button>
+  <!-- Loading State -->
+  <div class="map-loader" *ngIf="loading && !error && allLocations.length === 0">
+    <div class="spinner"></div>
+    <p>Loading live map...</p>
   </div>
 
-  <!-- Map Wrapper -->
-  <div class="map-wrapper">
-    <div #mapContainer class="map-container"></div>
-
-    <!-- Loading State -->
-    <div class="map-loader" *ngIf="loading && !error">
-      <div class="spinner"></div>
-      <p>Loading live map coordinates...</p>
-    </div>
-
-    <!-- Error State -->
-    <div class="map-error" *ngIf="error">
-      <div class="error-icon">⚠️</div>
-      <p>{{ error }}</p>
-    </div>
-
-    <!-- Empty State -->
-    <div class="map-empty" *ngIf="!loading && !error && filteredLocations.length === 0">
-      <div class="empty-icon">📍</div>
-      <p>No employees match the active filter criteria.</p>
-    </div>
+  <!-- Error State -->
+  <div class="map-error" *ngIf="error && allLocations.length === 0">
+    <div class="error-icon">⚠️</div>
+    <p>{{ error }}</p>
   </div>
 </div>

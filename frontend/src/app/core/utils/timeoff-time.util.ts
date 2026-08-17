@@ -1,25 +1,26 @@
-/** Shift window and helpers for inline time-off (must match backend: 09:00–18:00, 9h total). */
-export const SHIFT_TOTAL_HOURS = 9;
-export const SHIFT_START = '09:00';
-export const SHIFT_END = '18:00';
-
 export interface TimeSlotOption {
   value: string;
   label: string;
 }
 
-/** Build 30-minute slot values from 09:00 through 18:00 inclusive. */
-export function buildHalfHourSlots(): TimeSlotOption[] {
+/** Build 30-minute slot values from start_time through end_time inclusive. */
+export function buildHalfHourSlots(startStr: string = '00:00', endStr: string = '23:59'): TimeSlotOption[] {
   const slots: TimeSlotOption[] = [];
-  for (let h = 9; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      if (h === 18 && m > 0) {
-        break;
-      }
-      const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      slots.push({ value, label: formatTimeLabel(value) });
-    }
+  
+  const startMins = parseTimeToMinutes(startStr) || 0;
+  const endMins = parseTimeToMinutes(endStr) || 1439;
+  
+  // Align to next 30 min boundary for start
+  let currentMins = Math.ceil(startMins / 30) * 30;
+  
+  while (currentMins <= endMins) {
+    const h = Math.floor(currentMins / 60) % 24;
+    const m = currentMins % 60;
+    const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    slots.push({ value, label: formatTimeLabel(value) });
+    currentMins += 30;
   }
+  
   return slots;
 }
 
