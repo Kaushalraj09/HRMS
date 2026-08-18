@@ -24,7 +24,8 @@ def fixture_db_session():
     finally:
         db.close()
 
-def test_deleted_employee_excluded_from_total_count(db_session):
+def test_deleted_employee_excluded_from_total_count(db_session, monkeypatch):
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *a, **kw: True)
     emp1_in = EmployeeCreate(
         first_name="Active",
         last_name="Worker",
