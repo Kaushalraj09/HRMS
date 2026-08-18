@@ -1,193 +1,316 @@
-  <div class="attendance-wrapper">
+<div class="attendance-wrapper">
   <div class="attendance-container">
     
-    <!-- Header Section -->
+    <!-- 1. Header Section -->
     <div class="header-section">
       <div class="header-text">
-        <h1>Attendance Management</h1>
-        <p>Monitor employee attendance by date and status</p>
+        <div class="title-with-badge">
+          <h1>Attendance Management</h1>
+          <span class="live-sync-pill">
+            <span class="pulse-dot"></span> Live Sync
+          </span>
+        </div>
+        <p>Monitor real-time employee attendance, punch timings & daily timesheets</p>
+      </div>
+
+      <div class="header-actions" *ngIf="(attendanceData$ | async) as result">
+        <button type="button" class="btn btn-export" (click)="exportPdf(result.data)" title="Export to PDF">
+          <i class="fas fa-file-pdf"></i> Export PDF
+        </button>
       </div>
     </div>
 
-    <!-- Filters Section -->
+    <!-- 2. KPI Summary Cards Section -->
+    <div class="summary-cards-grid" *ngIf="(attendanceData$ | async) as result">
+      <!-- Working Card -->
+      <div class="kpi-summary-card card-working">
+        <div class="kpi-card-content">
+          <span class="kpi-card-label">Working Now</span>
+          <div class="kpi-card-value-row">
+            <span class="kpi-value text-amber">{{ result.metrics.working }}</span>
+            <span class="kpi-status-dot-active" title="Currently Working"></span>
+          </div>
+          <span class="kpi-card-desc">Active on shift currently</span>
+        </div>
+        <div class="kpi-icon-circle icon-amber">
+          <i class="fas fa-user-clock"></i>
+        </div>
+      </div>
+
+      <!-- Present Card -->
+      <div class="kpi-summary-card card-present">
+        <div class="kpi-card-content">
+          <span class="kpi-card-label">Present Today</span>
+          <div class="kpi-card-value-row">
+            <span class="kpi-value text-emerald">{{ result.metrics.present }}</span>
+          </div>
+          <span class="kpi-card-desc">Punched in & verified</span>
+        </div>
+        <div class="kpi-icon-circle icon-emerald">
+          <i class="fas fa-user-check"></i>
+        </div>
+      </div>
+
+      <!-- Absent Card -->
+      <div class="kpi-summary-card card-absent">
+        <div class="kpi-card-content">
+          <span class="kpi-card-label">Absent</span>
+          <div class="kpi-card-value-row">
+            <span class="kpi-value text-rose">{{ result.metrics.absent }}</span>
+          </div>
+          <span class="kpi-card-desc">Absent / On time off</span>
+        </div>
+        <div class="kpi-icon-circle icon-rose">
+          <i class="fas fa-user-times"></i>
+        </div>
+      </div>
+
+      <!-- Not Marked Card -->
+      <div class="kpi-summary-card card-not-marked">
+        <div class="kpi-card-content">
+          <span class="kpi-card-label">Not Marked</span>
+          <div class="kpi-card-value-row">
+            <span class="kpi-value text-slate">{{ result.metrics.notMarked }}</span>
+          </div>
+          <span class="kpi-card-desc">Pending check-in status</span>
+        </div>
+        <div class="kpi-icon-circle icon-slate">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Shimmer Summary Cards (While Loading) -->
+    <div class="summary-cards-grid" *ngIf="!(attendanceData$ | async)">
+      <div class="kpi-summary-card skeleton s-card" *ngFor="let i of [1,2,3,4]"></div>
+    </div>
+
+    <!-- 3. Filters Panel Section -->
     <div class="filter-panel" [formGroup]="filterForm">
+      <div class="filter-panel-header">
+        <div class="filter-title-group">
+          <i class="fas fa-filter text-primary"></i>
+          <span class="filter-title">Filter Attendance Records</span>
+        </div>
+
+        <!-- Quick Date Preset Chips -->
+        <div class="quick-preset-chips">
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'all'" (click)="setQuickPreset('all')">
+            All Time
+          </button>
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'today'" (click)="setQuickPreset('today')">
+            Today
+          </button>
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'yesterday'" (click)="setQuickPreset('yesterday')">
+            Yesterday
+          </button>
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'week'" (click)="setQuickPreset('week')">
+            Last 7 Days
+          </button>
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'month'" (click)="setQuickPreset('month')">
+            This Month
+          </button>
+        </div>
+      </div>
+
       <div class="filter-grid">
         <!-- From Date -->
         <div class="filter-group">
-          <label for="fromDate">From Date</label>
+          <label for="fromDate"><i class="far fa-calendar-alt"></i> From Date</label>
           <input type="date" id="fromDate" name="fromDate" formControlName="fromDate" class="filter-input">
         </div>
         
         <!-- To Date -->
         <div class="filter-group">
-          <label for="toDate">To Date</label>
+          <label for="toDate"><i class="far fa-calendar-alt"></i> To Date</label>
           <input type="date" id="toDate" name="toDate" formControlName="toDate" class="filter-input">
         </div>
 
-        <!-- Employee Name -->
+        <!-- Employee Search -->
         <div class="filter-group">
-          <label for="employeeSearch">Employee Name/Code</label>
-          <input type="text" id="employeeSearch" name="employeeSearch" formControlName="employeeSearch" placeholder="Search..." class="filter-input">
+          <label for="employeeSearch"><i class="fas fa-search"></i> Employee Name/Code</label>
+          <input type="text" id="employeeSearch" name="employeeSearch" formControlName="employeeSearch" placeholder="Search by name or code..." class="filter-input">
         </div>
 
         <!-- Department -->
         <div class="filter-group">
-          <label for="departmentFilter">Department</label>
+          <label for="departmentFilter"><i class="fas fa-building"></i> Department</label>
           <app-custom-select name="departmentFilter" inputId="departmentFilter" formControlName="department" [options]="departmentsOptions"></app-custom-select>
         </div>
 
         <!-- Status -->
         <div class="filter-group">
-          <label for="statusFilter">Status</label>
+          <label for="statusFilter"><i class="fas fa-tag"></i> Status</label>
           <app-custom-select name="statusFilter" inputId="statusFilter" formControlName="status" [options]="statusOptions"></app-custom-select>
         </div>
 
         <!-- Location (Work Mode) -->
         <div class="filter-group">
-          <label for="locationFilter">Location</label>
+          <label for="locationFilter"><i class="fas fa-map-marker-alt"></i> Location</label>
           <app-custom-select name="locationFilter" inputId="locationFilter" formControlName="location" [options]="locationOptions"></app-custom-select>
         </div>
       </div>
       
       <!-- Filter Actions -->
       <div class="filter-actions-row">
-        <button type="button" class="btn btn-outline" (click)="onReset()">Reset</button>
+        <button type="button" class="btn btn-outline" (click)="onReset()">
+          <i class="fas fa-undo"></i> Reset Filters
+        </button>
         <button type="button" class="btn btn-primary" (click)="onSearch()">
-          <i class="fas fa-search"></i> Search
+          <i class="fas fa-search"></i> Apply Filters
         </button>
       </div>
     </div>
 
-    <!-- Summary Cards Section -->
-    <div class="summary-cards" *ngIf="(attendanceData$ | async) as result">
-      <div class="metrics-card">
-        <div class="metric-label">Working</div>
-        <div class="metric-value checked-in">{{ result.metrics.working }}</div>
-      </div>
-      <div class="metrics-card">
-        <div class="metric-label">Present</div>
-        <div class="metric-value present">{{ result.metrics.present }}</div>
-      </div>
-      <div class="metrics-card">
-        <div class="metric-label">Absent</div>
-        <div class="metric-value absent">{{ result.metrics.absent }}</div>
-      </div>
-      <div class="metrics-card">
-        <div class="metric-label">Not Marked</div>
-        <div class="metric-value not-marked">{{ result.metrics.notMarked }}</div>
-      </div>
-    </div>
-    
-    <!-- Shimmer Summary Cards (While Loading First Time) -->
-    <div class="summary-cards" *ngIf="!(attendanceData$ | async)">
-      <div class="metrics-card skeleton s-card"></div>
-      <div class="metrics-card skeleton s-card"></div>
-      <div class="metrics-card skeleton s-card"></div>
-      <div class="metrics-card skeleton s-card"></div>
-    </div>
-
-    <!-- Table Section -->
+    <!-- 4. Table Section -->
     <div class="table-card">
       <div class="empty-state" *ngIf="(errorMessage$ | async) as errorMessage">
         <div class="empty-content" *ngIf="errorMessage">
-          <i class="fas fa-exclamation-circle empty-icon"></i>
+          <i class="fas fa-exclamation-circle empty-icon text-rose"></i>
           <p>{{ errorMessage }}</p>
         </div>
       </div>
+
       <div class="table-responsive">
-        <table>
+        <table class="attendance-table">
           <thead>
             <tr>
-              <th>Employee ID</th>
-              <th>Name</th>
+              <th>Employee</th>
               <th>Department</th>
               <th>Date</th>
               <th>Punch In</th>
               <th>Punch Out</th>
-              <th>Hours</th>
+              <th>Total Hours</th>
               <th>Status</th>
               <th>Location</th>
-              <th>Live Image</th>
+              <th class="text-center">Live Photo</th>
             </tr>
           </thead>
           
           <!-- Loading State -->
           <tbody *ngIf="(isLoading$ | async)">
             <tr *ngFor="let i of [1,2,3,4,5,6]">
-              <td><div class="skeleton s-text"></div></td>
+              <td><div class="skeleton s-avatar-row"></div></td>
+              <td><div class="skeleton s-text" style="width: 70%"></div></td>
               <td><div class="skeleton s-text" style="width: 80%"></div></td>
-              <td><div class="skeleton s-text"></div></td>
-              <td><div class="skeleton s-text"></div></td>
-              <td><div class="skeleton s-text"></div></td>
-              <td><div class="skeleton s-text"></div></td>
-              <td><div class="skeleton s-text" style="width: 40%"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-badge"></div></td>
+              <td><div class="skeleton s-text" style="width: 50%"></div></td>
               <td><div class="skeleton s-badge"></div></td>
               <td><div class="skeleton s-text" style="width: 60%"></div></td>
-              <td><div class="skeleton s-badge" style="width: 36px; height: 36px; border-radius: 50%"></div></td>
+              <td class="text-center"><div class="skeleton s-avatar-circle"></div></td>
             </tr>
           </tbody>
 
           <!-- Loaded Data -->
           <ng-container *ngIf="!(isLoading$ | async) && (attendanceData$ | async) as result">
             <tbody>
-              <tr *ngFor="let rec of result.data; trackBy: trackById">
-                <td class="font-medium text-dark">{{ rec.code }}</td>
-                <td class="font-medium text-dark">{{ rec.name }}</td>
-                <td>{{ rec.department }}</td>
-                <td>{{ rec.date | date:'mediumDate' }}</td>
-                <td>{{ rec.punchIn || '-' }}</td>
-                <td>{{ rec.punchOut || '-' }}</td>
-                <td>{{ rec.hours }}</td>
+              <tr *ngFor="let rec of result.data; trackBy: trackById" class="attendance-row">
+                <!-- Employee Info (Avatar + Name + Code) -->
                 <td>
-                  <span class="status-badge" [title]="rec.status" [ngClass]="{
+                  <div class="employee-cell">
+                    <div class="employee-avatar">
+                      {{ getInitials(rec.name) }}
+                    </div>
+                    <div class="employee-info-col">
+                      <span class="employee-name">{{ rec.name }}</span>
+                      <span class="employee-code-pill">{{ rec.code }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Department -->
+                <td>
+                  <span class="dept-badge">{{ rec.department || 'General' }}</span>
+                </td>
+
+                <!-- Date with weekday pill -->
+                <td>
+                  <div class="date-cell">
+                    <span class="date-text">{{ rec.date | date:'dd MMM yyyy' }}</span>
+                    <span class="weekday-pill">{{ rec.date | date:'EEE' }}</span>
+                  </div>
+                </td>
+
+                <!-- Punch In -->
+                <td>
+                  <span class="punch-time in" *ngIf="rec.punchIn">
+                    <i class="fas fa-arrow-down"></i> {{ rec.punchIn }}
+                  </span>
+                  <span class="punch-empty" *ngIf="!rec.punchIn">&mdash;</span>
+                </td>
+
+                <!-- Punch Out -->
+                <td>
+                  <span class="punch-time out" *ngIf="rec.punchOut">
+                    <i class="fas fa-arrow-up"></i> {{ rec.punchOut }}
+                  </span>
+                  <span class="punch-empty" *ngIf="!rec.punchOut">&mdash;</span>
+                </td>
+
+                <!-- Hours -->
+                <td>
+                  <span class="hours-badge" *ngIf="rec.hours && rec.hours !== '-'">
+                    <i class="far fa-clock"></i> {{ rec.hours }}
+                  </span>
+                  <span class="punch-empty" *ngIf="!rec.hours || rec.hours === '-'">0h 00m</span>
+                </td>
+
+                <!-- Status Badge -->
+                <td>
+                  <span class="status-badge" [ngClass]="{
                     'present':    rec.status === 'Present',
                     'working':    rec.status === 'Working',
                     'absent':     rec.status === 'Absent',
                     'not-marked': rec.status === 'Not Marked',
                     'half-day':   rec.status === 'Half Day',
                     'time-off':   rec.status === 'Time Off'
-                  }">{{ rec.status }}</span>
+                  }">
+                    <span class="status-dot"></span>
+                    {{ rec.status }}
+                  </span>
                 </td>
 
-                <!-- Location column: work-mode badge + truncated check-in address -->
+                <!-- Location Column -->
                 <td>
                   <div class="location-cell">
                     <span *ngIf="rec.workMode" class="work-mode-badge"
                           [ngClass]="rec.workMode === 'Office' ? 'office' : 'remote'">
-                      <i class="fas" [ngClass]="rec.workMode === 'Office' ? 'fa-building' : 'fa-home'" style="margin-right:4px;font-size:9px"></i>
+                      <i class="fas" [ngClass]="rec.workMode === 'Office' ? 'fa-building' : 'fa-laptop-house'"></i>
                       {{ rec.workMode }}
                     </span>
-                    <span *ngIf="!rec.workMode" class="address-text" style="color:#d1d5db">—</span>
+                    <span *ngIf="!rec.workMode" class="punch-empty">&mdash;</span>
                     <span *ngIf="rec.punchInAddress" class="address-text" [title]="rec.punchInAddress">
                       {{ rec.punchInAddress }}
                     </span>
                   </div>
                 </td>
 
-                <!-- Live Image column: actual photo or fallback user avatar when punched in -->
-                <td>
+                <!-- Live Image Column -->
+                <td class="text-center">
                   <div class="live-image-cell">
-                    <div class="avatar-wrapper" *ngIf="rec.punchIn; else noImage">
-                      <img *ngIf="rec.punchInImage" [src]="rec.punchInImage" class="verified-avatar clickable" [title]="'View Captured Photo'" (click)="openPhotoModal(rec.punchInImage, rec.name)" />
-                      <div *ngIf="!rec.punchInImage" class="verified-avatar" style="display:flex;align-items:center;justify-content:center;background:#e0e7ff;">
-                        <i class="fas fa-user" style="color:#6366f1;font-size:15px"></i>
+                    <div class="avatar-photo-wrapper" *ngIf="rec.punchIn; else noImage">
+                      <img *ngIf="rec.punchInImage" [src]="rec.punchInImage" class="photo-thumbnail clickable" [title]="'Click to view captured photo'" (click)="openPhotoModal(rec.punchInImage, rec.name)" />
+                      <div *ngIf="!rec.punchInImage" class="photo-fallback">
+                        <i class="fas fa-camera"></i>
                       </div>
-                      <span class="verified-badge" title="Attendance recorded">
-                        <i class="fas fa-check" style="font-size:7px"></i>
-                      </span>
                     </div>
                     <ng-template #noImage>
-                      <span style="color:#d1d5db;font-size:13px">—</span>
+                      <span class="punch-empty">&mdash;</span>
                     </ng-template>
                   </div>
                 </td>
               </tr>
               
+              <!-- Empty Records Row -->
               <tr *ngIf="result.data.length === 0">
-                <td colspan="10" class="empty-state">
+                <td colspan="9" class="empty-state-cell">
                   <div class="empty-content">
-                    <i class="fas fa-calendar-times empty-icon"></i>
-                    <p>No attendance records found</p>
+                    <div class="empty-icon-circle">
+                      <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <h4>No attendance records found</h4>
+                    <p>Try adjusting your search criteria or date filter range.</p>
                   </div>
                 </td>
               </tr>
@@ -199,21 +322,23 @@
       <!-- Pagination -->
       <div class="pagination-footer" *ngIf="!(isLoading$ | async) && (attendanceData$ | async) as result">
         <div class="pagination-info">
-          Showing <span class="font-medium">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to 
-          <span class="font-medium">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of 
-          <span class="font-medium">{{ result.total }}</span> entries
+          Showing <span class="font-bold">{{ result.data.length > 0 ? ((pageSubject.value - 1) * pageSize) + 1 : 0 }}</span> to 
+          <span class="font-bold">{{ ((pageSubject.value - 1) * pageSize) + result.data.length }}</span> of 
+          <span class="font-bold">{{ result.total }}</span> entries
         </div>
         
         <div class="pagination-controls" *ngIf="result.total > pageSize">
            <ng-container *ngIf="(paginationArray$ | async) as pages">
               <button 
-                class="page-btn" 
+                type="button"
+                class="page-btn nav-btn" 
                 [disabled]="pageSubject.value === 1"
                 (click)="setPage(pageSubject.value - 1)">
                 <i class="fas fa-chevron-left"></i>
               </button>
               
               <button 
+                type="button"
                 *ngFor="let p of pages" 
                 class="page-btn" 
                 [class.active]="p === pageSubject.value"
@@ -222,7 +347,8 @@
               </button>
               
               <button 
-                class="page-btn" 
+                type="button"
+                class="page-btn nav-btn" 
                 [disabled]="pageSubject.value === pages.length"
                 (click)="setPage(pageSubject.value + 1)">
                 <i class="fas fa-chevron-right"></i>
@@ -235,12 +361,17 @@
   </div>
 </div>
 
-<!-- Click to enlarge photo viewer modal -->
+<!-- Photo Viewer Modal -->
 <div class="photo-modal-overlay" *ngIf="selectedPhotoUrl" (click)="closePhotoModal()">
   <div class="photo-modal-box" (click)="$event.stopPropagation()">
     <div class="photo-modal-header">
-      <h3>Captured Image - {{ selectedPhotoEmployeeName }}</h3>
-      <button class="close-btn" (click)="closePhotoModal()"><i class="fas fa-times"></i></button>
+      <div class="modal-title-wrap">
+        <i class="fas fa-camera text-primary"></i>
+        <h3>Captured Attendance Photo &bull; {{ selectedPhotoEmployeeName }}</h3>
+      </div>
+      <button type="button" class="close-btn" (click)="closePhotoModal()" title="Close">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
     <div class="photo-modal-body">
       <img [src]="selectedPhotoUrl" alt="Enlarged captured photo" class="enlarged-photo" />

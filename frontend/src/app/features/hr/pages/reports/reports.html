@@ -7,8 +7,8 @@
       <p class="subtitle">Generate detailed logs, track metrics, and export compliance sheets.</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-export" (click)="exportCsv()" [disabled]="totalItems === 0 || isLoading">
-        <i class="fas fa-file-export"></i> Export report
+      <button class="btn btn-export" (click)="exportPdf()" [disabled]="totalItems === 0 || isLoading">
+        <i class="fas fa-file-pdf"></i> Export PDF
       </button>
     </div>
   </div>

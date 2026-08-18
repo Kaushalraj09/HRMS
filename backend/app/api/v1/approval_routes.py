@@ -30,6 +30,14 @@ def get_history(
     current_user: User = Depends(get_current_user)
 ):
     check_approval_access(current_user)
+    role = current_user.role.name.lower() if current_user.role else ""
+    if role not in ["admin", "hr"]:
+        from app.models.employee import Employee
+        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not employee:
+            return {"items": [], "page": page, "pageSize": pageSize, "totalItems": 0, "totalPages": 0}
+        employeeId = employee.id
+
     return approval_service.get_history_tasks(
         db, page=page, limit=pageSize, request_type=requestType, employee_id=employeeId
     )

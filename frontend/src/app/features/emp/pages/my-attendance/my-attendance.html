@@ -1,118 +1,314 @@
-<div class="my-attendance" [formGroup]="filterForm">
-    <div class="filter-card">
-        <div class="filter-header">
-            <h3 class="filter-title">Attendance</h3>
-            <p class="filter-desc">Search through your attendance history</p>
+<div class="my-attendance-wrapper">
+    
+    <!-- PAGE TOP HEADER -->
+    <div class="page-top-header">
+        <div class="header-left-col">
+            <div class="header-icon-badge">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="header-titles">
+                <h2 class="page-main-title">My Attendance</h2>
+                <p class="page-main-subtitle">View and monitor your daily attendance logs, work hours, and punch records</p>
+            </div>
         </div>
-        
-        <div class="filter-body">
-            <div class="filter-inputs-row">
-                <div class="filter-group">
-                    <label for="fromDate">From Date</label>
-                    <input type="date" id="fromDate" name="fromDate" class="filter-input" formControlName="fromDate">
-                </div>
-                <div class="filter-group">
-                    <label for="toDate">To Date</label>
-                    <input type="date" id="toDate" name="toDate" class="filter-input" formControlName="toDate">
-                </div>
-                <div class="filter-group">
-                    <label for="statusFilter">Status</label>
-                    <input type="text" id="statusFilter" name="statusFilter" class="filter-input" formControlName="status" placeholder="Present, Absent...">
-                </div>
+        <div class="header-right-actions">
+            <button type="button" class="export-btn" (click)="exportToPdf()" [disabled]="timeSheets.length === 0" title="Export as PDF">
+                <i class="fas fa-file-pdf"></i>
+                <span>Export PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- SUMMARY KPI METRIC CARDS -->
+    <div class="kpi-summary-grid">
+        <!-- Card 1: Total Work Duration -->
+        <div class="kpi-card kpi-blue">
+            <div class="kpi-icon-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="kpi-details">
+                <span class="kpi-title">Total Work Hours</span>
+                <span class="kpi-value">{{ totalWorkHoursDisplay }}</span>
+                <span class="kpi-badge-text blue-badge"><i class="fas fa-history"></i> {{ timeSheets.length }} Days Logged</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Present Days -->
+        <div class="kpi-card kpi-green">
+            <div class="kpi-icon-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7.5" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+            </div>
+            <div class="kpi-details">
+                <span class="kpi-title">Present Days</span>
+                <span class="kpi-value">{{ presentDaysCount }} <small class="val-unit">Days</small></span>
+                <span class="kpi-badge-text green-badge"><i class="fas fa-check-circle"></i> {{ presentRatePercentage }}% Attendance</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Total Overtime -->
+        <div class="kpi-card kpi-purple">
+            <div class="kpi-icon-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </div>
+            <div class="kpi-details">
+                <span class="kpi-title">Total Overtime</span>
+                <span class="kpi-value">{{ overtimeHoursDisplay }}</span>
+                <span class="kpi-badge-text purple-badge"><i class="fas fa-bolt"></i> Extra Hours</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Absent / Time Off -->
+        <div class="kpi-card kpi-amber">
+            <div class="kpi-icon-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="9" y1="10" x2="15" y2="16"></line><line x1="15" y1="10" x2="9" y2="16"></line></svg>
+            </div>
+            <div class="kpi-details">
+                <span class="kpi-title">Absent / Leaves</span>
+                <span class="kpi-value">{{ absentDaysCount }} <small class="val-unit">Days</small></span>
+                <span class="kpi-badge-text amber-badge">{{ leaveDaysCount }} Time-Off Days</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER & SEARCH PANEL -->
+    <div class="filter-panel-card" [formGroup]="filterForm">
+        <div class="filter-panel-header">
+            <div class="filter-heading-left">
+                <i class="fas fa-filter"></i>
+                <span>Filter Timesheets</span>
             </div>
             
-            <div class="filter-actions-row">
-                <button class="search-btn" type="button" (click)="onSearch()">
-                    <i class="fas fa-search"></i> Search
+            <!-- Quick Date Filter Presets -->
+            <div class="quick-range-chips">
+                <button type="button" class="range-chip" [class.active]="activeRange === 'this-month'" (click)="setQuickRange('this-month')">
+                    This Month
                 </button>
-                <button class="reset-btn" type="button" (click)="onReset()">
-                    <i class="fas fa-undo"></i> Reset
+                <button type="button" class="range-chip" [class.active]="activeRange === 'last-month'" (click)="setQuickRange('last-month')">
+                    Last Month
+                </button>
+                <button type="button" class="range-chip" [class.active]="activeRange === 'last-7-days'" (click)="setQuickRange('last-7-days')">
+                    Last 7 Days
+                </button>
+                <button type="button" class="range-chip" [class.active]="activeRange === 'all'" (click)="setQuickRange('all')">
+                    All Time
+                </button>
+            </div>
+        </div>
+
+        <div class="filter-panel-body">
+            <div class="filter-fields-grid">
+                <!-- From Date -->
+                <div class="field-item">
+                    <label for="fromDate">
+                        <i class="far fa-calendar-alt"></i> FROM DATE
+                    </label>
+                    <input type="date" id="fromDate" name="fromDate" class="input-control" formControlName="fromDate" (change)="activeRange = 'custom'">
+                </div>
+
+                <!-- To Date -->
+                <div class="field-item">
+                    <label for="toDate">
+                        <i class="far fa-calendar-check"></i> TO DATE
+                    </label>
+                    <input type="date" id="toDate" name="toDate" class="input-control" formControlName="toDate" (change)="activeRange = 'custom'">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="field-item">
+                    <label for="statusFilter">
+                        <i class="fas fa-tag"></i> ATTENDANCE STATUS
+                    </label>
+                    <select id="statusFilter" name="statusFilter" class="select-control" formControlName="status">
+                        <option value="">All Statuses</option>
+                        <option value="Present">Present</option>
+                        <option value="Working">Working</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Half Day">Half Day</option>
+                        <option value="Time Off">Time Off / Leave</option>
+                        <option value="Not Marked">Not Marked</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="filter-actions-group">
+                    <button class="action-btn-search" type="button" (click)="onSearch()">
+                        <i class="fas fa-search"></i>
+                        <span>Search</span>
+                    </button>
+                    <button class="action-btn-reset" type="button" (click)="onReset()">
+                        <i class="fas fa-undo"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMESHEET TABLE CARD -->
+    <div class="timesheet-card">
+        <div class="timesheet-card-header">
+            <div class="table-title-wrap">
+                <i class="fas fa-table-list table-head-icon"></i>
+                <h3 class="table-title">Timesheet Logs</h3>
+                <span class="count-badge">{{ timeSheets.length }} Total Records</span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="modern-timesheet-table">
+                <thead>
+                    <tr>
+                        <th class="th-date">DATE</th>
+                        <th class="th-day">DAY</th>
+                        <th class="th-time">ENTRY</th>
+                        <th class="th-time">EXIT</th>
+                        <th class="th-late">LATE</th>
+                        <th class="th-hours">WORK HOURS</th>
+                        <th class="th-hours">OVERTIME</th>
+                        <th class="th-hours">BREAK</th>
+                        <th class="th-hours">GRAND TOTAL</th>
+                        <th class="th-status">STATUS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Empty State -->
+                    <tr *ngIf="timeSheets.length === 0" class="no-data-row">
+                        <td colspan="10">
+                            <div class="empty-state-box">
+                                <div class="empty-icon-circle">
+                                    <i class="far fa-calendar-times"></i>
+                                </div>
+                                <h4>No Attendance Records Found</h4>
+                                <p>No timesheet entries found for the selected date range or filter criteria.</p>
+                                <button type="button" class="empty-reset-btn" (click)="onReset()">
+                                    <i class="fas fa-redo"></i> Reset Filters
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Data Rows -->
+                    <tr *ngFor="let sheet of pagedTimeSheets" class="data-row">
+                        <!-- Date -->
+                        <td class="td-date">
+                            <span class="date-text">{{ sheet.date }}</span>
+                        </td>
+
+                        <!-- Day -->
+                        <td class="td-day">
+                            <span class="day-chip" [class.weekend-chip]="sheet.day === 'Sun' || sheet.day === 'Sat'">
+                                {{ sheet.day }}
+                            </span>
+                        </td>
+
+                        <!-- Entry -->
+                        <td class="td-time">
+                            <span class="time-value" [class.time-empty]="sheet.entry === '-'">
+                                <i class="far fa-clock clock-icon" *ngIf="sheet.entry !== '-'"></i>
+                                {{ sheet.entry }}
+                            </span>
+                        </td>
+
+                        <!-- Exit -->
+                        <td class="td-time">
+                            <span class="time-value" [class.time-empty]="sheet.exit === '-'">
+                                <i class="far fa-clock clock-icon" *ngIf="sheet.exit !== '-'"></i>
+                                {{ sheet.exit }}
+                            </span>
+                        </td>
+
+                        <!-- Late -->
+                        <td class="td-late">
+                            <span *ngIf="isLate(sheet.late)" class="late-badge">
+                                <i class="fas fa-exclamation-triangle"></i> {{ sheet.late }}
+                            </span>
+                            <span *ngIf="!isLate(sheet.late)" class="text-muted-dash">-</span>
+                        </td>
+
+                        <!-- Work Hours (Total) -->
+                        <td class="td-hours">
+                            <span class="hours-val">{{ sheet.total || '-' }}</span>
+                        </td>
+
+                        <!-- Overtime -->
+                        <td class="td-hours">
+                            <span class="hours-val" [class.ot-highlight]="sheet.overtime && sheet.overtime !== '0h 0m' && sheet.overtime !== '-'">
+                                {{ sheet.overtime || '-' }}
+                            </span>
+                        </td>
+
+                        <!-- Break -->
+                        <td class="td-hours">
+                            <span class="hours-val text-muted">{{ sheet.break || '-' }}</span>
+                        </td>
+
+                        <!-- Grand Total -->
+                        <td class="td-hours">
+                            <span class="hours-val grand-total-bold">{{ sheet.grandTotal || '-' }}</span>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="td-status">
+                            <span class="status-pill" [ngClass]="{
+                                'status-present': sheet.status === 'Present' || sheet.status === 'Working',
+                                'status-absent': sheet.status === 'Absent',
+                                'status-half': sheet.status === 'Half Day',
+                                'status-leave': sheet.status === 'Time Off',
+                                'status-not-marked': sheet.status === 'Not Marked' || !sheet.status
+                            }">
+                                <span class="status-dot"></span>
+                                {{ sheet.status || 'Not Marked' }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINATION BAR -->
+        <div class="timesheet-pagination" *ngIf="timeSheets.length > 0">
+            <div class="pagination-info">
+                Showing <span class="highlight-num">{{ timeSheetStartEntry }}</span> to
+                <span class="highlight-num">{{ timeSheetEndEntry }}</span> of
+                <span class="highlight-num">{{ timeSheets.length }}</span> entries
+            </div>
+
+            <div class="pagination-controls" *ngIf="timeSheetTotalPages > 1">
+                <button
+                    type="button"
+                    class="page-nav-btn prev-btn"
+                    [disabled]="timeSheetPage === 1"
+                    (click)="setTimeSheetPage(timeSheetPage - 1)"
+                    title="Previous Page"
+                >
+                    <i class="fas fa-chevron-left"></i>
+                    <span>Prev</span>
+                </button>
+
+                <div class="page-numbers-wrap">
+                    <button
+                        type="button"
+                        class="page-num-btn"
+                        *ngFor="let page of timeSheetPages"
+                        [class.active]="page === timeSheetPage"
+                        (click)="setTimeSheetPage(page)"
+                    >
+                        {{ page }}
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    class="page-nav-btn next-btn"
+                    [disabled]="timeSheetPage === timeSheetTotalPages"
+                    (click)="setTimeSheetPage(timeSheetPage + 1)"
+                    title="Next Page"
+                >
+                    <span>Next</span>
+                    <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="time_sheet">
-        <div class="card recent_time flat-timesheet">
-            <div class="card-header">
-                Time Sheets
-            </div>
-            <div class="divider"></div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>DATE</th>
-                                <th>DAY</th>
-                                <th>ENTRY</th>
-                                <th>EXIT</th>
-                                <th>LATE</th>
-                                <th>TOTAL</th>
-                                <th>OVERTIME</th>
-                                <th>BREAK</th>
-                                <th>GRAND TOTAL</th>
-                                <th>STATUS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngIf="timeSheets.length === 0">
-                                <td colspan="10" class="no-data">
-                                    No attendance records found
-                                </td>
-                            </tr>
-                            <tr *ngFor="let sheet of pagedTimeSheets">
-                                <td>{{ sheet.date }}</td>
-                                <td>{{ sheet.day }}</td>
-                                <td>{{ sheet.entry }}</td>
-                                <td>{{ sheet.exit }}</td>
-                                <td>{{ sheet.late || '-' }}</td>
-                                <td>{{ sheet.total }}</td>
-                                <td>{{ sheet.overtime }}</td>
-                                <td>{{ sheet.break }}</td>
-                                <td>{{ sheet.grandTotal }}</td>
-                                <td>
-                                    <span *ngIf="sheet.status" class="status-badge" [title]="sheet.status" [ngClass]="sheet.status.toLowerCase()">
-                                        {{ sheet.status }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="timesheet-pagination" *ngIf="timeSheets.length > 0">
-                    <div class="timesheet-pagination__info">
-                        Showing <span>{{ timeSheetStartEntry }}</span> to
-                        <span>{{ timeSheetEndEntry }}</span> of
-                        <span>{{ timeSheets.length }}</span> entries
-                    </div>
-                    <div class="timesheet-pagination__controls" *ngIf="timeSheets.length > timeSheetPageSize">
-                        <button
-                            type="button"
-                            class="timesheet-page-btn"
-                            [disabled]="timeSheetPage === 1"
-                            (click)="setTimeSheetPage(timeSheetPage - 1)"
-                        >
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button
-                            type="button"
-                            class="timesheet-page-btn"
-                            *ngFor="let page of timeSheetPages"
-                            [class.active]="page === timeSheetPage"
-                            (click)="setTimeSheetPage(page)"
-                        >
-                            {{ page }}
-                        </button>
-                        <button
-                            type="button"
-                            class="timesheet-page-btn"
-                            [disabled]="timeSheetPage === timeSheetTotalPages"
-                            (click)="setTimeSheetPage(timeSheetPage + 1)"
-                        >
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-        </div>
-    </div>
 </div>

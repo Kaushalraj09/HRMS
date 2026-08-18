@@ -1,20 +1,25 @@
 :host {
   display: block;
-  padding: 24px;
-  background-color: hsl(210, 20%, 98%);
-  min-height: calc(100vh - 60px);
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+  min-height: auto;
   font-family: 'Inter', sans-serif;
   color: hsl(210, 10%, 20%);
 }
 
 .regularization-container {
-  max-width: 1280px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 /* Header styling */
 .regularization-header {
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 
 .breadcrumb {
@@ -43,7 +48,7 @@
 .regularization-layout {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 10px;
 }
 
 /* Request Panel Form Grid */

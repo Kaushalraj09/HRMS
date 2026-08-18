@@ -1,14 +1,14 @@
 :host {
   display: block;
-  padding: 24px;
-  background-color: hsl(210, 20%, 98%);
-  min-height: calc(100vh - 60px);
+  padding: 0;
+  background-color: transparent;
+  width: 100%;
   font-family: 'Inter', sans-serif;
   color: hsl(210, 10%, 20%);
 }
 
 .requests-container {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
 }
 

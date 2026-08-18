@@ -131,6 +131,7 @@ def get_user_notifications(
     search: Optional[str] = None
 ) -> List[Notification]:
     from app.models.employee import Employee
+    from app.models.user import User
     from datetime import datetime, timedelta, time
     from zoneinfo import ZoneInfo
     
@@ -139,10 +140,21 @@ def get_user_notifications(
     yesterday_date = current.date() - timedelta(days=1)
     cutoff = datetime.combine(yesterday_date, time.min, tzinfo=APP_TIMEZONE)
     
+    # Base query excluding login notifications across all roles
     query = db.query(Notification).filter(
         Notification.user_id == user_id,
-        Notification.deleted_at.is_(None)
+        Notification.deleted_at.is_(None),
+        ~Notification.type.in_(["LOGIN", "LOGIN_ACTIVITY"]),
+        ~func.coalesce(Notification.category, "").in_(["LOGIN", "LOGIN_ACTIVITY"])
     )
+
+    # Check user role for role-specific notification filtering
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.role and user.role.name.lower() in ["admin", "hr"]:
+        # HR & Admin receive time off, regularization, alerts, and system notices; NOT routine employee punch-ins/outs
+        query = query.filter(
+            ~func.coalesce(Notification.category, "").in_(["PUNCH_IN", "PUNCH_OUT"])
+        )
     
     if page == 1 and category is None and is_read is None and search is None:
         query = query.filter(
@@ -182,23 +194,41 @@ def get_user_notifications(
 
 
 def get_unread_count(db: Session, user_id: int) -> int:
-    return (
-        db.query(Notification)
-        .filter(
-            Notification.user_id == user_id,
-            Notification.is_read == False,
-            Notification.deleted_at.is_(None)
-        )
-        .count()
+    from app.models.user import User
+    query = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False,
+        Notification.deleted_at.is_(None),
+        ~Notification.type.in_(["LOGIN", "LOGIN_ACTIVITY"]),
+        ~func.coalesce(Notification.category, "").in_(["LOGIN", "LOGIN_ACTIVITY"])
     )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.role and user.role.name.lower() in ["admin", "hr"]:
+        query = query.filter(
+            ~func.coalesce(Notification.category, "").in_(["PUNCH_IN", "PUNCH_OUT"])
+        )
+
+    return query.count()
 
 
 def mark_all_notifications_read(db: Session, user_id: int) -> int:
-    db.query(Notification).filter(
+    from app.models.user import User
+    update_query = db.query(Notification).filter(
         Notification.user_id == user_id,
         Notification.is_read == False,
-        Notification.deleted_at.is_(None)
-    ).update(
+        Notification.deleted_at.is_(None),
+        ~Notification.type.in_(["LOGIN", "LOGIN_ACTIVITY"]),
+        ~func.coalesce(Notification.category, "").in_(["LOGIN", "LOGIN_ACTIVITY"])
+    )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.role and user.role.name.lower() in ["admin", "hr"]:
+        update_query = update_query.filter(
+            ~func.coalesce(Notification.category, "").in_(["PUNCH_IN", "PUNCH_OUT"])
+        )
+
+    update_query.update(
         {Notification.is_read: True, Notification.read_at: func.now()},
         synchronize_session=False
     )

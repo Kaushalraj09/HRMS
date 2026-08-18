@@ -56,21 +56,22 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
         **obj_in.model_dump()
     )
     db.add(new_employee)
-    db.commit()
-    db.refresh(new_employee)
-
-    from app.services.dashboard_service import invalidate_dashboard_cache
-    invalidate_dashboard_cache(db)
+    db.flush()
 
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
-    from app.services.account_access_service import apply_temporary_testing_password
     from app.core.config import settings
+    from app.services.account_access_service import InvitationDeliveryError
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
-    email_sent = send_reset_email(new_user.email, new_user.display_name, reset_link)
-    if not email_sent:
-        apply_temporary_testing_password(db, new_user)
+    if not send_reset_email(new_user.email, new_user.display_name, reset_link):
+        db.rollback()
+        raise InvitationDeliveryError("Unable to deliver the password setup email. No employee account was created.")
+
+    db.commit()
+    db.refresh(new_employee)
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
     return new_employee
 
 def _matches_employee_filters(employee, search: str, department: str, employee_type: str, status: str) -> bool:

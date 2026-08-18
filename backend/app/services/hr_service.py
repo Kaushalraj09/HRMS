@@ -75,22 +75,22 @@ def create_hr(db: Session, obj_in: HrCreate):
         hr_settings=None
     )
     db.add(new_hr)
-    
-    db.commit()
-    db.refresh(new_employee)
-
-    from app.services.dashboard_service import invalidate_dashboard_cache
-    invalidate_dashboard_cache(db)
+    db.flush()
 
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
-    from app.services.account_access_service import apply_temporary_testing_password
     from app.core.config import settings
+    from app.services.account_access_service import InvitationDeliveryError
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
-    email_sent = send_reset_email(new_user.email, new_user.display_name, reset_link)
-    if not email_sent:
-        apply_temporary_testing_password(db, new_user)
+    if not send_reset_email(new_user.email, new_user.display_name, reset_link):
+        db.rollback()
+        raise InvitationDeliveryError("Unable to deliver the password setup email. No HR account was created.")
+
+    db.commit()
+    db.refresh(new_employee)
+    from app.services.dashboard_service import invalidate_dashboard_cache
+    invalidate_dashboard_cache(db)
     return _employee_to_hr_response(new_employee)
 
 def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", status: str = ""):

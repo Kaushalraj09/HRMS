@@ -153,7 +153,7 @@ export class AdminReportsComponent implements OnInit {
     this.loadReport();
   }
 
-  exportCsv(): void {
+  exportPdf(): void {
     let endpoint = '';
     let filters: any = {};
 
@@ -172,7 +172,7 @@ export class AdminReportsComponent implements OnInit {
         break;
     }
 
-    this.reportService.exportReportCsv(endpoint, filters).subscribe({
+    this.reportService.exportReportPdf(endpoint, filters).subscribe({
       next: (blob) => {
         const filename = `admin_${this.activeTab}_report_${new Date().toISOString().split('T')[0]}.pdf`;
         const url = window.URL.createObjectURL(blob);
@@ -186,6 +186,10 @@ export class AdminReportsComponent implements OnInit {
       },
       error: (err) => console.error('Export failed', err)
     });
+  }
+
+  exportCsv(): void {
+    this.exportPdf();
   }
 
   pageNumbers: number[] = [1];

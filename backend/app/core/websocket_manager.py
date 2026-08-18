@@ -6,8 +6,8 @@ class ConnectionManager:
         # Maps user_id to list of active websockets
         self.active_connections: Dict[int, List[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
+    async def connect(self, websocket: WebSocket, user_id: int, subprotocol: str | None = None):
+        await websocket.accept(subprotocol=subprotocol)
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)

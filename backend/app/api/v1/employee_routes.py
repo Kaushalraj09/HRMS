@@ -8,6 +8,7 @@ from app.models.employee import Employee
 from app.core.enums import UserRole
 from app.schemas.employee import EmployeeCreate, EmployeeCredentialsResponse, EmployeeListResponse, EmployeeResponse, EmployeeUpdate
 from app.services import employee_service
+from app.services.account_access_service import InvitationDeliveryError
 
 router = APIRouter(prefix="/employees", tags=["employee-management"])
 
@@ -24,6 +25,8 @@ def add_employee(
         )
     try:
         return employee_service.create_employee(db, request)
+    except InvitationDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

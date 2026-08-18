@@ -29,7 +29,7 @@ def handle_attendance_punched_in(event: ev_types.AttendancePunchedIn):
         emp = db.query(Employee).filter(Employee.id == event.employee_id).first()
         if emp:
             time_str = event.punch_time.strftime("%I:%M %p")
-            # 1. Notify Employee
+            # Notify Employee only (confirmation of their own punch)
             _run_async(create_notification(
                 db=db,
                 user_id=emp.user_id,
@@ -38,20 +38,6 @@ def handle_attendance_punched_in(event: ev_types.AttendancePunchedIn):
                 message=f"You punched in at {time_str}.",
                 reference_id=event.attendance_id,
                 employee_id=emp.id
-            ))
-            # 2. Notify HR & Admin roles
-            _run_async(create_notification_for_roles(
-                db=db,
-                roles=["HR", "Admin"],
-                type="ATTENDANCE",
-                title="Employee Punched In",
-                message=f"{emp.first_name} {emp.last_name} punched in at {time_str}.",
-                category="PUNCH_IN",
-                severity="SUCCESS",
-                employee_id=emp.id,
-                created_by=emp.user_id,
-                reference_id=event.attendance_id,
-                notification_metadata={"work_mode": event.work_mode}
             ))
     except Exception as e:
         logger.error(f"Error handling AttendancePunchedIn notification: {e}")
@@ -64,7 +50,7 @@ def handle_attendance_punched_out(event: ev_types.AttendancePunchedOut):
         emp = db.query(Employee).filter(Employee.id == event.employee_id).first()
         if emp:
             time_str = event.punch_time.strftime("%I:%M %p")
-            # 1. Notify Employee
+            # Notify Employee only (confirmation of their own punch)
             _run_async(create_notification(
                 db=db,
                 user_id=emp.user_id,
@@ -73,20 +59,6 @@ def handle_attendance_punched_out(event: ev_types.AttendancePunchedOut):
                 message=f"You punched out at {time_str}.",
                 reference_id=event.attendance_id,
                 employee_id=emp.id
-            ))
-            # 2. Notify HR & Admin
-            _run_async(create_notification_for_roles(
-                db=db,
-                roles=["HR", "Admin"],
-                type="ATTENDANCE",
-                title="Employee Punched Out",
-                message=f"{emp.first_name} {emp.last_name} punched out at {time_str}.",
-                category="PUNCH_OUT",
-                severity="SUCCESS",
-                employee_id=emp.id,
-                created_by=emp.user_id,
-                reference_id=event.attendance_id,
-                notification_metadata={"work_mode": event.work_mode}
             ))
     except Exception as e:
         logger.error(f"Error handling AttendancePunchedOut notification: {e}")

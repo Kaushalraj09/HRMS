@@ -52,6 +52,11 @@ export class NotificationService implements OnDestroy {
     this.wsSubscription = this.attendanceService.wsMessage$.subscribe(msg => {
       if (msg && msg.type === 'NEW_NOTIFICATION') {
         const notif: Notification = msg.notification;
+        const notifType = (notif.type || '').toUpperCase();
+        const notifCategory = (notif.category || '').toUpperCase();
+        if (notifType.includes('LOGIN') || notifCategory.includes('LOGIN')) {
+          return;
+        }
         const currentList = this.notificationsSubject.value;
         if (!currentList.some(n => n.id === notif.id)) {
           this.notificationsSubject.next([notif, ...currentList]);
@@ -84,12 +89,17 @@ export class NotificationService implements OnDestroy {
 
     return this.http.get<Notification[]>(this.apiUrl, { params }).pipe(
       tap(notifs => {
+        const filtered = (notifs || []).filter(n => {
+          const t = (n.type || '').toUpperCase();
+          const c = (n.category || '').toUpperCase();
+          return !t.includes('LOGIN') && !c.includes('LOGIN');
+        });
         if (page === 1) {
-          this.notificationsSubject.next(notifs);
+          this.notificationsSubject.next(filtered);
         } else {
           const current = this.notificationsSubject.value;
           const merged = [...current];
-          for (const n of notifs) {
+          for (const n of filtered) {
             if (!merged.some(item => item.id === n.id)) {
               merged.push(n);
             }

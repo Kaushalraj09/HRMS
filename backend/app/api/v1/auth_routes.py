@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse, ForgotPasswordRequest, ResetPasswordRequest, WebSocketTicketResponse
+from app.core.security import create_websocket_ticket
 from app.services import auth_service
 from app.services.login_activity_service import log_login_activity
 
@@ -18,9 +19,10 @@ _lockouts: dict[str, datetime] = {}
 
 
 def _client_ip(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+    # Prioritize X-Real-IP set by trusted reverse proxy (Nginx)
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
     return request.client.host if request.client else "0.0.0.0"
 
 
@@ -97,41 +99,21 @@ async def login(
             status="Success"
         )
         
-        # Trigger real-time login notification for HR and Admin if user is an employee
-        from app.models.employee import Employee
-        employee = db.query(Employee).filter(Employee.user_id == user_id).first()
-        if employee:
-            try:
-                from app.services.notification_service import create_notification_for_roles
-                await create_notification_for_roles(
-                    db=db,
-                    roles=["HR", "Admin"],
-                    type="ATTENDANCE",
-                    category="LOGIN",
-                    severity="INFO",
-                    title="Employee Login",
-                    message=f"{employee.first_name} {employee.last_name} logged into the HRMS.",
-                    employee_id=employee.id,
-                    created_by=user_id,
-                    notification_metadata={
-                        "ip_address": ip_address,
-                        "user_agent": user_agent
-                    }
-                )
-            except Exception:
-                logger.exception("Failed to create login notification")
-        
     return result
 
 @router.post("/change-password", response_model=StandardResponse)
 def change_password(
     request: ChangePasswordRequest, 
+    http_request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    change_key = _rate_limit_key("change-password", http_request, current_user.email)
+    _enforce_rate_limit(change_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
     result = auth_service.change_user_password(db, current_user.id, request)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
+    _clear_rate_limit(change_key)
     return result
 
 @router.post("/forgot-password", response_model=StandardResponse)
@@ -142,7 +124,10 @@ def forgot_password(payload: ForgotPasswordRequest, http_request: Request, db: S
     return {"success": True, "message": "If the account exists, password reset instructions have been sent to the registered email."}
 
 @router.post("/reset-password", response_model=StandardResponse)
-def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(request: ResetPasswordRequest, http_request: Request, db: Session = Depends(get_db)):
+    ip = _client_ip(http_request)
+    reset_rate_key = f"reset-password:{ip}"
+    _enforce_rate_limit(reset_rate_key, max_attempts=10, window_seconds=300, lockout_seconds=900)
     result = auth_service.reset_password(db, request)
     if not result["success"]:
         raise HTTPException(
@@ -150,6 +135,12 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
             detail=result["message"]
         )
     return result
+
+
+@router.post("/ws-ticket", response_model=WebSocketTicketResponse)
+def create_ws_ticket(current_user: User = Depends(get_current_user)):
+    """Issue a one-minute ticket for the WebSocket subprotocol handshake."""
+    return {"ticket": create_websocket_ticket(current_user.email, current_user.id)}
 
 
 @router.get("/me")

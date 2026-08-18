@@ -450,4 +450,54 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     }
     return 'fas fa-bell';
   }
+
+  formatCategory(category?: string, type?: string): string {
+    const raw = (category || type || 'SYSTEM').toUpperCase();
+    const map: Record<string, string> = {
+      'LOGIN': 'Login',
+      'LOGIN_ACTIVITY': 'Login Activity',
+      'PUNCH_IN': 'Punch In',
+      'PUNCH_OUT': 'Punch Out',
+      'ATTENDANCE': 'Attendance',
+      'ATTENDANCE_AUTO_CHECKOUT': 'Auto Checkout',
+      'LEAVE': 'Leave',
+      'LEAVE_REQUEST': 'Leave Request',
+      'LEAVE_APPROVED': 'Leave Approved',
+      'LEAVE_REJECTED': 'Leave Rejected',
+      'LEAVE_CANCELLED': 'Leave Cancelled',
+      'TIMEOFF_APPLY': 'Time Off',
+      'TIMEOFF_REQUEST': 'Time Off',
+      'TIMEOFF_UPDATE': 'Time Off Update',
+      'TIMEOFF_EXPIRED': 'Time Off Expired',
+      'TIMEOFF_REMINDER': 'Time Off Reminder',
+      'SHIFT_END_REMINDER': 'Shift End',
+      'OVERTIME_REMINDER': 'Overtime Alert',
+      'SYSTEM': 'System'
+    };
+
+    if (map[raw]) {
+      return map[raw];
+    }
+    return raw.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  getCategoryTheme(category?: string, type?: string): string {
+    const raw = (category || type || 'SYSTEM').toUpperCase();
+    if (raw.includes('LOGIN')) return 'theme-blue';
+    if (raw.includes('PUNCH') || raw.includes('ATTENDANCE') || raw.includes('APPROVED')) return 'theme-green';
+    if (raw.includes('LEAVE') || raw.includes('TIMEOFF')) return 'theme-purple';
+    if (raw.includes('REMINDER') || raw.includes('ALERT')) return 'theme-amber';
+    if (raw.includes('REJECTED') || raw.includes('CANCELLED') || raw.includes('ERROR')) return 'theme-red';
+    return 'theme-slate';
+  }
+
+  getCategoryBadgeClass(category?: string): string {
+    const raw = (category || '').toUpperCase();
+    if (raw.includes('LOGIN')) return 'badge-blue';
+    if (raw.includes('PUNCH') || raw.includes('ATTENDANCE') || raw.includes('APPROVED')) return 'badge-green';
+    if (raw.includes('LEAVE') || raw.includes('TIMEOFF')) return 'badge-purple';
+    if (raw.includes('REMINDER') || raw.includes('ALERT')) return 'badge-amber';
+    if (raw.includes('REJECT') || raw.includes('CANCEL') || raw.includes('ERROR')) return 'badge-red';
+    return 'badge-gray';
+  }
 }

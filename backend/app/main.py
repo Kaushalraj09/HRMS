@@ -63,13 +63,20 @@ app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 
 @app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = None):
-    # Authenticate token if present, or extract from query parameters
+async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    # Browsers cannot set Authorization headers during a WebSocket upgrade.
+    # A short-lived ticket is therefore sent in the Sec-WebSocket-Protocol
+    # header, rather than in the URL where it could be logged.
     from app.api.deps import get_ws_user
+    requested_protocols = [
+        value.strip()
+        for value in websocket.headers.get("sec-websocket-protocol", "").split(",")
+        if value.strip()
+    ]
+    ticket = requested_protocols[1] if len(requested_protocols) >= 2 and requested_protocols[0] == "hrms-ticket" else None
     db = SessionLocal()
     try:
-        # Validate WebSocket token
-        user = get_ws_user(token=token, db=db)
+        user = get_ws_user(ticket=ticket, db=db)
         if not user or user.id != user_id:
             logger.warning("WebSocket auth failed for user_id=%s", user_id)
             await websocket.accept()  # Must accept before closing with code in some runtimes
@@ -84,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
         db.close()
 
     logger.info("WebSocket connection established for user_id=%s", user_id)
-    await manager.connect(websocket, user_id)
+    await manager.connect(websocket, user_id, subprotocol="hrms-ticket")
     try:
         while True:
             await websocket.receive_text()
@@ -93,6 +100,18 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
 
 
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -100,6 +119,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled server exception: %s", exc)
+    if settings.APP_ENV == "production":
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "An internal server error occurred. Please contact system administrator."}
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
 
 @app.get("/health")
 def health_check():

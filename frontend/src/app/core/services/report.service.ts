@@ -185,8 +185,8 @@ export class ReportService {
     );
   }
 
-  // General CSV Export
-  exportReportCsv(endpointPath: string, filterParams: any): Observable<Blob> {
+  // General PDF Report Export
+  exportReportPdf(endpointPath: string, filterParams: any): Observable<Blob> {
     let params = new HttpParams().set('export', 'pdf');
     Object.keys(filterParams).forEach(key => {
       if (filterParams[key] !== null && filterParams[key] !== undefined && filterParams[key] !== '') {
@@ -198,5 +198,9 @@ export class ReportService {
       params,
       responseType: 'blob'
     });
+  }
+
+  exportReportCsv(endpointPath: string, filterParams: any): Observable<Blob> {
+    return this.exportReportPdf(endpointPath, filterParams);
   }
 }

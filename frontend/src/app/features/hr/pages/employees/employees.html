@@ -379,7 +379,7 @@
     (closed)="onModalClose()">
   </app-employee-credential-modal>
 
-  <!-- Delete Confirmation Modal -->
+  <!-- Delete Confirmation Modal (Modern Pop Dialog) -->
   <div class="camera-modal-overlay" *ngIf="deleteModalOpen" (click)="closeDeleteModal()">
     <div class="camera-modal-box" (click)="$event.stopPropagation()">
       <div class="camera-modal-header">
@@ -387,7 +387,7 @@
           <i class="fas fa-exclamation-triangle"></i>
           <span>Confirm Deletion</span>
         </div>
-        <button class="close-btn" (click)="closeDeleteModal()">
+        <button type="button" class="close-btn" (click)="closeDeleteModal()" title="Close">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -397,20 +397,21 @@
             <i class="fas fa-trash-alt"></i>
           </div>
           <h3>Delete Employee?</h3>
-          <p style="margin: 0; max-width: 340px; color: #64748b; font-size: 14px; line-height: 1.5;">
-            Are you sure you want to delete employee <strong>{{ employeeToDelete?.name }}</strong> ({{ employeeToDelete?.employeeCode }})?
+          <p class="confirm-desc">
+            Are you sure you want to delete employee <strong>{{ employeeToDelete?.name }}</strong> <span class="emp-code-pill">({{ employeeToDelete?.employeeCode }})</span>?
           </p>
-          <p style="margin: 5px 0 0 0; max-width: 340px; color: #94a3b8; font-size: 13px; line-height: 1.4;">
-            This will permanently disable their login and remove them from active directories.
-          </p>
+          <div class="delete-warning-box">
+            <i class="fas fa-shield-alt"></i>
+            <span>This will permanently disable their login and remove them from active directories.</span>
+          </div>
         </div>
       </div>
       <div class="camera-modal-footer">
-        <button class="btn btn-secondary" (click)="closeDeleteModal()">
+        <button type="button" class="btn btn-secondary modal-cancel-btn" (click)="closeDeleteModal()">
           Cancel
         </button>
-        <button class="btn btn-danger" (click)="executeDelete()">
-          Delete Employee
+        <button type="button" class="btn btn-danger modal-delete-btn" (click)="executeDelete()">
+          <i class="fas fa-trash-alt"></i> Delete Employee
         </button>
       </div>
     </div>

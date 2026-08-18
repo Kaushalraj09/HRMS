@@ -1,0 +1,252 @@
+export interface PdfExportOptions {
+  title: string;
+  subtitle?: string;
+  filename?: string;
+  metadata?: { label: string; value: string | number }[];
+  headers: string[];
+  rows: (string | number)[][];
+}
+
+/**
+ * Generates an executive-styled, printable A4 PDF document and triggers the print/save-as-PDF dialog.
+ */
+export function exportTableToPdf(options: PdfExportOptions): void {
+  const { title, subtitle, headers, rows, metadata } = options;
+  const nowStr = new Date().toLocaleString();
+
+  const metadataHtml = metadata && metadata.length > 0
+    ? `<div class="meta-grid">
+        ${metadata.map(m => `
+          <div class="meta-card">
+            <span class="meta-label">${m.label}</span>
+            <span class="meta-value">${m.value}</span>
+          </div>
+        `).join('')}
+       </div>`
+    : '';
+
+  const tableHeaderHtml = headers.map(h => `<th>${h}</th>`).join('');
+  const tableRowsHtml = rows.map((r, idx) => `
+    <tr class="${idx % 2 === 0 ? 'even' : 'odd'}">
+      ${r.map(cell => `<td>${cell !== null && cell !== undefined ? cell : '-'}</td>`).join('')}
+    </tr>
+  `).join('');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    @page {
+      size: A4 landscape;
+      margin: 12mm 15mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0F172A;
+      background: #FFFFFF;
+      padding: 24px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #2563EB;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #2563EB;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .doc-title {
+      font-size: 16px;
+      font-weight: 750;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+
+    .doc-subtitle {
+      font-size: 12px;
+      color: #64748B;
+      font-weight: 500;
+    }
+
+    .report-meta-right {
+      text-align: right;
+      font-size: 11px;
+      color: #64748B;
+      line-height: 1.5;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .meta-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .meta-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748B;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .meta-value {
+      font-size: 14px;
+      font-weight: 750;
+      color: #0F172A;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    th {
+      background-color: #1E3A8A !important;
+      color: #FFFFFF !important;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 10px;
+      text-align: left;
+      border: 1px solid #1E3A8A;
+      font-size: 10px;
+    }
+
+    td {
+      padding: 7px 10px;
+      border: 1px solid #E2E8F0;
+      color: #1E293B;
+      vertical-align: middle;
+    }
+
+    tr.even td {
+      background-color: #F8FAFC !important;
+    }
+
+    tr.odd td {
+      background-color: #FFFFFF !important;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #94A3B8;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div>
+      <div class="brand-title">AIVAN 360 HR+</div>
+      <div class="doc-title">${title}</div>
+      ${subtitle ? `<div class="doc-subtitle">${subtitle}</div>` : ''}
+    </div>
+    <div class="report-meta-right">
+      <div><strong>Generated On:</strong> ${nowStr}</div>
+      <div><strong>Total Records:</strong> ${rows.length}</div>
+      <div><strong>Status:</strong> Confidential / Official</div>
+    </div>
+  </div>
+
+  ${metadataHtml}
+
+  <table>
+    <thead>
+      <tr>${tableHeaderHtml}</tr>
+    </thead>
+    <tbody>
+      ${tableRowsHtml}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>AIVAN 360 HR+ Enterprise Management System</span>
+    <span>Generated by Authenticated User &bull; Page 1 of 1</span>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    };
+  </script>
+</body>
+</html>
+  `;
+
+  const printWindow = window.open('', '_blank', 'width=1024,height=768');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  } else {
+    // Fallback if popup blocker active: write to hidden iframe and print
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 500);
+    }
+  }
+}

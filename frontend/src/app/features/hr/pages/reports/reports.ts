@@ -168,7 +168,7 @@ export class HRReportsComponent implements OnInit {
     this.loadReport();
   }
 
-  exportCsv(): void {
+  exportPdf(): void {
     let endpoint = '';
     const filters: any = {
       startDate: this.startDate,
@@ -192,7 +192,7 @@ export class HRReportsComponent implements OnInit {
         break;
     }
 
-    this.reportService.exportReportCsv(endpoint, filters).subscribe({
+    this.reportService.exportReportPdf(endpoint, filters).subscribe({
       next: (blob) => {
         const filename = `${this.activeTab}_report_${new Date().toISOString().split('T')[0]}.pdf`;
         const url = window.URL.createObjectURL(blob);
@@ -206,6 +206,10 @@ export class HRReportsComponent implements OnInit {
       },
       error: (err) => console.error('Export failed', err)
     });
+  }
+
+  exportCsv(): void {
+    this.exportPdf();
   }
 
   pageNumbers: number[] = [1];

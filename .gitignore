@@ -14,3 +14,7 @@ node_modules/
 dist/
 .angular/
 .vscode/
+
+# TLS certificate material is mounted at runtime and must never be committed.
+deploy/certs/*.pem
+deploy/certs/*.key

@@ -77,6 +77,10 @@ interface BackendTodayAttendanceState {
   overtimeExtended?: boolean;
 }
 
+interface WebSocketTicketResponse {
+  ticket: string;
+}
+
 export interface TimeOffApplyResponse {
   id: number;
   employee_id: number;
@@ -101,6 +105,7 @@ export class AttendanceService {
   });
   private socket: WebSocket | null = null;
   private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private pendingWebSocketTicketFor: string | number | null = null;
   public get timeoffUpdate$() {
     return this.timeoffService.timeoffUpdate$;
   }
@@ -120,7 +125,7 @@ export class AttendanceService {
 
     this.clearReconnectTimeout();
 
-    const wsUrl = buildWsUrl(`/ws/${userId}?token=${encodeURIComponent(token)}`);
+    const wsUrl = buildWsUrl(`/ws/${userId}`);
     
     // If we already have a socket connection to this exact URL, don't reconnect.
     if (this.socket && this.socket.url === wsUrl) {
@@ -137,7 +142,30 @@ export class AttendanceService {
       } catch (e) {}
     }
 
-    const socket = new WebSocket(wsUrl);
+    if (this.pendingWebSocketTicketFor === userId) {
+      return;
+    }
+
+    this.pendingWebSocketTicketFor = userId;
+    this.http.post<WebSocketTicketResponse>(buildApiUrl('/auth/ws-ticket'), {}).subscribe({
+      next: ({ ticket }) => {
+        if (this.pendingWebSocketTicketFor !== userId) {
+          return;
+        }
+        this.pendingWebSocketTicketFor = null;
+        this.openWebSocket(userId, wsUrl, ticket);
+      },
+      error: () => {
+        if (this.pendingWebSocketTicketFor === userId) {
+          this.pendingWebSocketTicketFor = null;
+          this.reconnectTimeoutId = setTimeout(() => this.connectWebSocket(userId), 5000);
+        }
+      }
+    });
+  }
+
+  private openWebSocket(userId: string | number, wsUrl: string, ticket: string) {
+    const socket = new WebSocket(wsUrl, ['hrms-ticket', ticket]);
     this.socket = socket;
 
     socket.onopen = () => {};
@@ -175,6 +203,7 @@ export class AttendanceService {
 
   disconnectWebSocket() {
     this.clearReconnectTimeout();
+    this.pendingWebSocketTicketFor = null;
     if (this.socket) {
       this.socket.onclose = () => { };
       this.socket.onerror = () => { };

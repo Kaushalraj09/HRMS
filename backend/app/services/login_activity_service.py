@@ -79,17 +79,6 @@ async def log_login_activity(
     db.commit()
     db.refresh(activity)
     
-    # Auto notify for successful logins
-    if status == "Success":
-        await create_notification(
-            db=db,
-            user_id=user_id,
-            type="LOGIN_ACTIVITY",
-            title="Successfully Logged In",
-            message="You logged in successfully.",
-            reference_id=activity.id
-        )
-        
     return activity
 
 def get_login_activities(

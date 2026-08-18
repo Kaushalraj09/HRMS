@@ -24,26 +24,33 @@
                     <!-- 1. HERO USER HEADER -->
                     <div class="admin-hero-card">
                         <div class="hero-left">
-                            <div class="hero-avatar">
-                                <span>{{ adminInitials }}</span>
+                            <div class="hero-avatar-wrapper">
+                                <div class="hero-avatar">
+                                    <span>{{ adminInitials }}</span>
+                                </div>
+                                <span class="avatar-status-dot" title="Active"></span>
                             </div>
                             <div class="hero-info">
-                                <h1 class="hero-title">{{ userName }}</h1>
-                                <p class="hero-subtitle">{{ adminCode }} &bull; {{ adminRole }} &bull; {{ adminDepartment }}</p>
+                                <div class="hero-title-row">
+                                    <h1 class="hero-title">{{ userName }}</h1>
+                                    <span class="role-badge">
+                                        <i class="fas fa-shield-alt"></i> {{ adminRole || 'Administrator' }}
+                                    </span>
+                                </div>
+                                <div class="hero-meta-row">
+                                    <span class="meta-item">
+                                        <i class="fas fa-id-badge"></i> {{ adminCode || '0001' }}
+                                    </span>
+                                    <span class="meta-dot">&bull;</span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-user-shield"></i> {{ adminRole || 'System Admin' }}
+                                    </span>
+                                    <span class="meta-dot">&bull;</span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-building"></i> {{ adminDepartment || 'Administration' }}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="hero-right">
-                            <div class="hero-pill-badge shift-pill">
-                                <i class="far fa-clock"></i>
-                                <span>{{ adminShift }}</span>
-                            </div>
-                            <div class="hero-pill-badge status-pill">
-                                <span>{{ adminStatus }}</span>
-                            </div>
-                            <button class="hero-edit-btn" (click)="openProfile()">
-                                <i class="fas fa-pencil-alt"></i>
-                                <span>Edit Profile</span>
-                            </button>
                         </div>
                     </div>
 

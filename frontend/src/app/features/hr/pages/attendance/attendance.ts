@@ -8,6 +8,7 @@ import { AttendanceService } from '../../../../core/services/attendance.service'
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 
 import { MasterDataService } from '../../../../core/services/master-data.service';
+import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
 
 @Component({
   selector: 'app-attendance',
@@ -160,12 +161,56 @@ export class AttendanceComponent implements OnInit {
     );
   }
 
+  activePreset: string = 'all';
+
+  getInitials(name?: string): string {
+    if (!name) return 'EM';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  setQuickPreset(preset: 'all' | 'today' | 'yesterday' | 'week' | 'month') {
+    this.activePreset = preset;
+    const now = new Date();
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    if (preset === 'all') {
+      this.filterForm.patchValue({ fromDate: '', toDate: '' });
+    } else if (preset === 'today') {
+      const todayStr = formatDate(now);
+      this.filterForm.patchValue({ fromDate: todayStr, toDate: todayStr });
+    } else if (preset === 'yesterday') {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const yStr = formatDate(yesterday);
+      this.filterForm.patchValue({ fromDate: yStr, toDate: yStr });
+    } else if (preset === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - 7);
+      this.filterForm.patchValue({ fromDate: formatDate(startOfWeek), toDate: formatDate(now) });
+    } else if (preset === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      this.filterForm.patchValue({ fromDate: formatDate(startOfMonth), toDate: formatDate(now) });
+    }
+
+    this.onSearch();
+  }
+
   onSearch() {
     this.pageSubject.next(1); // Force to page 1
     this.searchTrigger$.next(true); // Fire pipeline securely
   }
 
   onReset() {
+    this.activePreset = 'all';
     this.filterForm.reset({
       fromDate: '',
       toDate: '',
@@ -183,5 +228,41 @@ export class AttendanceComponent implements OnInit {
 
   trackById(index: number, record: AttendanceRecord): string {
     return record.id;
+  }
+
+  exportPdf(data: AttendanceRecord[]) {
+    if (!data || data.length === 0) return;
+    const headers = ['Employee ID', 'Name', 'Department', 'Date', 'Punch In', 'Punch Out', 'Hours', 'Status', 'Location'];
+    const rows = data.map(r => [
+      r.code || '-',
+      r.name || '-',
+      r.department || '-',
+      r.date || '-',
+      r.punchIn || '-',
+      r.punchOut || '-',
+      r.hours || '-',
+      r.status || '-',
+      r.workMode || '-'
+    ]);
+
+    const metadata = this.lastMetrics ? [
+      { label: 'Working Now', value: this.lastMetrics.working },
+      { label: 'Present Today', value: this.lastMetrics.present },
+      { label: 'Absent', value: this.lastMetrics.absent },
+      { label: 'Not Marked', value: this.lastMetrics.notMarked }
+    ] : [];
+
+    exportTableToPdf({
+      title: 'Workforce Attendance Report',
+      subtitle: 'Daily logs, punch timings, status breakdowns & location',
+      filename: `attendance_report_${new Date().toISOString().split('T')[0]}.pdf`,
+      headers,
+      rows,
+      metadata
+    });
+  }
+
+  exportCsv(data: AttendanceRecord[]) {
+    this.exportPdf(data);
   }
 }

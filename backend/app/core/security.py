@@ -19,8 +19,23 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
     if additional_claims:
         to_encode.update(additional_claims)
+    # Token types must not be overridden by callers. This keeps short-lived
+    # WebSocket tickets from being accepted as regular API credentials.
+    to_encode["type"] = "access"
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+
+def create_websocket_ticket(subject: Union[str, Any], user_id: int) -> str:
+    """Create a short-lived ticket solely for a WebSocket handshake."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=1)
+    payload = {
+        "exp": expire,
+        "sub": str(subject),
+        "uid": user_id,
+        "type": "websocket",
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

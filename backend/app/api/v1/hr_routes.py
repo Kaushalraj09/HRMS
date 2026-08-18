@@ -7,6 +7,7 @@ from app.models.user import User
 from app.core.enums import UserRole
 from app.schemas.hr import HrCreate, HrResponse, HrListResponse
 from app.services import hr_service
+from app.services.account_access_service import InvitationDeliveryError
 
 router = APIRouter(prefix="/hr-users", tags=["hr-management"])
 
@@ -23,6 +24,8 @@ def create_hr_user(
         )
     try:
         return hr_service.create_hr(db, request)
+    except InvitationDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

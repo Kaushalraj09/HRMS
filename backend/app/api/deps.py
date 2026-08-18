@@ -18,7 +18,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         active_dashboard: str = payload.get("activeDashboard")
-        if email is None:
+        if email is None or payload.get("type") != "access":
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -32,16 +32,17 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     return user
 
 
-def get_ws_user(db: Session, token: str | None) -> User | None:
-    if not token:
+def get_ws_user(db: Session, ticket: str | None) -> User | None:
+    if not ticket:
         return None
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(ticket, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        user_id = payload.get("uid")
+        if email is None or payload.get("type") != "websocket" or not isinstance(user_id, int):
             return None
         user = db.query(User).filter(User.email == email).first()
-        if user is None or user.status in ["Inactive", "Deleted"]:
+        if user is None or user.id != user_id or user.status in ["Inactive", "Deleted"]:
             return None
         return user
     except JWTError:
