@@ -427,10 +427,10 @@ export class AttendanceService {
       entry: displayPunchIn || displayScheduledStart || '-',
       exit: displayPunchOut || displayScheduledEnd || '-',
       late: punchIn ? formatMinutesToHours(row.lateMinutes ?? 0) : '-',
-      total: punchOut ? formatMinutesToHours(workMinutes) : '-',
-      overtime: punchOut ? formatMinutesToHours(overtimeMinutes) : '-',
-      break: punchOut ? formatMinutesToHours(breakMinutes) : '-',
-      grandTotal: punchOut ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
+      total: (punchOut || workMinutes > 0) ? formatMinutesToHours(workMinutes) : '-',
+      overtime: (punchOut || overtimeMinutes > 0) ? formatMinutesToHours(overtimeMinutes) : '-',
+      break: (punchOut || breakMinutes > 0) ? formatMinutesToHours(breakMinutes) : '-',
+      grandTotal: (punchOut || grandTotalMinutes > 0) ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
       status: this.normalizeStatus(row.status),
       workMode: row.workMode || 'Office'
     };

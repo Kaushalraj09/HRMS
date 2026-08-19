@@ -1359,38 +1359,38 @@ app-navbar {
 .timesheet-mini-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 
 .timesheet-mini-table th {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #94A3B8;
-  padding: 7px 5px;
-  border-bottom: 1px solid #F1F5F9;
+  font-size: 10px;
+  font-weight: 750;
+  color: #64748B;
+  padding: 8px 8px;
+  border-bottom: 1px solid #E2E8F0;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .timesheet-mini-table td {
-  padding: 9px 5px;
+  padding: 10px 8px;
   font-weight: 500;
   color: #334155;
-  border-bottom: 1px solid #F8FAFC;
+  border-bottom: 1px solid #F1F5F9;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .ts-date-cell {
-  font-weight: 600;
-  color: #1E293B;
+  font-weight: 700;
+  color: #0F172A;
   white-space: nowrap;
 }
 
 .ts-day-cell {
-  color: #475569;
+  color: #64748B;
   font-weight: 500;
 }
 
@@ -1399,21 +1399,27 @@ app-navbar {
   font-weight: 500;
 }
 
+.font-bold-hours {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+}
+
 .status-pill {
   font-size: 10.5px;
-  font-weight: 600;
-  padding: 2.5px 10px;
+  font-weight: 700;
+  padding: 3px 9px;
   border-radius: 9999px;
   width: fit-content;
   text-align: center;
   display: inline-block;
+  letter-spacing: 0.2px;
 }
 
-.green-pill { background: #F0FDF4; color: #16A34A; }
-.purple-pill { background: #FAF5FF; color: #7C3AED; }
-.red-pill { background: #FEF2F2; color: #DC2626; }
-.orange-pill { background: #FFF7ED; color: #EA580C; }
-.gray-pill { background: #F8FAFC; color: #64748B; }
+.green-pill { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+.purple-pill { background: #FAF5FF; color: #7C3AED; border: 1px solid #DDD6FE; }
+.red-pill { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.orange-pill { background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+.gray-pill { background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; }
 
 /* MY DOCUMENTS DONUT & CHECKLIST */
 .doc-head-icon {

@@ -549,8 +549,6 @@
                                             <th>IN</th>
                                             <th>OUT</th>
                                             <th>WORK HOURS</th>
-                                            <th>BREAK</th>
-                                            <th>OT</th>
                                             <th>STATUS</th>
                                         </tr>
                                     </thead>
@@ -560,9 +558,7 @@
                                             <td class="ts-day-cell">{{ sheet.day }}</td>
                                             <td class="ts-time-cell">{{ sheet.inTime }}</td>
                                             <td class="ts-time-cell">{{ sheet.outTime }}</td>
-                                            <td class="ts-time-cell">{{ sheet.workHours }}</td>
-                                            <td class="ts-time-cell">{{ sheet.breakTime }}</td>
-                                            <td class="ts-time-cell">{{ sheet.overtime }}</td>
+                                            <td class="ts-time-cell font-bold-hours">{{ sheet.workHours }}</td>
                                             <td>
                                                 <span class="status-pill" [ngClass]="sheet.statusClass">{{ sheet.status }}</span>
                                             </td>

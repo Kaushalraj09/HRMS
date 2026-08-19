@@ -618,11 +618,32 @@ export class EmpDashboard implements OnInit, OnDestroy {
   ];
 
   get displayTimesheetRows(): DashboardTimesheetDisplayRow[] {
-    if (!this.filteredTimeSheets || this.filteredTimeSheets.length === 0) {
+    const todayIso = toIsoDateLocal(new Date());
+
+    let sourceRows: EmployeeTimesheetRow[] = [...this.filteredTimeSheets];
+
+    // If today is not in sourceRows but the user has attendance state today, prepend today's entry
+    if ((this.isPunchedIn || this.punchInTime) && !sourceRows.some(r => r.date === todayIso)) {
+      const todayRow: EmployeeTimesheetRow = {
+        date: todayIso,
+        day: new Date().toLocaleDateString('en-GB', { weekday: 'short' }),
+        entry: this.punchInTime || '-',
+        exit: this.punchOutTime || '-',
+        total: this.totalWorkedSecondsToday > 0 ? this.timeEngine.formatHoursMinutes(this.totalWorkedSecondsToday) : '-',
+        break: '01h 00m',
+        overtime: '00h 00m',
+        status: this.isPunchedIn ? 'Working' : (this.punchOutTime ? 'Present' : 'Working'),
+        workMode: this.status || 'Office'
+      };
+      sourceRows = [todayRow, ...sourceRows];
+    }
+
+    if (!sourceRows || sourceRows.length === 0) {
       return this.defaultTimesheetRows;
     }
 
-    return this.filteredTimeSheets.slice(0, 3).map((row) => {
+    return sourceRows.slice(0, 3).map((row) => {
+      const isToday = row.date === todayIso;
       const d = row.date ? new Date(row.date) : new Date();
       const dateFormatted = isNaN(d.getTime())
         ? row.date
@@ -631,15 +652,38 @@ export class EmpDashboard implements OnInit, OnDestroy {
         ? (row.day || '')
         : d.toLocaleDateString('en-GB', { weekday: 'short' });
 
+      // Determine in/out times
+      let inTime = this.formatTime12h(row.entry);
+      let outTime = this.formatTime12h(row.exit);
+      let workHours = this.formatDurationHm(row.total);
+
+      if (isToday) {
+        if (this.punchInTime) {
+          inTime = this.formatTime12h(this.punchInTime);
+        }
+        if (this.punchOutTime) {
+          outTime = this.formatTime12h(this.punchOutTime);
+        }
+        if (this.totalWorkedSecondsToday > 0) {
+          workHours = this.formatDurationHm(this.timeEngine.formatHoursMinutes(this.totalWorkedSecondsToday));
+        } else if (this.isPunchedIn) {
+          workHours = '< 1m';
+        }
+      }
+
       const statusStr = String(row.status || '');
-      const isWorking = statusStr === 'Working' || statusStr === 'Present';
-      const isHoliday = statusStr === 'Holiday' || dayFormatted === 'Sun';
+      const isWorking = (isToday && this.isPunchedIn) || statusStr === 'Working';
+      const isPresent = !isWorking && (statusStr === 'Present' || (isToday && !!this.punchOutTime));
+      const isHoliday = statusStr === 'Holiday' || (!isToday && dayFormatted === 'Sun');
       const isAbsent = statusStr === 'Absent';
       const isTimeOff = statusStr === 'Time Off' || statusStr === 'Leave' || statusStr === 'Half Day';
 
       let statusClass = 'green-pill';
-      let statusLabel = statusStr || 'Working';
-      if (isHoliday) {
+      let statusLabel = 'Present';
+      if (isWorking) {
+        statusClass = 'green-pill';
+        statusLabel = 'Working';
+      } else if (isHoliday) {
         statusClass = 'purple-pill';
         statusLabel = 'Holiday';
       } else if (isAbsent) {
@@ -648,17 +692,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
       } else if (isTimeOff) {
         statusClass = 'orange-pill';
         statusLabel = 'Leave';
-      } else if (isWorking) {
+      } else if (isPresent) {
         statusClass = 'green-pill';
-        statusLabel = 'Working';
+        statusLabel = 'Present';
       }
 
       return {
         date: dateFormatted,
         day: dayFormatted,
-        inTime: this.formatTime12h(row.entry),
-        outTime: this.formatTime12h(row.exit),
-        workHours: this.formatDurationHm(row.total),
+        inTime: inTime || '-',
+        outTime: outTime || '-',
+        workHours: workHours || '-',
         breakTime: this.formatDurationHm(row.break) || '01h 00m',
         overtime: this.formatDurationHm(row.overtime) || '00h 00m',
         status: statusLabel,
