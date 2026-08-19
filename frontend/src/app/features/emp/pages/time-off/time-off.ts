@@ -31,6 +31,29 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
     return `${h}h ${m}m`;
   }
 
+  formatTimeSlot(startTime?: string, endTime?: string, leaveType?: string): string {
+    if (!startTime || leaveType === 'Full-Day' || leaveType === 'Full Day') {
+      return 'Full Day';
+    }
+    const formatTime = (t: string) => {
+      if (!t) return '';
+      const parts = t.trim().split(':');
+      if (parts.length >= 2) {
+        let hour = parseInt(parts[0], 10);
+        const min = parts[1];
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
+        return `${hourStr}:${min} ${ampm}`;
+      }
+      return t;
+    };
+    if (endTime) {
+      return `${formatTime(startTime)} – ${formatTime(endTime)}`;
+    }
+    return formatTime(startTime);
+  }
+
   // Pagination state
   page = 1;
   pageSize = 10;

@@ -170,30 +170,60 @@
                             </div>
 
                             <div class="punch-arc-center-container">
-                                <div class="punch-dial-wrapper">
+                                <div class="punch-dial-wrapper" [class.is-punched-in]="isPunchedIn">
+                                    <div class="dial-ambient-glow"></div>
                                     <svg class="punch-arc-svg" viewBox="0 0 200 200">
-                                        <path class="arc-bg" d="M 30 170 A 90 90 0 1 1 170 170" fill="none" stroke="#F1F5F9" stroke-width="14" stroke-linecap="round"/>
-                                        <path class="arc-progress" d="M 30 170 A 90 90 0 1 1 170 170" fill="none" stroke="url(#arcBluePurple)" stroke-width="14" stroke-linecap="round" stroke-dasharray="424" [attr.stroke-dashoffset]="arcDashOffset"/>
-                                        <defs>
-                                            <linearGradient id="arcBluePurple" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <stop offset="0%" stop-color="#2563EB" />
-                                                <stop offset="60%" stop-color="#7C3AED" />
-                                                <stop offset="100%" stop-color="#C026D3" />
-                                            </linearGradient>
-                                        </defs>
+                                         <defs>
+                                             <linearGradient id="arcTrackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                 <stop offset="0%" stop-color="#E2E8F0" />
+                                                 <stop offset="100%" stop-color="#F1F5F9" />
+                                             </linearGradient>
+                                             <linearGradient id="arcActiveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                 <stop offset="0%" stop-color="#2563EB" />
+                                                 <stop offset="50%" stop-color="#4F46E5" />
+                                                 <stop offset="100%" stop-color="#7C3AED" />
+                                             </linearGradient>
+                                             <linearGradient id="arcWorkingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                 <stop offset="0%" stop-color="#059669" />
+                                                 <stop offset="50%" stop-color="#10B981" />
+                                                 <stop offset="100%" stop-color="#34D399" />
+                                             </linearGradient>
+                                         </defs>
+                                         <circle class="dial-track-bg" cx="100" cy="100" r="82" fill="none" stroke="url(#arcTrackGrad)" stroke-width="8" />
+                                         <circle class="dial-progress-bar" cx="100" cy="100" r="82" fill="none" 
+                                             [attr.stroke]="isPunchedIn ? 'url(#arcWorkingGrad)' : 'url(#arcActiveGrad)'" 
+                                             stroke-width="8" 
+                                             stroke-linecap="round" 
+                                             stroke-dasharray="515" 
+                                             [attr.stroke-dashoffset]="arcDashOffset" />
                                     </svg>
-                                    <button type="button" class="punch-inner-btn" (click)="togglePunch()" [disabled]="isPunchDisabled">
-                                        <div class="fingerprint-icon">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="1.8"><path d="M12 12c0-3 2.5-5.5 5.5-5.5S23 9 23 12c0 4.5-3 7.5-6.5 10.5"/><path d="M12 12c0-3-2.5-5.5-5.5-5.5S1 9 1 12c0 4.5 3 7.5 6.5 10.5"/><path d="M12 7c0-2 1.5-3.5 3.5-3.5S19 5 19 7c0 3.5-2 6-4.5 8.5"/><path d="M12 7c0-2-1.5-3.5-3.5-3.5S5 5 5 7c0 3.5 2 6 4.5 8.5"/><path d="M12 2v2"/></svg>
+                                    <button type="button" class="punch-inner-btn" (click)="togglePunch()" [disabled]="isPunchDisabled" [class.punched-in]="isPunchedIn">
+                                        <div class="fingerprint-icon-wrap">
+                                            <svg *ngIf="!isPunchedIn" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M12 12c0-3 2.5-5.5 5.5-5.5S23 9 23 12c0 4.5-3 7.5-6.5 10.5"/>
+                                                <path d="M12 12c0-3-2.5-5.5-5.5-5.5S1 9 1 12c0 4.5 3 7.5 6.5 10.5"/>
+                                                <path d="M12 7c0-2 1.5-3.5 3.5-3.5S19 5 19 7c0 3.5-2 6-4.5 8.5"/>
+                                                <path d="M12 7c0-2-1.5-3.5-3.5-3.5S5 5 5 7c0 3.5 2 6 4.5 8.5"/>
+                                                <path d="M12 2v2"/>
+                                            </svg>
+                                            <svg *ngIf="isPunchedIn" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                                <polyline points="16 17 21 12 16 7"></polyline>
+                                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                                            </svg>
                                         </div>
                                         <span class="punch-label-action">{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</span>
-                                        <span class="punch-label-status">{{ attendanceStatusLabel || (isPunchedIn ? 'Punched In' : 'Not Marked') }}</span>
+                                        <div class="punch-status-badge" [class.badge-active]="isPunchedIn" [class.badge-not-marked]="!isPunchedIn">
+                                            <span class="status-pulse-dot" *ngIf="isPunchedIn"></span>
+                                            {{ attendanceStatusLabel || (isPunchedIn ? 'Working' : 'Not Marked') }}
+                                        </div>
                                     </button>
                                 </div>
                             </div>
 
-                            <div class="shift-time-centered">
-                                <span class="shift-lbl">Shift Time</span>
+                            <div class="shift-time-capsule">
+                                <i class="far fa-clock"></i>
+                                <span class="shift-lbl">Shift:</span>
                                 <span class="shift-val">{{ shiftStart }} – {{ shiftEnd }}</span>
                             </div>
 
@@ -209,10 +239,7 @@
                                     </div>
                                 </div>
                                 <div class="location-verified-bar">
-                                    <div class="loc-left-wrap">
-                                        <span class="loc-label"><i class="fas fa-map-marker-alt"></i> Location</span>
-                                        <span class="loc-text"><i class="fas fa-map-marker-alt"></i> {{ punchInAddress || 'AiVan 360 Office, Delhi' }}</span>
-                                    </div>
+                                    <span class="loc-text"><i class="fas fa-map-marker-alt"></i> {{ punchInAddress || 'AiVan 360 Office, Delhi' }}</span>
                                     <span class="loc-badge">Location Verified</span>
                                 </div>
                             </div>
@@ -662,11 +689,32 @@
       </div>
 
       <!-- Camera Feed or Captured Photo -->
-      <div class="camera-feed-container" *ngIf="!isPunchedIn">
+      <div class="camera-feed-container" 
+           *ngIf="!isPunchedIn" 
+           [class.face-detected]="isFaceDetected && !capturedImage"
+           [class.photo-captured]="!!capturedImage">
+        
         <video id="cameraFeed" autoplay playsinline muted *ngIf="!capturedImage" class="camera-video"></video>
         <img [src]="capturedImage" *ngIf="capturedImage" alt="Captured Photo" class="camera-photo-preview" />
-        <div class="camera-overlay-badge" *ngIf="!capturedImage && cameraStream">
-          <i class="fas fa-circle live-dot"></i> LIVE CAMERA
+        
+        <!-- Live Badges -->
+        <div class="camera-overlay-badge" *ngIf="!capturedImage && cameraStream && !isFaceDetected">
+          <i class="fas fa-circle live-dot"></i> SCANNING FACE...
+        </div>
+        <div class="camera-overlay-badge badge-green-face" *ngIf="!capturedImage && cameraStream && isFaceDetected">
+          <i class="fas fa-check-circle"></i> FACE DETECTED
+        </div>
+        <div class="camera-overlay-badge badge-green-captured" *ngIf="capturedImage">
+          <i class="fas fa-check-circle"></i> PHOTO CAPTURED
+        </div>
+
+        <!-- Biometric Target Frame (Turns Bright Green on Face Detected / Captured) -->
+        <div class="face-biometric-frame" [class.active-green]="isFaceDetected || capturedImage">
+          <div class="corner-bracket top-left"></div>
+          <div class="corner-bracket top-right"></div>
+          <div class="corner-bracket bottom-left"></div>
+          <div class="corner-bracket bottom-right"></div>
+          <div class="scanner-sweep-line" *ngIf="!capturedImage"></div>
         </div>
       </div>
 

@@ -61,10 +61,14 @@
             </div>
           </div>
           <div class="user-info">
-            <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
-            <p class="subtext">
-              {{ profile.employeeId }} &middot; {{ profile.role }} &middot; {{ profile.department }}
-            </p>
+            <div class="user-name-row">
+              <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
+              <span class="role-tag">{{ profile.role }}</span>
+            </div>
+            <div class="meta-chips-row">
+              <span class="meta-chip chip-id"><i class="fas fa-id-badge"></i> {{ profile.employeeId }}</span>
+              <span class="meta-chip chip-dept"><i class="fas fa-building"></i> {{ profile.department }}</span>
+            </div>
           </div>
         </div>
 
@@ -73,7 +77,8 @@
             <i class="far fa-clock"></i> {{ profile.shift }}
           </span>
           <span class="status-badge" [ngClass]="profile.status !== 'Active' ? 'inactive' : (isPunchedIn ? 'punched-in' : 'punched-out')">
-            {{ profile.status === 'Active' ? (isPunchedIn ? 'Punched In' : 'Punched Out') : profile.status }}
+            <span class="status-pulse-dot" *ngIf="profile.status === 'Active' && isPunchedIn"></span>
+            {{ profile.status === 'Active' ? (isPunchedIn ? 'Working' : 'Punched Out') : profile.status }}
           </span>
           
           <button class="edit-btn" (click)="openEditModal()">
@@ -88,77 +93,71 @@
         
         <!-- Left Card: Personal Details -->
         <div class="details-card">
-          <h2>Personal Details</h2>
+          <div class="card-header-bar">
+            <h2>Personal Details</h2>
+          </div>
           
-          <div class="details-grid">
-            <div class="detail-item">
-              <label>Gender</label>
-              <span>{{ profile.personalDetails.gender || 'Not Specified' }}</span>
+          <div class="simple-details-grid">
+            <div class="simple-detail-item">
+              <span class="detail-label">Gender</span>
+              <span class="detail-value">{{ profile.personalDetails.gender || 'Not Specified' }}</span>
             </div>
             
-            <div class="detail-item">
-              <label>Date of Birth</label>
-              <span>{{ profile.personalDetails.dateOfBirth | date:'mediumDate' }}</span>
+            <div class="simple-detail-item">
+              <span class="detail-label">Date of Birth</span>
+              <span class="detail-value">{{ profile.personalDetails.dateOfBirth ? (profile.personalDetails.dateOfBirth | date:'mediumDate') : 'Not Specified' }}</span>
             </div>
 
-            <div class="detail-item">
-              <label>Marital Status</label>
-              <span>{{ profile.personalDetails.maritalStatus || '—' }}</span>
+            <div class="simple-detail-item">
+              <span class="detail-label">Marital Status</span>
+              <span class="detail-value">{{ profile.personalDetails.maritalStatus || '—' }}</span>
             </div>
 
-            <div class="detail-item">
-              <label>Blood Group</label>
-              <span>{{ profile.personalDetails.bloodGroup || '—' }}</span>
+            <div class="simple-detail-item">
+              <span class="detail-label">Blood Group</span>
+              <span class="detail-value">{{ profile.personalDetails.bloodGroup || '—' }}</span>
             </div>
           </div>
         </div>
 
         <!-- Right Card: Contact Details -->
         <div class="details-card">
-          <h2>Contact</h2>
+          <div class="card-header-bar">
+            <h2>Contact</h2>
+          </div>
           
-          <div class="details-list">
-            
-            <div class="detail-row">
-              <div class="row-left">
-                <i class="far fa-envelope"></i>
-                <label>Official Email</label>
+          <div class="simple-contact-list">
+            <div class="simple-contact-row">
+              <div class="contact-label-wrap">
+                <i class="far fa-envelope contact-icon"></i>
+                <span>Official Email</span>
               </div>
-              <div class="row-right">
-                {{ profile.contactDetails.officialEmail }}
-              </div>
+              <span class="contact-value val-email">{{ profile.contactDetails.officialEmail }}</span>
             </div>
 
-            <div class="detail-row">
-              <div class="row-left">
-                <i class="fas fa-at"></i>
-                <label>Personal Email</label>
+            <div class="simple-contact-row">
+              <div class="contact-label-wrap">
+                <i class="fas fa-at contact-icon"></i>
+                <span>Personal Email</span>
               </div>
-              <div class="row-right">
-                {{ profile.contactDetails.personalEmail || 'Not Provided' }}
-              </div>
+              <span class="contact-value">{{ profile.contactDetails.personalEmail || 'Not Provided' }}</span>
             </div>
 
-            <div class="detail-row">
-              <div class="row-left">
-                <i class="fas fa-phone-alt"></i>
-                <label>Mobile Number</label>
+            <div class="simple-contact-row">
+              <div class="contact-label-wrap">
+                <i class="fas fa-phone-alt contact-icon"></i>
+                <span>Mobile Number</span>
               </div>
-              <div class="row-right">
-                {{ profile.contactDetails.mobileNumber }}
-              </div>
+              <span class="contact-value">{{ profile.contactDetails.mobileNumber || 'Not Provided' }}</span>
             </div>
 
-            <div class="detail-row">
-              <div class="row-left">
-                <i class="fas fa-map-marker-alt"></i>
-                <label>Location</label>
+            <div class="simple-contact-row">
+              <div class="contact-label-wrap">
+                <i class="fas fa-map-marker-alt contact-icon"></i>
+                <span>Location</span>
               </div>
-              <div class="row-right">
-                {{ profile.contactDetails.location || 'Not Provided' }}
-              </div>
+              <span class="contact-value">{{ profile.contactDetails.location || 'Main Office' }}</span>
             </div>
-            
           </div>
         </div>
 

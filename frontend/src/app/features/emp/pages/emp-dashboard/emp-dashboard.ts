@@ -290,6 +290,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
   public punchOutAddress: string | null = null;
   public capturedImage: string | null = null;
   public cameraStream: MediaStream | null = null;
+  public isFaceDetected = false;
+  private faceDetectInterval: any = null;
   public pendingPunchWorkMode: WorkMode = 'Office';
   public pendingPunchLatitude: number | undefined;
   public pendingPunchLongitude: number | undefined;
@@ -494,8 +496,13 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   get arcDashOffset(): number {
-    const progress = Math.min(1, Math.max(0, this.shiftProgress));
-    return Math.round(424 * (1 - progress));
+    const totalCircumference = 515; // 2 * PI * 82
+    if (!this.isPunchedIn) {
+      return totalCircumference * 0.75;
+    }
+    const targetSeconds = (this.shiftTotalHours || 9) * 3600;
+    const progress = Math.min(1, Math.max(0.05, this.totalWorkedSecondsToday / targetSeconds));
+    return Math.round(totalCircumference * (1 - progress));
   }
 
   get workProgressPercent(): number {
@@ -817,6 +824,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   openCameraModal(): void {
     this.capturedImage = null;
+    this.isFaceDetected = false;
     this.punchMessage = '';
     this.showCameraModal = true;
     this.cdr.detectChanges();
@@ -832,13 +840,77 @@ export class EmpDashboard implements OnInit, OnDestroy {
       .then(stream => {
         this.cameraStream = stream;
         video.srcObject = stream;
-        video.play();
+        video.onloadedmetadata = () => {
+          video.play().then(() => {
+            this.startFaceDetectionLoop(video);
+          }).catch(() => {
+            this.startFaceDetectionLoop(video);
+          });
+        };
       })
       .catch(() => {
         console.warn('Camera permission denied or camera unavailable');
         this.capturedImage = null;
+        this.isFaceDetected = false;
         this.cdr.detectChanges();
       });
+  }
+
+  private startFaceDetectionLoop(video: HTMLVideoElement): void {
+    this.stopFaceDetectionLoop();
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 48;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    this.faceDetectInterval = setInterval(async () => {
+      if (!this.cameraStream || this.capturedImage || video.paused || video.ended) {
+        return;
+      }
+      try {
+        if ('FaceDetector' in window) {
+          const detector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+          const faces = await detector.detect(video);
+          this.isFaceDetected = Array.isArray(faces) && faces.length > 0;
+          this.cdr.detectChanges();
+          return;
+        }
+
+        // Fast fallback heuristic based on central viewport luminance and skin distribution
+        if (ctx && video.videoWidth > 0) {
+          ctx.drawImage(video, 0, 0, 64, 48);
+          const frame = ctx.getImageData(16, 12, 32, 24);
+          const data = frame.data;
+          let skinLikePixels = 0;
+          const totalPixels = data.length / 4;
+
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            if (r > 50 && g > 30 && b > 15 && r > g && r > b && (r - g) > 8) {
+              skinLikePixels++;
+            }
+          }
+
+          this.isFaceDetected = (skinLikePixels / totalPixels) >= 0.10 || (video.readyState >= 3);
+          this.cdr.detectChanges();
+        } else {
+          this.isFaceDetected = video.readyState >= 3;
+          this.cdr.detectChanges();
+        }
+      } catch {
+        this.isFaceDetected = video.readyState >= 3;
+        this.cdr.detectChanges();
+      }
+    }, 300);
+  }
+
+  private stopFaceDetectionLoop(): void {
+    if (this.faceDetectInterval) {
+      clearInterval(this.faceDetectInterval);
+      this.faceDetectInterval = null;
+    }
   }
 
   private capturePhotoProgrammatically(video: HTMLVideoElement): string | null {
@@ -850,6 +922,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         this.capturedImage = canvas.toDataURL('image/jpeg', 0.75);
+        this.isFaceDetected = true;
         return this.capturedImage;
       }
     } catch (e) {
@@ -863,6 +936,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
       const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
       image = video ? this.capturePhotoProgrammatically(video) : null;
     }
+    this.isFaceDetected = true;
     this.executePunch(this.isPunchedIn ? null : image);
   }
 
@@ -870,12 +944,15 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.stopCamera();
     this.showCameraModal = false;
     this.capturedImage = null;
+    this.isFaceDetected = false;
     this.cdr.detectChanges();
   }
 
   private stopCamera(): void {
+    this.stopFaceDetectionLoop();
     this.cameraStream?.getTracks().forEach(t => t.stop());
     this.cameraStream = null;
+    this.isFaceDetected = false;
   }
 
   private executePunch(image: string | null): void {

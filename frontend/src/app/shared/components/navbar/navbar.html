@@ -97,33 +97,38 @@
                             <div *ngIf="notif.employee && !notif.employee.avatar" class="notif-avatar-fallback">
                                 {{ (notif.employee.first_name?.[0] || 'U') + (notif.employee.last_name?.[0] || '') }}
                             </div>
-                            <div *ngIf="!notif.employee" class="notif-icon" [ngClass]="notif.type?.toLowerCase() || 'system'">
+                            <div *ngIf="!notif.employee" class="notif-icon" [ngClass]="getCategoryTheme(notif.category, notif.type)">
                                 <i [ngClass]="getIconClass(notif.type, notif.category)"></i>
                             </div>
                         </div>
 
-                        <!-- Message & Meta Content -->
+                        <!-- Structured Content -->
                         <div class="notif-content">
-                            <div class="notif-message-row">
-                                <span class="emp-name" *ngIf="notif.employee">{{ notif.employee.full_name }}</span>
-                                {{ notif.message }}
+                            <!-- Top Header: Title & Timestamp -->
+                            <div class="notif-header-row">
+                                <span class="notif-title" *ngIf="notif.employee">{{ notif.employee.full_name }}</span>
+                                <span class="notif-title" *ngIf="!notif.employee">{{ formatCategory(notif.category, notif.type) }}</span>
+                                <span class="notif-time">{{ formatNotifTime(notif.created_at) }}</span>
                             </div>
+
+                            <!-- Middle Body: Clean Message -->
+                            <p class="notif-message">{{ notif.message }}</p>
+
+                            <!-- Bottom Meta Row: Category Badge & Status -->
                             <div class="notif-meta-row">
                                 <span class="category-badge" [ngClass]="getCategoryBadgeClass(notif.category || notif.type)">
-                                    {{ notif.category || notif.type }}
+                                    {{ formatCategory(notif.category, notif.type) }}
                                 </span>
-                                <span class="notif-time">{{ notif.created_at | date:'hh:mm a - dd MMM yyyy' }}</span>
+                                <span class="unread-pill" *ngIf="!notif.is_read">● Unread</span>
                             </div>
                         </div>
 
-                        <!-- Right Action Button -->
+                        <!-- Quick Action Dismiss Button -->
                         <div class="notif-item-actions" (click)="$event.stopPropagation()">
-                            <button type="button" class="action-btn delete-btn" title="Delete notification" (click)="deleteNotification($event, notif.id)">
+                            <button type="button" class="action-btn delete-btn" title="Dismiss notification" (click)="deleteNotification($event, notif.id)">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-
-                        <span class="unread-dot" *ngIf="!notif.is_read"></span>
                     </div>
                 </div>
             </div>
