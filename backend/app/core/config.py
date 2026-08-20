@@ -32,10 +32,12 @@ class Settings:
     
     # Frontend Base URL (Production or Staging Domain)
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:4200")
-    AUTO_CREATE_TABLES: bool = _get_bool("AUTO_CREATE_TABLES", APP_ENV != "production")
-    AUTO_SEED_ROLES: bool = _get_bool("AUTO_SEED_ROLES", APP_ENV != "production")
-    AUTO_SEED_DEMO_DATA: bool = _get_bool("AUTO_SEED_DEMO_DATA", APP_ENV != "production")
-    ENABLE_SCHEDULER: bool = _get_bool("ENABLE_SCHEDULER", APP_ENV != "production")
+    # Test runs provide their own isolated schema and seed data.  Automatic
+    # bootstrap is only appropriate for a developer's local environment.
+    AUTO_CREATE_TABLES: bool = _get_bool("AUTO_CREATE_TABLES", APP_ENV == "development")
+    AUTO_SEED_ROLES: bool = _get_bool("AUTO_SEED_ROLES", APP_ENV == "development")
+    AUTO_SEED_DEMO_DATA: bool = _get_bool("AUTO_SEED_DEMO_DATA", APP_ENV == "development")
+    ENABLE_SCHEDULER: bool = _get_bool("ENABLE_SCHEDULER", APP_ENV == "development")
     EXPOSE_RESET_LINK_IN_RESPONSE: bool = _get_bool("EXPOSE_RESET_LINK_IN_RESPONSE", False)
     
     # SMTP email configuration

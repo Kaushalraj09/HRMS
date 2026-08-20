@@ -17,7 +17,7 @@ jobs:
       - name: Dependency Vulnerability Audit
         run: pip-audit -r requirements.txt --ignore-vuln CVE-SAMPLE || true
       - name: Run Backend Test Suite
-        run: APP_ENV=test DATABASE_URL=sqlite:///./test.db JWT_SECRET_KEY=test-secret pytest -v
+        run: APP_ENV=test DATABASE_URL=sqlite:///./test.db JWT_SECRET_KEY=test-secret AUTO_CREATE_TABLES=false AUTO_SEED_ROLES=false AUTO_SEED_DEMO_DATA=false ENABLE_SCHEDULER=false pytest -v
 
   frontend:
     runs-on: ubuntu-latest

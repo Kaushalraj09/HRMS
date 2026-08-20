@@ -2,7 +2,7 @@ import io
 import pytest
 from datetime import datetime, date
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base, get_db
@@ -24,7 +24,13 @@ def db_session():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool
     )
+    # Importing the concrete models above registers their tables with this Base.
+    # Keep the schema creation next to the in-memory engine so this test module
+    # never depends on another module's fixture or on a persistent test database.
     Base.metadata.create_all(bind=engine)
+    if not inspect(engine).has_table(Role.__tablename__):
+        raise RuntimeError("Document-management test schema did not create the roles table")
+
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = TestingSessionLocal()
     try:
