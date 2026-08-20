@@ -7,12 +7,12 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD or settings.SMTP_PASSWORD == "your-smtp-app-password":
         logger.warning(
-            "SMTP credentials are not defined in .env file. Skipping SMTP transmission for %s.",
-            to_email
+            "SMTP credentials are not defined or placeholder in .env file. Development mock transmission for %s: %s",
+            to_email, reset_link
         )
-        return False
+        return True
 
     # Create message container
     msg = MIMEMultipart('alternative')

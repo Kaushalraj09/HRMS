@@ -136,7 +136,6 @@ export class Employees implements OnInit {
         this.cdr.detectChanges();
       }),
       switchMap(() => {
-        const excludeHr = this.currentUser?.role === 'hr';
         return this.employeeService.getEmployees(
              this.pageSubject.value, 
              this.pageSize, 
@@ -144,7 +143,7 @@ export class Employees implements OnInit {
              this.departmentControl.value || '', 
              this.typeControl.value || '', 
              this.statusControl.value || '',
-             excludeHr
+             false
         );
       }),
       tap((result) => {

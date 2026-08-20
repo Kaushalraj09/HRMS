@@ -1,14 +1,13 @@
 from sqlalchemy import literal, or_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.user import User, Role
 from app.models.employee import Employee
 from app.models.hr_user import HrUser
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 import secrets
+import string
 
 from app.core.security import hash_password
-
-from sqlalchemy.orm import joinedload
 
 def _employee_query(db: Session):
     return (

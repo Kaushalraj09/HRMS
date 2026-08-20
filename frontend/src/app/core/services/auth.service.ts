@@ -19,20 +19,30 @@ export class AuthService {
   private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
 
   private get storage(): Storage | null {
-    return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+    if (typeof localStorage !== 'undefined') return localStorage;
+    if (typeof sessionStorage !== 'undefined') return sessionStorage;
+    return null;
   }
 
   constructor(
     private readonly http: HttpClient
   ) {
     let initialUser: SessionUser | null = null;
-    const storage = this.storage;
-    if (storage) {
-      const stored = storage.getItem(this.userKey);
+    const storages = [
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      typeof sessionStorage !== 'undefined' ? sessionStorage : null
+    ].filter(Boolean) as Storage[];
+
+    for (const s of storages) {
+      const stored = s.getItem(this.userKey);
       if (stored) {
-        try { initialUser = JSON.parse(stored); } catch (e) {}
+        try {
+          initialUser = JSON.parse(stored);
+          if (initialUser) break;
+        } catch (e) {}
       }
     }
+
     this.currentUserSubject = new BehaviorSubject<SessionUser | null>(initialUser);
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
@@ -54,49 +64,75 @@ export class AuthService {
   }
 
   saveSession(response: LoginResponse): void {
-    const storage = this.storage;
-    if (storage) {
-      if (response.accessToken) {
-        storage.setItem(this.tokenKey, response.accessToken);
-      }
-      if (response.me) {
-        storage.setItem(this.userKey, JSON.stringify(response.me));
-        storage.setItem(this.sessionKey, String(response.me.id));
-      }
+    const storages = [
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      typeof sessionStorage !== 'undefined' ? sessionStorage : null
+    ].filter(Boolean) as Storage[];
+
+    for (const s of storages) {
+      try {
+        if (response.accessToken) {
+          s.setItem(this.tokenKey, response.accessToken);
+        }
+        if (response.me) {
+          s.setItem(this.userKey, JSON.stringify(response.me));
+          s.setItem(this.sessionKey, String(response.me.id));
+        }
+      } catch (e) {}
     }
   }
 
   logout(): void {
-    const storage = this.storage;
-    if (storage) {
-      storage.removeItem(this.tokenKey);
-      storage.removeItem(this.userKey);
-      storage.removeItem(this.sessionKey);
+    const storages = [
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      typeof sessionStorage !== 'undefined' ? sessionStorage : null
+    ].filter(Boolean) as Storage[];
+
+    for (const s of storages) {
+      try {
+        s.removeItem(this.tokenKey);
+        s.removeItem(this.userKey);
+        s.removeItem(this.sessionKey);
+      } catch (e) {}
     }
     this.currentUserSubject.next(null);
   }
 
   isLoggedIn(): boolean {
-    return !!this.storage?.getItem(this.tokenKey);
+    return !!this.getToken();
   }
 
   getToken(): string | null {
-    return this.storage?.getItem(this.tokenKey) ?? null;
+    if (typeof localStorage !== 'undefined') {
+      const tok = localStorage.getItem(this.tokenKey);
+      if (tok) return tok;
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      const tok = sessionStorage.getItem(this.tokenKey);
+      if (tok) return tok;
+    }
+    return null;
   }
 
   getCurrentUser(): SessionUser | null {
-    const storage = this.storage;
-    if (storage) {
-      const stored = storage.getItem(this.userKey);
-      if (stored) {
-        try {
+    const storages = [
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      typeof sessionStorage !== 'undefined' ? sessionStorage : null
+    ].filter(Boolean) as Storage[];
+
+    for (const s of storages) {
+      try {
+        const stored = s.getItem(this.userKey);
+        if (stored) {
           const user = JSON.parse(stored);
-          if (user?.id !== this.currentUserSubject.value?.id) {
-            this.currentUserSubject.next(user);
+          if (user) {
+            if (user?.id !== this.currentUserSubject.value?.id) {
+              this.currentUserSubject.next(user);
+            }
+            return user;
           }
-          return user;
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
     }
     return null;
   }

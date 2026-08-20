@@ -2,13 +2,13 @@
   <div class="modal-container scrollable-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>Add New Employee</h2>
-      <button class="close-btn" (click)="close()">
+      <button type="button" class="close-btn" (click)="close()">
         <i class="fas fa-times"></i>
       </button>
     </div>
 
     <div class="modal-body">
-      <form [formGroup]="form">
+      <form [formGroup]="form" (ngSubmit)="save()" (submit)="$event.preventDefault()">
         <!-- Account Access -->
         <div class="form-section" formGroupName="accountAccess">
           <h3>Account Access</h3>
@@ -155,8 +155,8 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-outline" (click)="close()" [disabled]="isSaving">Cancel</button>
-      <button class="btn btn-primary" (click)="save()" [disabled]="form.invalid || isSaving">
+      <button type="button" class="btn btn-outline" (click)="close()" [disabled]="isSaving">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="save()" [disabled]="form.invalid || isSaving">
         <i class="fas fa-spinner fa-spin" *ngIf="isSaving" style="margin-right: 6px;"></i>
         {{ isSaving ? 'Creating...' : 'Save & Create Login' }}
       </button>
