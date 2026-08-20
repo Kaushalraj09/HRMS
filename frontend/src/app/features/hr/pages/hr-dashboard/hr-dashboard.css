@@ -48,7 +48,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   box-sizing: border-box;
 }
 
@@ -65,7 +65,7 @@
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   color: #0F172A;
   margin: 0 0 2px 0;
