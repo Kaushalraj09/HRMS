@@ -66,7 +66,14 @@ export class Employees implements OnInit {
 
   get departmentsOptions() { return [{label: 'All Departments', value: ''}, ...this.departments.map(d => ({label: d, value: d}))]; }
   get typesOptions() { return [{label: 'All Types', value: ''}, ...this.types.map(t => ({label: t, value: t}))]; }
-  get statusOptions() { return [{label: 'All Statuses', value: ''}, ...this.statuses.map(s => ({label: s, value: s}))]; }
+  get statusOptions() {
+    return [
+      { label: 'Active (Default)', value: '' },
+      { label: 'All Statuses', value: 'all' },
+      { label: 'Inactive', value: 'Inactive' },
+      { label: 'On Leave', value: 'On Leave' }
+    ];
+  }
 
   // Pagination & Loading State
   pageSubject = new BehaviorSubject<number>(1);

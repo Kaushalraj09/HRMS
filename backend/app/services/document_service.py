@@ -939,7 +939,12 @@ def get_document_version_history(
 
 def get_hr_documents_kpi_overview(db: Session) -> HrDocumentOverviewKPI:
     """Compute organization-wide document metrics for HR dashboard."""
-    employees = db.query(Employee).filter(Employee.status != "Deleted").all()
+    employees = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .filter(Employee.status == "Active", User.status == "Active")
+        .all()
+    )
     total_employees = len(employees)
 
     if total_employees == 0:

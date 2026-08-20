@@ -19,8 +19,6 @@ def _employee_query(db: Session):
     )
 
 def generate_random_password(length: int = 12) -> str:
-    import secrets
-    import string
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
@@ -74,7 +72,7 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     try:
         from app.services.document_service import initialize_employee_requirements
         initialize_employee_requirements(db, new_employee.id)
-    except Exception as e:
+    except Exception:
         # Non-blocking requirement initialization
         pass
 
@@ -116,8 +114,6 @@ def list_employees(
     status: str = "",
     exclude_hr: bool = False,
 ):
-    from sqlalchemy import Date, String, Integer
-
     # Query Employee table records joining User and Role
     emp_q = (
         db.query(
@@ -179,7 +175,15 @@ def list_employees(
     if employee_type:
         emp_q = emp_q.filter(Employee.employee_type == employee_type)
     if status:
-        emp_q = emp_q.filter(Employee.status == status)
+        status_lower = status.strip().lower()
+        if status_lower == "inactive":
+            emp_q = emp_q.filter(or_(Employee.status == "Inactive", Employee.status == "Deleted"))
+        elif status_lower == "all":
+            emp_q = emp_q.filter(Employee.status != "Deleted")
+        else:
+            emp_q = emp_q.filter(Employee.status == status)
+    else:
+        emp_q = emp_q.filter(Employee.status == "Active")
 
     total = emp_q.count()
 
@@ -276,12 +280,13 @@ def delete_employee(db: Session, employee_id: int) -> bool:
     if not employee:
         return False
         
-    employee.status = "Deleted"
+    # Soft deletion: Mark as Inactive so profile/data is preserved but excluded from active workforce metrics
+    employee.status = "Inactive"
     
-    # Update linked User account status
+    # Disable linked User account login
     user = db.query(User).filter(User.id == employee.user_id).first()
     if user:
-        user.status = "Deleted"
+        user.status = "Inactive"
         
     db.commit()
 

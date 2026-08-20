@@ -118,7 +118,15 @@ def list_hrs(db: Session, page: int = 1, limit: int = 10, search: str = "", stat
     )
 
     if status:
-        query = query.filter(Employee.status == status)
+        status_lower = status.strip().lower()
+        if status_lower == "inactive":
+            query = query.filter(or_(Employee.status == "Inactive", Employee.status == "Deleted"))
+        elif status_lower == "all":
+            query = query.filter(Employee.status != "Deleted")
+        else:
+            query = query.filter(Employee.status == status)
+    else:
+        query = query.filter(Employee.status == "Active")
         
     search_value = (search or "").strip()
     if search_value:

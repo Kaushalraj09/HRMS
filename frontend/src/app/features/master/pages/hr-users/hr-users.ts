@@ -44,8 +44,8 @@ export class HrUsersComponent implements OnInit {
   pages$!: Observable<number[]>;
 
   statusOptions = [
-    { label: 'All Statuses', value: '' },
-    { label: 'Active', value: 'Active' },
+    { label: 'Active (Default)', value: '' },
+    { label: 'All Statuses', value: 'all' },
     { label: 'Inactive', value: 'Inactive' }
   ];
 

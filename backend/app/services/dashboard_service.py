@@ -89,19 +89,19 @@ def get_admin_dashboard_data(db: Session):
     total_hrs = (
         db.query(HrUser)
         .join(User, HrUser.user_id == User.id)
-        .filter(User.status != "Deleted")
+        .filter(User.status == "Active")
         .count()
     )
 
-    # Count both HRs and Employees together as the total workforce employees
+    # Count both active HRs and active Employees together as the total workforce employees
     total_emps = (
         db.query(Employee)
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .count()
     )
@@ -124,7 +124,7 @@ def get_admin_dashboard_data(db: Session):
     recent_hrs = (
         db.query(HrUser)
         .join(User, HrUser.user_id == User.id)
-        .filter(User.status != "Deleted")
+        .filter(User.status == "Active")
         .order_by(HrUser.created_at.desc())
         .limit(6)
         .all()
@@ -137,8 +137,8 @@ def get_admin_dashboard_data(db: Session):
         .join(Role, User.role_id == Role.id)
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .order_by(Employee.created_at.desc())
         .limit(6)
@@ -205,8 +205,8 @@ def get_admin_dashboard_data(db: Session):
         .join(Role, User.role_id == Role.id)
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .group_by(Employee.department)
         .all()
@@ -423,8 +423,8 @@ def get_hr_dashboard_data(db: Session):
         .join(Role, User.role_id == Role.id)
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .count()
     )
@@ -474,8 +474,8 @@ def get_hr_dashboard_data(db: Session):
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
             Employee.gender == "Male",
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .count()
     )
@@ -487,8 +487,8 @@ def get_hr_dashboard_data(db: Session):
         .filter(
             func.lower(Role.name).in_(["employee", "hr"]),
             Employee.gender == "Female",
-            Employee.status != "Deleted",
-            User.status != "Deleted"
+            Employee.status == "Active",
+            User.status == "Active"
         )
         .count()
     )
