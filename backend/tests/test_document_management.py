@@ -37,6 +37,7 @@ def db_session():
 
         # Seed document types
         seed_default_document_types(db)
+        db.commit()
 
         yield db
     finally:
