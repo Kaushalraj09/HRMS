@@ -13,7 +13,7 @@ from app.seeds.seed_demo_users import seed_users
 from app.seeds.seed_master_data import seed_roles
 from app.services.dashboard_service import get_admin_dashboard_data, invalidate_dashboard_cache
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def db_session():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(bind=engine)

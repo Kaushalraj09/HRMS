@@ -58,7 +58,7 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_data(db_session):
     # 1. Admin User
     admin_user = User(
