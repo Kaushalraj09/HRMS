@@ -82,9 +82,9 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
           this.userName = user.displayName;
           this.profileImage = user.profileImage || null;
           
-          const names = user.displayName.split(' ');
+          const names = (user.displayName || '').trim().split(/\s+/).filter(Boolean);
           const first = names[0]?.[0] || '';
-          const last = names[1]?.[0] || '';
+          const last = names.length > 1 ? names[names.length - 1]?.[0] || '' : '';
           this.userInitials = (first + last).toUpperCase() || 'U';
 
           // Connect WebSocket if not connected for this user

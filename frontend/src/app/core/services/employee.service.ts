@@ -237,15 +237,18 @@ export class EmployeeService {
   }
 
   private mapEmployee(row: BackendEmployee): Employee {
+    const firstName = (row.first_name || '').trim();
+    const lastName = (row.last_name || '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
     return {
       id: String(row.id),
       userId: String(row.user_id),
       reportingManagerId: row.reporting_manager_id != null ? String(row.reporting_manager_id) : null,
       reportingManagerName: row.reporting_manager_name || null,
       employeeCode: row.employee_code,
-      name: `${row.first_name} ${row.last_name}`.trim(),
-      firstName: row.first_name,
-      lastName: row.last_name,
+      name: fullName || 'Employee',
+      firstName: firstName,
+      lastName: lastName,
       department: row.department || '',
       designation: row.designation || '',
       employeeType: row.employee_type || '',

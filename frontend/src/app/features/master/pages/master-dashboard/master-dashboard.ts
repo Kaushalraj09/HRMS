@@ -188,11 +188,13 @@ export class MasterDashboard implements OnInit, OnDestroy {
   // Dynamic getters
   get adminInitials(): string {
     const name = this.userName || 'System Admin';
-    const parts = name.trim().split(' ');
+    const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+      const first = parts[0][0] || '';
+      const last = parts[parts.length - 1][0] || '';
+      return (first + last).toUpperCase() || 'SA';
     }
-    return name.slice(0, 2).toUpperCase();
+    return (parts[0] || 'SA').slice(0, 2).toUpperCase();
   }
 
   get adminCode(): string {

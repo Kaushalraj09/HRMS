@@ -155,7 +155,7 @@ export class Employees implements OnInit {
       }),
       tap((result) => {
         this.isLoading$.next(false);
-        this.updateStats(result.total);
+        this.updateStats(result.total, result.data);
         if (result.data) {
           this.loadDocumentCompletions(result.data);
         }
@@ -178,7 +178,7 @@ export class Employees implements OnInit {
     );
   }
 
-  updateStats(total: number) {
+  updateStats(total: number, employees?: Employee[]) {
     if (total <= 0) {
       this.stats.total = 0;
       this.stats.active = 0;
@@ -189,9 +189,15 @@ export class Employees implements OnInit {
     }
 
     this.stats.total = total;
-    this.stats.active = Math.max(1, Math.round(total * 0.875));
-    this.stats.onLeave = Math.max(0, Math.round(total * 0.08));
-    this.stats.inactive = Math.max(0, total - this.stats.active - this.stats.onLeave);
+    if (employees && employees.length > 0) {
+      this.stats.active = employees.filter(e => (e.status || 'Active').toLowerCase() === 'active').length;
+      this.stats.inactive = employees.filter(e => ['inactive', 'deleted'].includes((e.status || '').toLowerCase())).length;
+      this.stats.onLeave = employees.filter(e => (e.status || '').toLowerCase() === 'on leave').length;
+    } else {
+      this.stats.active = total;
+      this.stats.inactive = 0;
+      this.stats.onLeave = 0;
+    }
     this.cdr.detectChanges();
   }
 
@@ -240,11 +246,13 @@ export class Employees implements OnInit {
 
   getInitials(name: string): string {
     if (!name) return 'EM';
-    const parts = name.trim().split(' ');
+    const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+      const first = parts[0][0] || '';
+      const last = parts[parts.length - 1][0] || '';
+      return (first + last).toUpperCase() || 'EM';
     }
-    return name.slice(0, 2).toUpperCase();
+    return (parts[0] || 'EM').slice(0, 2).toUpperCase();
   }
 
   getAvatarColor(name: string): { bg: string, text: string } {

@@ -33,12 +33,16 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     if not emp_role:
         raise ValueError("Employee role not found")
     
+    first_name = (obj_in.first_name or "").strip()
+    last_name = (obj_in.last_name or "").strip()
+    official_email = obj_in.official_email.strip()
+
     # 2. Create the User Login
     # Note: We use the official_email as the login email
     new_user = User(
-        email=obj_in.official_email,
+        email=official_email,
         password_hash=hash_password(secrets.token_urlsafe(32)),
-        display_name=f"{obj_in.first_name} {obj_in.last_name}",
+        display_name=f"{first_name} {last_name}".strip(),
         role_id=emp_role.id,
         status="Active"
     )
@@ -47,10 +51,14 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     
     # 3. Create the Employee Profile
     emp_code = f"{new_user.id:04d}"
+    dump_dict = obj_in.model_dump()
+    dump_dict["first_name"] = first_name
+    dump_dict["last_name"] = last_name
+    dump_dict["official_email"] = official_email
     new_employee = Employee(
         user_id=new_user.id,
         employee_code=emp_code,
-        **obj_in.model_dump()
+        **dump_dict
     )
     db.add(new_employee)
     db.flush()
