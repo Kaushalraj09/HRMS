@@ -22,6 +22,11 @@ def upgrade() -> None:
     """Upgrade schema."""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    tables = inspector.get_table_names()
+    if '_alembic_tmp_hr_users' in tables:
+        op.execute('DROP TABLE _alembic_tmp_hr_users')
+        inspector = sa.inspect(bind)
+
     columns = [c['name'] for c in inspector.get_columns('hr_users')]
 
     with op.batch_alter_table('hr_users', schema=None) as batch_op:
@@ -37,6 +42,11 @@ def downgrade() -> None:
     """Downgrade schema."""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    tables = inspector.get_table_names()
+    if '_alembic_tmp_hr_users' in tables:
+        op.execute('DROP TABLE _alembic_tmp_hr_users')
+        inspector = sa.inspect(bind)
+
     columns = [c['name'] for c in inspector.get_columns('hr_users')]
 
     with op.batch_alter_table('hr_users', schema=None) as batch_op:

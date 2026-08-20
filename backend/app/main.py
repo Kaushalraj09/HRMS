@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     from app.domain.notifications.subscriber import register_all_listeners
     register_all_listeners()
 
-    if settings.AUTO_CREATE_TABLES:
+    if settings.AUTO_CREATE_TABLES and settings.APP_ENV != "test":
         # Run Alembic migrations programmatically to set up/upgrade the database schema
         from alembic.config import Config
         from alembic import command
