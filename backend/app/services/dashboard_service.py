@@ -198,8 +198,17 @@ def get_admin_dashboard_data(db: Session):
     employee_growth_count = max(1, len(recent_emps))
     employee_growth_rate = 1.46
 
-    # Department distribution
-    dept_counts = (
+    # Dynamic Department distribution synced with Master Data
+    from app.models.master_data import Department
+
+    master_depts = (
+        db.query(Department)
+        .filter(Department.is_active == True)
+        .order_by(Department.id.asc())
+        .all()
+    )
+
+    dept_counts_raw = (
         db.query(Employee.department, func.count(Employee.id))
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
@@ -212,39 +221,72 @@ def get_admin_dashboard_data(db: Session):
         .all()
     )
 
+    emp_dept_map = {}
+    for d_name, count in dept_counts_raw:
+        if d_name:
+            key = d_name.strip().lower()
+            emp_dept_map[key] = emp_dept_map.get(key, 0) + count
+
+    total_dept_emps = sum(emp_dept_map.values())
+
     color_map = {
         "engineering": "#3b82f6",
         "operations": "#8b5cf6",
         "human resources": "#10b981",
         "hr": "#10b981",
         "finance": "#f97316",
-        "administration": "#06b6d4",
         "marketing": "#ec4899",
-        "sales": "#eab308"
+        "sales": "#eab308",
+        "support": "#06b6d4",
+        "administration": "#6366f1"
     }
+    colors_cycle = ["#3b82f6", "#10b981", "#f97316", "#ec4899", "#eab308", "#06b6d4", "#8b5cf6", "#6366f1", "#14b8a6", "#f43f5e"]
 
-    total_dept_emps = sum(c[1] for c in dept_counts) if dept_counts else 0
     dept_distribution = []
+    seen_keys = set()
 
-    if total_dept_emps > 0 and len(dept_counts) >= 2:
-        colors_cycle = ["#3b82f6", "#8b5cf6", "#10b981", "#f97316", "#06b6d4", "#ec4899"]
-        for idx, (dept_name, count) in enumerate(dept_counts):
-            dept_key = (dept_name or "General").strip().lower()
-            dept_color = color_map.get(dept_key, colors_cycle[idx % len(colors_cycle)])
-            pct = round((count / total_dept_emps) * 100, 1)
+    if master_depts:
+        for idx, d in enumerate(master_depts):
+            d_name = d.name.strip()
+            d_key = d_name.lower()
+            seen_keys.add(d_key)
+            
+            count = emp_dept_map.get(d_key, 0)
+            if d_key == "human resources" and "hr" in emp_dept_map:
+                count += emp_dept_map["hr"]
+            elif d_key == "hr" and "human resources" in emp_dept_map:
+                count += emp_dept_map["human resources"]
+
+            pct = round((count / total_dept_emps) * 100, 1) if total_dept_emps > 0 else 0.0
+            dept_color = color_map.get(d_key, colors_cycle[idx % len(colors_cycle)])
             dept_distribution.append({
-                "name": dept_name or "General",
+                "name": d_name,
                 "count": count,
                 "percentage": pct,
                 "color": dept_color
             })
-    else:
-        # Balanced realistic default matching reference design
+
+    # Include any additional departments assigned to employees that are not in master_depts
+    for d_key, count in emp_dept_map.items():
+        if d_key not in seen_keys and d_key != "hr":
+            d_name = d_key.title()
+            pct = round((count / total_dept_emps) * 100, 1) if total_dept_emps > 0 else 0.0
+            dept_color = color_map.get(d_key, colors_cycle[len(dept_distribution) % len(colors_cycle)])
+            dept_distribution.append({
+                "name": d_name,
+                "count": count,
+                "percentage": pct,
+                "color": dept_color
+            })
+
+    if not dept_distribution:
         dept_distribution = [
-            {"name": "Engineering", "count": int(display_total_employees * 0.40), "percentage": 40.0, "color": "#3b82f6"},
-            {"name": "Operations", "count": int(display_total_employees * 0.30), "percentage": 30.0, "color": "#8b5cf6"},
-            {"name": "HR", "count": int(display_total_employees * 0.15), "percentage": 15.0, "color": "#10b981"},
-            {"name": "Finance", "count": int(display_total_employees * 0.15), "percentage": 15.0, "color": "#f97316"}
+            {"name": "Engineering", "count": 0, "percentage": 0.0, "color": "#3b82f6"},
+            {"name": "Human Resources", "count": 0, "percentage": 0.0, "color": "#10b981"},
+            {"name": "Finance", "count": 0, "percentage": 0.0, "color": "#f97316"},
+            {"name": "Marketing", "count": 0, "percentage": 0.0, "color": "#ec4899"},
+            {"name": "Sales", "count": 0, "percentage": 0.0, "color": "#eab308"},
+            {"name": "Support", "count": 0, "percentage": 0.0, "color": "#06b6d4"}
         ]
 
     # Attendance overview timeline (5 points across month)
