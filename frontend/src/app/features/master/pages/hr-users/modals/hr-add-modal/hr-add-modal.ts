@@ -86,6 +86,32 @@ export class HrAddModalComponent implements OnInit {
         emergencyContactNumber: ['', Validators.pattern('^[0-9]{10}$')]
       })
     });
+
+    // Auto-sync Login Email and Official / Company Email
+    const loginEmailCtrl = this.form.get('accountAccess.loginEmail');
+    const officialEmailCtrl = this.form.get('contactInfo.officialEmail');
+
+    if (loginEmailCtrl && officialEmailCtrl) {
+      loginEmailCtrl.valueChanges.subscribe(val => {
+        if (officialEmailCtrl.value !== val) {
+          officialEmailCtrl.setValue(val, { emitEvent: false });
+          if (loginEmailCtrl.touched) {
+            officialEmailCtrl.markAsTouched();
+          }
+          officialEmailCtrl.updateValueAndValidity({ emitEvent: false });
+        }
+      });
+
+      officialEmailCtrl.valueChanges.subscribe(val => {
+        if (loginEmailCtrl.value !== val) {
+          loginEmailCtrl.setValue(val, { emitEvent: false });
+          if (officialEmailCtrl.touched) {
+            loginEmailCtrl.markAsTouched();
+          }
+          loginEmailCtrl.updateValueAndValidity({ emitEvent: false });
+        }
+      });
+    }
   }
 
   ngOnInit(): void {
