@@ -15,6 +15,7 @@ import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { EmployeeLocationMap } from '../../components/employee-location-map/employee-location-map';
 import { RegularizationService } from '../../../../core/services/regularization.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
+import { DocumentService } from '../../../../core/services/document.service';
 
 export interface DashboardKpiItem {
   id: string;
@@ -70,6 +71,18 @@ export interface LeaveRequestRow {
   date: string;
   duration: string;
   status: string;
+}
+
+export interface WorkforceDataPoint {
+  day: string;
+  x: number;
+  y: number;
+  pct: number;
+  present: number;
+  absent: number;
+  leave: number;
+  wfh: number;
+  total: number;
 }
 
 @Component({
@@ -233,7 +246,26 @@ export class HrDashboard implements OnInit {
   wfSplinePathD = 'M 20 80 L 440 80';
   wfGradientAreaD = 'M 20 80 L 440 80 L 440 90 L 20 90 Z';
   
-  wfDataPoints: { day: string; x: number; y: number; pct: number }[] = [];
+  wfDataPoints: WorkforceDataPoint[] = [];
+  hoveredWfPoint: WorkforceDataPoint | null = null;
+  hoveredWfIndex: number | null = null;
+
+  setWfHover(pt: WorkforceDataPoint, index: number): void {
+    this.hoveredWfPoint = pt;
+    this.hoveredWfIndex = index;
+    this.cdr.detectChanges();
+  }
+
+  clearWfHover(): void {
+    this.hoveredWfPoint = null;
+    this.hoveredWfIndex = null;
+    this.cdr.detectChanges();
+  }
+
+  getTooltipTop(ptY: number): number {
+    const topPx = (ptY / 100) * 90;
+    return Math.max(10, Math.round(topPx));
+  }
 
   // HR Quick Stats (2x3 Grid)
   quickStatsList: HrQuickStatItem[] = [
@@ -297,6 +329,34 @@ export class HrDashboard implements OnInit {
   displayRecentAttendance: RecentAttendanceItem[] = [];
   rawRecentTimeSheets: any[] = [];
 
+  // Row 5: Employee Document Compliance & Latest News
+  docComplianceRate = 0.0;
+  docCompletedEmployees = 0;
+  docPartialEmployees = 0;
+  docAttentionEmployees = 0;
+  docAttentionNote = 'Loading document compliance status...';
+  totalRequiredDocs = 8;
+  docCompletePct = 0;
+  docPartialPct = 0;
+  docAttentionPct = 0;
+
+  latestNewsList = [
+    {
+      heading: 'Welcome to Aivan ERP System',
+      contents: 'We are excited to announce the launch of our new ERP system designed to streamline your business operations and improve productivity.',
+      newsType: 'GENERAL',
+      typeClass: 'general-pill',
+      date: 'April 10, 2026'
+    },
+    {
+      heading: 'Welcome to New Branch opening',
+      contents: 'We are excited to announce the launch of our new branch in downtown!',
+      newsType: 'PROMOTIONAL',
+      typeClass: 'promo-pill',
+      date: 'April 10, 2026'
+    }
+  ];
+
   // Pending API Data
   pendingRequests: any[] = [];
   processedRequests: any[] = [];
@@ -316,6 +376,7 @@ export class HrDashboard implements OnInit {
     private readonly timeoffService: TimeoffService,
     private readonly regularizationService: RegularizationService,
     private readonly masterDataService: MasterDataService,
+    private readonly documentService: DocumentService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
@@ -336,6 +397,7 @@ export class HrDashboard implements OnInit {
 
     this.loadMasterData();
     this.loadDashboardData();
+    this.loadDocumentComplianceMetrics();
     this.loadPendingRequests();
     this.loadProcessedRequests();
     this.loadPendingRegularizations();
@@ -346,6 +408,7 @@ export class HrDashboard implements OnInit {
 
     this.timeoffService.timeoffUpdate$.subscribe(() => {
       this.loadDashboardData();
+      this.loadDocumentComplianceMetrics();
       this.loadPendingRequests();
       this.loadProcessedRequests();
       this.loadPendingRegularizations();
@@ -354,9 +417,49 @@ export class HrDashboard implements OnInit {
     this.attendanceService.wsMessage$.subscribe((msg: any) => {
       if (msg?.type === 'PUNCH_UPDATE' || msg?.type === 'ATTENDANCE_UPDATE' || msg?.type === 'NEW_NOTIFICATION') {
         this.loadDashboardData();
+        this.loadDocumentComplianceMetrics();
         this.loadPendingRequests();
         this.loadProcessedRequests();
         this.loadPendingRegularizations();
+      }
+    });
+  }
+
+  loadDocumentComplianceMetrics(): void {
+    this.documentService.getHrOverview().subscribe({
+      next: (kpi) => {
+        if (kpi) {
+          const total = kpi.total_employees || 0;
+          this.docCompletedEmployees = kpi.complete_employees || 0;
+          this.docPartialEmployees = kpi.partial_employees || 0;
+          this.docAttentionEmployees = kpi.attention_employees !== undefined ? kpi.attention_employees : Math.max(0, total - this.docCompletedEmployees);
+          this.docComplianceRate = kpi.overall_compliance_rate || 0.0;
+          this.totalRequiredDocs = kpi.total_required_docs || 8;
+
+          if (total > 0) {
+            this.docCompletePct = Math.round((this.docCompletedEmployees / total) * 100);
+            this.docPartialPct = Math.round((this.docPartialEmployees / total) * 100);
+            this.docAttentionPct = Math.max(0, 100 - this.docCompletePct - this.docPartialPct);
+          } else {
+            this.docCompletePct = 0;
+            this.docPartialPct = 0;
+            this.docAttentionPct = 0;
+          }
+
+          if (this.docAttentionEmployees > 0) {
+            this.docAttentionNote = `${this.docAttentionEmployees} employee${this.docAttentionEmployees > 1 ? 's' : ''} require document attention`;
+          } else if (total > 0) {
+            this.docAttentionNote = 'All active employees have 100% compliant documents';
+          } else {
+            this.docAttentionNote = 'No active employees configured yet';
+          }
+
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.warn('Failed to load document compliance metrics for HR dashboard:', err);
       }
     });
   }
@@ -575,7 +678,7 @@ export class HrDashboard implements OnInit {
     }
 
     // Build 7 data points & Spline SVG Path
-    const points: { day: string; x: number; y: number; pct: number }[] = [];
+    const points: WorkforceDataPoint[] = [];
     const stepX = 420 / Math.max(1, len - 1);
 
     trend.forEach((item, i) => {
@@ -587,7 +690,12 @@ export class HrDashboard implements OnInit {
         day: item.date || `Day ${i + 1}`,
         x: Math.round(x),
         y: Math.round(y),
-        pct: Math.round(pct)
+        pct: Math.round(pct),
+        present: item.present ?? 0,
+        absent: item.absent ?? 0,
+        leave: item.leave ?? 0,
+        wfh: item.wfh ?? 0,
+        total: item.total ?? totalEmp
       });
     });
 

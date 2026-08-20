@@ -47,8 +47,8 @@ export const routes: Routes = [
       { path: 'login-activity', component: LoginActivityList },
       { path: 'login-activity/:id', component: LoginActivityDetail },
       { path: 'regularization-requests', component: RegularizationRequestsComponent },
+      { path: 'documents', loadComponent: () => import('./features/hr/pages/hr-documents/hr-documents').then(m => m.HrDocumentsComponent) },
       { path: 'reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) },
-
     ]
   },
   { 
@@ -58,6 +58,7 @@ export const routes: Routes = [
     data: { roles: ['admin', 'employee'] },
     children: [
       { path: 'my-attendance', component: MyAttendance },
+      { path: 'my-documents', loadComponent: () => import('./features/emp/pages/my-documents/my-documents').then(m => m.MyDocumentsComponent) },
       { path: 'regularization', component: RegularizationComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'change-password', component: ChangePasswordComponent },
@@ -72,6 +73,7 @@ export const routes: Routes = [
     children: [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
+      { path: 'documents', loadComponent: () => import('./features/hr/pages/hr-documents/hr-documents').then(m => m.HrDocumentsComponent) },
       { path: 'attendance', component: AttendanceComponent },
       { path: 'time-off', component: HrTimeOffComponent },
       { path: 'my-profile', component: MyProfile },

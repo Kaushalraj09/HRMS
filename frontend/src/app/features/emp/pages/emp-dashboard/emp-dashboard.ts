@@ -15,6 +15,7 @@ import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
+import { DocumentService } from '../../../../core/services/document.service';
 import { Holiday } from '../../../../core/models/master-data.model';
 import {
   EmployeeAttendanceSummaryItem,
@@ -92,6 +93,8 @@ export interface TrendDataPoint {
   x: number;
   y: number;
   label: string;
+  status?: string;
+  duration?: string;
 }
 
 @Injectable()
@@ -269,6 +272,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
   trendLinePathD = '';
   trendAreaPathD = '';
   trendDataPoints: TrendDataPoint[] = [];
+  hoveredTrendPoint: TrendDataPoint | null = null;
+  hoveredTrendIndex: number | null = null;
   readonly defaultTrendPcts: number[] = [50.0, 55.0, 94.3, 72.5, 62.1, 65.0, 88.0];
 
   showScheduleModal = false;
@@ -313,6 +318,18 @@ export class EmpDashboard implements OnInit, OnDestroy {
     },
   ];
 
+  docSummary: any = {
+    total_required: 0,
+    total_optional: 0,
+    uploaded: 0,
+    pending_review: 0,
+    verified: 0,
+    rejected: 0,
+    missing: 0,
+    completion_percentage: 0
+  };
+  dashboardDocList: any[] = [];
+
   private readonly subscriptions = new Subscription();
 
   constructor(
@@ -323,6 +340,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly authService: AuthService,
     private readonly timeEngine: TimeEngineService,
     private readonly masterDataService: MasterDataService,
+    private readonly documentService: DocumentService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
@@ -352,9 +370,29 @@ export class EmpDashboard implements OnInit, OnDestroy {
       })
     );
 
+    this.loadMyDocumentsSummary();
+    this.subscriptions.add(
+      this.documentService.documentUpdated$.subscribe(() => {
+        this.loadMyDocumentsSummary();
+      })
+    );
+
     this.initialize();
     this.startClock();
     this.updateAttendanceTrend();
+  }
+
+  loadMyDocumentsSummary(): void {
+    this.documentService.getMyDocuments().subscribe({
+      next: (res) => {
+        if (res && res.summary) {
+          this.docSummary = res.summary;
+          this.dashboardDocList = res.documents || [];
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {}
+    });
   }
 
   ngOnDestroy(): void {
@@ -617,6 +655,15 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
   ];
 
+  formatSecondsToHoursMinutes(seconds: number): string {
+    if (!seconds || seconds <= 0) return '-';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const hStr = h < 10 ? `0${h}` : `${h}`;
+    const mStr = m < 10 ? `0${m}` : `${m}`;
+    return `${hStr}h ${mStr}m`;
+  }
+
   get displayTimesheetRows(): DashboardTimesheetDisplayRow[] {
     const todayIso = toIsoDateLocal(new Date());
 
@@ -629,11 +676,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
         day: new Date().toLocaleDateString('en-GB', { weekday: 'short' }),
         entry: this.punchInTime || '-',
         exit: this.punchOutTime || '-',
-        total: this.totalWorkedSecondsToday > 0 ? this.timeEngine.formatHoursMinutes(this.totalWorkedSecondsToday) : '-',
+        total: this.totalWorkedSecondsToday > 0 ? this.formatSecondsToHoursMinutes(this.totalWorkedSecondsToday) : '-',
         break: '01h 00m',
         overtime: '00h 00m',
+        grandTotal: this.totalWorkedSecondsToday > 0 ? this.formatSecondsToHoursMinutes(this.totalWorkedSecondsToday) : '-',
         status: this.isPunchedIn ? 'Working' : (this.punchOutTime ? 'Present' : 'Working'),
-        workMode: this.status || 'Office'
+        workMode: (this.status as WorkMode) || 'Office'
       };
       sourceRows = [todayRow, ...sourceRows];
     }
@@ -665,7 +713,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
           outTime = this.formatTime12h(this.punchOutTime);
         }
         if (this.totalWorkedSecondsToday > 0) {
-          workHours = this.formatDurationHm(this.timeEngine.formatHoursMinutes(this.totalWorkedSecondsToday));
+          workHours = this.formatSecondsToHoursMinutes(this.totalWorkedSecondsToday);
         } else if (this.isPunchedIn) {
           workHours = '< 1m';
         }
@@ -2002,6 +2050,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   setTrendPeriod(period: 'This Week' | 'Last Week' | 'This Month'): void {
     this.trendPeriod = period;
     this.showTrendDropdown = false;
+    this.clearTrendHover();
     this.updateAttendanceTrend();
     this.cdr.detectChanges();
   }
@@ -2012,6 +2061,22 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
     this.showTrendDropdown = !this.showTrendDropdown;
     this.cdr.detectChanges();
+  }
+
+  setTrendHover(pt: TrendDataPoint, index: number): void {
+    this.hoveredTrendPoint = pt;
+    this.hoveredTrendIndex = index;
+    this.cdr.detectChanges();
+  }
+
+  clearTrendHover(): void {
+    this.hoveredTrendPoint = null;
+    this.hoveredTrendIndex = null;
+    this.cdr.detectChanges();
+  }
+
+  getTrendTooltipLeft(x: number): number {
+    return (x / 320) * 100;
   }
 
   updateAttendanceTrend(): void {
@@ -2041,11 +2106,15 @@ export class EmpDashboard implements OnInit, OnDestroy {
       const dayName = dayNames[i];
 
       let dayPct = 0;
+      let pointStatus = 'Present';
+      let pointDuration = '';
       const sheet = this.allTimesheets.find(t => t.date === iso);
 
       if (sheet) {
         const statusStr = String(sheet.status || '');
+        pointStatus = statusStr || 'Present';
         if (sheet.total && sheet.total !== '-') {
+          pointDuration = sheet.total;
           const parsedMins = this.parseDurationMinutes(sheet.total);
           const targetMins = (this.shiftTotalHours || 9) * 60;
           dayPct = targetMins > 0 ? Math.min(100, Math.round((parsedMins / targetMins) * 100)) : 85;
@@ -2060,11 +2129,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
         } else {
           dayPct = 0;
         }
-      } else if (iso === todayIso && this.isPunchedIn) {
-        dayPct = Math.min(100, Math.round(this.workProgressPercent || 60));
       } else if (this.allTimesheets.length === 0 || iso > todayIso) {
+        pointStatus = iso > todayIso ? 'Upcoming' : 'Scheduled';
         dayPct = this.defaultTrendPcts[i];
       } else {
+        pointStatus = 'Present';
         dayPct = this.defaultTrendPcts[i];
       }
 
@@ -2082,7 +2151,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
         pct: dayPct,
         x,
         y,
-        label: `${dayPct.toFixed(1)}%`
+        label: `${dayPct.toFixed(1)}%`,
+        status: pointStatus,
+        duration: pointDuration
       });
     }
 

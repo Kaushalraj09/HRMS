@@ -17,6 +17,17 @@ import { AttendanceService } from '../../../../core/services/attendance.service'
 import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { RegularizationService } from '../../../../core/services/regularization.service';
 
+export interface MasterAttendancePoint {
+  label: string;
+  dateStr: string;
+  pct: number;
+  x: number;
+  y: number;
+  presentCount: number;
+  totalCount: number;
+  status: string;
+}
+
 @Component({
   selector: 'app-master-dashboard',
   imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, MasterSidebar, RouterModule],
@@ -36,6 +47,25 @@ export class MasterDashboard implements OnInit, OnDestroy {
   // Filter dropdown states
   attendanceFilter: 'month' | 'week' | 'today' = 'month';
   hiringFilter: 'year' | 'quarter' = 'year';
+
+  // 1. Attendance Overview Hover State
+  hoveredAttendancePoint: MasterAttendancePoint | null = null;
+  hoveredAttendanceIndex: number | null = null;
+  attendancePoints: MasterAttendancePoint[] = [
+    { label: '01 May', dateStr: '01 May 2026', pct: 20.0, x: 20, y: 160, presentCount: 1, totalCount: 4, status: 'Holiday / Start' },
+    { label: '08 May', dateStr: '08 May 2026', pct: 68.0, x: 140, y: 70, presentCount: 3, totalCount: 4, status: 'Working Day' },
+    { label: '15 May', dateStr: '15 May 2026', pct: 28.0, x: 260, y: 140, presentCount: 1, totalCount: 4, status: 'Weekend / Off' },
+    { label: '22 May', dateStr: '22 May 2026', pct: 72.0, x: 370, y: 60, presentCount: 3, totalCount: 4, status: 'Working Day' },
+    { label: '31 May', dateStr: '31 May 2026', pct: 93.0, x: 480, y: 25, presentCount: 4, totalCount: 4, status: 'All Present' }
+  ];
+
+  // 2. Employee Distribution Donut Hover State
+  hoveredDeptIndex: number | null = null;
+  hoveredDeptItem: DepartmentDistributionItem | null = null;
+
+  // 3. Monthly Hiring Bar Hover State
+  hoveredHiringIndex: number | null = null;
+  hoveredHiringItem: MonthlyHiringItem | null = null;
 
   // Approvals & Oversight
   pendingRequests: any[] = [];
@@ -303,6 +333,49 @@ export class MasterDashboard implements OnInit, OnDestroy {
   getHiringBarHeight(count: number): number {
     const maxVal = 60;
     return Math.min(100, Math.max(10, (count / maxVal) * 100));
+  }
+
+  // Attendance Hover Handlers
+  setAttendanceHover(pt: MasterAttendancePoint, i: number): void {
+    this.hoveredAttendancePoint = pt;
+    this.hoveredAttendanceIndex = i;
+    this.cdr.detectChanges();
+  }
+
+  clearAttendanceHover(): void {
+    this.hoveredAttendancePoint = null;
+    this.hoveredAttendanceIndex = null;
+    this.cdr.detectChanges();
+  }
+
+  getAttendanceTooltipLeft(x: number): number {
+    return (x / 500) * 100;
+  }
+
+  // Distribution Hover Handlers
+  setDeptHover(item: DepartmentDistributionItem, index: number): void {
+    this.hoveredDeptIndex = index;
+    this.hoveredDeptItem = item;
+    this.cdr.detectChanges();
+  }
+
+  clearDeptHover(): void {
+    this.hoveredDeptIndex = null;
+    this.hoveredDeptItem = null;
+    this.cdr.detectChanges();
+  }
+
+  // Hiring Hover Handlers
+  setHiringHover(item: MonthlyHiringItem, index: number): void {
+    this.hoveredHiringIndex = index;
+    this.hoveredHiringItem = item;
+    this.cdr.detectChanges();
+  }
+
+  clearHiringHover(): void {
+    this.hoveredHiringIndex = null;
+    this.hoveredHiringItem = null;
+    this.cdr.detectChanges();
   }
 
   // Quick action dispatcher

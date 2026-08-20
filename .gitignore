@@ -8,12 +8,18 @@ env/
 venv/
 build/
 dist/
+*.sqlite
+*.db
 
 # Node
 node_modules/
 dist/
 .angular/
 .vscode/
+
+# Storage
+backend/storage/documents/*
+!backend/storage/documents/.gitkeep
 
 # TLS certificate material is mounted at runtime and must never be committed.
 deploy/certs/*.pem

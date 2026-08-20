@@ -1,0 +1,560 @@
+<div class="documents-page-wrapper">
+  <!-- Top Banner & Progress Header -->
+  <div class="doc-header-card">
+    <div class="header-main-info">
+      <div class="header-titles">
+        <div class="title-with-badge">
+          <h1 class="page-title">My Documents</h1>
+          <span class="compliance-badge" [class.complete]="summary.completion_percentage === 100">
+            <i class="fas" [ngClass]="summary.completion_percentage === 100 ? 'fa-shield-alt' : 'fa-hourglass-half'"></i>
+            {{ summary.completion_percentage }}% Complete
+          </span>
+        </div>
+        <p class="page-subtitle">
+          Complete your onboarding and employment compliance documentation for 
+          <strong>{{ employeeName }}</strong> ({{ employeeCode }})
+        </p>
+      </div>
+
+      <!-- Completion Ring / Gauge -->
+      <div class="progress-gauge-box">
+        <div class="progress-text-wrap">
+          <span class="progress-fraction">
+            <strong>{{ summary.verified }}</strong> of {{ summary.total_required }}
+          </span>
+          <span class="progress-label">required verified</span>
+        </div>
+        <div class="progress-track-bar">
+          <div class="progress-fill-bar" [style.width.%]="summary.completion_percentage"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert / Toast Messages -->
+    <div class="alert-banner success" *ngIf="successMessage">
+      <i class="fas fa-check-circle"></i>
+      <span>{{ successMessage }}</span>
+    </div>
+    <div class="alert-banner error" *ngIf="errorMessage">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Summary KPI Metric Cards (5 Cards) -->
+    <div class="doc-metrics-grid">
+      <div class="metric-card required-card" (click)="setStatusFilter('ALL')" [class.active]="selectedStatusFilter === 'ALL'">
+        <div class="metric-icon-wrap blue">
+          <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ summary.total_required }}</span>
+          <span class="metric-title">Required Documents</span>
+        </div>
+      </div>
+
+      <div class="metric-card uploaded-card">
+        <div class="metric-icon-wrap teal">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ summary.uploaded }}</span>
+          <span class="metric-title">Uploaded Files</span>
+        </div>
+      </div>
+
+      <div class="metric-card pending-card" (click)="setStatusFilter('PENDING_REVIEW')" [class.active]="selectedStatusFilter === 'PENDING_REVIEW'">
+        <div class="metric-icon-wrap amber">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ summary.pending_review }}</span>
+          <span class="metric-title">Pending Review</span>
+        </div>
+      </div>
+
+      <div class="metric-card verified-card" (click)="setStatusFilter('VERIFIED')" [class.active]="selectedStatusFilter === 'VERIFIED'">
+        <div class="metric-icon-wrap emerald">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ summary.verified }}</span>
+          <span class="metric-title">Verified</span>
+        </div>
+      </div>
+
+      <div class="metric-card rejected-card" (click)="setStatusFilter('REJECTED')" [class.active]="selectedStatusFilter === 'REJECTED'">
+        <div class="metric-icon-wrap rose">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ summary.rejected }}</span>
+          <span class="metric-title">Rejected / Re-upload</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rejection Attention Alert Banner if any rejected docs -->
+  <div class="rejection-notice-card" *ngIf="summary.rejected > 0">
+    <div class="notice-icon">
+      <i class="fas fa-exclamation-circle"></i>
+    </div>
+    <div class="notice-body">
+      <h4>Action Required: Re-upload Rejected Documents</h4>
+      <p>
+        HR has reviewed your documents and requested a re-upload for 
+        <strong>{{ summary.rejected }}</strong> document(s). Please review the feedback remarks below and upload clear replacements.
+      </p>
+    </div>
+  </div>
+
+  <!-- Search & Filter Card -->
+  <div class="filter-toolbar-card">
+    <div class="search-input-box">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search documents by name, category, or file..." 
+        [(ngModel)]="searchQuery" 
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+
+    <!-- Category Pills -->
+    <div class="category-pills-row">
+      <button 
+        type="button" 
+        class="cat-pill" 
+        *ngFor="let cat of categories" 
+        [class.active]="selectedCategory === cat" 
+        (click)="setCategory(cat)">
+        {{ cat === 'ALL' ? 'All Categories' : cat }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Document Items Table / Grid -->
+  <div class="documents-container-card">
+    <div class="table-loading-state" *ngIf="isLoading">
+      <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+      <p>Loading your documents...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoading">
+      <!-- Empty State -->
+      <div class="empty-docs-box" *ngIf="filteredDocuments.length === 0">
+        <div class="empty-illustration-container">
+          <div class="empty-glow-ring"></div>
+          <div class="empty-icon-circle">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="empty-docs-title">No documents match your filter</h3>
+        <p class="empty-docs-sub">Try clearing your search query or selecting another category.</p>
+        <button type="button" class="btn-clear-filters" (click)="selectedCategory = 'ALL'; selectedStatusFilter = 'ALL'; searchQuery = ''; applyFilters()">
+          <i class="fas fa-undo-alt"></i> Clear All Filters
+        </button>
+      </div>
+
+      <!-- Document Table -->
+      <div class="table-responsive" *ngIf="filteredDocuments.length > 0">
+        <table class="documents-modern-table">
+          <thead>
+            <tr>
+              <th>DOCUMENT</th>
+              <th>CATEGORY</th>
+              <th>REQUIREMENT</th>
+              <th>STATUS</th>
+              <th>UPLOAD INFO</th>
+              <th class="text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of filteredDocuments" class="doc-row" [class.highlight-rejected]="doc.status === 'REJECTED' || doc.status === 'RESUBMISSION_REQUIRED'">
+              <!-- Document Name + Description -->
+              <td>
+                <div class="doc-name-cell">
+                  <div class="doc-icon-circle" [ngClass]="doc.status.toLowerCase()">
+                    <i [class]="getStatusIcon(doc.status)"></i>
+                  </div>
+                  <div class="doc-meta-wrap">
+                    <span class="doc-main-name">{{ doc.document_type_name }}</span>
+                    <span class="doc-sub-desc" *ngIf="doc.description">{{ doc.description }}</span>
+                    <span class="file-spec-hint">Formats: {{ doc.allowed_file_types.toUpperCase() }} · Max {{ doc.max_file_size_mb }}MB</span>
+                  </div>
+                </div>
+
+                <!-- Inline Rejection Alert if rejected -->
+                <div class="row-rejection-alert" *ngIf="(doc.status === 'REJECTED' || doc.status === 'RESUBMISSION_REQUIRED') && doc.rejection_reason">
+                  <i class="fas fa-info-circle"></i>
+                  <span><strong>HR Remarks:</strong> {{ doc.rejection_reason }}</span>
+                </div>
+              </td>
+
+              <!-- Category -->
+              <td>
+                <span class="category-tag">{{ doc.category }}</span>
+              </td>
+
+              <!-- Required / Optional -->
+              <td>
+                <span class="requirement-pill" [class.required]="doc.is_required" [class.optional]="!doc.is_required">
+                  {{ doc.is_required ? 'Required' : 'Optional' }}
+                </span>
+              </td>
+
+              <!-- Status Badge -->
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(doc.status)">
+                  <i [class]="getStatusIcon(doc.status)"></i>
+                  {{ getStatusLabel(doc.status) }}
+                </span>
+              </td>
+
+              <!-- Upload Info -->
+              <td>
+                <div class="upload-info-wrap" *ngIf="doc.document_id">
+                  <div class="file-name-line">
+                    <i class="far fa-file-alt"></i>
+                    <span class="file-name-text" [title]="doc.file_name || ''">{{ doc.file_name }}</span>
+                  </div>
+                  <div class="file-sub-meta">
+                    <span class="file-size-badge">{{ formatSize(doc.file_size) }}</span>
+                    <span class="version-badge" *ngIf="doc.version">v{{ doc.version }}</span>
+                    <span class="upload-date">{{ formatDate(doc.uploaded_at) }}</span>
+                  </div>
+                </div>
+                <span class="no-upload-text" *ngIf="!doc.document_id">— Not uploaded yet —</span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="actions-btn-group">
+                  <!-- 1. Primary Upload Button for missing -->
+                  <button 
+                    type="button" 
+                    class="btn-action-primary upload" 
+                    *ngIf="doc.status === 'NOT_UPLOADED'" 
+                    (click)="openUploadModal(doc)">
+                    <i class="fas fa-upload"></i> Upload
+                  </button>
+
+                  <!-- 2. Re-upload Button for rejected -->
+                  <button 
+                    type="button" 
+                    class="btn-action-primary reupload" 
+                    *ngIf="doc.status === 'REJECTED' || doc.status === 'RESUBMISSION_REQUIRED'" 
+                    (click)="openUploadModal(doc)">
+                    <i class="fas fa-redo-alt"></i> Re-upload
+                  </button>
+
+                  <!-- 3. Preview Button -->
+                  <button 
+                    type="button" 
+                    class="btn-action-icon preview" 
+                    *ngIf="doc.document_id" 
+                    (click)="openPreview(doc)" 
+                    title="Preview Document">
+                    <i class="fas fa-eye"></i>
+                  </button>
+
+                  <!-- 4. Download Button -->
+                  <button 
+                    type="button" 
+                    class="btn-action-icon download" 
+                    *ngIf="doc.document_id" 
+                    (click)="downloadDocument(doc)" 
+                    title="Download Document">
+                    <i class="fas fa-download"></i>
+                  </button>
+
+                  <!-- 5. Replace Button (for pending review) -->
+                  <button 
+                    type="button" 
+                    class="btn-action-icon replace" 
+                    *ngIf="doc.status === 'PENDING_REVIEW'" 
+                    (click)="openUploadModal(doc)" 
+                    title="Replace File">
+                    <i class="fas fa-exchange-alt"></i>
+                  </button>
+
+                  <!-- 6. Version History Button -->
+                  <button 
+                    type="button" 
+                    class="btn-action-icon history" 
+                    *ngIf="doc.versions_count > 1" 
+                    (click)="openHistoryModal(doc)" 
+                    title="View Version History ({{ doc.versions_count }} versions)">
+                    <i class="fas fa-history"></i>
+                    <span class="version-counter-dot">{{ doc.versions_count }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- UPLOAD / RESUBMIT MODAL                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isUploadModalOpen" (click)="closeUploadModal()">
+  <div class="modal-card upload-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon-badge">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <div>
+          <h3>{{ selectedDocForUpload?.status === 'REJECTED' || selectedDocForUpload?.status === 'RESUBMISSION_REQUIRED' ? 'Re-upload Document' : 'Upload Document' }}</h3>
+          <p class="modal-sub">{{ selectedDocForUpload?.document_type_name }} · {{ selectedDocForUpload?.category }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeUploadModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Description & Specification Info -->
+      <div class="doc-instructions-box" *ngIf="selectedDocForUpload?.description">
+        <i class="fas fa-info-circle"></i>
+        <span>{{ selectedDocForUpload?.description }}</span>
+      </div>
+
+      <!-- If re-uploading rejected document, show previous rejection reason -->
+      <div class="rejection-reason-callout" *ngIf="selectedDocForUpload?.rejection_reason">
+        <div class="callout-head">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>Previous Rejection Reason:</strong>
+        </div>
+        <p>{{ selectedDocForUpload?.rejection_reason }}</p>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div 
+        class="drag-drop-zone" 
+        [class.drag-over]="isDragOver" 
+        [class.has-file]="!!selectedFile"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)">
+        
+        <input 
+          type="file" 
+          id="docFileInput" 
+          class="file-input-hidden" 
+          [accept]="selectedDocForUpload ? '.' + selectedDocForUpload.allowed_file_types.split(',').join(',.') : '*'"
+          (change)="onFileSelected($event)" 
+        />
+
+        <div class="zone-idle-content" *ngIf="!selectedFile">
+          <div class="upload-illustration">
+            <i class="fas fa-cloud-arrow-up"></i>
+          </div>
+          <h4>Drag & Drop your file here</h4>
+          <p class="browse-prompt">or <label for="docFileInput" class="btn-browse-trigger">Browse file</label> from your device</p>
+          <div class="file-rules-tag">
+            Supported: {{ selectedDocForUpload?.allowed_file_types?.toUpperCase() }} · Max {{ selectedDocForUpload?.max_file_size_mb }}MB
+          </div>
+        </div>
+
+        <!-- Selected File Preview Card -->
+        <div class="selected-file-card" *ngIf="selectedFile">
+          <div class="file-preview-thumbnail">
+            <img *ngIf="filePreviewUrl" [src]="filePreviewUrl" alt="File preview" class="img-thumb" />
+            <i *ngIf="!filePreviewUrl" class="fas fa-file-pdf icon-thumb"></i>
+          </div>
+          <div class="file-meta-info">
+            <span class="file-name-bold">{{ selectedFile.name }}</span>
+            <span class="file-size-text">{{ formatSize(selectedFile.size) }}</span>
+            <span class="file-type-pill">{{ selectedFile.type || 'Document' }}</span>
+          </div>
+          <label for="docFileInput" class="btn-change-file" title="Change file">
+            <i class="fas fa-sync-alt"></i> Change
+          </label>
+        </div>
+      </div>
+
+      <!-- Error message -->
+      <div class="file-error-alert" *ngIf="fileError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ fileError }}</span>
+      </div>
+
+      <!-- Remarks / Comments field -->
+      <div class="form-group-field">
+        <label for="uploadRemarks">Remarks / Notes (Optional):</label>
+        <textarea 
+          id="uploadRemarks" 
+          class="form-control-text" 
+          rows="2" 
+          placeholder="Add any notes about this document or reference number..."
+          [(ngModel)]="uploadRemarks">
+        </textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeUploadModal()" [disabled]="isUploading">
+        Cancel
+      </button>
+      <button type="button" class="btn-submit-upload" (click)="submitUpload()" [disabled]="!selectedFile || isUploading">
+        <i class="fas" [ngClass]="isUploading ? 'fa-circle-notch fa-spin' : 'fa-check'"></i>
+        {{ isUploading ? 'Uploading Document...' : 'Submit for Verification' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- DOCUMENT PREVIEW MODAL                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isPreviewModalOpen" (click)="closePreviewModal()">
+  <div class="modal-card preview-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon-badge preview">
+          <i class="fas fa-file-alt"></i>
+        </div>
+        <div>
+          <h3>{{ previewDocTitle }}</h3>
+          <p class="modal-sub">Secure document viewer</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button 
+          type="button" 
+          class="btn-header-action" 
+          *ngIf="activePreviewDocId" 
+          (click)="activePreviewDocId && downloadDocument({ document_id: activePreviewDocId, document_type_name: previewDocTitle, document_type_id: 0, document_type_code: '', category: '', is_required: true, allowed_file_types: '', max_file_size_mb: 5, status: '', versions_count: 0 })">
+          <i class="fas fa-download"></i> Download
+        </button>
+        <button type="button" class="btn-close-modal" (click)="closePreviewModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-body preview-body">
+      <div class="preview-spinner" *ngIf="isPreviewLoading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <p>Loading document preview...</p>
+      </div>
+
+      <ng-container *ngIf="!isPreviewLoading">
+        <!-- PDF / Document Object Embed -->
+        <div class="embed-wrapper" *ngIf="!isImageMime(previewMimeType)">
+          <iframe 
+            *ngIf="previewBlobUrl" 
+            [src]="previewBlobUrl" 
+            class="document-iframe" 
+            title="Document Preview">
+          </iframe>
+        </div>
+
+        <!-- Image Viewer -->
+        <div class="image-preview-wrapper" *ngIf="isImageMime(previewMimeType)">
+          <img *ngIf="rawBlobUrl" [src]="previewBlobUrl" alt="Document Preview" class="full-preview-image" />
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- DOCUMENT VERSION HISTORY MODAL                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isHistoryModalOpen" (click)="closeHistoryModal()">
+  <div class="modal-card history-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon-badge history">
+          <i class="fas fa-history"></i>
+        </div>
+        <div>
+          <h3>Version History</h3>
+          <p class="modal-sub">{{ historyDocTitle }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeHistoryModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="history-spinner" *ngIf="isHistoryLoading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <p>Loading audit timeline...</p>
+      </div>
+
+      <div class="version-timeline-list" *ngIf="!isHistoryLoading">
+        <div class="timeline-item" *ngFor="let v of versionHistory; let idx = index" [class.latest]="idx === 0">
+          <div class="timeline-marker">
+            <span class="version-chip">v{{ v.version_number }}</span>
+          </div>
+
+          <div class="timeline-card">
+            <div class="version-card-head">
+              <div class="v-title-meta">
+                <span class="v-filename">{{ v.file_name }}</span>
+                <span class="v-filesize">{{ formatSize(v.file_size) }}</span>
+              </div>
+              <span class="status-badge" [ngClass]="getStatusClass(v.status)">
+                {{ getStatusLabel(v.status) }}
+              </span>
+            </div>
+
+            <div class="version-details-grid">
+              <div class="v-meta-item">
+                <span class="lbl">Uploaded By:</span>
+                <span class="val">{{ v.uploaded_by_name || 'Employee' }}</span>
+              </div>
+              <div class="v-meta-item">
+                <span class="lbl">Upload Date:</span>
+                <span class="val">{{ formatDate(v.uploaded_at) }}</span>
+              </div>
+              <div class="v-meta-item" *ngIf="v.verified_by_name">
+                <span class="lbl">Verified By:</span>
+                <span class="val text-emerald">{{ v.verified_by_name }} ({{ formatDate(v.verified_at) }})</span>
+              </div>
+              <div class="v-meta-item" *ngIf="v.rejected_by_name">
+                <span class="lbl">Rejected By:</span>
+                <span class="val text-rose">{{ v.rejected_by_name }} ({{ formatDate(v.rejected_at) }})</span>
+              </div>
+            </div>
+
+            <!-- Rejection Reason if any -->
+            <div class="version-rejection-callout" *ngIf="v.rejection_reason">
+              <i class="fas fa-exclamation-circle"></i>
+              <span><strong>Rejection Feedback:</strong> {{ v.rejection_reason }}</span>
+            </div>
+
+            <!-- Remarks if any -->
+            <div class="version-remarks-line" *ngIf="v.remarks">
+              <span class="lbl">Notes:</span> <em>{{ v.remarks }}</em>
+            </div>
+
+            <div class="version-actions-bar">
+              <button type="button" class="btn-download-version" (click)="downloadVersion(v)">
+                <i class="fas fa-download"></i> Download v{{ v.version_number }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeHistoryModal()">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

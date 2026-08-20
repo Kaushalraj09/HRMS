@@ -404,7 +404,7 @@
                 </div>
               </div>
 
-              <div class="wf-chart-container">
+              <div class="wf-chart-container" (mouseleave)="clearWfHover()">
                 <div class="wf-chart-main">
                   <div class="wf-y-axis">
                     <span class="wf-axis-title">Attendance Trend</span>
@@ -436,18 +436,56 @@
                       <!-- Spline Curved Line -->
                       <path [attr.d]="wfSplinePathD" fill="none" stroke="#2563EB" stroke-width="2.8" stroke-linecap="round"/>
 
-                      <!-- Data Points with Tooltips -->
-                      <g *ngFor="let pt of wfDataPoints">
-                        <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2" class="wf-circle-point">
-                          <title>{{ pt.day }}: {{ pt.pct }}%</title>
-                        </circle>
+                      <!-- Active Guide Line when hovering a point -->
+                      <line *ngIf="hoveredWfPoint" [attr.x1]="hoveredWfPoint.x" y1="10" [attr.x2]="hoveredWfPoint.x" y2="85" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.75"/>
+
+                      <!-- Data Points with Interactive Touch Targets -->
+                      <g *ngFor="let pt of wfDataPoints; let i = index" class="wf-point-group" (mouseenter)="setWfHover(pt, i)" (click)="setWfHover(pt, i)">
+                        <!-- Invisible larger touch target -->
+                        <rect [attr.x]="pt.x - 22" y="0" width="44" height="100" fill="transparent" style="cursor: pointer;"/>
+                        
+                        <!-- Glowing Halo if active -->
+                        <circle *ngIf="hoveredWfIndex === i" [attr.cx]="pt.x" [attr.cy]="pt.y" r="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" opacity="0.8"/>
+
+                        <!-- Center point dot -->
+                        <circle [attr.cx]="pt.x" [attr.cy]="pt.y" [attr.r]="hoveredWfIndex === i ? 5.5 : 4" [attr.fill]="hoveredWfIndex === i ? '#1D4ED8' : '#2563EB'" stroke="#FFFFFF" [attr.stroke-width]="hoveredWfIndex === i ? 2.5 : 2" class="wf-circle-point"/>
                       </g>
                     </svg>
+
+                    <!-- Interactive Floating Tooltip Card -->
+                    <div class="wf-hover-tooltip" *ngIf="hoveredWfPoint" [style.left.%]="(hoveredWfPoint.x / 460) * 100" [style.top.px]="getTooltipTop(hoveredWfPoint.y)" [class.tooltip-align-right]="hoveredWfPoint.x > 330" [class.tooltip-align-left]="hoveredWfPoint.x < 120">
+                      <div class="wf-tt-header">
+                        <span class="wf-tt-date">{{ hoveredWfPoint.day }}</span>
+                        <span class="wf-tt-rate-badge">{{ hoveredWfPoint.pct }}% Rate</span>
+                      </div>
+                      <div class="wf-tt-stats-grid">
+                        <div class="wf-tt-stat-item">
+                          <span class="wf-tt-dot green"></span>
+                          <span class="wf-tt-lbl">Present:</span>
+                          <strong class="wf-tt-num">{{ hoveredWfPoint.present }}</strong>
+                        </div>
+                        <div class="wf-tt-stat-item" *ngIf="hoveredWfPoint.wfh !== undefined">
+                          <span class="wf-tt-dot blue"></span>
+                          <span class="wf-tt-lbl">WFH:</span>
+                          <strong class="wf-tt-num">{{ hoveredWfPoint.wfh }}</strong>
+                        </div>
+                        <div class="wf-tt-stat-item">
+                          <span class="wf-tt-dot amber"></span>
+                          <span class="wf-tt-lbl">On Leave:</span>
+                          <strong class="wf-tt-num">{{ hoveredWfPoint.leave }}</strong>
+                        </div>
+                        <div class="wf-tt-stat-item">
+                          <span class="wf-tt-dot red"></span>
+                          <span class="wf-tt-lbl">Absent:</span>
+                          <strong class="wf-tt-num">{{ hoveredWfPoint.absent }}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div class="wf-x-axis">
-                  <span *ngFor="let pt of wfDataPoints">{{ pt.day }}</span>
+                  <span *ngFor="let pt of wfDataPoints; let i = index" [class.active-x]="hoveredWfIndex === i" (mouseenter)="setWfHover(pt, i)">{{ pt.day }}</span>
                 </div>
               </div>
             </div>
@@ -626,6 +664,114 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ROW 5: EMPLOYEE DOCUMENT COMPLIANCE & LATEST NEWS (AT LAST) -->
+          <div class="analytics-row-bottom-grid compliance-news-row-grid">
+            
+            <!-- Col 1: Employee Document Compliance -->
+            <div class="hr-card card-compliance">
+              <div class="card-head-row-between">
+                <h3 class="card-title">Employee Document Compliance</h3>
+                <a routerLink="/hr-dashboard/employees" class="view-all-link">View Details →</a>
+              </div>
+
+              <div class="compliance-body-layout">
+                <!-- Left: Circular Donut Chart -->
+                <div class="compliance-donut-wrap">
+                  <svg viewBox="0 0 42 42" class="compliance-donut-svg">
+                    <circle cx="21" cy="21" r="15.9155" fill="none" stroke="#F1F5F9" stroke-width="4.2"/>
+                    
+                    <!-- Red attention arc -->
+                    <circle *ngIf="docAttentionPct > 0" cx="21" cy="21" r="15.9155" fill="none" stroke="#EF4444" stroke-width="4.2"
+                            [attr.stroke-dasharray]="docAttentionPct + ' ' + (100 - docAttentionPct)" stroke-dashoffset="0"/>
+
+                    <!-- Orange partial arc -->
+                    <circle *ngIf="docPartialPct > 0" cx="21" cy="21" r="15.9155" fill="none" stroke="#F59E0B" stroke-width="4.2"
+                            [attr.stroke-dasharray]="docPartialPct + ' ' + (100 - docPartialPct)" [attr.stroke-dashoffset]="-docAttentionPct"/>
+
+                    <!-- Green complete arc -->
+                    <circle *ngIf="docCompletePct > 0" cx="21" cy="21" r="15.9155" fill="none" stroke="#10B981" stroke-width="4.2"
+                            [attr.stroke-dasharray]="docCompletePct + ' ' + (100 - docCompletePct)" [attr.stroke-dashoffset]="-(docAttentionPct + docPartialPct)"/>
+                  </svg>
+                  <div class="compliance-donut-center">
+                    <span class="compliance-pct">{{ docComplianceRate }}%</span>
+                    <span class="compliance-sub">Overall Completion</span>
+                  </div>
+                </div>
+
+                <!-- Middle: Legend Breakdown List -->
+                <div class="compliance-legend-col">
+                  <div class="comp-legend-item">
+                    <div class="comp-icon-dot green-dot">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    <div class="comp-legend-info">
+                      <span class="comp-emp-count">{{ docCompletedEmployees }} Employees</span>
+                      <span class="comp-sub-lbl">{{ totalRequiredDocs }}/{{ totalRequiredDocs }} Complete</span>
+                    </div>
+                  </div>
+
+                  <div class="comp-legend-item">
+                    <div class="comp-icon-dot amber-dot">
+                      <i class="fas fa-exclamation"></i>
+                    </div>
+                    <div class="comp-legend-info">
+                      <span class="comp-emp-count">{{ docPartialEmployees }} Employees</span>
+                      <span class="comp-sub-lbl">3-{{ totalRequiredDocs - 1 }}/{{ totalRequiredDocs }} Complete</span>
+                    </div>
+                  </div>
+
+                  <div class="comp-legend-item">
+                    <div class="comp-icon-dot red-dot">
+                      <i class="fas fa-times"></i>
+                    </div>
+                    <div class="comp-legend-info">
+                      <span class="comp-emp-count">{{ docAttentionEmployees }} Employees</span>
+                      <span class="comp-sub-lbl">&lt;3/{{ totalRequiredDocs }} Complete</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Attention note & Progress Bar -->
+                <div class="compliance-action-col">
+                  <div class="comp-action-header">
+                    <span class="comp-attention-msg">{{ docAttentionNote }}</span>
+                  </div>
+                  <div class="comp-progress-bar-row">
+                    <div class="comp-progress-track">
+                      <div class="comp-progress-fill" [style.width.%]="docComplianceRate"></div>
+                    </div>
+                    <span class="comp-progress-val">{{ docComplianceRate }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 2: Latest News -->
+            <div class="hr-card card-latest-news">
+              <div class="card-head-row-between">
+                <h3 class="card-title">Latest News</h3>
+                <a routerLink="/hr-dashboard" class="view-all-link">View All News →</a>
+              </div>
+
+              <div class="hr-news-list">
+                <div class="hr-news-item" *ngFor="let news of latestNewsList">
+                  <div class="hr-news-icon-circle">
+                    <i class="fas fa-info"></i>
+                  </div>
+                  <div class="hr-news-content">
+                    <h4 class="hr-news-heading">{{ news.heading }}</h4>
+                    <p class="hr-news-text">{{ news.contents }}</p>
+                    <div class="hr-news-meta">
+                      <span class="hr-news-tag" [ngClass]="news.typeClass">{{ news.newsType }}</span>
+                      <span class="hr-news-date">{{ news.date }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

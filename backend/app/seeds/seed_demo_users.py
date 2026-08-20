@@ -147,6 +147,9 @@ def seed_users(db: Session):
             if existing_employee:
                 from app.models.login_activity import LoginActivity
                 from app.models.notification import Notification
+                from app.models.attendance import Attendance, AttendanceAuditTrail
+                db.query(AttendanceAuditTrail).filter(AttendanceAuditTrail.employee_id == existing_employee.id).delete()
+                db.query(Attendance).filter(Attendance.employee_id == existing_employee.id).delete()
                 db.query(LoginActivity).filter(LoginActivity.employee_id == existing_employee.id).update({LoginActivity.employee_id: None})
                 db.query(Notification).filter(Notification.employee_id == existing_employee.id).update({Notification.employee_id: None})
                 db.delete(existing_employee)

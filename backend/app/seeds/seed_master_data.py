@@ -158,4 +158,9 @@ def seed_master_data(db: Session):
             ))
             print(f"Added holiday: {h['name']}")
 
+    # 7. Document Types & Requirements
+    from app.services.document_service import seed_default_document_types, ensure_all_employees_have_requirements
+    seed_default_document_types(db)
+    ensure_all_employees_have_requirements(db)
+
     db.commit()

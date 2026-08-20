@@ -437,7 +437,7 @@
                                 </div>
                             </div>
 
-                            <div class="trend-chart-container">
+                            <div class="trend-chart-container" (mouseleave)="clearTrendHover()">
                                 <div class="trend-chart-main">
                                     <div class="trend-y-axis">
                                         <span>100%</span>
@@ -450,7 +450,7 @@
                                         <svg viewBox="0 0 320 100" class="trend-line-svg" preserveAspectRatio="none">
                                             <defs>
                                                 <linearGradient id="trendGradientFill" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.22"/>
+                                                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.25"/>
                                                     <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.0"/>
                                                 </linearGradient>
                                             </defs>
@@ -468,17 +468,80 @@
                                             <!-- Dynamic Curved Line -->
                                             <path [attr.d]="trendLinePathD" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
 
-                                            <!-- Dynamic Data point dots with tooltips -->
-                                            <g *ngFor="let pt of trendDataPoints">
-                                                <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#2563EB" stroke="#FFFFFF" stroke-width="1.8" class="trend-circle-point">
-                                                    <title>{{ pt.day }} ({{ pt.dateStr }}): {{ pt.label }}</title>
-                                                </circle>
+                                            <!-- Active Vertical Guideline Line when hovering -->
+                                            <line 
+                                                *ngIf="hoveredTrendPoint" 
+                                                [attr.x1]="hoveredTrendPoint.x" 
+                                                y1="10" 
+                                                [attr.x2]="hoveredTrendPoint.x" 
+                                                y2="85" 
+                                                stroke="#3B82F6" 
+                                                stroke-width="1.5" 
+                                                stroke-dasharray="2 2" 
+                                                opacity="0.8"
+                                            />
+
+                                            <!-- Interactive Data point dots with wide touch targets -->
+                                            <g *ngFor="let pt of trendDataPoints; let i = index" class="trend-point-group" (mouseenter)="setTrendHover(pt, i)">
+                                                <!-- Invisible wide touch area for smooth mouse tracking -->
+                                                <rect [attr.x]="pt.x - 22" y="0" width="44" height="100" fill="transparent" class="trend-hover-hitbox"/>
+
+                                                <!-- Glowing outer halo ring when hovered -->
+                                                <circle 
+                                                    *ngIf="hoveredTrendIndex === i" 
+                                                    [attr.cx]="pt.x" 
+                                                    [attr.cy]="pt.y" 
+                                                    r="9" 
+                                                    fill="#DBEAFE" 
+                                                    stroke="#2563EB" 
+                                                    stroke-width="1.5" 
+                                                    opacity="0.85" 
+                                                    class="trend-glow-circle"
+                                                />
+
+                                                <!-- Center point circle -->
+                                                <circle 
+                                                    [attr.cx]="pt.x" 
+                                                    [attr.cy]="pt.y" 
+                                                    [attr.r]="hoveredTrendIndex === i ? 5.5 : 4" 
+                                                    [attr.fill]="hoveredTrendIndex === i ? '#1D4ED8' : '#2563EB'" 
+                                                    stroke="#FFFFFF" 
+                                                    [attr.stroke-width]="hoveredTrendIndex === i ? 2.5 : 1.8" 
+                                                    class="trend-circle-point"
+                                                />
                                             </g>
                                         </svg>
+
+                                        <!-- Floating Interactive Tooltip -->
+                                        <div 
+                                            class="trend-hover-tooltip" 
+                                            *ngIf="hoveredTrendPoint" 
+                                            [style.left.%]="getTrendTooltipLeft(hoveredTrendPoint.x)" 
+                                            [style.top.px]="hoveredTrendPoint.y < 35 ? (hoveredTrendPoint.y + 14) : (hoveredTrendPoint.y - 48)"
+                                            [class.align-right]="hoveredTrendPoint.x > 240"
+                                            [class.align-left]="hoveredTrendPoint.x < 65"
+                                        >
+                                            <div class="tt-header">
+                                                <span class="tt-day">{{ hoveredTrendPoint.day }}</span>
+                                                <span class="tt-badge" [class.high]="hoveredTrendPoint.pct >= 80" [class.med]="hoveredTrendPoint.pct >= 50 && hoveredTrendPoint.pct < 80" [class.low]="hoveredTrendPoint.pct < 50">
+                                                    {{ hoveredTrendPoint.label }}
+                                                </span>
+                                            </div>
+                                            <div class="tt-sub-info" *ngIf="hoveredTrendPoint.status">
+                                                <span class="tt-status-dot" [class.green]="hoveredTrendPoint.status === 'Working' || hoveredTrendPoint.status === 'Present'" [class.amber]="hoveredTrendPoint.status === 'Half Day' || hoveredTrendPoint.status === 'Time Off'" [class.red]="hoveredTrendPoint.status === 'Absent'"></span>
+                                                <span class="tt-status-text">{{ hoveredTrendPoint.status }}</span>
+                                                <span class="tt-dur-text" *ngIf="hoveredTrendPoint.duration">· {{ hoveredTrendPoint.duration }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="trend-x-axis">
-                                    <span *ngFor="let pt of trendDataPoints">{{ pt.day }}</span>
+                                    <span 
+                                        *ngFor="let pt of trendDataPoints; let i = index" 
+                                        [class.active-axis-label]="hoveredTrendIndex === i"
+                                        (mouseenter)="setTrendHover(pt, i)">
+                                        {{ pt.day }}
+                                    </span>
                                 </div>
                             </div>
 
@@ -572,34 +635,45 @@
                         <div class="dashboard-card col-documents">
                             <div class="card-head-row">
                                 <span class="card-head-title"><i class="far fa-file-alt doc-head-icon"></i> My Documents</span>
-                                <a routerLink="/emp-dashboard/my-profile" class="card-head-link">View Documents →</a>
+                                <a routerLink="/emp-dashboard/my-documents" class="card-head-link">Manage Documents →</a>
                             </div>
 
                             <div class="documents-body">
                                 <div class="doc-donut-gauge">
                                     <svg viewBox="0 0 36 36" class="doc-donut-svg">
-                                        <!-- Orange arc (12.5% uncompleted top segment) -->
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F59E0B" stroke-width="4.2"/>
-                                        <!-- Green arc (87.5% completed segment) -->
-                                        <path stroke-dasharray="87.5, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="4.2" stroke-linecap="round"/>
+                                        <!-- Background track -->
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" stroke-width="4.2"/>
+                                        <!-- Completed segment -->
+                                        <path [attr.stroke-dasharray]="docSummary.completion_percentage + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" [attr.stroke]="docSummary.completion_percentage === 100 ? '#10B981' : '#3B82F6'" stroke-width="4.2" stroke-linecap="round"/>
                                     </svg>
                                     <div class="doc-gauge-center">
-                                        <span class="doc-count">7 / 8</span>
-                                        <span class="doc-sub">Complete</span>
-                                        <span class="doc-pct"><i class="far fa-dot-circle"></i> 87.5%</span>
+                                        <span class="doc-count">{{ docSummary.verified }} / {{ docSummary.total_required }}</span>
+                                        <span class="doc-sub">Verified</span>
+                                        <span class="doc-pct"><i class="far fa-dot-circle"></i> {{ docSummary.completion_percentage }}%</span>
                                     </div>
                                 </div>
 
                                 <div class="doc-checklist-wrapper">
-                                    <div class="doc-checklist-single">
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Aadhaar Card</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>PAN Card</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Passport Photo</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Address Proof</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Educational Certificate</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Experience Letter</span></div>
-                                        <div class="doc-item checked"><i class="fas fa-check doc-chk-ic"></i> <span>Bank Details</span></div>
-                                        <div class="doc-item warning"><i class="fas fa-exclamation-circle doc-warn-ic"></i> <span>Emergency Contact</span></div>
+                                    <div class="doc-checklist-single" *ngIf="dashboardDocList.length > 0">
+                                        <div 
+                                            *ngFor="let item of dashboardDocList.slice(0, 8)" 
+                                            class="doc-item" 
+                                            [class.checked]="item.status === 'VERIFIED'" 
+                                            [class.warning]="item.status === 'REJECTED' || item.status === 'RESUBMISSION_REQUIRED'" 
+                                            [class.pending]="item.status === 'PENDING_REVIEW'">
+                                            <i class="fas" [ngClass]="{
+                                                'fa-check doc-chk-ic': item.status === 'VERIFIED',
+                                                'fa-clock doc-pend-ic': item.status === 'PENDING_REVIEW',
+                                                'fa-exclamation-circle doc-warn-ic': item.status === 'REJECTED' || item.status === 'RESUBMISSION_REQUIRED',
+                                                'fa-circle doc-miss-ic': item.status === 'NOT_UPLOADED'
+                                            }"></i>
+                                            <span [title]="item.document_type_name">{{ item.document_type_name }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="doc-empty-quick" *ngIf="dashboardDocList.length === 0">
+                                        <a routerLink="/emp-dashboard/my-documents" class="btn-quick-upload">
+                                            <i class="fas fa-upload"></i> Upload Documents
+                                        </a>
                                     </div>
                                 </div>
                             </div>

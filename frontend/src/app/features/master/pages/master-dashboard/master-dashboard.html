@@ -168,7 +168,7 @@
                     <!-- 3. MIDDLE ROW: 3 VISUAL CHARTS -->
                     <div class="charts-grid">
                         <!-- Chart 1: Attendance Overview -->
-                        <div class="dashboard-panel chart-panel">
+                        <div class="dashboard-panel chart-panel" (mouseleave)="clearAttendanceHover()">
                             <div class="panel-header">
                                 <h3 class="panel-title">Attendance Overview</h3>
                                 <div class="panel-filter">
@@ -188,10 +188,32 @@
                                     <span>0%</span>
                                 </div>
                                 <div class="chart-canvas-area">
-                                    <!-- Dynamic Badge Point -->
-                                    <div class="chart-active-tooltip" [style.left.%]="92" [style.top.%]="15">
+                                    <!-- Static Badge Point when not hovering -->
+                                    <div class="chart-active-tooltip" *ngIf="!hoveredAttendancePoint" [style.left.%]="92" [style.top.%]="15">
                                         {{ attendanceRateDisplay }}
                                     </div>
+
+                                    <!-- Floating Rich Tooltip when Hovering any Point -->
+                                    <div 
+                                        class="master-att-tooltip" 
+                                        *ngIf="hoveredAttendancePoint" 
+                                        [style.left.%]="getAttendanceTooltipLeft(hoveredAttendancePoint.x)" 
+                                        [style.top.px]="hoveredAttendancePoint.y < 50 ? (hoveredAttendancePoint.y + 16) : (hoveredAttendancePoint.y - 50)"
+                                        [class.align-right]="hoveredAttendancePoint.x > 380"
+                                        [class.align-left]="hoveredAttendancePoint.x < 90"
+                                    >
+                                        <div class="m-tt-header">
+                                            <span class="m-tt-day">{{ hoveredAttendancePoint.label }}</span>
+                                            <span class="m-tt-badge" [class.high]="hoveredAttendancePoint.pct >= 75" [class.med]="hoveredAttendancePoint.pct >= 50 && hoveredAttendancePoint.pct < 75" [class.low]="hoveredAttendancePoint.pct < 50">
+                                                {{ hoveredAttendancePoint.pct.toFixed(0) }}%
+                                            </span>
+                                        </div>
+                                        <div class="m-tt-sub">
+                                            <span class="m-tt-dot"></span>
+                                            <span>{{ hoveredAttendancePoint.presentCount }}/{{ hoveredAttendancePoint.totalCount }} Present</span>
+                                        </div>
+                                    </div>
+
                                     <svg viewBox="0 0 500 200" preserveAspectRatio="none" class="curve-chart-svg">
                                         <defs>
                                             <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -212,22 +234,63 @@
                                         <!-- Spline Curve -->
                                         <path d="M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25" fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
 
-                                        <!-- Final Point Circle -->
-                                        <circle cx="480" cy="25" r="5" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+                                        <!-- Dotted vertical guideline when hovering -->
+                                        <line 
+                                            *ngIf="hoveredAttendancePoint" 
+                                            [attr.x1]="hoveredAttendancePoint.x" 
+                                            y1="20" 
+                                            [attr.x2]="hoveredAttendancePoint.x" 
+                                            y2="195" 
+                                            stroke="#3b82f6" 
+                                            stroke-width="1.8" 
+                                            stroke-dasharray="3 3" 
+                                            opacity="0.85"
+                                        />
+
+                                        <!-- Interactive Data Points -->
+                                        <g *ngFor="let pt of attendancePoints; let idx = index" class="att-point-group" (mouseenter)="setAttendanceHover(pt, idx)">
+                                            <!-- Wide hit target -->
+                                            <rect [attr.x]="pt.x - 30" y="0" width="60" height="200" fill="transparent" class="att-hit-box"/>
+
+                                            <!-- Glowing halo circle when hovered -->
+                                            <circle 
+                                                *ngIf="hoveredAttendanceIndex === idx" 
+                                                [attr.cx]="pt.x" 
+                                                [attr.cy]="pt.y" 
+                                                r="11" 
+                                                fill="#dbeafe" 
+                                                stroke="#2563eb" 
+                                                stroke-width="2" 
+                                                opacity="0.9" 
+                                                class="att-glow-halo"
+                                            />
+
+                                            <!-- Center point circle -->
+                                            <circle 
+                                                [attr.cx]="pt.x" 
+                                                [attr.cy]="pt.y" 
+                                                [attr.r]="hoveredAttendanceIndex === idx ? 6.5 : (idx === attendancePoints.length - 1 ? 5 : 4)" 
+                                                [attr.fill]="hoveredAttendanceIndex === idx ? '#1d4ed8' : '#ffffff'" 
+                                                stroke="#2563eb" 
+                                                [attr.stroke-width]="hoveredAttendanceIndex === idx ? 3 : 2.5" 
+                                                class="att-point-circle"
+                                            />
+                                        </g>
                                     </svg>
                                 </div>
                             </div>
                             <div class="x-axis-labels">
-                                <span>01 May</span>
-                                <span>08 May</span>
-                                <span>15 May</span>
-                                <span>22 May</span>
-                                <span>31 May</span>
+                                <span 
+                                    *ngFor="let pt of attendancePoints; let idx = index" 
+                                    [class.active-axis-label]="hoveredAttendanceIndex === idx"
+                                    (mouseenter)="setAttendanceHover(pt, idx)">
+                                    {{ pt.label }}
+                                </span>
                             </div>
                         </div>
 
                         <!-- Chart 2: Employee Distribution -->
-                        <div class="dashboard-panel chart-panel">
+                        <div class="dashboard-panel chart-panel" (mouseleave)="clearDeptHover()">
                             <div class="panel-header">
                                 <h3 class="panel-title">Employee Distribution</h3>
                             </div>
@@ -236,7 +299,7 @@
                                     <svg viewBox="0 0 100 100" class="donut-svg">
                                         <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" stroke-width="14"/>
                                         
-                                        <!-- Dynamic Donut Segments -->
+                                        <!-- Dynamic Donut Segments with Hover Elevation -->
                                         <circle 
                                             *ngFor="let item of departmentDistribution; let idx = index" 
                                             cx="50" 
@@ -244,20 +307,32 @@
                                             r="40" 
                                             fill="transparent" 
                                             [attr.stroke]="item.color" 
-                                            stroke-width="14"
+                                            [attr.stroke-width]="hoveredDeptIndex === idx ? 17 : 14"
                                             [attr.stroke-dasharray]="getDonutDashArray(item.percentage)"
                                             [attr.stroke-dashoffset]="getDonutOffset(idx)"
+                                            [class.active-segment]="hoveredDeptIndex === idx"
+                                            (mouseenter)="setDeptHover(item, idx)"
+                                            (mouseleave)="clearDeptHover()"
                                             class="donut-segment"
                                         />
                                     </svg>
-                                    <div class="donut-center-info">
-                                        <span class="donut-center-val">{{ totalEmployeesDisplay }}</span>
-                                        <span class="donut-center-label">Total</span>
+                                    <div class="donut-center-info" [class.hover-active]="hoveredDeptItem !== null">
+                                        <span class="donut-center-val" [style.color]="hoveredDeptItem ? hoveredDeptItem.color : '#0f172a'">
+                                            {{ hoveredDeptItem ? (hoveredDeptItem.percentage + '%') : totalEmployeesDisplay }}
+                                        </span>
+                                        <span class="donut-center-label">
+                                            {{ hoveredDeptItem ? hoveredDeptItem.name : 'Total' }}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <div class="distribution-legend">
-                                    <div class="legend-row" *ngFor="let item of departmentDistribution">
+                                    <div 
+                                        class="legend-row" 
+                                        *ngFor="let item of departmentDistribution; let idx = index"
+                                        [class.active-legend]="hoveredDeptIndex === idx"
+                                        (mouseenter)="setDeptHover(item, idx)"
+                                        (mouseleave)="clearDeptHover()">
                                         <div class="legend-left">
                                             <span class="legend-indicator" [style.background]="item.color"></span>
                                             <span class="legend-text">{{ item.name }}</span>
@@ -269,7 +344,7 @@
                         </div>
 
                         <!-- Chart 3: Monthly Hiring Trend -->
-                        <div class="dashboard-panel chart-panel">
+                        <div class="dashboard-panel chart-panel" (mouseleave)="clearHiringHover()">
                             <div class="panel-header">
                                 <h3 class="panel-title">Monthly Hiring Trend</h3>
                                 <div class="panel-filter">
@@ -287,11 +362,23 @@
                                     <span>0</span>
                                 </div>
                                 <div class="bars-container">
-                                    <div class="bar-col" *ngFor="let m of monthlyHiring" [title]="m.month + ': ' + m.count + ' hires'">
+                                    <div 
+                                        class="bar-col" 
+                                        *ngFor="let m of monthlyHiring; let idx = index" 
+                                        [class.active-bar]="hoveredHiringIndex === idx"
+                                        (mouseenter)="setHiringHover(m, idx)"
+                                        (mouseleave)="clearHiringHover()"
+                                    >
+                                        <!-- Floating tooltip directly above each hovered bar -->
+                                        <div class="hiring-bar-tooltip" *ngIf="hoveredHiringIndex === idx">
+                                            <span class="h-tt-val">{{ m.count }}</span>
+                                            <span class="h-tt-lbl">hires</span>
+                                        </div>
+
                                         <div class="bar-track">
                                             <div class="bar-fill" [style.height.%]="getHiringBarHeight(m.count)"></div>
                                         </div>
-                                        <span class="bar-month">{{ m.month }}</span>
+                                        <span class="bar-month" [class.active-month]="hoveredHiringIndex === idx">{{ m.month }}</span>
                                     </div>
                                 </div>
                             </div>

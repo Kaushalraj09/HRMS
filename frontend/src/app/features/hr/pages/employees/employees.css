@@ -567,10 +567,21 @@
 }
 
 /* Documents list */
+.docs-interactive-cell {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.docs-interactive-cell:hover .docs-icon-list,
+.docs-interactive-cell:hover .doc-completion-gauge {
+  transform: translateY(-1px);
+}
+
 .docs-icon-list {
   display: flex;
   align-items: center;
   gap: 5px;
+  transition: transform 0.15s ease;
 }
 
 .doc-icon-badge {
@@ -581,12 +592,35 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  background: #F8FAFC;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.doc-icon-badge.pdf { color: #EF4444; }
-.doc-icon-badge.word { color: #2563EB; }
-.doc-icon-badge.excel { color: #10B981; }
-.doc-icon-badge.image { color: #0284C7; }
+.doc-icon-badge.pdf { color: #EF4444; background: #FEF2F2; }
+.doc-icon-badge.word { color: #2563EB; background: #EFF6FF; }
+.doc-icon-badge.excel { color: #10B981; background: #F0FDF4; }
+.doc-icon-badge.image { color: #0284C7; background: #F0F9FF; }
+.doc-icon-badge.other { color: #64748B; background: #F1F5F9; }
+
+.no-docs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.no-docs-pill:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #2563EB;
+}
 
 .doc-count-plus {
   background: #F1F5F9;
@@ -602,6 +636,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: transform 0.15s ease;
 }
 
 .completion-circle-ring {

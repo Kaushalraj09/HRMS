@@ -2,12 +2,51 @@
   <div #mapContainer class="map-container"></div>
 
   <!-- Active Filter Badge Pill (Top-Right of Map) -->
-  <div class="map-filter-indicator" *ngIf="filter !== 'ALL'">
+  <div class="map-filter-indicator" *ngIf="filter !== 'ALL' && !activeHubDisplay">
     <span class="filter-indicator-dot" [ngClass]="getFilterColorClass()"></span>
     <span class="filter-indicator-text">{{ getFilterLabel() }}: <strong>{{ filteredLocations.length }}</strong></span>
     <button type="button" class="btn-clear-map-filter" (click)="clearFilter()" title="Show All Employees">
       <i class="fas fa-times"></i>
     </button>
+  </div>
+
+  <!-- DYNAMIC AUTO-SIZED FLOATING CARD OVERLAY (SHIFTS LEFT/RIGHT BASED ON PIN POSITION) -->
+  <div class="hub-full-card-overlay" [ngClass]="overlaySide" *ngIf="activeHubDisplay" (mouseenter)="onOverlayMouseEnter()" (mouseleave)="onOverlayMouseLeave()">
+    <div class="hub-overlay-header">
+      <div class="hub-overlay-title-group">
+        <span class="hub-overlay-city-badge">📍 {{ activeHubDisplay.city }}</span>
+        <span class="hub-overlay-count-pill">{{ activeHubDisplay.count }} {{ getFilterSubLabel(activeHubDisplay.count) }}</span>
+      </div>
+      <button type="button" class="btn-close-hub-overlay" (click)="closeHubOverlay()" title="Close Details">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="hub-overlay-employee-list">
+      <div class="hub-employee-card" *ngFor="let emp of activeHubDisplay.employees">
+        <div class="hub-emp-avatar">{{ getInitials(emp.employeeName) }}</div>
+        <div class="hub-emp-details">
+          <div class="hub-emp-name-row">
+            <span class="hub-emp-name">{{ emp.employeeName }}</span>
+            <span class="hub-emp-dept" *ngIf="emp.department">{{ emp.department }}</span>
+          </div>
+          <div class="hub-emp-meta-row">
+            <span class="hub-meta-time" *ngIf="emp.punchInTime">
+              <i class="far fa-clock"></i> {{ emp.punchInTime }} <span *ngIf="emp.punchOutTime">- {{ emp.punchOutTime }}</span>
+            </span>
+            <span class="hub-meta-time" *ngIf="!emp.punchInTime && (emp.status === 'ON_LEAVE' || emp.status === 'LEAVE')">
+              <i class="fas fa-calendar-alt"></i> On Leave
+            </span>
+            <span class="hub-meta-time" *ngIf="!emp.punchInTime && emp.status === 'ABSENT'">
+              <i class="fas fa-user-times"></i> Not Punched
+            </span>
+
+            <span class="hub-pill-mode" [ngClass]="(emp.workMode || 'office').toLowerCase()">{{ emp.workMode }}</span>
+            <span class="hub-pill-status" [ngClass]="(emp.status || 'active').toLowerCase()">{{ formatStatusLabel(emp.status) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Empty State Overlay when no employees match filter -->

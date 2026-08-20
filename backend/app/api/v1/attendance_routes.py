@@ -1421,22 +1421,15 @@ def get_today_locations(
 
 
 
-    from datetime import date
-
-
-
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
     import random
 
-
-
-    today = date.today()
-
-
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+    today = datetime.now(APP_TIMEZONE).date()
+    response_data: list[EmployeeLocationResponse] = []
 
     # Query today's attendance records where the user has punched in
-
-
-
     # 1. Fetch today's punches
     today_records = db.query(Attendance).join(Employee).filter(
         Attendance.date == today,

@@ -138,7 +138,7 @@
               <circle cx="50" cy="50" r="36" class="donut-segment segment-red" stroke-dasharray="23 226" stroke-dashoffset="-203"></circle>
             </svg>
             <div class="donut-center-text">
-              <span class="donut-ratio">8/8</span>
+              <span class="donut-ratio">{{ stats.docCompleteCount }}/{{ stats.total || 4 }}</span>
             </div>
           </div>
 
@@ -201,7 +201,7 @@
               <tbody>
                 <tr *ngFor="let emp of result.data; trackBy: trackById" class="emp-row">
                   <!-- Employee Name + Avatar + Email -->
-                  <td>
+                  <td (click)="openViewModal(emp, 'details')" class="docs-interactive-cell" title="Click to view employee details">
                     <div class="emp-profile-cell">
                       <div 
                         class="emp-avatar-circle" 
@@ -245,19 +245,25 @@
                     </span>
                   </td>
 
-                  <!-- Documents icons list -->
-                  <td>
+                  <!-- Documents icons list (Real uploaded files) -->
+                  <td (click)="openViewModal(emp, 'documents')" class="docs-interactive-cell" title="Click to view & upload employee documents">
                     <div class="docs-icon-list">
-                      <span class="doc-icon-badge pdf" title="PDF document"><i class="fas fa-file-pdf"></i></span>
-                      <span class="doc-icon-badge word" title="Word document"><i class="fas fa-file-word"></i></span>
-                      <span class="doc-icon-badge excel" title="Excel spreadsheet"><i class="fas fa-file-excel"></i></span>
-                      <span class="doc-icon-badge image" *ngIf="getDocCountBadge(emp).hasImg" title="Image / Certificate"><i class="fas fa-file-image"></i></span>
-                      <span class="doc-count-plus" *ngIf="getDocCountBadge(emp).extra > 0">+{{ getDocCountBadge(emp).extra }}</span>
+                      <ng-container *ngIf="getDocData(emp) as docInfo">
+                        <ng-container *ngIf="docInfo.uploadedCount > 0">
+                          <span *ngFor="let icon of docInfo.fileIcons" class="doc-icon-badge" [ngClass]="icon.type" [title]="icon.title">
+                            <i [class]="icon.iconClass"></i>
+                          </span>
+                          <span class="doc-count-plus" *ngIf="docInfo.extraCount > 0">+{{ docInfo.extraCount }}</span>
+                        </ng-container>
+                        <span class="no-docs-pill" *ngIf="docInfo.uploadedCount === 0">
+                          <i class="fas fa-cloud-upload-alt"></i> Upload
+                        </span>
+                      </ng-container>
                     </div>
                   </td>
 
                   <!-- Doc Completion Ring + Text -->
-                  <td>
+                  <td (click)="openViewModal(emp, 'documents')" class="docs-interactive-cell" title="Click to review employee documents & compliance">
                     <div class="doc-completion-gauge">
                       <div class="completion-circle-ring" [style.border-color]="getDocCompletion(emp).color">
                         <span class="ratio-text" [style.color]="getDocCompletion(emp).color">{{ getDocCompletion(emp).count }}/{{ getDocCompletion(emp).total }}</span>
@@ -269,7 +275,7 @@
                   <!-- Action Icons Row -->
                   <td>
                     <div class="actions-icon-row">
-                      <button type="button" class="btn-row-action view" (click)="openViewModal(emp)" title="View Details">
+                      <button type="button" class="btn-row-action view" (click)="openViewModal(emp, 'details')" title="View Details">
                         <i class="fas fa-eye"></i>
                       </button>
                       <button type="button" class="btn-row-action edit" (click)="openEditModal(emp)" title="Edit Employee">
@@ -364,7 +370,8 @@
   <app-employee-view-modal 
     *ngIf="activeModal === 'view' && selectedEmployee" 
     [employeeId]="selectedEmployee.id"
-    (closed)="onModalClose()">
+    [initialTab]="viewModalTab"
+    (closed)="onModalClose(true)">
   </app-employee-view-modal>
 
   <app-employee-edit-modal 

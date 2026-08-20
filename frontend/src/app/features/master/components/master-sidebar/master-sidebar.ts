@@ -53,6 +53,7 @@ export class MasterSidebar implements OnInit {
     {
       groupName: 'People',
       items: [
+        { label: 'Documents', icon: 'fas fa-folder-open', route: '/master-dashboard/documents' },
         { label: 'Attendance', icon: 'far fa-clock', route: '/master-dashboard/attendance' },
         { label: 'Time Off Oversight', icon: 'fas fa-calendar-times', route: '/master-dashboard/time-off' },
         { label: 'Regularization Oversight', icon: 'fas fa-business-time', route: '/master-dashboard/regularization-requests' }

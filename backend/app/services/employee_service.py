@@ -70,6 +70,15 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
 
     db.commit()
     db.refresh(new_employee)
+
+    # Initialize standard onboarding document requirements
+    try:
+        from app.services.document_service import initialize_employee_requirements
+        initialize_employee_requirements(db, new_employee.id)
+    except Exception as e:
+        # Non-blocking requirement initialization
+        pass
+
     from app.services.dashboard_service import invalidate_dashboard_cache
     invalidate_dashboard_cache(db)
     return new_employee

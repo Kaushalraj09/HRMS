@@ -1,0 +1,547 @@
+<div class="hr-docs-container">
+  <!-- Top KPI Compliance Overview Header -->
+  <div class="hr-overview-card">
+    <div class="overview-header-row">
+      <div class="header-text-group">
+        <div class="badge-pill-header">
+          <span class="live-pulse"></span>
+          <span>HR Document Compliance</span>
+        </div>
+        <h1 class="page-title">Document Verification Center</h1>
+        <p class="page-subtitle">Track organizational compliance, review submitted identity proofs, and manage onboarding documents.</p>
+      </div>
+
+      <div class="compliance-gauge-card">
+        <div class="gauge-ring-box">
+          <svg class="progress-ring" width="84" height="84" viewBox="0 0 84 84">
+            <circle class="progress-ring-bg" cx="42" cy="42" r="34" />
+            <circle 
+              class="progress-ring-fill" 
+              cx="42" 
+              cy="42" 
+              r="34" 
+              [style.strokeDasharray]="213.6"
+              [style.strokeDashoffset]="213.6 - (213.6 * (kpiData.overall_compliance_rate || 0) / 100)"
+            />
+          </svg>
+          <div class="gauge-center-text">
+            <span class="gauge-pct">{{ kpiData.overall_compliance_rate }}%</span>
+          </div>
+        </div>
+        <div class="gauge-meta">
+          <span class="gauge-title">Organization Compliance</span>
+          <span class="gauge-sub">{{ kpiData.complete_employees }} of {{ kpiData.total_employees }} fully compliant</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="alert-banner success" *ngIf="successMessage">
+      <i class="fas fa-check-circle alert-icon"></i>
+      <span>{{ successMessage }}</span>
+    </div>
+    <div class="alert-banner error" *ngIf="errorMessage">
+      <i class="fas fa-exclamation-triangle alert-icon"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- 4 KPI Metrics Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card" (click)="onStatusFilterChange('PENDING_REVIEW')" [class.active]="selectedStatus === 'PENDING_REVIEW'">
+        <div class="kpi-icon-box amber">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="kpi-details">
+          <span class="kpi-val">{{ kpiData.documents_pending }}</span>
+          <span class="kpi-title">Pending Reviews</span>
+        </div>
+        <div class="kpi-active-indicator" *ngIf="selectedStatus === 'PENDING_REVIEW'"></div>
+      </div>
+
+      <div class="kpi-card" (click)="onStatusFilterChange('VERIFIED')" [class.active]="selectedStatus === 'VERIFIED'">
+        <div class="kpi-icon-box emerald">
+          <i class="fas fa-check-double"></i>
+        </div>
+        <div class="kpi-details">
+          <span class="kpi-val">{{ kpiData.documents_verified }}</span>
+          <span class="kpi-title">Verified Documents</span>
+        </div>
+        <div class="kpi-active-indicator" *ngIf="selectedStatus === 'VERIFIED'"></div>
+      </div>
+
+      <div class="kpi-card" (click)="onStatusFilterChange('REJECTED')" [class.active]="selectedStatus === 'REJECTED'">
+        <div class="kpi-icon-box rose">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="kpi-details">
+          <span class="kpi-val">{{ kpiData.documents_rejected }}</span>
+          <span class="kpi-title">Rejected Documents</span>
+        </div>
+        <div class="kpi-active-indicator" *ngIf="selectedStatus === 'REJECTED'"></div>
+      </div>
+
+      <div class="kpi-card" (click)="onStatusFilterChange('')" [class.active]="selectedStatus === ''">
+        <div class="kpi-icon-box blue">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="kpi-details">
+          <span class="kpi-val">{{ kpiData.incomplete_employees }}</span>
+          <span class="kpi-title">Incomplete Profiles</span>
+        </div>
+        <div class="kpi-active-indicator" *ngIf="selectedStatus === ''"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Queue Card -->
+  <div class="queue-card">
+    <div class="queue-toolbar">
+      <!-- Search Box -->
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          class="form-search-input" 
+          placeholder="Search by employee name, code, or document..." 
+          [(ngModel)]="searchQuery" 
+          (ngModelChange)="onSearchChange()"
+        />
+        <button type="button" class="btn-clear-search" *ngIf="searchQuery" (click)="clearSearch()" title="Clear search">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="filters-row">
+        <!-- Department Filter -->
+        <div class="select-wrapper">
+          <i class="fas fa-building select-icon"></i>
+          <select class="form-select" [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()">
+            <option *ngFor="let d of departments" [value]="d">{{ d === 'All' ? 'All Departments' : d }}</option>
+          </select>
+        </div>
+
+        <!-- Status Filter Tabs -->
+        <div class="status-pill-group">
+          <button 
+            type="button" 
+            class="filter-pill" 
+            [class.active]="selectedStatus === ''" 
+            (click)="onStatusFilterChange('')">
+            All Reviews
+          </button>
+          <button 
+            type="button" 
+            class="filter-pill pending" 
+            [class.active]="selectedStatus === 'PENDING_REVIEW'" 
+            (click)="onStatusFilterChange('PENDING_REVIEW')">
+            <span class="pill-dot amber"></span>
+            Pending ({{ kpiData.documents_pending }})
+          </button>
+          <button 
+            type="button" 
+            class="filter-pill verified" 
+            [class.active]="selectedStatus === 'VERIFIED'" 
+            (click)="onStatusFilterChange('VERIFIED')">
+            <span class="pill-dot emerald"></span>
+            Verified
+          </button>
+          <button 
+            type="button" 
+            class="filter-pill rejected" 
+            [class.active]="selectedStatus === 'REJECTED'" 
+            (click)="onStatusFilterChange('REJECTED')">
+            <span class="pill-dot rose"></span>
+            Rejected
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoadingTable">
+        <div class="spinner-ring"></div>
+        <p>Loading document reviews...</p>
+      </div>
+
+      <ng-container *ngIf="!isLoadingTable">
+        <!-- Modern Aesthetic Empty State Box -->
+        <div class="empty-state-box" *ngIf="pendingReviews.length === 0">
+          <div class="empty-illustration-container">
+            <div class="empty-glow-ring"></div>
+            <div class="empty-icon-circle">
+              <!-- Crisp SVG Icon -->
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M9 15l2 2 4-4"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="empty-status-tag" *ngIf="!searchQuery && (selectedStatus === 'PENDING_REVIEW' || selectedStatus === '')">
+            <span class="pulse-dot"></span>
+            <span>All Caught Up</span>
+          </div>
+
+          <h3 class="empty-state-title">
+            <span *ngIf="searchQuery || selectedDepartment !== 'All' || selectedStatus !== ''">No matching documents found</span>
+            <span *ngIf="!searchQuery && selectedDepartment === 'All' && selectedStatus === ''">Review Queue is Clear</span>
+          </h3>
+
+          <p class="empty-state-subtitle">
+            <span *ngIf="searchQuery">No submissions match "<strong>{{ searchQuery }}</strong>" in {{ selectedDepartment === 'All' ? 'any department' : selectedDepartment }}.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'PENDING_REVIEW'">All pending employee submissions have been thoroughly reviewed and verified.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'REJECTED'">There are currently no rejected documents in this category.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'VERIFIED'">No verified documents found matching the selected filters.</span>
+            <span *ngIf="!searchQuery && selectedStatus === '' && selectedDepartment === 'All'">No employee documents currently require your immediate review.</span>
+          </p>
+
+          <div class="empty-state-actions" *ngIf="searchQuery || selectedDepartment !== 'All' || selectedStatus !== ''">
+            <button type="button" class="btn-reset-filters" (click)="resetFilters()">
+              <i class="fas fa-undo-alt"></i> Reset All Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <table class="modern-review-table" *ngIf="pendingReviews.length > 0">
+          <thead>
+            <tr>
+              <th>EMPLOYEE</th>
+              <th>DOCUMENT</th>
+              <th>CATEGORY</th>
+              <th>UPLOAD DETAILS</th>
+              <th>STATUS</th>
+              <th class="text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of pendingReviews" class="review-row">
+              <!-- Employee Info -->
+              <td>
+                <div class="emp-cell">
+                  <span class="emp-avatar">{{ item.employee_name.charAt(0) }}</span>
+                  <div class="emp-meta">
+                    <span class="emp-name">{{ item.employee_name }}</span>
+                    <span class="emp-code">{{ item.employee_code }} · {{ item.department }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Document Name -->
+              <td>
+                <div class="doc-cell">
+                  <span class="doc-title">{{ item.document_type_name }}</span>
+                  <span class="file-name-meta"><i class="far fa-file-alt"></i> {{ item.file_name }}</span>
+                </div>
+              </td>
+
+              <!-- Category -->
+              <td>
+                <span class="cat-badge">{{ item.category }}</span>
+              </td>
+
+              <!-- Upload Details -->
+              <td>
+                <div class="upload-meta-cell">
+                  <span class="upload-date">{{ formatDate(item.uploaded_at) }}</span>
+                  <span class="upload-by">By: {{ item.uploaded_by_name }} ({{ item.uploaded_by_role }})</span>
+                  <span class="version-tag">v{{ item.version }} · {{ formatSize(item.file_size) }}</span>
+                </div>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(item.status)">
+                  <span class="status-dot"></span>
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="hr-action-group">
+                  <!-- Preview -->
+                  <button type="button" class="btn-icon preview" (click)="openPreview(item)" title="Preview Document">
+                    <i class="fas fa-eye"></i>
+                  </button>
+
+                  <!-- Download -->
+                  <button type="button" class="btn-icon download" (click)="downloadDoc(item)" title="Download File">
+                    <i class="fas fa-download"></i>
+                  </button>
+
+                  <!-- Verify Button -->
+                  <button 
+                    type="button" 
+                    class="btn-hr-verify" 
+                    *ngIf="item.status === 'PENDING_REVIEW' || item.status === 'UPLOADED'" 
+                    (click)="openVerifyModal(item)">
+                    <i class="fas fa-check"></i> Verify
+                  </button>
+
+                  <!-- Reject Button -->
+                  <button 
+                    type="button" 
+                    class="btn-hr-reject" 
+                    *ngIf="item.status === 'PENDING_REVIEW' || item.status === 'UPLOADED'" 
+                    (click)="openRejectModal(item)">
+                    <i class="fas fa-times"></i> Reject
+                  </button>
+
+                  <!-- History -->
+                  <button type="button" class="btn-icon history" (click)="openHistory(item)" title="Version History">
+                    <i class="fas fa-history"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination-footer" *ngIf="totalPages > 1">
+          <span class="page-info">Showing page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong> ({{ totalItems }} items)</span>
+          <div class="page-btn-group">
+            <button type="button" class="btn-page" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+              <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <button type="button" class="btn-page" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+              Next <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- VERIFY MODAL                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isVerifyModalOpen" (click)="closeVerifyModal()">
+  <div class="modal-card dialog-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header verify-header">
+      <div class="header-left">
+        <div class="header-icon-badge emerald">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div>
+          <h3>Verify Document</h3>
+          <p class="modal-sub">{{ selectedDocForVerify?.employee_name }} · {{ selectedDocForVerify?.document_type_name }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeVerifyModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="verify-callout-box">
+        <i class="fas fa-shield-alt callout-ico"></i>
+        <div>
+          <h4>Compliance Verification</h4>
+          <p>Marking this document as <strong>Verified</strong> confirms validity and increases the employee's onboarding compliance percentage.</p>
+        </div>
+      </div>
+
+      <div class="form-group-field">
+        <label for="verifyRemarks">Verification Remarks / Audit Notes (Optional):</label>
+        <textarea 
+          id="verifyRemarks" 
+          class="form-control-text" 
+          rows="2" 
+          placeholder="e.g., Verified against government portal records or original hard copy..."
+          [(ngModel)]="verifyRemarks">
+        </textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeVerifyModal()" [disabled]="isVerifying">
+        Cancel
+      </button>
+      <button type="button" class="btn-verify-confirm" (click)="submitVerify()" [disabled]="isVerifying">
+        <i class="fas" [ngClass]="isVerifying ? 'fa-circle-notch fa-spin' : 'fa-check-circle'"></i>
+        {{ isVerifying ? 'Verifying...' : 'Confirm Verification' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- REJECT MODAL                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isRejectModalOpen" (click)="closeRejectModal()">
+  <div class="modal-card dialog-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header reject-header">
+      <div class="header-left">
+        <div class="header-icon-badge rose">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div>
+          <h3>Reject Document</h3>
+          <p class="modal-sub">{{ selectedDocForReject?.employee_name }} · {{ selectedDocForReject?.document_type_name }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeRejectModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-prompt-text">
+        Please provide a specific reason for rejection. This feedback will be sent directly to the employee so they can upload an acceptable replacement.
+      </p>
+
+      <!-- Quick Template Pills -->
+      <div class="quick-reasons-container">
+        <span class="quick-reasons-label">Quick Suggestions:</span>
+        <div class="quick-tags-list">
+          <button 
+            type="button" 
+            class="quick-reason-tag" 
+            *ngFor="let r of quickReasons"
+            (click)="setQuickRejectionReason(r)">
+            + {{ r }}
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group-field">
+        <label for="rejectionReason">Rejection Reason <span class="required-star">*</span>:</label>
+        <textarea 
+          id="rejectionReason" 
+          class="form-control-text error-border" 
+          rows="3" 
+          placeholder="Type or select a reason above describing why the document cannot be accepted..."
+          [(ngModel)]="rejectionReason">
+        </textarea>
+      </div>
+
+      <div class="file-error-alert" *ngIf="rejectionError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ rejectionError }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeRejectModal()" [disabled]="isRejecting">
+        Cancel
+      </button>
+      <button type="button" class="btn-reject-confirm" (click)="submitReject()" [disabled]="!rejectionReason.trim() || isRejecting">
+        <i class="fas" [ngClass]="isRejecting ? 'fa-circle-notch fa-spin' : 'fa-ban'"></i>
+        {{ isRejecting ? 'Rejecting...' : 'Reject Document' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- PREVIEW MODAL                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isPreviewModalOpen" (click)="closePreviewModal()">
+  <div class="modal-card preview-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon-badge preview">
+          <i class="fas fa-file-alt"></i>
+        </div>
+        <div>
+          <h3>{{ previewDocTitle }}</h3>
+          <p class="modal-sub">HR Review Preview</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closePreviewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body preview-body">
+      <div class="preview-spinner" *ngIf="isPreviewLoading">
+        <div class="spinner-ring"></div>
+        <p>Loading secure document preview...</p>
+      </div>
+
+      <ng-container *ngIf="!isPreviewLoading">
+        <div class="embed-wrapper" *ngIf="!isImageMime(previewMimeType)">
+          <iframe 
+            *ngIf="previewBlobUrl" 
+            [src]="previewBlobUrl" 
+            class="document-iframe" 
+            title="Document Preview">
+          </iframe>
+        </div>
+
+        <div class="image-preview-wrapper" *ngIf="isImageMime(previewMimeType)">
+          <img *ngIf="rawBlobUrl" [src]="previewBlobUrl" alt="Document Preview" class="full-preview-image" />
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HISTORY MODAL                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="isHistoryModalOpen" (click)="closeHistoryModal()">
+  <div class="modal-card history-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon-badge history">
+          <i class="fas fa-history"></i>
+        </div>
+        <div>
+          <h3>Version History</h3>
+          <p class="modal-sub">{{ historyDocTitle }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeHistoryModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="history-spinner" *ngIf="isHistoryLoading">
+        <div class="spinner-ring"></div>
+        <p>Loading audit timeline...</p>
+      </div>
+
+      <div class="version-timeline-list" *ngIf="!isHistoryLoading">
+        <div class="timeline-item" *ngFor="let v of versionHistory; let idx = index" [class.latest]="idx === 0">
+          <div class="timeline-marker">
+            <span class="version-chip">v{{ v.version_number }}</span>
+          </div>
+
+          <div class="timeline-card">
+            <div class="version-card-head">
+              <span class="v-filename">{{ v.file_name }}</span>
+              <span class="status-badge" [ngClass]="getStatusClass(v.status)">{{ getStatusLabel(v.status) }}</span>
+            </div>
+
+            <div class="version-details-grid">
+              <div><span class="lbl">Uploaded By:</span> {{ v.uploaded_by_name || 'Employee' }}</div>
+              <div><span class="lbl">Date:</span> {{ formatDate(v.uploaded_at) }}</div>
+            </div>
+
+            <div class="version-rejection-callout" *ngIf="v.rejection_reason">
+              <strong>Rejection Reason:</strong> {{ v.rejection_reason }}
+            </div>
+
+            <div class="version-actions-bar">
+              <button type="button" class="btn-download-version" (click)="downloadVersion(v)">
+                <i class="fas fa-download"></i> Download v{{ v.version_number }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>

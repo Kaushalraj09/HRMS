@@ -38,6 +38,7 @@ export class HrSidebar implements OnInit {
         items: [ 
           { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
           { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
+          { label: 'Documents', icon: 'fas fa-folder-open', route: '/hr-dashboard/documents' },
           { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
           { label: 'Time Off', icon: 'fas fa-calendar-times', route: '/hr-dashboard/time-off' },
           { label: 'Regularizations', icon: 'fas fa-business-time', route: '/hr-dashboard/regularization-requests' },

@@ -1,11 +1,17 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import logging
+
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app import models
 from app.seeds.seed_demo_users import seed_users
 from app.seeds.seed_master_data import seed_roles, seed_master_data
+from app.core.websocket_manager import manager
+from app.services.scheduler_service import start_scheduler, shutdown_scheduler
+
 from app.api.v1 import (
     auth_routes,
     profile_routes,
@@ -20,13 +26,11 @@ from app.api.v1 import (
     report_routes,
     master_data_routes,
     approval_routes,
+    document_routes,
 )
 
-from contextlib import asynccontextmanager
-from app.core.websocket_manager import manager
-from app.services.scheduler_service import start_scheduler, shutdown_scheduler
-
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -58,6 +62,7 @@ async def lifespan(app: FastAPI):
 
     if settings.ENABLE_SCHEDULER:
         shutdown_scheduler()
+
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
@@ -99,10 +104,6 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         manager.disconnect(websocket, user_id)
 
 
-
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -112,6 +113,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -119,6 +121,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -133,9 +136,11 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": str(exc)}
     )
 
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "Backend is running and CORS is enabled"}
+
 
 app.include_router(auth_routes.router, prefix="/api/v1")
 app.include_router(profile_routes.router, prefix="/api/v1")
@@ -150,3 +155,4 @@ app.include_router(regularization_routes.router, prefix="/api/v1")
 app.include_router(report_routes.router, prefix="/api/v1")
 app.include_router(master_data_routes.router, prefix="/api/v1")
 app.include_router(approval_routes.router, prefix="/api/v1")
+app.include_router(document_routes.router, prefix="/api/v1")

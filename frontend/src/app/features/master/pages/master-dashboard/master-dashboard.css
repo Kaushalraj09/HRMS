@@ -398,6 +398,7 @@ app-navbar {
   font-weight: 500;
   width: 40px;
   padding-bottom: 8px;
+  user-select: none;
 }
 
 .chart-canvas-area {
@@ -409,6 +410,7 @@ app-navbar {
 .curve-chart-svg {
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 .chart-active-tooltip {
@@ -424,6 +426,111 @@ app-navbar {
   z-index: 10;
 }
 
+/* Master Attendance Floating Rich Tooltip */
+.master-att-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.35), 0 4px 6px -2px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 110px;
+  white-space: nowrap;
+  animation: masterTooltipFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.master-att-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px 4px 0 4px;
+  border-style: solid;
+  border-color: #0F172A transparent transparent transparent;
+}
+
+.master-att-tooltip.align-left {
+  transform: translate(-15%, -100%);
+}
+.master-att-tooltip.align-left::after {
+  left: 20%;
+}
+
+.master-att-tooltip.align-right {
+  transform: translate(-85%, -100%);
+}
+.master-att-tooltip.align-right::after {
+  left: 80%;
+}
+
+@keyframes masterTooltipFadeIn {
+  from { opacity: 0; transform: translate(-50%, -90%) scale(0.95); }
+  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+.m-tt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.m-tt-day {
+  font-weight: 700;
+  font-size: 11px;
+  color: #F8FAFC;
+}
+
+.m-tt-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.m-tt-badge.high { color: #4ADE80; background: rgba(74, 222, 128, 0.18); }
+.m-tt-badge.med { color: #FBBF24; background: rgba(251, 191, 36, 0.18); }
+.m-tt-badge.low { color: #F87171; background: rgba(248, 113, 113, 0.18); }
+
+.m-tt-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  color: #94A3B8;
+}
+
+.m-tt-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3B82F6;
+}
+
+.att-point-group {
+  cursor: pointer;
+}
+
+.att-hit-box {
+  cursor: pointer;
+}
+
+.att-point-circle {
+  transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.2s ease, stroke-width 0.2s ease;
+  cursor: pointer;
+}
+
+.att-glow-halo {
+  animation: haloPulse 1.8s infinite ease-in-out;
+}
+
 .x-axis-labels {
   display: flex;
   justify-content: space-between;
@@ -432,6 +539,21 @@ app-navbar {
   color: #94a3b8;
   font-weight: 500;
   margin-top: 8px;
+}
+
+.x-axis-labels span {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.x-axis-labels span:hover,
+.x-axis-labels span.active-axis-label {
+  color: #2563EB;
+  background: #EFF6FF;
+  font-weight: 800;
+  transform: translateY(-1px);
 }
 
 /* Employee Distribution Donut Chart */
@@ -454,10 +576,17 @@ app-navbar {
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
+  overflow: visible;
 }
 
 .donut-segment {
-  transition: stroke-width 0.3s ease;
+  transition: stroke-width 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  cursor: pointer;
+}
+
+.donut-segment:hover,
+.donut-segment.active-segment {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
 }
 
 .donut-center-info {
@@ -469,6 +598,13 @@ app-navbar {
   display: flex;
   flex-direction: column;
   align-items: center;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.donut-center-info.hover-active .donut-center-val {
+  transform: scale(1.08);
+  transition: transform 0.2s ease;
 }
 
 .donut-center-val {
@@ -476,25 +612,40 @@ app-navbar {
   font-weight: 700;
   color: #0f172a;
   line-height: 1.1;
+  transition: color 0.2s ease;
 }
 
 .donut-center-label {
   font-size: 11px;
   font-weight: 600;
   color: #64748b;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .distribution-legend {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .legend-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.legend-row:hover,
+.legend-row.active-legend {
+  background: #F1F5F9;
+  transform: translateX(3px);
 }
 
 .legend-left {
@@ -528,6 +679,7 @@ app-navbar {
   gap: 12px;
   height: 190px;
   margin-top: 6px;
+  position: relative;
 }
 
 .y-axis-ticks {
@@ -538,6 +690,7 @@ app-navbar {
   color: #94a3b8;
   font-weight: 500;
   padding-bottom: 22px;
+  user-select: none;
 }
 
 .bars-container {
@@ -558,6 +711,13 @@ app-navbar {
   justify-content: flex-end;
   gap: 6px;
   cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.bar-col:hover,
+.bar-col.active-bar {
+  transform: translateY(-2px);
 }
 
 .bar-track {
@@ -574,18 +734,68 @@ app-navbar {
   width: 100%;
   background: linear-gradient(180deg, #6366f1 0%, #3b82f6 100%);
   border-radius: 4px 4px 0 0;
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, background 0.2s;
 }
 
-.bar-col:hover .bar-fill {
+.bar-col:hover .bar-fill,
+.bar-col.active-bar .bar-fill {
   background: linear-gradient(180deg, #4f46e5 0%, #2563eb 100%);
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.45);
+}
+
+.hiring-bar-tooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+  pointer-events: none;
+  z-index: 30;
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  animation: masterTooltipFadeIn 0.15s ease;
+}
+
+.hiring-bar-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 3px 3px 0 3px;
+  border-style: solid;
+  border-color: #0F172A transparent transparent transparent;
+}
+
+.h-tt-val {
+  color: #60A5FA;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.h-tt-lbl {
+  color: #CBD5E1;
+  font-size: 9px;
 }
 
 .bar-month {
   font-size: 10px;
   color: #94a3b8;
   font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.bar-month.active-month {
+  color: #2563EB;
+  font-weight: 800;
 }
 
 /* 4. BOTTOM ROW: WIDGETS GRID */

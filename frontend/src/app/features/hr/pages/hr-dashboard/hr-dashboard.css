@@ -893,14 +893,14 @@
 .mc-red .mc-val { color: #EF4444; }
 
 .map-container-wrapper {
-  height: 250px;
+  height: 275px;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
   background: #F1F5F9;
   border: 1px solid #E2E8F0;
   flex: 1;
-  min-height: 240px;
+  min-height: 260px;
 }
 
 .map-container-wrapper app-employee-location-map {
@@ -1009,22 +1009,128 @@
 .wf-svg-wrapper {
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .wf-spline-svg {
   width: 100%;
   height: 90px;
   display: block;
+  overflow: visible;
 }
 
 .wf-circle-point {
   cursor: pointer;
-  transition: r 0.2s ease, stroke-width 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.wf-circle-point:hover {
-  r: 6.5px;
-  stroke-width: 3px;
+.wf-point-group {
+  cursor: pointer;
+}
+
+/* INTERACTIVE CHART TOOLTIP */
+.wf-hover-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%) translateY(-10px);
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 7px 11px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.35), 0 4px 8px rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  animation: ttFade 0.15s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+@keyframes ttFade {
+  from { opacity: 0; transform: translate(-50%, -100%) translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -100%) translateY(-10px) scale(1); }
+}
+
+.wf-hover-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #0F172A;
+}
+
+.wf-hover-tooltip.tooltip-align-right {
+  transform: translate(-82%, -100%) translateY(-10px);
+}
+.wf-hover-tooltip.tooltip-align-right::after {
+  left: 82%;
+}
+
+.wf-hover-tooltip.tooltip-align-left {
+  transform: translate(-18%, -100%) translateY(-10px);
+}
+.wf-hover-tooltip.tooltip-align-left::after {
+  left: 18%;
+}
+
+.wf-tt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 4px;
+  margin-bottom: 5px;
+}
+
+.wf-tt-date {
+  font-weight: 750;
+  color: #F8FAFC;
+  font-size: 11px;
+}
+
+.wf-tt-rate-badge {
+  font-size: 10px;
+  font-weight: 750;
+  color: #60A5FA;
+  background: rgba(37, 99, 235, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.wf-tt-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 3px 10px;
+}
+
+.wf-tt-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #CBD5E1;
+}
+
+.wf-tt-stat-item .wf-tt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.wf-tt-dot.green { background: #34D399; }
+.wf-tt-dot.blue { background: #60A5FA; }
+.wf-tt-dot.amber { background: #FBBF24; }
+.wf-tt-dot.red { background: #F87171; }
+
+.wf-tt-num {
+  font-weight: 750;
+  color: #FFFFFF;
 }
 
 .wf-x-axis {
@@ -1036,6 +1142,16 @@
   font-weight: 600;
   color: #64748B;
   margin-top: 2px;
+}
+
+.wf-x-axis span {
+  cursor: pointer;
+  transition: color 0.15s ease, font-weight 0.15s ease;
+}
+
+.wf-x-axis span.active-x {
+  color: #2563EB;
+  font-weight: 800;
 }
 
 /* HR Quick Stats (2x3 Grid) */
@@ -1398,6 +1514,283 @@
 
 
 /* ==========================================================================
+   ROW 5: EMPLOYEE DOCUMENT COMPLIANCE & LATEST NEWS
+   ========================================================================== */
+
+.compliance-news-row-grid {
+  display: grid;
+  grid-template-columns: 1.18fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Compliance Card */
+.card-compliance {
+  display: flex;
+  flex-direction: column;
+}
+
+.compliance-body-layout {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 8px 0;
+  width: 100%;
+}
+
+.compliance-donut-wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+}
+
+.compliance-donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.compliance-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.compliance-pct {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1;
+}
+
+.compliance-sub {
+  font-size: 8px;
+  font-weight: 600;
+  color: #64748B;
+  margin-top: 2px;
+  line-height: 1.15;
+  max-width: 60px;
+}
+
+.compliance-legend-col {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex-shrink: 0;
+  min-width: 135px;
+}
+
+.comp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.comp-icon-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  flex-shrink: 0;
+}
+
+.green-dot { background: #ECFDF5; color: #10B981; border: 1px solid #A7F3D0; }
+.amber-dot { background: #FFFBEB; color: #F59E0B; border: 1px solid #FDE68A; }
+.red-dot { background: #FEF2F2; color: #EF4444; border: 1px solid #FECACA; }
+
+.comp-legend-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.comp-emp-count {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.comp-sub-lbl {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.compliance-action-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding-left: 20px;
+  border-left: 1px solid #F1F5F9;
+  width: 100%;
+}
+
+.comp-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.comp-attention-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+}
+
+.comp-details-link {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #2563EB;
+  text-decoration: none;
+  white-space: nowrap;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.comp-details-link:hover {
+  text-decoration: underline;
+  color: #1D4ED8;
+}
+
+.comp-progress-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.comp-progress-track {
+  flex: 1;
+  height: 8.5px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.comp-progress-fill {
+  height: 100%;
+  background: #10B981;
+  border-radius: 9999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.comp-progress-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: #059669;
+  min-width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Latest News Card */
+.card-latest-news {
+  display: flex;
+  flex-direction: column;
+}
+
+.hr-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.hr-news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hr-news-icon-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.hr-news-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hr-news-heading {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.hr-news-text {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 450;
+  color: #64748B;
+  line-height: 1.35;
+}
+
+.hr-news-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.hr-news-tag {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.general-pill {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.promo-pill {
+  background: #7C3AED;
+  color: #FFFFFF;
+}
+
+.hr-news-date {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN BREAKPOINTS
    ========================================================================== */
 
@@ -1420,6 +1813,9 @@
   .oversight-row-4-grid {
     grid-template-columns: 1fr;
   }
+  .compliance-news-row-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 992px) {
@@ -1427,7 +1823,8 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .analytics-row-top-grid,
-  .analytics-row-bottom-grid {
+  .analytics-row-bottom-grid,
+  .compliance-news-row-grid {
     grid-template-columns: 1fr;
   }
   .card-location-map,
@@ -1437,5 +1834,15 @@
   .filter-fields-group {
     flex-direction: column;
     align-items: stretch;
+  }
+  .compliance-body-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .compliance-action-col {
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid #F1F5F9;
+    padding-top: 12px;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, Inject, PLATFORM_ID, ViewEncapsulation, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, Inject, PLATFORM_ID, ViewEncapsulation, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
@@ -61,6 +61,28 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
   loading = false;
   error = '';
 
+  selectedHub: CityHubCluster | null = null;
+  hoveredHub: CityHubCluster | null = null;
+  private overlayHoverTimeout: any = null;
+
+  get activeHubDisplay(): CityHubCluster | null {
+    return this.selectedHub || this.hoveredHub;
+  }
+
+  get overlaySide(): 'left' | 'right' {
+    if (!this.activeHubDisplay) return 'right';
+    if (this.map && this.activeHubDisplay.lat && this.activeHubDisplay.lng) {
+      try {
+        const point = this.map.latLngToContainerPoint([this.activeHubDisplay.lat, this.activeHubDisplay.lng]);
+        const mapWidth = this.map.getSize().x;
+        return point.x > (mapWidth * 0.45) ? 'left' : 'right';
+      } catch (e) {
+        // fallback
+      }
+    }
+    return this.activeHubDisplay.lng >= 78.5 ? 'left' : 'right';
+  }
+
   private cityColorMap: Record<string, string> = {
     'delhi': 'hub-delhi',
     'new delhi': 'hub-delhi',
@@ -81,9 +103,59 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
 
   constructor(
     private http: HttpClient,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+  }
+
+  getInitials(name?: string): string {
+    if (!name) return 'EP';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  formatStatusLabel(status?: string): string {
+    const s = (status || 'ACTIVE').toUpperCase();
+    if (s === 'WORKING' || s === 'ACTIVE') return 'Working';
+    if (s === 'LATE') return 'Late';
+    if (s === 'PUNCHED_OUT') return 'Punched Out';
+    if (s === 'ON_LEAVE' || s === 'LEAVE') return 'On Leave';
+    if (s === 'ABSENT') return 'Absent';
+    return status || 'Active';
+  }
+
+  onMarkerHover(hub: CityHubCluster): void {
+    if (this.overlayHoverTimeout) {
+      clearTimeout(this.overlayHoverTimeout);
+      this.overlayHoverTimeout = null;
+    }
+    this.hoveredHub = hub;
+    this.cdr.detectChanges();
+  }
+
+  onMarkerLeave(): void {
+    this.overlayHoverTimeout = setTimeout(() => {
+      this.hoveredHub = null;
+      this.cdr.detectChanges();
+    }, 280);
+  }
+
+  onOverlayMouseEnter(): void {
+    if (this.overlayHoverTimeout) {
+      clearTimeout(this.overlayHoverTimeout);
+      this.overlayHoverTimeout = null;
+    }
+  }
+
+  onOverlayMouseLeave(): void {
+    this.hoveredHub = null;
+    this.cdr.detectChanges();
+  }
+
+  closeHubOverlay(): void {
+    this.selectedHub = null;
+    this.hoveredHub = null;
+    this.cdr.detectChanges();
   }
 
   ngOnInit(): void {
@@ -139,7 +211,7 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
     return 'dot-gray';
   }
 
-  private getFilterSubLabel(count: number): string {
+  getFilterSubLabel(count: number): string {
     const f = (this.filter || 'ALL').toUpperCase();
     const plural = count === 1 ? 'Employee' : 'Employees';
     if (f === 'PRESENT') return `${plural} Present`;
@@ -319,75 +391,21 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
 
       const marker = L.marker([hub.lat, hub.lng], { icon: hubIcon });
 
-      // 2. Rich Hover Tooltip Popup showing every employee in this location
-      const empRows = hub.employees.map(emp => {
-        const initials = (emp.employeeName || 'Emp').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        const modeClass = (emp.workMode || 'office').toLowerCase();
-        const s = (emp.status || 'ACTIVE').toUpperCase();
-        
-        let statusBadgeHtml = '';
-        let timeInfoHtml = '';
-
-        if (s === 'ON_LEAVE' || s === 'LEAVE') {
-          statusBadgeHtml = '<span class="popup-status on_leave">On Leave</span>';
-          timeInfoHtml = '<span class="popup-time"><i class="fas fa-calendar-alt"></i> Leave</span>';
-        } else if (s === 'ABSENT') {
-          statusBadgeHtml = '<span class="popup-status absent">Absent</span>';
-          timeInfoHtml = '<span class="popup-time"><i class="fas fa-user-times"></i> Not Punched</span>';
-        } else if (s === 'PUNCHED_OUT') {
-          statusBadgeHtml = '<span class="popup-status punched_out">Punched Out</span>';
-          timeInfoHtml = `<span class="popup-time"><i class="far fa-clock"></i> ${emp.punchInTime || '-'} - ${emp.punchOutTime || '-'}</span>`;
-        } else if (s === 'LATE') {
-          statusBadgeHtml = '<span class="popup-status late">Late</span>';
-          timeInfoHtml = `<span class="popup-time"><i class="far fa-clock"></i> ${emp.punchInTime || 'Working'}</span>`;
-        } else {
-          statusBadgeHtml = '<span class="popup-status active">Working</span>';
-          timeInfoHtml = `<span class="popup-time"><i class="far fa-clock"></i> ${emp.punchInTime || 'Working'}</span>`;
-        }
-
-        return `
-          <div class="popup-emp-row">
-            <div class="popup-emp-avatar">${initials}</div>
-            <div class="popup-emp-info">
-              <div class="popup-emp-name">${emp.employeeName}</div>
-              <div class="popup-emp-meta">
-                ${timeInfoHtml}
-                <span class="popup-pill ${modeClass}">${emp.workMode}</span>
-                ${statusBadgeHtml}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      const popupHtml = `
-        <div class="custom-map-popup">
-          <div class="popup-header">
-            <span class="popup-city-title">📍 ${hub.city}</span>
-            <span class="popup-city-sub">${hub.count} ${this.getFilterSubLabel(hub.count)}</span>
-          </div>
-          <div class="popup-emp-list">
-            ${empRows}
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(popupHtml, {
-        offset: L.point(0, -48),
-        className: 'custom-leaflet-popup',
-        closeButton: false,
-        autoPan: false
-      });
-
       marker.on('mouseover', () => {
-        marker.openPopup();
+        this.onMarkerHover(hub);
       });
       marker.on('mouseout', () => {
-        marker.closePopup();
+        this.onMarkerLeave();
       });
 
       marker.on('click', () => {
-        this.map.flyTo([hub.lat, hub.lng], 8, { duration: 0.6 });
+        if (this.selectedHub?.city === hub.city) {
+          this.selectedHub = null;
+        } else {
+          this.selectedHub = hub;
+          this.hoveredHub = hub;
+        }
+        this.cdr.detectChanges();
       });
 
       this.markersLayerGroup.addLayer(marker);
@@ -396,9 +414,10 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
 
     if (bounds.isValid()) {
       if (this.cityHubs.length === 1) {
-        this.map.setView([this.cityHubs[0].lat, this.cityHubs[0].lng], 6.5);
+        const singleHub = this.cityHubs[0];
+        this.map.setView([singleHub.lat + 0.8, singleHub.lng], 6.5);
       } else {
-        this.map.fitBounds(bounds.pad(0.35), { maxZoom: 8 });
+        this.map.fitBounds(bounds.pad(0.45), { maxZoom: 7.5, paddingTopLeft: [20, 75], paddingBottomRight: [20, 20] });
       }
     } else {
       this.fitIndiaView();
@@ -409,7 +428,7 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
 
   private fitIndiaView(): void {
     if (!this.map) return;
-    this.map.setView([21.5, 79.2], 4.5);
+    this.map.setView([23.0, 79.5], 4.3);
     this.refreshMapSize();
   }
 

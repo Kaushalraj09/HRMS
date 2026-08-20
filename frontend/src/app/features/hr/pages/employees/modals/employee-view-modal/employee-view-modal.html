@@ -1,8 +1,9 @@
 <div class="modal-overlay" (click)="close()">
   <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Header -->
     <div class="modal-header">
       <div class="header-content">
-        <h2>Employee Details</h2>
+        <h2>Employee Profile</h2>
         <p *ngIf="employeeDetail$ | async as detail">
           {{ detail.employee.employeeCode }} · {{ detail.employee.designation }} · {{ detail.employee.department }}
         </p>
@@ -12,44 +13,190 @@
       </button>
     </div>
 
-    <div class="modal-body" *ngIf="employeeDetail$ | async as detail; else loading">
-      <div class="info-section">
-        <h3>Summary</h3>
-        <div class="info-grid">
-          <div class="info-item"><span class="label-text">Name</span><span>{{ detail.employee.name }}</span></div>
-          <div class="info-item"><span class="label-text">Status</span><span class="status-badge" [ngClass]="detail.employee.status.toLowerCase()">{{ detail.employee.status }}</span></div>
-          <div class="info-item"><span class="label-text">Work Mode</span><span>{{ detail.employee.workLocation }}</span></div>
-          <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shift?.name || detail.employee.shiftType || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj || 'N/A' }}</span></div>
-        </div>
-      </div>
+    <!-- Navigation Tabs -->
+    <div class="modal-nav-tabs">
+      <button 
+        type="button" 
+        class="tab-btn" 
+        [class.active]="activeTab === 'details'" 
+        (click)="setTab('details')">
+        <i class="far fa-user"></i> Profile Details
+      </button>
+      <button 
+        type="button" 
+        class="tab-btn" 
+        [class.active]="activeTab === 'documents'" 
+        (click)="setTab('documents')">
+        <i class="fas fa-folder-open"></i> Documents & Compliance
+        <span class="tab-badge" *ngIf="docData" [class.complete]="docData.summary.completion_percentage === 100">
+          {{ docData.summary.completion_percentage }}%
+        </span>
+      </button>
+    </div>
 
-      <div class="info-section">
-        <h3>Contact & Account</h3>
-        <div class="info-grid">
-          <div class="info-item"><span class="label-text">Official Email</span><span>{{ detail.employee.officialEmail || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Login Email</span><span>{{ detail.loginEmail || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Mobile</span><span>{{ detail.employee.mobile || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Personal Email</span><span>{{ detail.employee.personalEmail || 'N/A' }}</span></div>
-          <div class="info-item">
-            <span class="label-text">Emergency Contact</span>
-            <span *ngIf="detail.employee.emergencyContactName || detail.employee.emergencyContactNumber; else noContact">
-              {{ detail.employee.emergencyContactName }} <span *ngIf="detail.employee.emergencyContactNumber">({{ detail.employee.emergencyContactNumber }})</span>
-            </span>
-            <ng-template #noContact><span>N/A</span></ng-template>
+    <!-- TAB 1: Profile Details -->
+    <div class="modal-body" *ngIf="activeTab === 'details'">
+      <ng-container *ngIf="employeeDetail$ | async as detail; else loading">
+        <div class="info-section">
+          <h3>Summary</h3>
+          <div class="info-grid">
+            <div class="info-item"><span class="label-text">Name</span><span>{{ detail.employee.name }}</span></div>
+            <div class="info-item"><span class="label-text">Status</span><span class="status-badge" [ngClass]="detail.employee.status.toLowerCase()">{{ detail.employee.status }}</span></div>
+            <div class="info-item"><span class="label-text">Work Mode</span><span>{{ detail.employee.workLocation }}</span></div>
+            <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shift?.name || detail.employee.shiftType || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj || 'N/A' }}</span></div>
           </div>
         </div>
+
+        <div class="info-section">
+          <h3>Contact & Account</h3>
+          <div class="info-grid">
+            <div class="info-item"><span class="label-text">Official Email</span><span>{{ detail.employee.officialEmail || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Login Email</span><span>{{ detail.loginEmail || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Mobile</span><span>{{ detail.employee.mobile || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Personal Email</span><span>{{ detail.employee.personalEmail || 'N/A' }}</span></div>
+            <div class="info-item">
+              <span class="label-text">Emergency Contact</span>
+              <span *ngIf="detail.employee.emergencyContactName || detail.employee.emergencyContactNumber; else noContact">
+                {{ detail.employee.emergencyContactName }} <span *ngIf="detail.employee.emergencyContactNumber">({{ detail.employee.emergencyContactNumber }})</span>
+              </span>
+              <ng-template #noContact><span>N/A</span></ng-template>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3>Personal Information</h3>
+          <div class="info-grid">
+            <div class="info-item"><span class="label-text">Gender</span><span>{{ detail.employee.gender || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Date of Birth</span><span>{{ detail.employee.dob || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Marital Status</span><span>{{ detail.employee.maritalStatus || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Blood Group</span><span>{{ detail.employee.bloodGroup || 'N/A' }}</span></div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- TAB 2: Documents & Compliance -->
+    <div class="modal-body docs-body" *ngIf="activeTab === 'documents'">
+      <!-- Loading spinner -->
+      <div class="loading-state" *ngIf="isLoadingDocs">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <p>Loading employee documents...</p>
       </div>
 
-      <div class="info-section">
-        <h3>Personal Information</h3>
-        <div class="info-grid">
-          <div class="info-item"><span class="label-text">Gender</span><span>{{ detail.employee.gender || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Date of Birth</span><span>{{ detail.employee.dob || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Marital Status</span><span>{{ detail.employee.maritalStatus || 'N/A' }}</span></div>
-          <div class="info-item"><span class="label-text">Blood Group</span><span>{{ detail.employee.bloodGroup || 'N/A' }}</span></div>
-        </div>
+      <div class="alert-banner success" *ngIf="docsSuccess">
+        <i class="fas fa-check-circle"></i> <span>{{ docsSuccess }}</span>
       </div>
+      <div class="alert-banner error" *ngIf="docsError">
+        <i class="fas fa-exclamation-triangle"></i> <span>{{ docsError }}</span>
+      </div>
+
+      <ng-container *ngIf="!isLoadingDocs && docData">
+        <!-- Document summary bar -->
+        <div class="doc-summary-banner">
+          <div class="summary-left">
+            <span class="compliance-gauge-text">{{ docData.summary.completion_percentage }}% Compliant</span>
+            <span class="compliance-sub">({{ docData.summary.verified }} of {{ docData.summary.total_required }} required verified)</span>
+          </div>
+          <div class="summary-chips">
+            <span class="chip verified"><i class="fas fa-check"></i> {{ docData.summary.verified }} Verified</span>
+            <span class="chip pending"><i class="fas fa-clock"></i> {{ docData.summary.pending_review }} Pending</span>
+            <span class="chip rejected"><i class="fas fa-times"></i> {{ docData.summary.rejected }} Rejected</span>
+            <span class="chip missing"><i class="fas fa-exclamation"></i> {{ docData.summary.missing }} Missing</span>
+          </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="docs-modal-table-wrap">
+          <table class="docs-modal-table">
+            <thead>
+              <tr>
+                <th>DOCUMENT TYPE</th>
+                <th>REQUIRED</th>
+                <th>STATUS</th>
+                <th>FILE</th>
+                <th class="text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of docData.documents" class="doc-item-row">
+                <!-- Document Name & Category -->
+                <td>
+                  <div class="doc-type-col">
+                    <span class="doc-name">{{ item.document_type_name }}</span>
+                    <span class="doc-cat">{{ item.category }}</span>
+                  </div>
+                  <!-- Rejection reason if any -->
+                  <div class="doc-rejection-hint" *ngIf="item.rejection_reason && (item.status === 'REJECTED' || item.status === 'RESUBMISSION_REQUIRED')">
+                    <i class="fas fa-info-circle"></i> Reason: {{ item.rejection_reason }}
+                  </div>
+                </td>
+
+                <!-- Required Toggle Switch -->
+                <td>
+                  <label class="toggle-switch" title="Toggle Required/Optional">
+                    <input type="checkbox" [checked]="item.is_required" (change)="toggleRequirement(item)" />
+                    <span class="slider"></span>
+                  </label>
+                  <span class="req-label" [class.is-req]="item.is_required">{{ item.is_required ? 'Required' : 'Optional' }}</span>
+                </td>
+
+                <!-- Status Badge -->
+                <td>
+                  <span class="status-badge" [ngClass]="getStatusBadgeClass(item.status)">
+                    {{ getStatusLabel(item.status) }}
+                  </span>
+                </td>
+
+                <!-- File Info -->
+                <td>
+                  <div *ngIf="item.document_id" class="file-cell-info">
+                    <span class="file-title" [title]="item.file_name || ''">{{ item.file_name }}</span>
+                    <span class="file-sub-meta">v{{ item.version }} · {{ formatSize(item.file_size) }}</span>
+                  </div>
+                  <span *ngIf="!item.document_id" class="no-file">—</span>
+                </td>
+
+                <!-- Actions -->
+                <td class="text-right">
+                  <div class="hr-doc-actions">
+                    <!-- Upload on Behalf of Employee -->
+                    <button type="button" class="btn-hr-act upload" (click)="openHrUpload(item)" title="Upload on behalf of employee">
+                      <i class="fas fa-upload"></i>
+                    </button>
+
+                    <!-- Preview -->
+                    <button type="button" class="btn-hr-act preview" *ngIf="item.document_id" (click)="openPreview(item)" title="Preview">
+                      <i class="fas fa-eye"></i>
+                    </button>
+
+                    <!-- Download -->
+                    <button type="button" class="btn-hr-act download" *ngIf="item.document_id" (click)="downloadDoc(item)" title="Download">
+                      <i class="fas fa-download"></i>
+                    </button>
+
+                    <!-- Verify Button -->
+                    <button type="button" class="btn-hr-act verify" *ngIf="item.document_id && item.status !== 'VERIFIED'" (click)="openVerify(item)" title="Verify">
+                      <i class="fas fa-check"></i>
+                    </button>
+
+                    <!-- Reject Button -->
+                    <button type="button" class="btn-hr-act reject" *ngIf="item.document_id && item.status !== 'REJECTED'" (click)="openReject(item)" title="Reject">
+                      <i class="fas fa-times"></i>
+                    </button>
+
+                    <!-- History -->
+                    <button type="button" class="btn-hr-act history" *ngIf="item.versions_count > 1" (click)="openHistory(item)" title="History">
+                      <i class="fas fa-history"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
     </div>
 
     <ng-template #loading>
@@ -58,5 +205,134 @@
         <p>Loading employee data...</p>
       </div>
     </ng-template>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HR UPLOAD MODAL                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="nested-modal-backdrop" *ngIf="isHrUploadOpen" (click)="closeHrUpload()">
+  <div class="nested-modal-card" (click)="$event.stopPropagation()">
+    <div class="nested-header">
+      <h4>Upload Document for Employee</h4>
+      <button class="close-btn" (click)="closeHrUpload()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nested-body">
+      <p><strong>Document:</strong> {{ selectedDocTypeForUpload?.document_type_name }}</p>
+      <div class="form-group-field">
+        <label>Select File:</label>
+        <input type="file" (change)="onFilePicked($event)" class="form-control-file" />
+      </div>
+      <div class="form-group-field">
+        <label>HR Remarks (Optional):</label>
+        <textarea class="form-control-text" rows="2" [(ngModel)]="uploadRemarks" placeholder="e.g. Uploaded from signed paperwork"></textarea>
+      </div>
+      <div class="file-error-alert" *ngIf="uploadError">{{ uploadError }}</div>
+    </div>
+    <div class="nested-footer">
+      <button class="btn-cancel" (click)="closeHrUpload()">Cancel</button>
+      <button class="btn-primary" (click)="submitHrUpload()" [disabled]="!uploadFile || isUploading">
+        {{ isUploading ? 'Uploading...' : 'Upload Document' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HR VERIFY MODAL                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="nested-modal-backdrop" *ngIf="isVerifyOpen" (click)="closeVerify()">
+  <div class="nested-modal-card" (click)="$event.stopPropagation()">
+    <div class="nested-header">
+      <h4>Verify Document</h4>
+      <button class="close-btn" (click)="closeVerify()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nested-body">
+      <p>Mark <strong>{{ selectedDocForVerify?.document_type_name }}</strong> as verified?</p>
+      <div class="form-group-field">
+        <label>Verification Notes (Optional):</label>
+        <textarea class="form-control-text" rows="2" [(ngModel)]="verifyRemarks" placeholder="e.g. Verified against official records"></textarea>
+      </div>
+    </div>
+    <div class="nested-footer">
+      <button class="btn-cancel" (click)="closeVerify()">Cancel</button>
+      <button class="btn-verify" (click)="submitVerify()" [disabled]="isVerifying">Confirm Verification</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HR REJECT MODAL                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="nested-modal-backdrop" *ngIf="isRejectOpen" (click)="closeReject()">
+  <div class="nested-modal-card" (click)="$event.stopPropagation()">
+    <div class="nested-header">
+      <h4>Reject Document</h4>
+      <button class="close-btn" (click)="closeReject()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nested-body">
+      <p>Reject <strong>{{ selectedDocForReject?.document_type_name }}</strong> and request re-upload?</p>
+      <div class="form-group-field">
+        <label>Rejection Reason *:</label>
+        <textarea class="form-control-text error-border" rows="3" [(ngModel)]="rejectionReason" placeholder="e.g. Unclear scan, expired date..."></textarea>
+      </div>
+      <div class="file-error-alert" *ngIf="rejectionError">{{ rejectionError }}</div>
+    </div>
+    <div class="nested-footer">
+      <button class="btn-cancel" (click)="closeReject()">Cancel</button>
+      <button class="btn-reject" (click)="submitReject()" [disabled]="!rejectionReason.trim() || isRejecting">Reject Document</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- PREVIEW MODAL                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="nested-modal-backdrop" *ngIf="isPreviewOpen" (click)="closePreview()">
+  <div class="nested-preview-card" (click)="$event.stopPropagation()">
+    <div class="nested-header">
+      <h4>{{ previewTitle }}</h4>
+      <button class="close-btn" (click)="closePreview()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nested-preview-body">
+      <div class="loading-state" *ngIf="isPreviewLoading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <p>Loading document...</p>
+      </div>
+      <ng-container *ngIf="!isPreviewLoading">
+        <iframe *ngIf="previewBlobUrl && !isImageMime(previewMimeType)" [src]="previewBlobUrl" class="doc-iframe"></iframe>
+        <img *ngIf="rawBlobUrl && isImageMime(previewMimeType)" [src]="previewBlobUrl" class="doc-img" alt="Preview" />
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HISTORY MODAL                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="nested-modal-backdrop" *ngIf="isHistoryOpen" (click)="closeHistory()">
+  <div class="nested-modal-card" (click)="$event.stopPropagation()">
+    <div class="nested-header">
+      <h4>Version History: {{ historyTitle }}</h4>
+      <button class="close-btn" (click)="closeHistory()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nested-body">
+      <div *ngIf="isHistoryLoading" class="loading-state">
+        <i class="fas fa-circle-notch fa-spin"></i>
+      </div>
+      <div *ngIf="!isHistoryLoading" class="history-list">
+        <div *ngFor="let v of versionHistory" class="history-row">
+          <div>
+            <strong>v{{ v.version_number }}</strong> - {{ v.file_name }} ({{ formatSize(v.file_size) }})
+            <div class="sub-txt">{{ formatDate(v.uploaded_at) }} by {{ v.uploaded_by_name || 'Employee' }}</div>
+            <div *ngIf="v.rejection_reason" class="rej-txt">Rejection Reason: {{ v.rejection_reason }}</div>
+          </div>
+          <button class="btn-mini-dl" (click)="downloadVersion(v)"><i class="fas fa-download"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="nested-footer">
+      <button class="btn-cancel" (click)="closeHistory()">Close</button>
+    </div>
   </div>
 </div>
