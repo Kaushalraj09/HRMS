@@ -6,8 +6,7 @@
             [userName]="userName" 
             [searchValue]="searchTerm"
             (hamburgerClick)="toggleSidebar()"
-            (searchChange)="onSearch($event)" 
-            (profileClick)="openProfile()">
+            (searchChange)="onSearch($event)">
         </app-navbar>
 
         <div class="main-content" [class.expanded]="!(isSidebarOpen$ | async)">

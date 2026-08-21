@@ -297,7 +297,6 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
     this.isNotificationDropdownOpen = false;
     this.isLanguageDropdownOpen = false;
-    this.profileClick.emit();
   }
 
   toggleLanguageDropdown(event: MouseEvent) {

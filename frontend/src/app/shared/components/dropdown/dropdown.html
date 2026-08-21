@@ -1,6 +1,6 @@
 <div class="dropdown-menu" *ngIf="!isLogoutPopupOpen">
     <ul>
-        <li><a [routerLink]="profileRoute"><i class="far fa-user"></i> My Profile</a></li>
+        <li><a [routerLink]="profileRoute" (click)="onProfileItemClick()"><i class="far fa-user"></i> My Profile</a></li>
         <li class="divider"></li>
         <li><a style="cursor: pointer;" (click)="openLogoutConfirm($event)"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>

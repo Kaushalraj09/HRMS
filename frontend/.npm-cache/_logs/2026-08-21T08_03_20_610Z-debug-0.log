@@ -1,0 +1,41 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.1
+2 info using node@v24.11.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Raj\Desktop\HRMS\frontend\.npmrc
+5 silly config load:file:C:\Users\Raj\.npmrc
+6 silly config load:file:C:\Users\Raj\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm ci
+8 verbose argv "ci" "--cache" ".npm-cache" "--ignore-scripts"
+9 verbose logfile logs-max:10 dir:C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T08_03_20_610Z-
+10 verbose logfile C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T08_03_20_610Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly logfile done cleaning log files
+14 silly idealTree buildDeps
+15 verbose stack Error: EPERM: operation not permitted, unlink 'C:\Users\Raj\Desktop\HRMS\frontend\node_modules\@esbuild\win32-x64\esbuild.exe'
+16 error code EPERM
+17 error syscall unlink
+18 error path C:\Users\Raj\Desktop\HRMS\frontend\node_modules\@esbuild\win32-x64\esbuild.exe
+19 error errno -4048
+20 error [Error: EPERM: operation not permitted, unlink 'C:\Users\Raj\Desktop\HRMS\frontend\node_modules\@esbuild\win32-x64\esbuild.exe'] {
+20 error   errno: -4048,
+20 error   code: 'EPERM',
+20 error   syscall: 'unlink',
+20 error   path: 'C:\\Users\\Raj\\Desktop\\HRMS\\frontend\\node_modules\\@esbuild\\win32-x64\\esbuild.exe'
+20 error }
+21 error
+21 error The operation was rejected by your operating system.
+21 error It's possible that the file was already in use (by a text editor or antivirus),
+21 error or that you lack permissions to access it.
+21 error
+21 error If you believe this might be a permissions issue, please double-check the
+21 error permissions of the file and its containing directories, or try running
+21 error the command again as root/Administrator.
+22 verbose cwd C:\Users\Raj\Desktop\HRMS\frontend
+23 verbose os Windows_NT 10.0.26200
+24 verbose node v24.11.0
+25 verbose npm  v11.6.1
+26 verbose exit -4048
+27 verbose code -4048
+28 error A complete log of this run can be found in: C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T08_03_20_610Z-debug-0.log

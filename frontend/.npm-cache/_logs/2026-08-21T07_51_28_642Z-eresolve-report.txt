@@ -1,0 +1,58 @@
+'Log files:
+C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T07_51_28_642Z-debug-0.log
+
+# npm resolution error report
+
+While resolving: frontend@0.0.0
+Found: @angular/common@21.2.18
+node_modules/@angular/common
+  @angular/common@"^21.2.21" from the root project
+  peer @angular/common@"21.2.18" from @angular/forms@21.2.18
+  node_modules/@angular/forms
+    @angular/forms@"^21.2.21" from the root project
+    peer @angular/forms@"^21.0.0 || ^22.0.0" from @angular/material@21.2.14
+    node_modules/@angular/material
+      @angular/material@"^21.2.21" from the root project
+  peer @angular/common@"^21.0.0 || ^22.0.0" from @angular/material@21.2.14
+  node_modules/@angular/material
+    @angular/material@"^21.2.21" from the root project
+  peer @angular/common@"21.2.18" from @angular/platform-browser@21.2.18
+  node_modules/@angular/platform-browser
+    @angular/platform-browser@"^21.2.21" from the root project
+    peer @angular/platform-browser@"21.2.18" from @angular/forms@21.2.18
+    node_modules/@angular/forms
+      @angular/forms@"^21.2.21" from the root project
+      peer @angular/forms@"^21.0.0 || ^22.0.0" from @angular/material@21.2.14
+      node_modules/@angular/material
+        @angular/material@"^21.2.21" from the root project
+    peer @angular/platform-browser@"^21.0.0 || ^22.0.0" from @angular/material@21.2.14
+    node_modules/@angular/material
+      @angular/material@"^21.2.21" from the root project
+    peer @angular/platform-browser@"21.2.18" from @angular/router@21.2.18
+    node_modules/@angular/router
+      @angular/router@"^21.2.21" from the root project
+    peer @angular/platform-browser@">=21.0.0" from ng2-charts@10.0.0
+    node_modules/ng2-charts
+      ng2-charts@"^10.0.0" from the root project
+    peerOptional @angular/platform-browser@"^21.0.0" from @angular/build@21.2.21
+    node_modules/@angular/build
+      dev @angular/build@"^21.2.21" from the root project
+  peer @angular/common@"21.2.18" from @angular/router@21.2.18
+  node_modules/@angular/router
+    @angular/router@"^21.2.21" from the root project
+  peer @angular/common@">=21.0.0" from ng2-charts@10.0.0
+  node_modules/ng2-charts
+    ng2-charts@"^10.0.0" from the root project
+
+Could not resolve dependency:
+@angular/common@"^21.2.21" from the root project
+
+Conflicting peer dependency: @angular/core@21.2.21
+node_modules/@angular/core
+  peer @angular/core@"21.2.21" from @angular/common@21.2.21
+  node_modules/@angular/common
+    @angular/common@"^21.2.21" from the root project
+
+Fix the upstream dependency conflict, or retry
+this command with --force or --legacy-peer-deps
+to accept an incorrect (and potentially broken) dependency resolution.

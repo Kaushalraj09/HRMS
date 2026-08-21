@@ -147,7 +147,7 @@
                 <path d="M6 9L12 15L18 9" />
             </svg>
             
-            <app-dropdown *ngIf="isProfileDropdownOpen"></app-dropdown>
+            <app-dropdown *ngIf="isProfileDropdownOpen" (itemClick)="isProfileDropdownOpen = false"></app-dropdown>
         </div>
     </div>
 </nav>

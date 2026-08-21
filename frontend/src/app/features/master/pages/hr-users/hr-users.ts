@@ -59,7 +59,7 @@ export class HrUsersComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.hrData$ = combineLatest([this.reloadSubject, this.pageSubject]).pipe(
       tap(() => this.isLoading$.next(true)),
-      switchMap(([_, page]) =>
+      switchMap(([_, page]: [boolean, number]) =>
         this.hrService.getHrUsers(page, this.pageSize, this.searchControl.value || '', this.statusControl.value || '')
       ),
       tap(() => this.isLoading$.next(false)),
@@ -67,7 +67,7 @@ export class HrUsersComponent implements OnInit {
     );
 
     this.pages$ = this.hrData$.pipe(
-      map(result => Array.from({ length: Math.max(1, Math.ceil(result.total / this.pageSize)) }, (_, index) => index + 1))
+      map((result: PaginatedResult<HrUser>) => Array.from({ length: Math.max(1, Math.ceil(result.total / this.pageSize)) }, (_: unknown, index: number) => index + 1))
     );
   }
 
@@ -121,12 +121,13 @@ export class HrUsersComponent implements OnInit {
         alert('HR user deleted successfully.');
         this.onSearch();
       },
-      error: (err) => {
+      error: (err: any) => {
         this.isLoading$.next(false);
         console.error('Failed to delete HR user:', err);
         alert(err?.error?.detail || 'An error occurred while deleting the HR user.');
       }
     });
   }
+
 }
 

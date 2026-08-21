@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
@@ -12,9 +12,14 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrl: './dropdown.css',
 })
 export class Dropdown {
+  @Output() itemClick = new EventEmitter<void>();
   isLogoutPopupOpen = false;
 
   constructor(private router: Router, private readonly authService: AuthService) {}
+
+  onProfileItemClick() {
+    this.itemClick.emit();
+  }
 
   get profileRoute(): string {
     const user = this.authService.getCurrentUser();

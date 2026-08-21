@@ -1,0 +1,105 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.1
+2 info using node@v24.11.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Raj\Desktop\HRMS\frontend\.npmrc
+5 silly config load:file:C:\Users\Raj\.npmrc
+6 silly config load:file:C:\Users\Raj\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm ci
+8 verbose argv "ci" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T07_55_05_674Z-
+10 verbose logfile C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T07_55_05_674Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly idealTree buildDeps
+14 silly fetch manifest angular-draggable-droppable@^9.0.1
+15 silly packumentCache full:https://registry.npmjs.org/angular-draggable-droppable cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/angular-draggable-droppable 990ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/angular-draggable-droppable set size:undefined disposed:false
+18 silly fetch manifest @angular/core@>=20.2.0
+19 silly packumentCache full:https://registry.npmjs.org/@angular%2fcore cache-miss
+20 http cache https://registry.npmjs.org/@angular%2fcore 206ms (cache hit)
+21 silly packumentCache full:https://registry.npmjs.org/@angular%2fcore set size:3137910 disposed:false
+22 silly fetch manifest @angular/compiler@21.2.21
+23 silly packumentCache full:https://registry.npmjs.org/@angular%2fcompiler cache-miss
+24 http cache https://registry.npmjs.org/@angular%2fcompiler 130ms (cache hit)
+25 silly packumentCache full:https://registry.npmjs.org/@angular%2fcompiler set size:2806313 disposed:false
+26 silly fetch manifest rxjs@^6.5.3 || ^7.4.0
+27 silly packumentCache full:https://registry.npmjs.org/rxjs cache-miss
+28 http fetch GET 200 https://registry.npmjs.org/rxjs 253ms (cache revalidated)
+29 silly packumentCache full:https://registry.npmjs.org/rxjs set size:1028301 disposed:false
+30 silly fetch manifest zone.js@~0.15.0 || ~0.16.0
+31 silly packumentCache full:https://registry.npmjs.org/zone.js cache-miss
+32 http fetch GET 200 https://registry.npmjs.org/zone.js 336ms (cache revalidated)
+33 silly packumentCache full:https://registry.npmjs.org/zone.js set size:378576 disposed:false
+34 silly fetch manifest angular-resizable-element@^8.0.0
+35 silly packumentCache full:https://registry.npmjs.org/angular-resizable-element cache-miss
+36 http fetch GET 200 https://registry.npmjs.org/angular-resizable-element 387ms (cache miss)
+37 silly packumentCache full:https://registry.npmjs.org/angular-resizable-element set size:undefined disposed:false
+38 silly placeDep ROOT angular-draggable-droppable@9.0.1 OK for: angular-calendar@0.32.1 want: ^9.0.1
+39 silly placeDep ROOT angular-resizable-element@8.0.3 OK for: angular-calendar@0.32.1 want: ^8.0.0
+40 silly fetch manifest @mattlewis92/dom-autoscroller@^2.4.2
+41 silly packumentCache full:https://registry.npmjs.org/@mattlewis92%2fdom-autoscroller cache-miss
+42 http fetch GET 200 https://registry.npmjs.org/@mattlewis92%2fdom-autoscroller 774ms (cache miss)
+43 silly packumentCache full:https://registry.npmjs.org/@mattlewis92%2fdom-autoscroller set size:undefined disposed:false
+44 silly placeDep ROOT @mattlewis92/dom-autoscroller@2.4.2 OK for: angular-draggable-droppable@9.0.1 want: ^2.4.2
+45 verbose stack Error: 
+45 verbose stack `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+45 verbose stack
+45 verbose stack Missing: angular-draggable-droppable@9.0.1 from lock file
+45 verbose stack Missing: angular-resizable-element@8.0.3 from lock file
+45 verbose stack Missing: @mattlewis92/dom-autoscroller@2.4.2 from lock file
+45 verbose stack
+45 verbose stack Clean install a project
+45 verbose stack
+45 verbose stack Usage:
+45 verbose stack npm ci
+45 verbose stack
+45 verbose stack Options:
+45 verbose stack [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+45 verbose stack [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+45 verbose stack [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+45 verbose stack [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+45 verbose stack [--no-bin-links] [--no-fund] [--dry-run]
+45 verbose stack [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+45 verbose stack [--workspaces] [--include-workspace-root] [--install-links]
+45 verbose stack
+45 verbose stack aliases: clean-install, ic, install-clean, isntall-clean
+45 verbose stack
+45 verbose stack Run "npm help ci" for more info
+45 verbose stack     at CI.usageError (C:\Program Files\nodejs\node_modules\npm\lib\base-cmd.js:111:26)
+45 verbose stack     at CI.exec (C:\Program Files\nodejs\node_modules\npm\lib\commands\ci.js:70:18)
+45 verbose stack     at async Npm.exec (C:\Program Files\nodejs\node_modules\npm\lib\npm.js:208:9)
+45 verbose stack     at async module.exports (C:\Program Files\nodejs\node_modules\npm\lib\cli\entry.js:67:5)
+46 error code EUSAGE
+47 error
+47 error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+47 error
+47 error Missing: angular-draggable-droppable@9.0.1 from lock file
+47 error Missing: angular-resizable-element@8.0.3 from lock file
+47 error Missing: @mattlewis92/dom-autoscroller@2.4.2 from lock file
+47 error
+47 error Clean install a project
+47 error
+47 error Usage:
+47 error npm ci
+47 error
+47 error Options:
+47 error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+47 error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+47 error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+47 error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+47 error [--no-bin-links] [--no-fund] [--dry-run]
+47 error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+47 error [--workspaces] [--include-workspace-root] [--install-links]
+47 error
+47 error aliases: clean-install, ic, install-clean, isntall-clean
+47 error
+47 error Run "npm help ci" for more info
+48 verbose cwd C:\Users\Raj\Desktop\HRMS\frontend
+49 verbose os Windows_NT 10.0.26200
+50 verbose node v24.11.0
+51 verbose npm  v11.6.1
+52 verbose exit 1
+53 verbose code 1
+54 error A complete log of this run can be found in: C:\Users\Raj\Desktop\HRMS\frontend\.npm-cache\_logs\2026-08-21T07_55_05_674Z-debug-0.log
