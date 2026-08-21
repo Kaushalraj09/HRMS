@@ -18,9 +18,9 @@ MarkupSafe==3.0.3
 passlib==1.7.4
 psycopg==3.3.3
 psycopg-binary==3.3.3
-pyasn1==0.6.3
+pyasn1>=0.6.4
 pydantic==2.13.0
-pydantic-settings==2.13.1
+pydantic-settings>=2.14.2
 pydantic_core==2.46.0
 pyjwt>=2.13.0
 PyMySQL==1.1.2
