@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+import jwt
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
@@ -20,7 +20,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         active_dashboard: str = payload.get("activeDashboard")
         if email is None or payload.get("type") != "access":
             raise credentials_exception
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
         
     user = db.query(User).filter(User.email == email).first()
@@ -45,6 +45,6 @@ def get_ws_user(db: Session, ticket: str | None) -> User | None:
         if user is None or user.id != user_id or user.status in ["Inactive", "Deleted"]:
             return None
         return user
-    except JWTError:
+    except jwt.InvalidTokenError:
         return None
 

@@ -137,7 +137,7 @@ def change_user_password(db: Session, user_id: int, request: ChangePasswordReque
 
 def generate_reset_token(user: User) -> str:
     from datetime import datetime, timedelta, timezone
-    from jose import jwt
+    import jwt
     from app.core.config import settings
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode = {
@@ -172,7 +172,7 @@ def forgot_password(db: Session, request):
     return email_sent
 
 def reset_password(db: Session, request):
-    from jose import jwt, JWTError
+    import jwt
     from app.core.config import settings
     if request.newPassword != request.confirmPassword:
         return {"success": False, "message": "Passwords do not match"}
@@ -183,7 +183,7 @@ def reset_password(db: Session, request):
         token_type = unverified.get("type")
         if not email or token_type != "reset":
             return {"success": False, "message": "Invalid token"}
-    except JWTError:
+    except jwt.InvalidTokenError:
         return {"success": False, "message": "Invalid or expired token"}
     
     user = db.query(User).filter(User.email.ilike(email)).first()
@@ -193,7 +193,7 @@ def reset_password(db: Session, request):
     secret = settings.SECRET_KEY + user.password_hash
     try:
         jwt.decode(request.token, secret, algorithms=[settings.ALGORITHM])
-    except JWTError:
+    except jwt.InvalidTokenError:
         return {"success": False, "message": "Invalid or expired token"}
     
     user.password_hash = hash_password(request.newPassword)

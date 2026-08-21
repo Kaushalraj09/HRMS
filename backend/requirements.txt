@@ -28,11 +28,6 @@ typing-inspection>=0.4.0
 passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0
 PyJWT>=2.8.0
-python-jose[cryptography]>=3.3.0
-# 0.19.3 is not published on PyPI; python-jose is compatible with 0.19.2.
-ecdsa>=0.19.2,<0.20
-rsa>=4.9.0
-pyasn1>=0.6.0
 
 # System, Configuration & Scheduling
 python-dotenv>=1.0.0

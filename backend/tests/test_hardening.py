@@ -142,7 +142,7 @@ def test_forgot_password_returns_email_status_without_exposing_reset_link(db_ses
 
 
 def test_websocket_ticket_has_a_dedicated_token_type():
-    from jose import jwt
+    import jwt
     from app.core.config import settings
     from app.core.security import create_access_token, create_websocket_ticket
 
