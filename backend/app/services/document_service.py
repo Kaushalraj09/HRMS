@@ -841,9 +841,13 @@ def get_version_file_for_user(
     version_id: int,
     current_user: User
 ) -> Tuple[str, str, str]:
-    """Securely download a historical version."""
+    """Securely download a historical version (or fallback to current document if main doc ID passed)."""
     version = db.query(EmployeeDocumentVersion).filter(EmployeeDocumentVersion.id == version_id).first()
     if not version:
+        # Fallback to main document download if version ID matches main doc ID
+        doc_fallback = db.query(EmployeeDocument).filter(EmployeeDocument.id == version_id).first()
+        if doc_fallback:
+            return get_document_file_for_user(db, version_id, current_user)
         raise HTTPException(status_code=404, detail="Document version not found")
 
     doc = db.query(EmployeeDocument).filter(EmployeeDocument.id == version.document_id).first()
@@ -898,6 +902,9 @@ def get_document_version_history(
     # Current version
     history_list.append(DocumentVersionResponse(
         id=document.id,
+        document_id=document.id,
+        version_id=None,
+        is_current=True,
         version_number=document.version,
         file_name=document.file_name,
         file_size=document.file_size,
@@ -917,6 +924,9 @@ def get_document_version_history(
     for v in versions:
         history_list.append(DocumentVersionResponse(
             id=v.id,
+            document_id=v.document_id,
+            version_id=v.id,
+            is_current=False,
             version_number=v.version_number,
             file_name=v.file_name,
             file_size=v.file_size,
@@ -933,6 +943,7 @@ def get_document_version_history(
         ))
 
     return history_list
+
 
 
 # ─── 8. HR Organization Compliance KPI Overview ──────────────────────────────

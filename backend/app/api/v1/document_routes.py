@@ -1,3 +1,5 @@
+import os
+import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
@@ -7,8 +9,11 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.employee import Employee
-from app.models.document import DocumentType, EmployeeDocument, EmployeeDocumentRequirement
+from app.models.document import DocumentType, EmployeeDocument, EmployeeDocumentRequirement, DocumentAuditLog
 from app.core.enums import UserRole
+
+logger = logging.getLogger(__name__)
+
 from app.schemas.document import (
     DocumentTypeCreate,
     DocumentTypeUpdate,
@@ -402,15 +407,41 @@ def delete_employee_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    if doc.status in ["VERIFIED", "APPROVED"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verified documents cannot be deleted directly. Mark as unverified or rejected prior to deletion."
+        )
+
     employee_id = doc.employee_id
     document_type_id = doc.document_type_id
+    file_name = doc.file_name
 
-    # Remove physical file if exists
+    # Remove the current file and every archived version before changing the
+    # database.  If storage cannot be updated, keep the DB record intact so
+    # the document is not orphaned and the operation can be retried safely.
+    file_paths = {doc.storage_path}
+    file_paths.update(version.storage_path for version in doc.versions)
     try:
-        if os.path.exists(doc.storage_path):
-            os.remove(doc.storage_path)
-    except Exception as e:
-        logger.warning(f"Failed to remove file from disk: {e}")
+        for file_path in filter(None, file_paths):
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    except OSError as exc:
+        logger.exception("Failed to remove document file during deletion", exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document file could not be deleted; no database changes were made.",
+        ) from exc
+
+    # This must be committed atomically with the record deletion.  `details`
+    # is the model's structured audit field (there is no `notes` column).
+    db.add(DocumentAuditLog(
+        document_id=doc.id,
+        employee_id=employee_id,
+        action="DOCUMENT_DELETED",
+        performed_by_user_id=current_user.id,
+        details={"file_name": file_name, "deleted_by_user_id": current_user.id},
+    ))
 
     # Revert requirement status
     req = db.query(EmployeeDocumentRequirement).filter(

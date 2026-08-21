@@ -366,7 +366,11 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
   }
 
   downloadVersion(v: DocumentVersion): void {
-    this.documentService.downloadVersion(v.id).subscribe({
+    const obs = (v.is_current && v.document_id)
+      ? this.documentService.downloadDocument(v.document_id)
+      : this.documentService.downloadVersion(v.version_id || v.id);
+
+    obs.subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -383,6 +387,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
       }
     });
   }
+
 
   private cleanupBlobUrls(): void {
     if (this.rawBlobUrl) {

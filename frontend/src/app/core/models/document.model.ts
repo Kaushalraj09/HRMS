@@ -24,6 +24,9 @@ export interface DocumentType {
 
 export interface DocumentVersion {
   id: number;
+  document_id?: number | null;
+  version_id?: number | null;
+  is_current?: boolean;
   version_number: number;
   file_name: string;
   file_size: number;
@@ -38,6 +41,7 @@ export interface DocumentVersion {
   rejection_reason?: string | null;
   remarks?: string | null;
 }
+
 
 export interface EmployeeDocumentItem {
   requirement_id?: number | null;

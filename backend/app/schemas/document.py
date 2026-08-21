@@ -43,6 +43,9 @@ class DocumentTypeResponse(DocumentTypeBase):
 # Document Version Schema
 class DocumentVersionResponse(BaseModel):
     id: int
+    document_id: Optional[int] = None
+    version_id: Optional[int] = None
+    is_current: Optional[bool] = False
     version_number: int
     file_name: str
     file_size: int
@@ -58,6 +61,7 @@ class DocumentVersionResponse(BaseModel):
     remarks: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 # Employee Document Schema

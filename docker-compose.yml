@@ -26,7 +26,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    expose: ["8000"]
+    volumes:
+      - hrms_document_storage:/app/storage/documents
     deploy:
       resources:
         limits:
@@ -60,3 +61,4 @@ services:
 
 volumes:
   postgres_data:
+  hrms_document_storage:

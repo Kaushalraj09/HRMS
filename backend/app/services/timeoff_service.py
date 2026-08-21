@@ -385,7 +385,7 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
         start_time=st,
         end_time=et,
         duration_hours=round(requested, 2),
-        status="Approved",
+        status="Pending",
     )
     db.add(new_request)
     db.commit()
@@ -397,18 +397,28 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     except Exception:
         pass
 
-    # Dispatch LeaveApproved domain event
+    # Create unified ApprovalTask
+    try:
+        from app.services.approval_service import create_approval_task
+        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        submitted_by = employee_obj.user_id if employee_obj else 1
+        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
+    except Exception as e:
+        print(f"Failed to create approval task: {e}")
+
+    # Dispatch LeaveRequested domain event
     try:
         from app.domain.events.dispatcher import EventDispatcher
-        from app.domain.events.types import LeaveApproved
-        EventDispatcher.dispatch(LeaveApproved(
+        from app.domain.events.types import LeaveRequested
+        EventDispatcher.dispatch(LeaveRequested(
             employee_id=employee_id,
             leave_request_id=new_request.id,
             date=new_request.date,
             leave_type=new_request.leave_type
         ))
     except Exception as e:
-        print(f"Failed to dispatch LeaveApproved event: {e}")
+        print(f"Failed to dispatch LeaveRequested event: {e}")
+
 
     approved_today = get_timeoff_duration_for_date(db, employee_id, date.today())
     approved_seconds_today = int(round(approved_today * 3600))
