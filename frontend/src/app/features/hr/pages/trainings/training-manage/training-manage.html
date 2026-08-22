@@ -1,0 +1,320 @@
+<div class="container-fluid p-4">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center">
+      <a routerLink="/hr-dashboard/trainings" class="btn btn-outline-secondary btn-sm me-3">
+        <i class="fas fa-arrow-left me-1"></i>Back
+      </a>
+      <div *ngIf="training">
+        <h3 class="fw-bold mb-0">{{ training.title }}</h3>
+        <span class="badge bg-primary-subtle text-primary me-2 font-monospace">{{ training.code }}</span>
+        <span class="badge bg-secondary-subtle text-secondary me-2">{{ training.category }}</span>
+        <span class="badge" [ngClass]="{'bg-success': training.status === 'Published', 'bg-warning text-dark': training.status === 'Draft'}">
+          {{ training.status }}
+        </span>
+      </div>
+    </div>
+    <div *ngIf="training">
+      <a [routerLink]="['/hr-dashboard/trainings', training.id, 'assessment']" class="btn btn-outline-primary">
+        <i class="fas fa-file-signature me-2"></i>Assessment Builder
+      </a>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <i class="fas fa-spinner fa-spin fs-3 text-primary me-2"></i>Loading details...
+  </div>
+
+  <div *ngIf="!isLoading && training">
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4 border-bottom">
+      <li class="nav-item">
+        <button
+          class="nav-link fw-semibold px-4"
+          [class.active]="activeTab === 'content'"
+          (click)="activeTab = 'content'"
+        >
+          <i class="fas fa-folder-open me-2"></i>Learning Materials ({{ training.materials?.length || 0 }})
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          class="nav-link fw-semibold px-4"
+          [class.active]="activeTab === 'assignments'"
+          (click)="activeTab = 'assignments'"
+        >
+          <i class="fas fa-user-check me-2"></i>Employee Assignments ({{ assignments.length || 0 }})
+        </button>
+      </li>
+    </ul>
+
+    <!-- TAB 1: LEARNING MATERIALS -->
+    <div *ngIf="activeTab === 'content'">
+      <div class="row g-4">
+        <!-- Upload Card -->
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light fw-bold py-3">
+              <i class="fas fa-cloud-upload-alt me-2 text-primary"></i>Upload New Learning Material
+            </div>
+            <div class="card-body p-4">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Select File <span class="text-danger">*</span></label>
+                <input
+                  type="file"
+                  class="form-control"
+                  (change)="onFileSelected($event)"
+                />
+                <div class="form-text small">
+                  Supports Documents (PDF, DOCX, XLSX, PPTX, TXT), Videos (MP4, WEBM), Audio (MP3, WAV), Images (JPG, PNG). Max 50MB.
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Description / Notes</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="e.g. Chapter 1 Safety Video Guide"
+                  [(ngModel)]="materialDescription"
+                />
+              </div>
+
+              <div class="form-check mb-4">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  id="reqCheck"
+                  [(ngModel)]="isRequiredMaterial"
+                />
+                <label class="form-check-label fw-semibold" for="reqCheck">
+                  Required Material for Completion
+                </label>
+              </div>
+
+              <button
+                class="btn btn-primary w-100 py-2"
+                [disabled]="!selectedFile || isUploading"
+                (click)="uploadMaterial()"
+              >
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="isUploading"></i>
+                <i class="fas fa-upload me-2" *ngIf="!isUploading"></i>Upload Material
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Materials List Card -->
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light fw-bold py-3">
+              <i class="fas fa-list me-2 text-primary"></i>Uploaded Learning Materials
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>#</th>
+                      <th>File Name & Type</th>
+                      <th>Size</th>
+                      <th>Requirement</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngIf="!training.materials || training.materials.length === 0">
+                      <td colspan="5" class="text-center py-4 text-muted">
+                        No learning materials uploaded yet. Use the upload box on the left.
+                      </td>
+                    </tr>
+                    <tr *ngFor="let mat of training.materials; let i = index">
+                      <td class="fw-bold text-muted">{{ i + 1 }}</td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <i
+                            class="fs-4 me-3"
+                            [ngClass]="{
+                              'fas fa-file-pdf text-danger': mat.file_type === 'document' && mat.file_name.endsWith('.pdf'),
+                              'fas fa-file-video text-primary': mat.file_type === 'video',
+                              'fas fa-file-audio text-warning': mat.file_type === 'audio',
+                              'fas fa-file-image text-info': mat.file_type === 'image',
+                              'fas fa-file-alt text-secondary': mat.file_type === 'document'
+                            }"
+                          ></i>
+                          <div>
+                            <div class="fw-bold text-dark">{{ mat.file_name }}</div>
+                            <div class="small text-muted">{{ mat.description || mat.file_type | titlecase }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="small">{{ (mat.file_size / (1024 * 1024)).toFixed(2) }} MB</td>
+                      <td>
+                        <span
+                          class="badge"
+                          [ngClass]="mat.is_required ? 'bg-danger-subtle text-danger border border-danger' : 'bg-light text-muted border'"
+                        >
+                          {{ mat.is_required ? 'Required' : 'Optional' }}
+                        </span>
+                      </td>
+                      <td class="text-end">
+                        <a [href]="getDownloadUrl(mat.id)" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                          <i class="fas fa-download"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" (click)="deleteMaterial(mat.id)">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: EMPLOYEE ASSIGNMENTS -->
+    <div *ngIf="activeTab === 'assignments'">
+      <div class="row g-4">
+        <!-- Assign Controls Card -->
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light fw-bold py-3">
+              <i class="fas fa-user-plus me-2 text-primary"></i>Assign Training Program
+            </div>
+            <div class="card-body p-4">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Assignment Scope</label>
+                <select class="form-select" [(ngModel)]="assignmentType">
+                  <option value="All">All Active Employees</option>
+                  <option value="Selected">Selected Employees</option>
+                  <option value="Department">By Department</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Due Date / Deadline</label>
+                <input type="date" class="form-control" [(ngModel)]="dueDate" />
+              </div>
+
+              <!-- Selected Employees Box -->
+              <div *ngIf="assignmentType === 'Selected'" class="mb-3">
+                <label class="form-label fw-semibold">Select Employees ({{ selectedEmployeeIds.length }} selected)</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm mb-2"
+                  placeholder="Search employee name/code..."
+                  [(ngModel)]="employeeSearchTerm"
+                />
+                <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                  <div *ngFor="let emp of filteredEmployees" class="form-check py-1 border-bottom">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [id]="'emp_' + emp.id"
+                      [checked]="isEmployeeSelected(emp.id)"
+                      (change)="toggleEmployeeSelection(emp.id)"
+                    />
+                    <label class="form-check-label small" [for]="'emp_' + emp.id">
+                      {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }}) - {{ emp.department }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Department Box -->
+              <div *ngIf="assignmentType === 'Department'" class="mb-3">
+                <label class="form-label fw-semibold">Select Departments</label>
+                <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                  <div *ngFor="let d of departments" class="form-check py-1">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [id]="'dept_' + d.id"
+                      [checked]="isDeptSelected(d.name)"
+                      (change)="toggleDeptSelection(d.name)"
+                    />
+                    <label class="form-check-label small" [for]="'dept_' + d.id">
+                      {{ d.name }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                class="btn btn-primary w-100 py-2 mt-2"
+                [disabled]="isAssigning"
+                (click)="submitAssignment()"
+              >
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="isAssigning"></i>
+                <i class="fas fa-paper-plane me-2" *ngIf="!isAssigning"></i>Assign Training Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assignments Table Card -->
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light fw-bold py-3">
+              <i class="fas fa-users-cog me-2 text-primary"></i>Assigned Employees List
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Employee</th>
+                      <th>Department</th>
+                      <th>Assigned Date</th>
+                      <th>Progress</th>
+                      <th>Test Score</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngIf="assignments.length === 0">
+                      <td colspan="6" class="text-center py-4 text-muted">
+                        No employees currently assigned to this training.
+                      </td>
+                    </tr>
+                    <tr *ngFor="let a of assignments">
+                      <td>
+                        <div class="fw-bold text-dark">{{ a.employee_name }}</div>
+                        <div class="small text-muted font-monospace">{{ a.employee_code }}</div>
+                      </td>
+                      <td>{{ a.department }}</td>
+                      <td class="small">{{ a.assigned_at | date:'mediumDate' }}</td>
+                      <td style="min-width: 120px;">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="progress flex-grow-1" style="height: 6px;">
+                            <div class="progress-bar bg-success" [style.width.%]="a.progress_percentage"></div>
+                          </div>
+                          <span class="small">{{ a.progress_percentage }}%</span>
+                        </div>
+                      </td>
+                      <td class="small fw-semibold">{{ a.assessment_score }}</td>
+                      <td>
+                        <span
+                          class="badge"
+                          [ngClass]="{
+                            'bg-success': a.status === 'COMPLETED',
+                            'bg-warning text-dark': a.status === 'IN_PROGRESS',
+                            'bg-secondary': a.status === 'NOT_STARTED'
+                          }"
+                        >
+                          {{ a.status }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

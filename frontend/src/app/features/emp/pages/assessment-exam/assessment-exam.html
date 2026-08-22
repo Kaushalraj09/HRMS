@@ -1,0 +1,177 @@
+<div class="exam-container bg-light min-vh-100 p-4">
+  <!-- Top Exam Header -->
+  <div class="card border-0 shadow-sm mb-4 bg-white sticky-top rounded-3">
+    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+      <div>
+        <h4 class="fw-bold mb-0 text-dark">{{ examData?.assessment_title || 'Assessment Test' }}</h4>
+        <span class="small text-muted">
+          Question {{ currentQuestionIndex + 1 }} of {{ examData?.total_questions || 0 }}
+        </span>
+      </div>
+
+      <!-- Timer Box -->
+      <div class="d-flex align-items-center gap-3">
+        <div class="timer-box bg-dark text-white px-3 py-2 rounded-3 d-flex align-items-center gap-2">
+          <i class="far fa-clock fs-5 text-warning"></i>
+          <div>
+            <div class="small text-white-50" style="font-size: 0.7rem;">TIME REMAINING</div>
+            <div class="fw-bold fs-5 font-monospace text-warning lh-1">{{ formattedTime }}</div>
+          </div>
+        </div>
+
+        <button class="btn btn-success px-4 py-2 fw-semibold" (click)="openSubmitModal()">
+          Submit Assessment
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5 text-muted">
+    <i class="fas fa-spinner fa-spin fs-2 text-primary me-2"></i>Loading assessment questions...
+  </div>
+
+  <!-- Main Exam Content -->
+  <div *ngIf="!isLoading && examData && currentQuestion" class="row g-4">
+    <!-- Left/Center: Active Question Box -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <span class="badge bg-primary-subtle text-primary border px-2 py-1 fs-6">
+              Question {{ currentQuestionIndex + 1 }}
+            </span>
+            <span class="small text-muted fw-semibold">
+              {{ currentQuestion.marks }} Mark(s) • {{ currentQuestion.difficulty }}
+            </span>
+          </div>
+
+          <h5 class="fw-bold text-dark mb-4 lh-base" style="font-size: 1.15rem;">
+            {{ currentQuestion.question_text }}
+          </h5>
+
+          <!-- 4 MCQ Options (Radio Buttons - NO Correct/Incorrect Styling Revealed!) -->
+          <div class="options-container d-flex flex-column gap-3 mb-4">
+            <div
+              *ngFor="let opt of currentQuestion.options"
+              class="option-item p-3 border rounded-3 cursor-pointer"
+              [class.option-selected]="isOptionSelected(currentQuestion.id, opt.id)"
+              (click)="selectOption(currentQuestion.id, opt.id)"
+            >
+              <div class="form-check d-flex align-items-center">
+                <input
+                  class="form-check-input me-3 cursor-pointer"
+                  type="radio"
+                  [name]="'q_radio_' + currentQuestion.id"
+                  [id]="'opt_' + opt.id"
+                  [checked]="isOptionSelected(currentQuestion.id, opt.id)"
+                  (change)="selectOption(currentQuestion.id, opt.id)"
+                />
+                <label class="form-check-label text-dark fs-6 cursor-pointer flex-grow-1" [for]="'opt_' + opt.id">
+                  <strong class="me-2">Option {{ opt.option_key }}:</strong> {{ opt.option_text }}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Navigation Buttons -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+            <button
+              class="btn btn-outline-secondary px-4"
+              [disabled]="currentQuestionIndex === 0"
+              (click)="prevQuestion()"
+            >
+              <i class="fas fa-chevron-left me-2"></i>Previous
+            </button>
+
+            <button
+              *ngIf="currentQuestionIndex < examData.questions.length - 1"
+              class="btn btn-primary px-4"
+              (click)="nextQuestion()"
+            >
+              Next<i class="fas fa-chevron-right ms-2"></i>
+            </button>
+
+            <button
+              *ngIf="currentQuestionIndex === examData.questions.length - 1"
+              class="btn btn-success px-4 fw-semibold"
+              (click)="openSubmitModal()"
+            >
+              Review & Submit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Question Navigator Grid -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light fw-bold py-3">
+          <i class="fas fa-th me-2 text-primary"></i>Question Navigator
+        </div>
+        <div class="card-body p-4">
+          <div class="question-grid mb-4">
+            <button
+              *ngFor="let q of examData.questions; let idx = index"
+              class="btn q-grid-btn"
+              [ngClass]="{
+                'active-q': currentQuestionIndex === idx,
+                'answered-q': isQuestionAnswered(q.id) && currentQuestionIndex !== idx,
+                'unanswered-q': !isQuestionAnswered(q.id) && currentQuestionIndex !== idx
+              }"
+              (click)="goToQuestion(idx)"
+            >
+              {{ idx + 1 }}
+            </button>
+          </div>
+
+          <div class="border-top pt-3">
+            <div class="d-flex align-items-center gap-2 mb-2 small text-muted">
+              <span class="legend-dot bg-success"></span>
+              <span>Answered ({{ answeredCount }})</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-2 small text-muted">
+              <span class="legend-dot bg-secondary"></span>
+              <span>Unanswered ({{ unansweredCount }})</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 small text-muted">
+              <span class="legend-dot bg-primary"></span>
+              <span>Current Question</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Confirmation Dialog Modal -->
+  <div class="modal-backdrop fade show" *ngIf="showConfirmModal"></div>
+  <div class="modal fade show d-block" tabindex="-1" *ngIf="showConfirmModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-3">
+        <div class="modal-header border-bottom py-3">
+          <h5 class="modal-title fw-bold">Submit Assessment?</h5>
+          <button type="button" class="btn-close" (click)="closeSubmitModal()"></button>
+        </div>
+        <div class="modal-body p-4 text-center">
+          <i class="fas fa-question-circle fs-1 text-warning mb-3"></i>
+          <h5>Are you sure you want to submit your test?</h5>
+          <p class="text-muted small mb-3">
+            You have answered <strong>{{ answeredCount }}</strong> of <strong>{{ examData?.total_questions }}</strong> questions.
+            <span *ngIf="unansweredCount > 0" class="text-danger d-block mt-1 fw-bold">
+              {{ unansweredCount }} question(s) are left unanswered.
+            </span>
+          </p>
+        </div>
+        <div class="modal-footer border-top p-3 justify-content-center gap-2">
+          <button type="button" class="btn btn-outline-secondary px-4" (click)="closeSubmitModal()">
+            Cancel & Continue Exam
+          </button>
+          <button type="button" class="btn btn-success px-4 fw-semibold" [disabled]="isSubmitting" (click)="confirmSubmit()">
+            <i class="fas fa-spinner fa-spin me-2" *ngIf="isSubmitting"></i>Yes, Submit Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

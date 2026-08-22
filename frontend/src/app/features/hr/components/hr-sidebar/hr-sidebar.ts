@@ -42,6 +42,14 @@ export class HrSidebar implements OnInit {
           { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
           { label: 'Time Off', icon: 'fas fa-calendar-times', route: '/hr-dashboard/time-off' },
           { label: 'Regularizations', icon: 'fas fa-business-time', route: '/hr-dashboard/regularization-requests' },
+          {
+            label: 'Training & Development',
+            icon: 'fas fa-graduation-cap',
+            children: [
+              { label: 'All Trainings', route: '/hr-dashboard/trainings' },
+              { label: 'Training Reports', route: '/hr-dashboard/training-reports' }
+            ]
+          },
           { label: 'Reports', icon: 'fas fa-file-contract', route: '/hr-dashboard/reports' },
           { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
           { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },

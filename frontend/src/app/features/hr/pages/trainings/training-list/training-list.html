@@ -1,0 +1,250 @@
+<div class="training-container p-4">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-1">Training & Development</h2>
+      <p class="text-muted small mb-0">Manage training programs, upload materials, assign employees, and track assessments.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="create" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Create Training
+      </a>
+      <a routerLink="reports" class="btn btn-outline-secondary">
+        <i class="fas fa-chart-bar me-2"></i>Reports
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4" *ngIf="kpis">
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-primary text-white p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-white-50 small text-uppercase fw-semibold">Total Trainings</div>
+            <div class="fs-3 fw-bold">{{ kpis.total_trainings }}</div>
+          </div>
+          <i class="fas fa-graduation-cap fs-1 text-white-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-success text-white p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-white-50 small text-uppercase fw-semibold">Active</div>
+            <div class="fs-3 fw-bold">{{ kpis.active_trainings }}</div>
+          </div>
+          <i class="fas fa-play-circle fs-1 text-white-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-info text-white p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-white-50 small text-uppercase fw-semibold">Assigned Employees</div>
+            <div class="fs-3 fw-bold">{{ kpis.assigned_employees }}</div>
+          </div>
+          <i class="fas fa-users fs-1 text-white-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-purple text-white p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-white-50 small text-uppercase fw-semibold">Completed</div>
+            <div class="fs-3 fw-bold">{{ kpis.completed_trainings }}</div>
+          </div>
+          <i class="fas fa-check-circle fs-1 text-white-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-warning text-dark p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small text-uppercase fw-semibold">Pending</div>
+            <div class="fs-3 fw-bold">{{ kpis.pending_trainings }}</div>
+          </div>
+          <i class="fas fa-clock fs-1 text-black-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-gradient-danger text-white p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-white-50 small text-uppercase fw-semibold">Avg Score</div>
+            <div class="fs-3 fw-bold">{{ kpis.avg_assessment_score }}%</div>
+          </div>
+          <i class="fas fa-star fs-1 text-white-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar Card -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0">
+              <i class="fas fa-search text-muted"></i>
+            </span>
+            <input
+              type="text"
+              class="form-control border-start-0 ps-0"
+              placeholder="Search training title or code..."
+              [(ngModel)]="searchTerm"
+              (keyup.enter)="onSearch()"
+            />
+          </div>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedCategory" (change)="onSearch()">
+            <option value="">All Categories</option>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedStatus" (change)="onSearch()">
+            <option value="">All Statuses</option>
+            <option *ngFor="let st of statuses" [value]="st">{{ st }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedDepartment" (change)="onSearch()">
+            <option value="">All Departments</option>
+            <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button class="btn btn-primary w-100" (click)="onSearch()">Filter</button>
+          <button class="btn btn-outline-secondary" (click)="resetFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trainings Table Card -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Title & Code</th>
+              <th>Category</th>
+              <th>Trainer</th>
+              <th>Duration</th>
+              <th>Assignments</th>
+              <th>Completion</th>
+              <th>Assessment</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="isLoading">
+              <td colspan="9" class="text-center py-4 text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i>Loading training programs...
+              </td>
+            </tr>
+            <tr *ngIf="!isLoading && trainings.length === 0">
+              <td colspan="9" class="text-center py-5 text-muted">
+                <i class="fas fa-folder-open fs-2 mb-2"></i>
+                <p class="mb-0">No training programs found matching criteria.</p>
+              </td>
+            </tr>
+            <tr *ngFor="let item of trainings">
+              <td>
+                <div class="fw-bold text-dark">{{ item.title }}</div>
+                <div class="badge bg-light text-secondary border font-monospace small">{{ item.code }}</div>
+              </td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                  {{ item.category }}
+                </span>
+              </td>
+              <td>{{ item.trainer_name || 'HR Team' }}</td>
+              <td>{{ item.estimated_duration_minutes }} mins</td>
+              <td>
+                <span class="fw-bold">{{ item.assigned_count || 0 }}</span> Employees
+              </td>
+              <td style="min-width: 140px;">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height: 6px;">
+                    <div
+                      class="progress-bar bg-success"
+                      role="progressbar"
+                      [style.width.%]="item.completion_percentage || 0"
+                    ></div>
+                  </div>
+                  <span class="small text-muted">{{ item.completion_percentage || 0 }}%</span>
+                </div>
+              </td>
+              <td>
+                <span *ngIf="item.has_assessment" class="badge bg-success-subtle text-success border">
+                  <i class="fas fa-check-circle me-1"></i>Configured
+                </span>
+                <span *ngIf="!item.has_assessment" class="badge bg-warning-subtle text-warning border">
+                  <i class="fas fa-exclamation-circle me-1"></i>Pending
+                </span>
+              </td>
+              <td>
+                <span
+                  class="badge px-2 py-1"
+                  [ngClass]="{
+                    'bg-success': item.status === 'Published',
+                    'bg-warning text-dark': item.status === 'Draft',
+                    'bg-secondary': item.status === 'Archived'
+                  }"
+                >
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="dropdown">
+                  <button
+                    class="btn btn-sm btn-light border dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <a class="dropdown-menu-item dropdown-item" [routerLink]="[item.id, 'manage']">
+                        <i class="fas fa-tasks text-primary me-2"></i>Manage Content & Assign
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-menu-item dropdown-item" [routerLink]="[item.id, 'assessment']">
+                        <i class="fas fa-file-signature text-info me-2"></i>Assessment Builder
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-menu-item dropdown-item" [routerLink]="[item.id, 'edit']">
+                        <i class="fas fa-edit text-warning me-2"></i>Edit Training
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <button class="dropdown-item text-danger" (click)="archiveTraining(item.id)">
+                        <i class="fas fa-archive me-2"></i>Archive
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

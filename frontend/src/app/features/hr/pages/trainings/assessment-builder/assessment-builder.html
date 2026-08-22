@@ -1,0 +1,200 @@
+<div class="container-fluid p-4">
+  <div class="d-flex align-items-center mb-4">
+    <a [routerLink]="['/hr-dashboard/trainings', trainingId, 'manage']" class="btn btn-outline-secondary btn-sm me-3">
+      <i class="fas fa-arrow-left me-1"></i>Back to Training
+    </a>
+    <div>
+      <h3 class="fw-bold mb-0">Assessment Builder</h3>
+      <p class="text-muted small mb-0">Create MCQ assessment test, configure duration & passing score, and add 4-option questions.</p>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <i class="fas fa-spinner fa-spin fs-3 text-primary me-2"></i>Loading assessment configuration...
+  </div>
+
+  <div *ngIf="!isLoading">
+    <div class="row g-4">
+      <!-- Left Column: Assessment Settings Form -->
+      <div class="col-lg-5">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-light fw-bold py-3">
+            <i class="fas fa-cog me-2 text-primary"></i>Assessment Configuration
+          </div>
+          <div class="card-body p-4">
+            <form [formGroup]="settingsForm" (ngSubmit)="saveAssessmentSettings()">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Assessment Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="title" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Instructions for Employee</label>
+                <textarea class="form-control" rows="2" formControlName="instructions"></textarea>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Duration (Minutes)</label>
+                  <input type="number" class="form-control" formControlName="duration_minutes" min="1" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Passing %</label>
+                  <input type="number" class="form-control" formControlName="passing_percentage" min="0" max="100" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Allowed Attempts</label>
+                <input type="number" class="form-control" formControlName="max_attempts" min="1" />
+              </div>
+
+              <div class="border rounded p-3 bg-light mb-3">
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" formControlName="randomize_questions" id="randQ" />
+                  <label class="form-check-label fw-semibold small" for="randQ">Randomize Question Order</label>
+                </div>
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" formControlName="randomize_options" id="randO" />
+                  <label class="form-check-label fw-semibold small" for="randO">Randomize Options Order</label>
+                </div>
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" formControlName="show_result" id="showR" />
+                  <label class="form-check-label fw-semibold small" for="showR">Show Score Result After Submit</label>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="show_correct_answers" id="showA" />
+                  <label class="form-check-label fw-semibold small" for="showA">Allow Answer Key Review After Submit</label>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 py-2" [disabled]="isSavingAssessment">
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="isSavingAssessment"></i>
+                <i class="fas fa-save me-2" *ngIf="!isSavingAssessment"></i>Save Assessment Settings
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Question Builder & List -->
+      <div class="col-lg-7">
+        <!-- New MCQ Question Form Card -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-light fw-bold py-3">
+            <i class="fas fa-plus-circle me-2 text-primary"></i>Add MCQ Question (4 Options Required)
+          </div>
+          <div class="card-body p-4">
+            <form [formGroup]="questionForm" (ngSubmit)="addQuestion()">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Question Text <span class="text-danger">*</span></label>
+                <textarea
+                  class="form-control"
+                  rows="2"
+                  formControlName="question_text"
+                  placeholder="e.g. What is the immediate first action to take during a workplace fire emergency?"
+                ></textarea>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Difficulty</label>
+                  <select class="form-select" formControlName="difficulty">
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Marks</label>
+                  <input type="number" class="form-control" formControlName="marks" min="0.5" step="0.5" />
+                </div>
+              </div>
+
+              <!-- Exactly 4 Options List -->
+              <label class="form-label fw-semibold">Options & Correct Answer Selection <span class="text-danger">*</span></label>
+              <div class="border rounded p-3 bg-light mb-3" formArrayName="options">
+                <div *ngFor="let optGroup of optionsArray.controls; let i = index" [formGroupName]="i" class="mb-2">
+                  <div class="input-group">
+                    <span class="input-group-text bg-white">
+                      <input
+                        type="radio"
+                        name="correctRadio"
+                        [checked]="selectedCorrectOptionIndex === i"
+                        (change)="setCorrectOption(i)"
+                      />
+                      <span class="ms-2 fw-bold text-primary">Option {{ optGroup.get('option_key')?.value }}</span>
+                    </span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      formControlName="option_text"
+                      [placeholder]="'Enter text for option ' + optGroup.get('option_key')?.value"
+                    />
+                  </div>
+                </div>
+                <div class="form-text small text-muted">
+                  <i class="fas fa-info-circle me-1"></i>Select the radio button next to the single correct option.
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Explanation (Optional)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="explanation"
+                  placeholder="Shown during review if answer key review is enabled"
+                />
+              </div>
+
+              <button type="submit" class="btn btn-success w-100 py-2" [disabled]="isAddingQuestion">
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="isAddingQuestion"></i>
+                <i class="fas fa-plus me-2" *ngIf="!isAddingQuestion"></i>Add Question to Assessment
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Questions List Card -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-list-ol me-2 text-primary"></i>Configured Questions ({{ assessment?.questions?.length || 0 }})</span>
+          </div>
+          <div class="card-body p-0">
+            <div *ngIf="!assessment?.questions || assessment?.questions?.length === 0" class="text-center py-4 text-muted">
+              No questions added yet. Use the form above to build MCQ questions.
+            </div>
+
+            <div *ngFor="let q of assessment?.questions; let idx = index" class="border-bottom p-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="fw-bold fs-6">
+                  Q{{ idx + 1 }}. {{ q.question_text }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge bg-light text-dark border">{{ q.marks }} Mark(s)</span>
+                  <span class="badge bg-secondary-subtle text-secondary border">{{ q.difficulty }}</span>
+                  <button class="btn btn-sm btn-outline-danger" (click)="q.id && deleteQuestion(q.id)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row g-2 mt-2">
+                <div *ngFor="let opt of q.options" class="col-md-6">
+                  <div
+                    class="p-2 border rounded small d-flex align-items-center justify-content-between"
+                    [ngClass]="opt.is_correct ? 'bg-success-subtle border-success text-success fw-bold' : 'bg-white text-dark'"
+                  >
+                    <span><strong>Option {{ opt.option_key }}:</strong> {{ opt.option_text }}</span>
+                    <i *ngIf="opt.is_correct" class="fas fa-check-circle text-success ms-2"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

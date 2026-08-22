@@ -1,0 +1,16 @@
+.nav-tabs .nav-link {
+  color: #6b7280;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 0.75rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #4f46e5;
+  border-bottom: 2px solid #4f46e5;
+  background: transparent;
+}
+
+.card {
+  border-radius: 12px;
+}

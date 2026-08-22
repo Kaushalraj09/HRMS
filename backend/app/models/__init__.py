@@ -16,6 +16,17 @@ from app.models.document import (
     EmployeeDocumentVersion,
     DocumentAuditLog,
 )
+from app.models.training import (
+    Training,
+    TrainingMaterial,
+    TrainingAssignment,
+    TrainingMaterialProgress,
+    Assessment,
+    AssessmentQuestion,
+    AssessmentOption,
+    AssessmentAttempt,
+    AssessmentAnswer,
+)
 
 __all__ = [
     "Attendance",
@@ -46,5 +57,15 @@ __all__ = [
     "EmployeeDocument",
     "EmployeeDocumentVersion",
     "DocumentAuditLog",
+    "Training",
+    "TrainingMaterial",
+    "TrainingAssignment",
+    "TrainingMaterialProgress",
+    "Assessment",
+    "AssessmentQuestion",
+    "AssessmentOption",
+    "AssessmentAnswer",
+    "AssessmentAttempt",
 ]
+
 

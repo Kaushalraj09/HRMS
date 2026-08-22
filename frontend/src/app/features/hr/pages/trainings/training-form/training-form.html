@@ -1,0 +1,123 @@
+<div class="container-fluid p-4">
+  <div class="d-flex align-items-center mb-4">
+    <a routerLink="/hr-dashboard/trainings" class="btn btn-outline-secondary btn-sm me-3">
+      <i class="fas fa-arrow-left me-1"></i>Back
+    </a>
+    <div>
+      <h2 class="fw-bold mb-0">{{ isEditMode ? 'Edit Training Program' : 'Create New Training Program' }}</h2>
+      <p class="text-muted small mb-0">Fill in program details, schedule, category, and trainer information.</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm col-lg-9 col-xl-8 mx-auto">
+    <div class="card-body p-4">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <i class="fas fa-spinner fa-spin fs-3 text-primary me-2"></i>Loading details...
+      </div>
+
+      <form *ngIf="!isLoading" [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- Section: Basic Information -->
+        <h5 class="fw-bold border-bottom pb-2 mb-3 text-primary">
+          <i class="fas fa-info-circle me-2"></i>Basic Information
+        </h5>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">Training Title <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              formControlName="title"
+              placeholder="e.g. Workplace Safety & Emergency Procedures"
+            />
+            <div *ngIf="form.get('title')?.touched && form.get('title')?.invalid" class="text-danger small mt-1">
+              Title is required (max 200 characters).
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Training Code <span class="text-danger">*</span></label>
+            <input type="text" class="form-control font-monospace" formControlName="code" placeholder="e.g. TRN-1001" />
+            <div *ngIf="form.get('code')?.touched && form.get('code')?.invalid" class="text-danger small mt-1">
+              Code is required.
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+            <select class="form-select" formControlName="category">
+              <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Trainer / Instructor</label>
+            <input type="text" class="form-control" formControlName="trainer_name" placeholder="e.g. HR Safety Team / External Expert" />
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Description</label>
+          <textarea
+            class="form-control"
+            rows="3"
+            formControlName="description"
+            placeholder="Brief overview of what this training covers..."
+          ></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Learning Objective</label>
+          <textarea
+            class="form-control"
+            rows="2"
+            formControlName="learning_objective"
+            placeholder="What employees will achieve after completing this program..."
+          ></textarea>
+        </div>
+
+        <!-- Section: Schedule & Configuration -->
+        <h5 class="fw-bold border-bottom pb-2 mb-3 text-primary">
+          <i class="fas fa-calendar-alt me-2"></i>Schedule & Configuration
+        </h5>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Estimated Duration (Minutes) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" formControlName="estimated_duration_minutes" min="1" />
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Start Date</label>
+            <input type="date" class="form-control" formControlName="start_date" />
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">End Date / Deadline</label>
+            <input type="date" class="form-control" formControlName="end_date" />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+          <select class="form-select" formControlName="status">
+            <option value="Draft">Draft (Only visible to HR)</option>
+            <option value="Published">Published (Active & Assignable)</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+          <a routerLink="/hr-dashboard/trainings" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4" [disabled]="isSubmitting">
+            <i class="fas fa-spinner fa-spin me-1" *ngIf="isSubmitting"></i>
+            {{ isEditMode ? 'Save Changes' : 'Create & Proceed to Content' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
