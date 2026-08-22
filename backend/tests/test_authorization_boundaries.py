@@ -65,7 +65,9 @@ def test_punch_in_own_attendance_success(client, db_session):
 
     payload = {
         "employee_id": emp1.id,
-        "workMode": "Office"
+        "workMode": "Office",
+        "latitude": 15.8716667,
+        "longitude": 74.5085833
     }
     
     response = client.post("/api/v1/attendance/punch-in", json=payload)

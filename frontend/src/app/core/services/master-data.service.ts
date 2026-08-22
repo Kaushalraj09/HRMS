@@ -49,8 +49,12 @@ function workLocationToBackend(payload: Partial<WorkLocation>, existingCode?: st
   const { address, ...rest } = payload as any;
   return {
     ...rest,
-    description: address ?? null,
+    description: address ?? rest.description ?? null,
     code: existingCode ?? rest.code ?? generateCode('LOC'),
+    location_type: rest.location_type ?? 'office',
+    latitude: rest.latitude != null ? Number(rest.latitude) : null,
+    longitude: rest.longitude != null ? Number(rest.longitude) : null,
+    geofence_radius_meters: rest.geofence_radius_meters != null ? Number(rest.geofence_radius_meters) : 40.0,
     is_active: rest.is_active ?? true,
   };
 }
@@ -61,6 +65,11 @@ function workLocationFromBackend(item: any): WorkLocation {
     name: item.name,
     code: item.code,
     address: item.description ?? item.address ?? undefined,
+    description: item.description ?? undefined,
+    location_type: item.location_type ?? 'office',
+    latitude: item.latitude != null ? Number(item.latitude) : undefined,
+    longitude: item.longitude != null ? Number(item.longitude) : undefined,
+    geofence_radius_meters: item.geofence_radius_meters != null ? Number(item.geofence_radius_meters) : 40.0,
     is_active: item.is_active ?? true,
   };
 }

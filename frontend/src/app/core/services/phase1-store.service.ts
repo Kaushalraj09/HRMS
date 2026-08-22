@@ -1037,7 +1037,7 @@ export class Phase1StoreService {
         dob: '1998-03-22',
         maritalStatus: 'Single',
         bloodGroup: 'B+',
-        workLocation: 'Indore Office',
+        workLocation: 'Belagavi ICCC Office',
         shiftType: 'General Shift',
         doj: '2025-10-01'
       },
@@ -1063,7 +1063,7 @@ export class Phase1StoreService {
         dob: '1997-08-14',
         maritalStatus: 'Single',
         bloodGroup: 'O+',
-        workLocation: 'Indore Office',
+        workLocation: 'Belagavi ICCC Office',
         shiftType: 'General Shift',
         doj: '2025-11-10'
       },

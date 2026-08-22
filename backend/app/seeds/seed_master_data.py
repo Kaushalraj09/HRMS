@@ -117,14 +117,45 @@ def seed_master_data(db: Session):
 
     # 4. Work Locations
     locations = [
-        {"name": "Indore Office", "code": "IND_OFF"},
-        {"name": "Remote Home Office", "code": "REMOTE_OFF"},
-        {"name": "Hybrid", "code": "HYBRID_OFF"}
+        {
+            "name": "Belagavi ICCC Office",
+            "code": "BEL_OFF",
+            "location_type": "office",
+            "latitude": 15.8716667,
+            "longitude": 74.5085833,
+            "geofence_radius_meters": 40.0,
+            "description": "Belagavi ICCC Office"
+        },
+        {
+            "name": "Hubli ICCC Office",
+            "code": "HUB_OFF",
+            "location_type": "office",
+            "latitude": 15.3547222,
+            "longitude": 75.1341667,
+            "geofence_radius_meters": 40.0,
+            "description": "Hubli ICCC Office"
+        },
+        {
+            "name": "Remote",
+            "code": "REMOTE_OFF",
+            "location_type": "remote",
+            "latitude": None,
+            "longitude": None,
+            "geofence_radius_meters": 0.0,
+            "description": "Remote Working"
+        }
     ]
     for loc in locations:
-        if not db.query(WorkLocation).filter(WorkLocation.code == loc["code"]).first():
-            db.add(WorkLocation(name=loc["name"], code=loc["code"]))
+        existing = db.query(WorkLocation).filter(WorkLocation.code == loc["code"]).first()
+        if not existing:
+            existing = db.query(WorkLocation).filter(WorkLocation.name == loc["name"]).first()
+        if not existing:
+            db.add(WorkLocation(**loc))
             print(f"Added work location: {loc['name']}")
+        else:
+            for k, v in loc.items():
+                setattr(existing, k, v)
+            print(f"Updated work location: {loc['name']}")
 
     # 5. Leave Types
     leave_types = [

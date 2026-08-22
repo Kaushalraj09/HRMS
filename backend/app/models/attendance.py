@@ -32,6 +32,9 @@ class Attendance(Base):
     is_working = Column(Integer, default=0) # 0 = Not Working, 1 = Working
     
     # Location tracking
+    work_location_id = Column(Integer, ForeignKey("work_locations.id"), nullable=True, index=True)
+    work_location_name = Column(String(150), nullable=True)
+    geofence_distance_meters = Column(Float, nullable=True)
     punch_in_latitude = Column(Float, nullable=True)
     punch_in_longitude = Column(Float, nullable=True)
     punch_in_address = Column(String(500), nullable=True)
@@ -59,6 +62,7 @@ class Attendance(Base):
     # Relationships
     employee = relationship("Employee", backref="attendance_records")
     shift = relationship("Shift", foreign_keys=[shift_id])
+    work_location = relationship("WorkLocation", foreign_keys=[work_location_id])
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

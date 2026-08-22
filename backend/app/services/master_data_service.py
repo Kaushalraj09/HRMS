@@ -134,6 +134,10 @@ def create_work_location(db: Session, payload) -> WorkLocation:
         name=payload.name,
         code=payload.code,
         description=payload.description,
+        location_type=getattr(payload, "location_type", "office") or "office",
+        latitude=getattr(payload, "latitude", None),
+        longitude=getattr(payload, "longitude", None),
+        geofence_radius_meters=getattr(payload, "geofence_radius_meters", 40.0) or 40.0,
         is_active=payload.is_active
     )
     db.add(db_loc)
@@ -149,6 +153,14 @@ def update_work_location(db: Session, loc_id: int, payload) -> WorkLocation:
     db_loc.name = payload.name
     db_loc.code = payload.code
     db_loc.description = payload.description
+    if hasattr(payload, "location_type") and payload.location_type is not None:
+        db_loc.location_type = payload.location_type
+    if hasattr(payload, "latitude"):
+        db_loc.latitude = payload.latitude
+    if hasattr(payload, "longitude"):
+        db_loc.longitude = payload.longitude
+    if hasattr(payload, "geofence_radius_meters") and payload.geofence_radius_meters is not None:
+        db_loc.geofence_radius_meters = payload.geofence_radius_meters
     db_loc.is_active = payload.is_active
     db.commit()
     db.refresh(db_loc)

@@ -160,7 +160,9 @@
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Address</th>
+                <th>Type</th>
+                <th>Coordinates (Lat, Lon)</th>
+                <th>Geofence Radius</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -168,7 +170,9 @@
             <tbody>
               <tr *ngFor="let item of filteredLocations" class="table-row-hover">
                 <td><span class="font-bold">{{ item.name }}</span></td>
-                <td>{{ item.address || '-' }}</td>
+                <td><span class="badge-type">{{ item.location_type || 'office' }}</span></td>
+                <td>{{ item.latitude != null ? item.latitude + ', ' + item.longitude : '-' }}</td>
+                <td>{{ item.geofence_radius_meters != null ? item.geofence_radius_meters + 'm' : '40m' }}</td>
                 <td>
                   <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
                     {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -179,7 +183,7 @@
                 </td>
               </tr>
               <tr *ngIf="filteredLocations.length === 0">
-                <td colspan="4" class="empty-state">No work locations found matching the filter criteria.</td>
+                <td colspan="6" class="empty-state">No work locations found matching the filter criteria.</td>
               </tr>
             </tbody>
           </table>
@@ -497,16 +501,69 @@
         </div>
 
         <!-- Location details -->
-        <div class="form-group mt-4" *ngIf="activeTab === 'locations'">
-          <label for="modal-address">Address</label>
-          <input 
-            id="modal-address"
-            type="text" 
-            [(ngModel)]="formModel.address" 
-            name="address" 
-            class="premium-input" 
-            placeholder="Enter full physical address..."
-          />
+        <div *ngIf="activeTab === 'locations'">
+          <div class="form-group mt-4">
+            <label for="modal-address">Address / Description</label>
+            <input 
+              id="modal-address"
+              type="text" 
+              [(ngModel)]="formModel.address" 
+              name="address" 
+              class="premium-input" 
+              placeholder="Enter office description or physical address..."
+            />
+          </div>
+          <div class="shift-row mt-4">
+            <div class="form-group">
+              <label for="modal-location-type">Location Type</label>
+              <select 
+                id="modal-location-type"
+                [(ngModel)]="formModel.location_type" 
+                name="location_type" 
+                class="premium-input"
+              >
+                <option value="office">Office</option>
+                <option value="remote">Remote</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal-geofence-radius">Geofence Radius (meters)</label>
+              <input 
+                id="modal-geofence-radius"
+                type="number" 
+                [(ngModel)]="formModel.geofence_radius_meters" 
+                name="geofence_radius_meters" 
+                class="premium-input" 
+                placeholder="40"
+              />
+            </div>
+          </div>
+          <div class="shift-row mt-4" *ngIf="formModel.location_type !== 'remote'">
+            <div class="form-group">
+              <label for="modal-latitude">Latitude</label>
+              <input 
+                id="modal-latitude"
+                type="number" 
+                step="0.0000001"
+                [(ngModel)]="formModel.latitude" 
+                name="latitude" 
+                class="premium-input" 
+                placeholder="e.g. 15.8716667"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modal-longitude">Longitude</label>
+              <input 
+                id="modal-longitude"
+                type="number" 
+                step="0.0000001"
+                [(ngModel)]="formModel.longitude" 
+                name="longitude" 
+                class="premium-input" 
+                placeholder="e.g. 74.5085833"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Leave details -->

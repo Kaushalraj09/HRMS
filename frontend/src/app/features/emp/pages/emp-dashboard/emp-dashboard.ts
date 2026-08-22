@@ -16,7 +16,8 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
-import { Holiday } from '../../../../core/models/master-data.model';
+import { MyProfileService } from '../../../../core/services/profile.service';
+import { Holiday, WorkLocation } from '../../../../core/models/master-data.model';
 import {
   EmployeeAttendanceSummaryItem,
   EmployeeTimelineEvent,
@@ -302,6 +303,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
   public pendingPunchLongitude: number | undefined;
   public pendingPunchAddress: string | undefined;
   public isLocationLoading = false;
+  public masterWorkLocations: WorkLocation[] = [];
+  public assignedWorkLocationName = '';
 
   latestNews_content = [
     {
@@ -341,6 +344,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly timeEngine: TimeEngineService,
     private readonly masterDataService: MasterDataService,
     private readonly documentService: DocumentService,
+    private readonly myProfileService: MyProfileService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
@@ -842,64 +846,92 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   fetchCurrentLocation(): void {
     this.isLocationLoading = true;
-    if (!this.pendingPunchAddress) {
-      this.pendingPunchAddress = 'AiVan 360 Office, Delhi';
-    }
+    this.punchMessage = 'Checking your office location...';
     this.cdr.detectChanges();
 
-    const fallbackToIp = () => {
-      this.subscriptions.add(
-        this.attendanceService.getIpLocation().subscribe({
-          next: (res: any) => {
-            if (res && res.latitude && res.longitude) {
-              this.pendingPunchLatitude = res.latitude;
-              this.pendingPunchLongitude = res.longitude;
-              
-              const city = res.cityName || '';
-              const region = res.regionName || '';
-              const country = res.countryName || '';
-              const loc = [city, region, country].filter(val => !!val).join(', ');
-              if (loc) {
-                this.pendingPunchAddress = loc;
-              }
-            }
-            this.isLocationLoading = false;
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.isLocationLoading = false;
-            this.cdr.detectChanges();
-          }
-        })
+    const checkGeofenceAndProceed = (lat: number, lon: number) => {
+      this.pendingPunchLatitude = lat;
+      this.pendingPunchLongitude = lon;
+
+      const assignedName = (this.assignedWorkLocationName || '').trim();
+      const matchedLoc = this.masterWorkLocations.find(
+        (l) => l.name.toLowerCase() === assignedName.toLowerCase()
       );
+
+      const locType = matchedLoc?.location_type || (assignedName.toLowerCase() === 'remote' ? 'remote' : 'office');
+
+      if (locType === 'remote') {
+        this.isLocationLoading = false;
+        this.punchMessage = '';
+        this.cdr.detectChanges();
+        return;
+      }
+
+      if (matchedLoc && matchedLoc.latitude != null && matchedLoc.longitude != null) {
+        const radius = matchedLoc.geofence_radius_meters || 40;
+        const dist = this.calculateDistanceMeters(lat, lon, matchedLoc.latitude, matchedLoc.longitude);
+        if (dist > radius) {
+          this.punchMessage = `You are outside the allowed office area. Please move within ${Math.round(radius)} meters of ${matchedLoc.name} to mark attendance.`;
+          this.isLocationLoading = false;
+          this.cdr.detectChanges();
+          return;
+        }
+      }
+
+      this.isLocationLoading = false;
+      this.punchMessage = '';
+      this.cdr.detectChanges();
     };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          this.pendingPunchLatitude = pos.coords.latitude;
-          this.pendingPunchLongitude = pos.coords.longitude;
+          checkGeofenceAndProceed(pos.coords.latitude, pos.coords.longitude);
           this.attendanceService.reverseGeocode(pos.coords.latitude, pos.coords.longitude).subscribe({
             next: (geo: any) => {
               if (geo?.display_name) {
                 this.pendingPunchAddress = geo.display_name;
               }
-              this.isLocationLoading = false;
               this.cdr.detectChanges();
             },
-            error: () => {
-              fallbackToIp();
-            }
+            error: () => {}
           });
         },
-        () => {
-          fallbackToIp();
+        (err) => {
+          console.warn('GPS location error:', err);
+          const assignedName = (this.assignedWorkLocationName || '').trim();
+          const matchedLoc = this.masterWorkLocations.find(
+            (l) => l.name.toLowerCase() === assignedName.toLowerCase()
+          );
+          const locType = matchedLoc?.location_type || (assignedName.toLowerCase() === 'remote' ? 'remote' : 'office');
+          if (locType === 'office') {
+            this.punchMessage = `GPS location access is required to mark attendance for ${assignedName || 'your office'}. Please allow location permissions and try again.`;
+          } else {
+            this.punchMessage = '';
+          }
+          this.isLocationLoading = false;
+          this.cdr.detectChanges();
         },
-        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      fallbackToIp();
+      this.isLocationLoading = false;
+      this.punchMessage = 'Geolocation is not supported by your browser.';
+      this.cdr.detectChanges();
     }
+  }
+
+  private calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000.0;
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   refetchLocation(): void {
@@ -1450,6 +1482,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.allTimesheets = timesheets || [];
         this.allTimeoffs = timeoffs.items || [];
         this.masterHolidays = masterData?.holidays || [];
+        this.masterWorkLocations = masterData?.workLocations || [];
+
+        this.subscriptions.add(
+          this.myProfileService.getProfile().subscribe({
+            next: (prof: any) => {
+              this.assignedWorkLocationName = prof?.employmentDetails?.workLocation || prof?.employee?.workLocation || '';
+              this.cdr.detectChanges();
+            },
+            error: () => {}
+          })
+        );
 
         const rawTimeoffItems = this.allTimeoffs;
         this.recentTimeOffRequests = rawTimeoffItems.slice(0, 5);

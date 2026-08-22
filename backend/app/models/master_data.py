@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Time, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Time, ForeignKey, Float
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -85,6 +85,10 @@ class WorkLocation(Base):
     name = Column(String(150), nullable=False, unique=True)
     code = Column(String(30), nullable=False, unique=True)
     description = Column(String(255), nullable=True)
+    location_type = Column(String(50), nullable=False, default="office")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    geofence_radius_meters = Column(Float, nullable=False, default=40.0)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

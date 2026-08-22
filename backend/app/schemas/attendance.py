@@ -92,6 +92,9 @@ class AttendanceResponse(BaseModel):
     work_mode: WorkMode = Field(alias="workMode")
     
     # Location fields - optional
+    work_location_id: Optional[int] = Field(default=None, alias="workLocationId")
+    work_location_name: Optional[str] = Field(default=None, alias="workLocationName")
+    geofence_distance_meters: Optional[float] = Field(default=None, alias="geofenceDistanceMeters")
     punch_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
     punch_in_longitude: Optional[float] = Field(default=None, alias="punchInLongitude")
     punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
@@ -174,6 +177,9 @@ class TodayAttendanceState(BaseModel):
     work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
     
     # Optional punch times and location
+    work_location_id: Optional[int] = Field(default=None, alias="workLocationId")
+    work_location_name: Optional[str] = Field(default=None, alias="workLocationName")
+    geofence_distance_meters: Optional[float] = Field(default=None, alias="geofenceDistanceMeters")
     punch_in: Optional[time] = Field(default=None, alias="punchIn")
     punch_out: Optional[time] = Field(default=None, alias="punchOut")
     punch_in_latitude: Optional[float] = Field(default=None, alias="punchInLatitude")
@@ -247,6 +253,9 @@ class AttendanceRecord(BaseModel):
     late_minutes: int = Field(default=0, alias="lateMinutes")
     early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
     work_mode: Optional[WorkMode] = Field(None, alias="workMode")
+    work_location_id: Optional[int] = Field(default=None, alias="workLocationId")
+    work_location_name: Optional[str] = Field(default=None, alias="workLocationName")
+    geofence_distance_meters: Optional[float] = Field(default=None, alias="geofenceDistanceMeters")
     punch_in_address: Optional[str] = Field(default=None, alias="punchInAddress")
     punch_out_address: Optional[str] = Field(default=None, alias="punchOutAddress")
     punch_in_image: Optional[str] = Field(default=None, alias="punchInImage")

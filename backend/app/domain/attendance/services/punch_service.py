@@ -11,6 +11,7 @@ from app.domain.overtime.overtime_service import OvertimeService
 from app.domain.events.dispatcher import EventDispatcher
 from app.domain.events import types as ev_types
 from app.services.attendance_service import get_timeoff_duration_for_date, log_audit_trail_sync
+from app.core.geofence import validate_employee_geofence
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,13 @@ class PunchService:
                         }
                     )
             
+            # Geofence validation
+            employee = db.query(Employee).filter(Employee.id == employee_id).first()
+            if not employee:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
+                
+            geofence_data = validate_employee_geofence(db, employee, latitude, longitude)
+            
             # Create or update record
             shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
             
@@ -118,6 +126,9 @@ class PunchService:
             attendance.punch_in_longitude = longitude
             attendance.punch_in_address = address
             attendance.punch_in_image = image
+            attendance.work_location_id = geofence_data.get("work_location_id")
+            attendance.work_location_name = geofence_data.get("work_location_name")
+            attendance.geofence_distance_meters = geofence_data.get("distance_meters")
             
             db.commit()
         except Exception as e:

@@ -67,6 +67,10 @@ class WorkLocationBase(BaseModel):
     name: str = Field(..., max_length=150)
     code: str = Field(..., max_length=30)
     description: Optional[str] = Field(None, max_length=255)
+    location_type: str = Field(default="office", alias="location_type")
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    geofence_radius_meters: float = Field(default=40.0, alias="geofence_radius_meters")
     is_active: bool = True
 
 class WorkLocationCreate(WorkLocationBase):

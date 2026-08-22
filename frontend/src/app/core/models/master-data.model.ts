@@ -51,6 +51,11 @@ export interface WorkLocation {
   code?: string;
   /** Mapped from backend `description` field */
   address?: string;
+  description?: string;
+  location_type?: 'office' | 'remote' | string;
+  latitude?: number;
+  longitude?: number;
+  geofence_radius_meters?: number;
   is_active: boolean;
 }
 
