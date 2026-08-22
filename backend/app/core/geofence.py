@@ -113,7 +113,7 @@ def validate_employee_geofence(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "success": False,
-                "message": f"You are outside the allowed office area. Please move within {int(allowed_radius)} meters of {work_location.name} to mark attendance.",
+                "message": f"You are outside the assigned office location ({work_location.name}) to mark attendance.",
                 "office": work_location.name,
                 "distance_meters": round(distance_meters, 1),
                 "allowed_radius_meters": int(allowed_radius)

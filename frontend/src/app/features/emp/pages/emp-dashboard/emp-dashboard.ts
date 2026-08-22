@@ -871,7 +871,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
         const radius = matchedLoc.geofence_radius_meters || 40;
         const dist = this.calculateDistanceMeters(lat, lon, matchedLoc.latitude, matchedLoc.longitude);
         if (dist > radius) {
-          this.punchMessage = `You are outside the allowed office area. Please move within ${Math.round(radius)} meters of ${matchedLoc.name} to mark attendance.`;
+          this.punchMessage = `You are outside the assigned office location (${matchedLoc.name}) to mark attendance.`;
           this.isLocationLoading = false;
           this.cdr.detectChanges();
           return;
