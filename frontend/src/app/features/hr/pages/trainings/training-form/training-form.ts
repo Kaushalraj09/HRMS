@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
@@ -29,7 +29,9 @@ export class TrainingFormComponent implements OnInit {
     private fb: FormBuilder,
     private trainingService: TrainingService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -40,6 +42,18 @@ export class TrainingFormComponent implements OnInit {
       this.trainingId = +idParam;
       this.loadTraining(this.trainingId);
     }
+  }
+
+  getBasePrefix(): string {
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+  }
+
+  getTrainingsListRoute(): string {
+    return `${this.getBasePrefix()}/trainings`;
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   private initForm(): void {
@@ -60,6 +74,7 @@ export class TrainingFormComponent implements OnInit {
 
   loadTraining(id: number): void {
     this.isLoading = true;
+    this.cdr.detectChanges();
     this.trainingService.getTrainingById(id).subscribe({
       next: (t) => {
         this.form.patchValue({
@@ -75,10 +90,12 @@ export class TrainingFormComponent implements OnInit {
           status: t.status
         });
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         alert('Failed to load training details: ' + (err.error?.detail || err.message));
-        this.router.navigate(['/hr-dashboard/trainings']);
+        this.router.navigate([this.getTrainingsListRoute()]);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -96,7 +113,7 @@ export class TrainingFormComponent implements OnInit {
       this.trainingService.updateTraining(this.trainingId, payload).subscribe({
         next: () => {
           this.isSubmitting = false;
-          this.router.navigate(['/hr-dashboard/trainings']);
+          this.router.navigate([this.getTrainingsListRoute()]);
         },
         error: (err) => {
           this.isSubmitting = false;
@@ -107,7 +124,7 @@ export class TrainingFormComponent implements OnInit {
       this.trainingService.createTraining(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
-          this.router.navigate(['/hr-dashboard/trainings', res.id, 'manage']);
+          this.router.navigate([this.getBasePrefix(), 'trainings', res.id.toString(), 'manage']);
         },
         error: (err) => {
           this.isSubmitting = false;

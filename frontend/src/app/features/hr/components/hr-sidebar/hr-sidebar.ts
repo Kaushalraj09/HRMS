@@ -105,25 +105,28 @@ export class HrSidebar implements OnInit {
         }
 
         this.checkMobileCollapse();
+        this.checkActiveRoutes();
         this.isHrSidebarOpen$.subscribe(open => {
           this.collapsed = !open;
         });
 
-        // Optionally auto-expand menu based on current route
+        // Auto-expand menu based on current route
         this.router.events.pipe(
           filter(event => event instanceof NavigationEnd)
         ).subscribe(() => {
           this.checkActiveRoutes();
           this.checkMobileCollapse();
         });
-        
-        // Initial check
-        setTimeout(() => this.checkActiveRoutes(), 100);
       }
     
       toggleExpand(item: MenuItem): void {
         if (item.children) {
           item.expanded = !item.expanded;
+          if (item.route) {
+            this.router.navigate([item.route]);
+          } else if (item.children.length > 0 && item.children[0].route) {
+            this.router.navigate([item.children[0].route]);
+          }
         }
       }
     

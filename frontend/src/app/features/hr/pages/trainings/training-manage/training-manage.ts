@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
@@ -48,7 +48,9 @@ export class TrainingManageComponent implements OnInit {
     private router: Router,
     private trainingService: TrainingService,
     private masterDataService: MasterDataService,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private cdr: ChangeDetectorRef,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -61,31 +63,65 @@ export class TrainingManageComponent implements OnInit {
     }
   }
 
+  getBasePrefix(): string {
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+  }
+
+  getAssessmentRoute(): string[] {
+    return [this.getBasePrefix(), 'trainings', this.trainingId.toString(), 'assessment'];
+  }
+
+  getTrainingsListRoute(): string {
+    return `${this.getBasePrefix()}/trainings`;
+  }
+
+  goBack(): void {
+    this.location.back();
+  }
+
   loadTraining(): void {
     this.isLoading = true;
+    this.cdr.detectChanges();
     this.trainingService.getTrainingById(this.trainingId).subscribe({
       next: (data) => {
         this.training = data;
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         alert('Failed to load training details: ' + (err.error?.detail || err.message));
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
 
   loadAssignments(): void {
     this.trainingService.getAssignments(this.trainingId).subscribe({
-      next: (data) => (this.assignments = data),
-      error: (err) => console.error('Error loading assignments:', err)
+      next: (data) => {
+        this.assignments = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading assignments:', err);
+        this.cdr.detectChanges();
+      }
     });
   }
 
   loadMasterData(): void {
-    this.masterDataService.getDepartments().subscribe((res: any) => (this.departments = res || []));
-    this.masterDataService.getDesignations().subscribe((res: any) => (this.designations = res || []));
-    this.employeeService.getEmployees(1, 100, '', '', '', '').subscribe((res: any) => (this.allEmployees = res.items || res || []));
+    this.masterDataService.getDepartments().subscribe((res: any) => {
+      this.departments = res || [];
+      this.cdr.detectChanges();
+    });
+    this.masterDataService.getDesignations().subscribe((res: any) => {
+      this.designations = res || [];
+      this.cdr.detectChanges();
+    });
+    this.employeeService.getEmployees(1, 100, '', '', '', '').subscribe((res: any) => {
+      this.allEmployees = res.items || res || [];
+      this.cdr.detectChanges();
+    });
   }
 
   // ─── Material Methods ───────────────────────────────────────────────────

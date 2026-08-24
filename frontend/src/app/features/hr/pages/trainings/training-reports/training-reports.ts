@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { TrainingReportRow, Training } from '../../../../../core/models/training.model';
 import { MasterDataService } from '../../../../../core/services/master-data.service';
@@ -26,7 +26,10 @@ export class TrainingReportsComponent implements OnInit {
 
   constructor(
     private trainingService: TrainingService,
-    private masterDataService: MasterDataService
+    private masterDataService: MasterDataService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -35,16 +38,35 @@ export class TrainingReportsComponent implements OnInit {
     this.loadReports();
   }
 
+  getBasePrefix(): string {
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+  }
+
+  getTrainingsListRoute(): string {
+    return `${this.getBasePrefix()}/trainings`;
+  }
+
+  goBack(): void {
+    this.location.back();
+  }
+
   loadTrainings(): void {
-    this.trainingService.getTrainings({ limit: 100 }).subscribe((res) => (this.trainings = res.items || []));
+    this.trainingService.getTrainings({ limit: 100 }).subscribe((res) => {
+      this.trainings = res.items || [];
+      this.cdr.detectChanges();
+    });
   }
 
   loadDepartments(): void {
-    this.masterDataService.getDepartments().subscribe((res: any) => (this.departments = res || []));
+    this.masterDataService.getDepartments().subscribe((res: any) => {
+      this.departments = res || [];
+      this.cdr.detectChanges();
+    });
   }
 
   loadReports(): void {
     this.isLoading = true;
+    this.cdr.detectChanges();
     this.trainingService
       .getReports({
         training_id: this.selectedTrainingId || undefined,
@@ -55,10 +77,12 @@ export class TrainingReportsComponent implements OnInit {
         next: (data) => {
           this.reports = data;
           this.isLoading = false;
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Error loading reports:', err);
           this.isLoading = false;
+          this.cdr.detectChanges();
         }
       });
   }

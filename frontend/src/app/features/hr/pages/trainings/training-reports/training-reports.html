@@ -1,60 +1,89 @@
-<div class="container-fluid p-4">
-  <div class="d-flex align-items-center justify-content-between mb-4">
-    <div class="d-flex align-items-center">
-      <a routerLink="/hr-dashboard/trainings" class="btn btn-outline-secondary btn-sm me-3">
-        <i class="fas fa-arrow-left me-1"></i>Back
-      </a>
-      <div>
-        <h2 class="fw-bold mb-0">Training & Assessment Reports</h2>
-        <p class="text-muted small mb-0">Track completion status, score breakdown, and export employee training progress.</p>
+<div class="trainings-page-wrapper">
+  <!-- Page Header Card -->
+  <div class="trainings-header-card">
+    <div class="header-main-info">
+      <div class="header-titles">
+        <div class="title-with-badge">
+          <h1 class="page-title">Training & Assessment Reports</h1>
+          <span class="portal-badge">Analytics & Export</span>
+        </div>
+        <p class="page-subtitle">Track completion status, score breakdown, and export employee training progress.</p>
       </div>
-    </div>
-    <button class="btn btn-success" (click)="exportToCSV()">
-      <i class="fas fa-file-excel me-2"></i>Export CSV
-    </button>
-  </div>
 
-  <!-- Filter Card -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-      <div class="row g-2 align-items-center">
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold mb-1">Training Program</label>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedTrainingId" (change)="loadReports()">
-            <option [ngValue]="null">All Trainings</option>
-            <option *ngFor="let t of trainings" [value]="t.id">{{ t.title }} ({{ t.code }})</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold mb-1">Department</label>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedDepartment" (change)="loadReports()">
-            <option value="">All Departments</option>
-            <option *ngFor="let d of departments" [value]="d.name">{{ d.name }}</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold mb-1">Status</label>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedStatus" (change)="loadReports()">
-            <option value="">All Statuses</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="NOT_STARTED">Not Started</option>
-          </select>
-        </div>
-        <div class="col-md-3 d-flex align-items-end gap-2 pt-4">
-          <button class="btn btn-sm btn-primary w-100" (click)="loadReports()">Apply Filters</button>
-          <button class="btn btn-sm btn-outline-secondary" (click)="resetFilters()">Reset</button>
-        </div>
+      <div class="header-action-btns">
+        <button type="button" class="btn-header-primary green" (click)="exportToCSV()">
+          <i class="fas fa-file-excel"></i>
+          <span>Export CSV</span>
+        </button>
+        <a [routerLink]="getTrainingsListRoute()" class="btn-header-secondary">
+          <i class="fas fa-arrow-left"></i>
+          <span>Back to Trainings</span>
+        </a>
       </div>
     </div>
   </div>
 
-  <!-- Reports Data Table -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+  <!-- Filter Toolbar Card -->
+  <div class="filter-toolbar-card">
+    <div class="filter-controls-row">
+      <div class="select-box-wrap flex-grow-1">
+        <label class="form-label-custom">Training Program</label>
+        <select class="modern-select" [(ngModel)]="selectedTrainingId" (change)="loadReports()">
+          <option [ngValue]="null">All Trainings</option>
+          <option *ngFor="let t of trainings" [value]="t.id">{{ t.title }} ({{ t.code }})</option>
+        </select>
+      </div>
+
+      <div class="select-box-wrap">
+        <label class="form-label-custom">Department</label>
+        <select class="modern-select" [(ngModel)]="selectedDepartment" (change)="loadReports()">
+          <option value="">All Departments</option>
+          <option *ngFor="let d of departments" [value]="d.name">{{ d.name }}</option>
+        </select>
+      </div>
+
+      <div class="select-box-wrap">
+        <label class="form-label-custom">Status</label>
+        <select class="modern-select" [(ngModel)]="selectedStatus" (change)="loadReports()">
+          <option value="">All Statuses</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="NOT_STARTED">Not Started</option>
+        </select>
+      </div>
+
+      <div class="filter-btn-group align-self-end">
+        <button type="button" class="btn-filter-submit" (click)="loadReports()">Apply Filters</button>
+        <button type="button" class="btn-filter-reset" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Container Card -->
+  <div class="documents-container-card">
+    <div *ngIf="isLoading" class="table-loading-state">
+      <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+      <p>Loading reports data...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoading">
+      <div *ngIf="reports.length === 0" class="empty-docs-box">
+        <div class="empty-illustration-container">
+          <div class="empty-glow-ring"></div>
+          <div class="empty-icon-circle">
+            <i class="fas fa-chart-line"></i>
+          </div>
+        </div>
+        <h3 class="empty-docs-title">No Training Reports Found</h3>
+        <p class="empty-docs-sub">No report entries match your selected filters.</p>
+        <button type="button" class="btn-clear-filters" (click)="resetFilters()" *ngIf="selectedTrainingId || selectedDepartment || selectedStatus">
+          <i class="fas fa-undo-alt"></i> Reset Filters
+        </button>
+      </div>
+
+      <div class="table-responsive" *ngIf="reports.length > 0">
+        <table class="documents-modern-table">
+          <thead>
             <tr>
               <th>Employee</th>
               <th>Department</th>
@@ -69,48 +98,45 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngIf="isLoading">
-              <td colspan="10" class="text-center py-4 text-muted">
-                <i class="fas fa-spinner fa-spin me-2"></i>Loading reports data...
-              </td>
-            </tr>
-            <tr *ngIf="!isLoading && reports.length === 0">
-              <td colspan="10" class="text-center py-5 text-muted">
-                No training report data found matching selected filters.
-              </td>
-            </tr>
-            <tr *ngFor="let r of reports">
+            <tr *ngFor="let r of reports" class="doc-row">
               <td>
-                <div class="fw-bold text-dark">{{ r.employee_name }}</div>
-                <div class="small text-muted font-monospace">{{ r.employee_code }}</div>
+                <div class="doc-name-cell">
+                  <div class="doc-icon-circle blue">
+                    <i class="far fa-user"></i>
+                  </div>
+                  <div class="doc-meta-wrap">
+                    <span class="doc-main-name">{{ r.employee_name }}</span>
+                    <span class="code-badge-pill">{{ r.employee_code }}</span>
+                  </div>
+                </div>
               </td>
-              <td>{{ r.department }}</td>
+              <td><span class="category-tag">{{ r.department }}</span></td>
               <td>
-                <div class="fw-bold">{{ r.training_title }}</div>
+                <div class="fw-bold text-dark">{{ r.training_title }}</div>
                 <div class="small text-muted">{{ r.category }}</div>
               </td>
               <td class="small">{{ r.assigned_date | date:'mediumDate' }}</td>
               <td class="small">{{ r.completed_date ? (r.completed_date | date:'mediumDate') : '-' }}</td>
               <td style="min-width: 110px;">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="progress flex-grow-1" style="height: 6px;">
-                    <div class="progress-bar bg-success" [style.width.%]="r.progress_percentage"></div>
+                <div class="table-progress-wrap">
+                  <div class="progress-track-bar">
+                    <div class="progress-fill-bar" [style.width.%]="r.progress_percentage"></div>
                   </div>
-                  <span class="small">{{ r.progress_percentage }}%</span>
+                  <span class="progress-pct-text">{{ r.progress_percentage }}%</span>
                 </div>
               </td>
-              <td class="small">{{ r.assessment_title }}</td>
+              <td class="small">{{ r.assessment_title || 'N/A' }}</td>
               <td>
-                <span class="fw-bold">{{ r.score }}</span>
+                <span class="fw-bold text-dark">{{ r.score }}</span>
                 <span class="small text-muted ms-1">({{ r.percentage }})</span>
               </td>
               <td>
                 <span
-                  class="badge"
+                  class="status-badge"
                   [ngClass]="{
-                    'bg-success': r.result === 'Passed',
-                    'bg-danger': r.result === 'Failed',
-                    'bg-light text-muted border': r.result === 'Not Attempted'
+                    'status-verified': r.result === 'Passed',
+                    'status-rejected': r.result === 'Failed',
+                    'status-missing': r.result === 'Not Attempted'
                   }"
                 >
                   {{ r.result }}
@@ -118,13 +144,14 @@
               </td>
               <td>
                 <span
-                  class="badge"
+                  class="status-badge"
                   [ngClass]="{
-                    'bg-success': r.assignment_status === 'COMPLETED',
-                    'bg-warning text-dark': r.assignment_status === 'IN_PROGRESS',
-                    'bg-secondary': r.assignment_status === 'NOT_STARTED'
+                    'status-verified': r.assignment_status === 'COMPLETED',
+                    'status-pending': r.assignment_status === 'IN_PROGRESS',
+                    'status-missing': r.assignment_status === 'NOT_STARTED'
                   }"
                 >
+                  <span class="status-dot"></span>
                   {{ r.assignment_status }}
                 </span>
               </td>
@@ -132,6 +159,7 @@
           </tbody>
         </table>
       </div>
-    </div>
+    </ng-container>
   </div>
 </div>
+

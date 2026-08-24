@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
@@ -27,7 +27,9 @@ export class AssessmentBuilderComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
-    private trainingService: TrainingService
+    private trainingService: TrainingService,
+    private cdr: ChangeDetectorRef,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -37,6 +39,22 @@ export class AssessmentBuilderComponent implements OnInit {
       this.initForms();
       this.loadAssessment();
     }
+  }
+
+  getBasePrefix(): string {
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+  }
+
+  getManageRoute(): string[] {
+    return [this.getBasePrefix(), 'trainings', this.trainingId.toString(), 'manage'];
+  }
+
+  getTrainingsListRoute(): string {
+    return `${this.getBasePrefix()}/trainings`;
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   private initForms(): void {
@@ -74,6 +92,7 @@ export class AssessmentBuilderComponent implements OnInit {
 
   loadAssessment(): void {
     this.isLoading = true;
+    this.cdr.detectChanges();
     this.trainingService.getAssessment(this.trainingId).subscribe({
       next: (data) => {
         this.assessment = data;
@@ -91,12 +110,14 @@ export class AssessmentBuilderComponent implements OnInit {
           status: data.status
         });
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         // Assessment not created yet -> set defaults from training title
         this.trainingService.getTrainingById(this.trainingId).subscribe((t) => {
           this.settingsForm.patchValue({ title: `${t.title} Assessment Test` });
           this.isLoading = false;
+          this.cdr.detectChanges();
         });
       }
     });
