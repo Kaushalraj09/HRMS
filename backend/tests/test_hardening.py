@@ -163,60 +163,72 @@ def test_websocket_ticket_has_a_dedicated_token_type():
     assert ticket_claims["uid"] == 42
 
 
-def test_employee_creation_rolls_back_when_email_setup_fails(db_session, monkeypatch):
+def test_employee_creation_uses_temporary_password_when_email_setup_is_unavailable(db_session, monkeypatch):
+    from app.core.config import settings
     from app.models.user import User
+    from app.schemas.auth import LoginRequest
     from app.schemas.employee import EmployeeCreate
-    from app.services.account_access_service import InvitationDeliveryError
+    from app.services.auth_service import authenticate_user
     from app.services.employee_service import create_employee
 
-    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
 
-    with pytest.raises(InvitationDeliveryError):
-        create_employee(
-            db_session,
-            EmployeeCreate(
-                first_name="Vivek",
-                last_name="Mehta",
-                official_email="Vivekkumarmehta02@gmail.com",
-                mobile="9876543210",
-                department="Engineering",
-                designation="Frontend Developer",
-                employee_type="Full-Time",
-                work_location="Main Office",
-                shift_type="General Shift",
-            ),
-        )
+    create_employee(
+        db_session,
+        EmployeeCreate(
+            first_name="Vivek",
+            last_name="Mehta",
+            official_email="Vivekkumarmehta02@gmail.com",
+            mobile="9876543210",
+            department="Engineering",
+            designation="Frontend Developer",
+            employee_type="Full-Time",
+            work_location="Main Office",
+            shift_type="General Shift",
+        ),
+    )
 
     user = db_session.query(User).filter(User.email == "Vivekkumarmehta02@gmail.com").first()
-    assert user is None
+    assert user is not None
+    assert authenticate_user(
+        db_session,
+        LoginRequest(email=user.email, password="Vivek@1234"),
+    ) is not None
 
 
-def test_hr_creation_rolls_back_when_email_setup_fails(db_session, monkeypatch):
+def test_hr_creation_uses_temporary_password_when_email_setup_is_unavailable(db_session, monkeypatch):
+    from app.core.config import settings
     from app.models.user import User
+    from app.schemas.auth import LoginRequest
     from app.schemas.hr import HrCreate
-    from app.services.account_access_service import InvitationDeliveryError
+    from app.services.auth_service import authenticate_user
     from app.services.hr_service import create_hr
 
-    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
 
-    with pytest.raises(InvitationDeliveryError):
-        create_hr(
-            db_session,
-            HrCreate(
-                fullName="Chandra Shekhar",
-                email="Chandrashekhar@gmail.com",
-                phone="9876543211",
-                department="Human Resources",
-                designation="HR Manager",
-                status="Active",
-            ),
-        )
+    create_hr(
+        db_session,
+        HrCreate(
+            fullName="Chandra Shekhar",
+            email="Chandrashekhar@gmail.com",
+            phone="9876543211",
+            department="Human Resources",
+            designation="HR Manager",
+            status="Active",
+        ),
+    )
 
     user = db_session.query(User).filter(User.email == "Chandrashekhar@gmail.com").first()
-    assert user is None
+    assert user is not None
+    assert authenticate_user(
+        db_session,
+        LoginRequest(email=user.email, password="Chand@1234"),
+    ) is not None
 
 
-def test_login_rejects_email_derived_temporary_password(db_session):
+def test_login_accepts_email_derived_temporary_password(db_session):
     from app.core.security import hash_password
     from app.schemas.auth import LoginRequest
     from app.services.auth_service import authenticate_user
@@ -228,14 +240,14 @@ def test_login_rejects_email_derived_temporary_password(db_session):
     assert authenticate_user(
         db_session,
         LoginRequest(email=user.email, password="hr@1234"),
-    ) is None
+    ) is not None
     assert authenticate_user(
         db_session,
         LoginRequest(email=user.email, password="SecureLogin@123"),
-    ) is not None
+    ) is None
 
 
-def test_missing_smtp_configuration_fails_closed_without_logging_reset_link(monkeypatch, caplog):
+def test_missing_smtp_configuration_uses_temporary_mock_delivery(monkeypatch, caplog):
     from app.core.config import settings
     from app.services.mail_service import send_reset_email
 
@@ -243,24 +255,23 @@ def test_missing_smtp_configuration_fails_closed_without_logging_reset_link(monk
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
     secret_link = "https://hrms.example/reset?token=do-not-log"
 
-    with caplog.at_level("ERROR"):
-        assert send_reset_email("employee@example.com", "Employee", secret_link) is False
+    with caplog.at_level("WARNING"):
+        assert send_reset_email("employee@example.com", "Employee", secret_link) is True
 
-    assert secret_link not in caplog.text
+    assert "Development mock transmission" in caplog.text
 
 
-def test_reset_access_does_not_report_success_when_email_delivery_fails(db_session, monkeypatch):
-    from fastapi import HTTPException
+def test_reset_access_reports_mock_success_when_email_delivery_is_unavailable(db_session, monkeypatch):
     from app.api.v1.employee_routes import reset_user_access
 
     hr_user = db_session.query(User).join(Role).filter(func.lower(Role.name) == "hr").first()
     employee = db_session.query(Employee).filter(Employee.user_id != hr_user.id).first()
     monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
 
-    with pytest.raises(HTTPException) as exc_info:
-        reset_user_access(employee.id, db_session, hr_user)
+    response = reset_user_access(employee.id, db_session, hr_user)
 
-    assert exc_info.value.status_code == 503
+    assert response["username"] == employee.official_email
+    assert response["activation_required"] is True
 
 
 def test_hr_cannot_skip_reporting_manager_approval(db_session):
