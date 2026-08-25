@@ -96,7 +96,11 @@ export class EmployeeLocationMap implements OnInit, OnDestroy, AfterViewInit, On
     'indore': 'hub-orange',
     'gaya': 'hub-teal',
     'kolkata': 'hub-purple',
-    'chennai': 'hub-delhi'
+    'chennai': 'hub-delhi',
+    'hubli': 'hub-orange',
+    'hubballi': 'hub-orange',
+    'belagavi': 'hub-teal',
+    'belgaum': 'hub-teal'
   };
 
   private colorPalette = ['hub-teal', 'hub-delhi', 'hub-orange', 'hub-mumbai', 'hub-pune', 'hub-hyderabad', 'hub-bengaluru'];
