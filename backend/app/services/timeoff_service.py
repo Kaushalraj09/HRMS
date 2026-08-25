@@ -117,23 +117,26 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     )
     
     db.add(new_request)
-    db.commit()
-    db.refresh(new_request)
-    
+
+    # Create the approval task in the same transaction as the request. A task
+    # creation failure must not leave an orphaned Pending request.
+    try:
+        db.flush()
+        from app.services.approval_service import create_approval_task
+        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        submitted_by = employee_obj.user_id if employee_obj else 1
+        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
+        db.commit()
+        db.refresh(new_request)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unable to create the approval workflow") from e
+
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
         invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
-    
-    # Create unified ApprovalTask
-    try:
-        from app.services.approval_service import create_approval_task
-        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
-        submitted_by = employee_obj.user_id if employee_obj else 1
-        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
-    except Exception as e:
-        print(f"Failed to create approval task: {e}")
         
     # Dispatch LeaveRequested domain event
     try:
@@ -184,13 +187,25 @@ def get_processed_requests(db: Session, limit: int = 20):
         r.employee_code = r.employee.employee_code
     return results
 
-def approve_request(db: Session, request_id: int, action: str, admin_user_id: int, comments: str = None, approved_duration_hours: float = None):
+def approve_request(
+    db: Session,
+    request_id: int,
+    action: str,
+    admin_user_id: int,
+    comments: str = None,
+    approved_duration_hours: float = None,
+    enforce_approval_stage: bool = True,
+):
     req = db.query(TimeOffRequest).filter(TimeOffRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
     
     if req.status != "Pending":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending requests can be processed.")
+
+    if enforce_approval_stage:
+        from app.services.approval_service import require_hr_stage
+        require_hr_stage(db, "timeoff", request_id, admin_user_id)
         
     if action.upper() == "APPROVE":
         employee = db.query(Employee).filter(Employee.id == req.employee_id).first()
@@ -388,23 +403,25 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
         status="Pending",
     )
     db.add(new_request)
-    db.commit()
-    db.refresh(new_request)
-    
+
+    # Keep the request and its first approval task atomic.
+    try:
+        db.flush()
+        from app.services.approval_service import create_approval_task
+        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        submitted_by = employee_obj.user_id if employee_obj else 1
+        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
+        db.commit()
+        db.refresh(new_request)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unable to create the approval workflow") from e
+
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
         invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
     except Exception:
         pass
-
-    # Create unified ApprovalTask
-    try:
-        from app.services.approval_service import create_approval_task
-        employee_obj = db.query(Employee).filter(Employee.id == employee_id).first()
-        submitted_by = employee_obj.user_id if employee_obj else 1
-        create_approval_task(db, request_type="timeoff", request_id=new_request.id, employee_id=employee_id, submitted_by=submitted_by)
-    except Exception as e:
-        print(f"Failed to create approval task: {e}")
 
     # Dispatch LeaveRequested domain event
     try:

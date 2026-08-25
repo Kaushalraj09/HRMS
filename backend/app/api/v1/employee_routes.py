@@ -152,7 +152,11 @@ def reset_user_access(
         raise HTTPException(status_code=404, detail="User account not found")
 
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(user)}"
-    send_reset_email(user.email, user.display_name, reset_link)
+    if not send_reset_email(user.email, user.display_name, reset_link):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Password setup email could not be sent. Please verify SMTP configuration and try again.",
+        )
 
     return {
         "employee_id": employee.id,

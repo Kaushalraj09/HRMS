@@ -203,7 +203,7 @@ def download_material(
     is_hr = current_user.role and current_user.role.name.lower() in ["admin", "hr"]
     if not is_hr:
         emp_id = _get_employee_id(current_user)
-        assignment = service.db.query(service.TrainingAssignment).filter(
+        assignment = db.query(service.TrainingAssignment).filter(
             service.TrainingAssignment.training_id == training_id,
             service.TrainingAssignment.employee_id == emp_id
         ).first()

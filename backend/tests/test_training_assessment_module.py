@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -139,6 +140,22 @@ def test_file_upload_validation_and_reorder(client, db_session):
     )
     assert res_pdf.status_code == 200
     assert res_pdf.json()["file_name"] == "Safety_Guide.pdf"
+
+    material_id = res_pdf.json()["id"]
+    emp_user = db_session.query(User).filter(User.email == "emp1@example.com").first()
+    emp = db_session.query(Employee).filter(Employee.user_id == emp_user.id).first()
+    db_session.add(TrainingAssignment(training_id=t.id, employee_id=emp.id, status="IN_PROGRESS"))
+    db_session.commit()
+    app.dependency_overrides[get_current_user] = lambda: emp_user
+    material_path = Path(
+        db_session.query(TrainingMaterial).filter(TrainingMaterial.id == material_id).one().storage_path
+    )
+    try:
+        download_res = client.get(f"/api/v1/trainings/{t.id}/materials/{material_id}/download")
+        assert download_res.status_code == 200
+        assert download_res.content.startswith(b"%PDF")
+    finally:
+        material_path.unlink(missing_ok=True)
 
 
 # ─── 2. Assignment Tests ────────────────────────────────────────────────────

@@ -36,7 +36,10 @@ def upgrade() -> None:
         if 'receiver_role' not in columns:
             batch_op.add_column(sa.Column('receiver_role', sa.String(length=50), nullable=True))
         if 'updated_at' not in columns:
-            batch_op.add_column(sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True))
+            # CURRENT_TIMESTAMP is accepted by both PostgreSQL and SQLite. The
+            # historical `now()` default prevented SQLite migration smoke tests
+            # from copying the notifications table during batch alteration.
+            batch_op.add_column(sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True))
         if 'deleted_at' not in columns:
             batch_op.add_column(sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
         if 'notification_metadata' not in columns:

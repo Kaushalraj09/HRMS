@@ -232,7 +232,7 @@ def get_employee_credentials(db: Session, employee_id: int):
             "username": user.email,
             "email": user.email,
             "activation_required": True,
-            "temporary_password_hint": "Temporary testing password: first 5 email letters + @1234. Replace with setup email after SMTP is configured.",
+            "temporary_password_hint": "The employee must set a password using the secure activation or reset email.",
             "status": user.status or hr.status or "Active",
         }
         
@@ -251,7 +251,7 @@ def get_employee_credentials(db: Session, employee_id: int):
         "username": user.email,
         "email": user.email,
         "activation_required": True,
-        "temporary_password_hint": "Temporary testing password: first 5 email letters + @1234. Replace with setup email after SMTP is configured.",
+        "temporary_password_hint": "The employee must set a password using the secure activation or reset email.",
         "status": user.status or employee.status or "Active",
     }
 

@@ -239,8 +239,17 @@ def get_pending_requests(
     import math
     from app.models.timeoff import TimeOffRequest
     from app.models.employee import Employee
+    from app.models.approval_task import ApprovalTask
     
-    query = db.query(TimeOffRequest).filter(TimeOffRequest.status == "Pending")
+    final_stage_request_ids = db.query(ApprovalTask.request_id).filter(
+        ApprovalTask.request_type == "timeoff",
+        ApprovalTask.status == "pending",
+        ApprovalTask.assigned_role == "hr",
+    )
+    query = db.query(TimeOffRequest).filter(
+        TimeOffRequest.status == "Pending",
+        TimeOffRequest.id.in_(final_stage_request_ids),
+    )
     
     if search:
         search_filter = f"%{search}%"
@@ -596,5 +605,4 @@ async def cancel_request(
         "requestId": req.id,
         "status": req.status
     }
-
 

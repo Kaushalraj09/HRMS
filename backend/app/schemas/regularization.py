@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date, time, datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 class RegularizationRequestCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -12,8 +12,8 @@ class RegularizationRequestCreate(BaseModel):
     reason_text: str = Field(alias="reasonText")
 
 class RegularizationRequestDecision(BaseModel):
-    status: str # approved, rejected
-    review_comment: Optional[str] = Field(default=None, alias="reviewComment")
+    status: Literal["approved", "rejected"]
+    review_comment: Optional[str] = Field(default=None, alias="reviewComment", max_length=500)
 
 class RegularizationRequestResponse(BaseModel):
     model_config = ConfigDict(

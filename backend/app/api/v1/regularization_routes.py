@@ -65,15 +65,17 @@ async def submit_regularization(
         status="pending"
     )
     db.add(new_request)
-    db.commit()
-    db.refresh(new_request)
 
-    # Create unified ApprovalTask
+    # Keep the request and its first approval task atomic.
     try:
+        db.flush()
         from app.services.approval_service import create_approval_task
         create_approval_task(db, request_type="regularization", request_id=new_request.id, employee_id=employee.id, submitted_by=current_user.id)
+        db.commit()
+        db.refresh(new_request)
     except Exception as e:
-        print(f"Failed to create regularization approval task: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unable to create the approval workflow") from e
 
     log_audit_trail_sync(db, "REGULARIZATION_SUBMIT", employee.id, f"Submitted regularization request for {request.attendance_date}")
 
@@ -215,8 +217,15 @@ async def get_pending_regularizations(
         )
 
     import math
+    from app.models.approval_task import ApprovalTask
+    final_stage_request_ids = db.query(ApprovalTask.request_id).filter(
+        ApprovalTask.request_type == "regularization",
+        ApprovalTask.status == "pending",
+        ApprovalTask.assigned_role == "hr",
+    )
     query = db.query(AttendanceRegularizationRequest).filter(
-        AttendanceRegularizationRequest.status == "pending"
+        AttendanceRegularizationRequest.status.in_(["pending", "pending_hr"]),
+        AttendanceRegularizationRequest.id.in_(final_stage_request_ids),
     )
 
     if search:
@@ -258,6 +267,9 @@ async def review_regularization(
             detail="Access denied. Only Admin or HR can review regularization requests."
         )
 
+    from app.services.approval_service import require_hr_stage
+    require_hr_stage(db, "regularization", request_id, current_user.id)
+
     req = db.query(AttendanceRegularizationRequest).filter(
         AttendanceRegularizationRequest.id == request_id
     ).first()
@@ -267,7 +279,7 @@ async def review_regularization(
             detail="Regularization request not found"
         )
 
-    if req.status != "pending":
+    if req.status not in {"pending", "pending_hr"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Request is already reviewed"

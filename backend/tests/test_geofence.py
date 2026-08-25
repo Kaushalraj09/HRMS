@@ -132,6 +132,18 @@ def test_remote_employee_bypasses_geofence(db_session):
     assert res["work_location_name"] == "Remote"
 
 
+def test_unknown_work_location_fails_closed(db_session):
+    emp = get_or_create_belagavi_employee(db_session)
+    emp.work_location = "Unconfigured Office"
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        validate_employee_geofence(db_session, emp, None, None)
+
+    assert exc_info.value.status_code == 400
+    assert "not configured" in exc_info.value.detail["message"]
+
+
 def test_security_backend_enforcement(db_session):
     """
     Test that even if a Belagavi-assigned employee sends GPS coordinates of Hubli office,

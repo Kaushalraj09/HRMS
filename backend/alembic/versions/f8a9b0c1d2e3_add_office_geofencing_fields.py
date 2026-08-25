@@ -25,18 +25,22 @@ def upgrade() -> None:
     op.add_column('work_locations', sa.Column('longitude', sa.Float(), nullable=True))
     op.add_column('work_locations', sa.Column('geofence_radius_meters', sa.Float(), nullable=False, server_default='40.0'))
 
-    # Add geofence audit fields to attendance table
-    op.add_column('attendance', sa.Column('work_location_id', sa.Integer(), sa.ForeignKey('work_locations.id'), nullable=True))
-    op.add_column('attendance', sa.Column('work_location_name', sa.String(length=150), nullable=True))
-    op.add_column('attendance', sa.Column('geofence_distance_meters', sa.Float(), nullable=True))
-    op.create_index(op.f('ix_attendance_work_location_id'), 'attendance', ['work_location_id'], unique=False)
+    # Batch mode keeps the foreign-key alteration compatible with SQLite.
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('work_location_id', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('work_location_name', sa.String(length=150), nullable=True))
+        batch_op.add_column(sa.Column('geofence_distance_meters', sa.Float(), nullable=True))
+        batch_op.create_foreign_key('fk_attendance_work_location', 'work_locations', ['work_location_id'], ['id'])
+        batch_op.create_index(op.f('ix_attendance_work_location_id'), ['work_location_id'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_attendance_work_location_id'), table_name='attendance')
-    op.drop_column('attendance', 'geofence_distance_meters')
-    op.drop_column('attendance', 'work_location_name')
-    op.drop_column('attendance', 'work_location_id')
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.drop_index(op.f('ix_attendance_work_location_id'))
+        batch_op.drop_constraint('fk_attendance_work_location', type_='foreignkey')
+        batch_op.drop_column('geofence_distance_meters')
+        batch_op.drop_column('work_location_name')
+        batch_op.drop_column('work_location_id')
     op.drop_column('work_locations', 'geofence_radius_meters')
     op.drop_column('work_locations', 'longitude')
     op.drop_column('work_locations', 'latitude')

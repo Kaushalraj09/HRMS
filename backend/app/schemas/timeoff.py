@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date, time
-from typing import Optional
+from typing import Optional, Literal
 
 class TimeOffRequestCreate(BaseModel):
     date: date
@@ -64,7 +64,6 @@ class TimeOffRequestPaginatedResponse(BaseModel):
 
 
 class TimeOffDecisionRequest(BaseModel):
-    decision: str  # "approved" or "rejected"
+    decision: Literal["approved", "rejected"]
     comment: Optional[str] = None
     approvedHours: Optional[float] = None
-

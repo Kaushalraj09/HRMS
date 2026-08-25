@@ -58,7 +58,17 @@ def validate_employee_geofence(
             .first()
         )
 
-    if not work_location or (getattr(work_location, "location_type", "office") or "").lower() != "office":
+    if not work_location:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": f"Assigned work location '{assigned_location_name}' is not configured. Please contact HR.",
+                "office": assigned_location_name,
+            }
+        )
+
+    if (getattr(work_location, "location_type", "office") or "").lower() != "office":
         return {
             "is_remote": True,
             "work_location_id": work_location.id if work_location else None,

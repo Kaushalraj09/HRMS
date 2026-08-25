@@ -28,6 +28,7 @@ services:
         condition: service_healthy
     volumes:
       - hrms_document_storage:/app/storage/documents
+      - hrms_training_storage:/app/storage/trainings
     deploy:
       resources:
         limits:
@@ -62,3 +63,4 @@ services:
 volumes:
   postgres_data:
   hrms_document_storage:
+  hrms_training_storage:

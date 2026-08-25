@@ -10,6 +10,9 @@ from datetime import datetime
 
 def create_approval_task(db: Session, request_type: str, request_id: int, employee_id: int, submitted_by: int) -> ApprovalTask:
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found for approval task")
+
     task = ApprovalTask(
         request_type=request_type,
         request_id=request_id,
@@ -19,7 +22,9 @@ def create_approval_task(db: Session, request_type: str, request_id: int, employ
         assigned_role="manager" if employee and employee.reporting_manager_id else "hr"
     )
     db.add(task)
-    db.commit()
+    # The caller owns the surrounding request transaction. Flushing here makes
+    # the task id available without committing a request that may still fail.
+    db.flush()
     db.refresh(task)
     return task
 
@@ -35,11 +40,32 @@ def _is_assigned_manager(task: ApprovalTask, user: User) -> bool:
     )
 
 
+def require_hr_stage(db: Session, request_type: str, request_id: int, reviewer_id: int) -> ApprovalTask:
+    """Require the final HR stage before a legacy module endpoint can decide."""
+    reviewer = db.query(User).filter(User.id == reviewer_id).first()
+    if _role_name(reviewer) not in {"admin", "hr"}:
+        raise HTTPException(status_code=403, detail="HR/Admin approval is required for this stage")
+
+    task = db.query(ApprovalTask).filter(
+        ApprovalTask.request_type == request_type,
+        ApprovalTask.request_id == request_id,
+        ApprovalTask.status == "pending",
+    ).first()
+    if not task:
+        raise HTTPException(status_code=409, detail="No pending approval task exists for this request")
+    if task.assigned_role != "hr":
+        raise HTTPException(status_code=409, detail="Reporting manager approval is required before HR approval")
+    return task
+
+
 def get_pending_tasks(db: Session, current_user: User) -> dict:
     query = db.query(ApprovalTask).filter(ApprovalTask.status == "pending")
     role = _role_name(current_user)
     if role in {"admin", "hr"}:
-        query = query.filter(ApprovalTask.assigned_role == "hr")
+        # HR/Admin need visibility of manager-stage tasks to perform an
+        # explicit, reason-backed override. The decision guard below still
+        # prevents an accidental manager-stage approval without that reason.
+        pass
     else:
         manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
         if not manager_employee:
@@ -121,7 +147,16 @@ def get_history_tasks(db: Session, page: int = 1, limit: int = 10, request_type:
         "totalPages": total_pages
     }
 
-def decide_task(db: Session, task_id: int, reviewer_id: int, decision: str, comment: str = None, approved_hours: float = None) -> ApprovalTask:
+def decide_task(
+    db: Session,
+    task_id: int,
+    reviewer_id: int,
+    decision: str,
+    comment: str = None,
+    approved_hours: float = None,
+    override: bool = False,
+    override_reason: str = None,
+) -> ApprovalTask:
     task = db.query(ApprovalTask).filter(ApprovalTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Approval task not found")
@@ -131,13 +166,30 @@ def decide_task(db: Session, task_id: int, reviewer_id: int, decision: str, comm
 
     reviewer = db.query(User).filter(User.id == reviewer_id).first()
     reviewer_role = _role_name(reviewer)
+    is_override = False
     if task.assigned_role == "manager":
-        if reviewer_role not in {"admin", "hr"} and not _is_assigned_manager(task, reviewer):
+        assigned_manager = _is_assigned_manager(task, reviewer)
+        if not assigned_manager:
+            if reviewer_role not in {"admin", "hr"} or not override or not (override_reason or "").strip():
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only the assigned reporting manager can review this request unless HR/Admin provides an override reason",
+                )
+            is_override = True
+
+        now = datetime.now()
+        task.manager_reviewed_by = reviewer_id
+        task.manager_reviewed_at = now
+        task.manager_decision_comment = comment
+        if is_override:
+            task.decision_comment = f"HR override: {override_reason.strip()}"
+        else:
+            task.decision_comment = comment
+
+        if not assigned_manager and not is_override:
             raise HTTPException(status_code=403, detail="Only the assigned reporting manager can review this request")
-        task.reviewed_by = reviewer_id
-        task.reviewed_at = datetime.now()
-        task.decision_comment = comment
-        if decision == "approved":
+
+        if decision == "approved" and not is_override:
             task.assigned_role = "hr"
             if task.request_type == "timeoff":
                 req = db.query(TimeOffRequest).filter(TimeOffRequest.id == task.request_id).first()
@@ -158,21 +210,37 @@ def decide_task(db: Session, task_id: int, reviewer_id: int, decision: str, comm
     task.status = decision
     task.reviewed_by = reviewer_id
     task.reviewed_at = datetime.now()
-    task.decision_comment = comment
+    if not is_override:
+        task.decision_comment = comment
     
     # Propagate to sub-modules
     if task.request_type == "timeoff":
         action = "APPROVE" if decision == "approved" else "REJECT"
-        timeoff_service.approve_request(db, task.request_id, action, reviewer_id, comment, approved_hours)
+        timeoff_service.approve_request(
+            db,
+            task.request_id,
+            action,
+            reviewer_id,
+            comment,
+            approved_hours,
+            # decide_task has already authorized the reviewer and the task
+            # status is now non-pending, so the legacy service must not look
+            # up the already-transitioned task a second time.
+            enforce_approval_stage=False,
+        )
     elif task.request_type == "regularization":
         # Process regularization request
         from app.models.attendance import AttendanceRegularizationRequest
         reg_req = db.query(AttendanceRegularizationRequest).filter(AttendanceRegularizationRequest.id == task.request_id).first()
         if reg_req:
             reg_req.status = decision
+            if task.assigned_role == "manager" and not is_override:
+                reg_req.manager_decision = decision
+            else:
+                reg_req.hr_decision = decision
             reg_req.reviewed_by = reviewer_id
             reg_req.reviewed_at = datetime.now()
-            reg_req.review_comment = comment
+            reg_req.review_comment = task.decision_comment
             
             if decision == "approved":
                 # Apply regularization to attendance record

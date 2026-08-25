@@ -58,7 +58,11 @@ async def decide_approval(
     
     result = approval_service.decide_task(
         db, task_id=approvalTaskId, reviewer_id=current_user.id,
-        decision=payload.decision, comment=payload.comment, approved_hours=payload.approved_hours
+        decision=payload.decision,
+        comment=payload.comment,
+        approved_hours=payload.approved_hours,
+        override=payload.override,
+        override_reason=payload.override_reason,
     )
     
     # If it is a timeoff request, trigger real-time notifications

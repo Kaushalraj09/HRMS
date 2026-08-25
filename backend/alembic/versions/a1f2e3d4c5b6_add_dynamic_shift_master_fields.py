@@ -28,24 +28,28 @@ def upgrade() -> None:
     op.add_column('shifts', sa.Column('early_exit_before_minutes', sa.Integer(), server_default='0', nullable=True))
     op.add_column('shifts', sa.Column('is_night_shift', sa.Boolean(), server_default='0', nullable=True))
 
-    # Add shift_id to employees table
-    op.add_column('employees', sa.Column('shift_id', sa.Integer(), nullable=True))
-    op.create_index(op.f('ix_employees_shift_id'), 'employees', ['shift_id'], unique=False)
-    op.create_foreign_key('fk_employees_shift_id', 'employees', 'shifts', ['shift_id'], ['id'])
+    # Batch mode keeps self-contained foreign-key changes compatible with
+    # SQLite while generating normal constraints on PostgreSQL.
+    with op.batch_alter_table('employees', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('shift_id', sa.Integer(), nullable=True))
+        batch_op.create_index(op.f('ix_employees_shift_id'), ['shift_id'], unique=False)
+        batch_op.create_foreign_key('fk_employees_shift_id', 'shifts', ['shift_id'], ['id'])
 
-    # Add shift_id to attendance table
-    op.add_column('attendance', sa.Column('shift_id', sa.Integer(), nullable=True))
-    op.create_index(op.f('ix_attendance_shift_id'), 'attendance', ['shift_id'], unique=False)
-    op.create_foreign_key('fk_attendance_shift_id', 'attendance', 'shifts', ['shift_id'], ['id'])
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('shift_id', sa.Integer(), nullable=True))
+        batch_op.create_index(op.f('ix_attendance_shift_id'), ['shift_id'], unique=False)
+        batch_op.create_foreign_key('fk_attendance_shift_id', 'shifts', ['shift_id'], ['id'])
 
 def downgrade() -> None:
-    op.drop_constraint('fk_attendance_shift_id', 'attendance', type_='foreignkey')
-    op.drop_index(op.f('ix_attendance_shift_id'), table_name='attendance')
-    op.drop_column('attendance', 'shift_id')
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_attendance_shift_id', type_='foreignkey')
+        batch_op.drop_index(op.f('ix_attendance_shift_id'))
+        batch_op.drop_column('shift_id')
 
-    op.drop_constraint('fk_employees_shift_id', 'employees', type_='foreignkey')
-    op.drop_index(op.f('ix_employees_shift_id'), table_name='employees')
-    op.drop_column('employees', 'shift_id')
+    with op.batch_alter_table('employees', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_employees_shift_id', type_='foreignkey')
+        batch_op.drop_index(op.f('ix_employees_shift_id'))
+        batch_op.drop_column('shift_id')
 
     op.drop_column('shifts', 'is_night_shift')
     op.drop_column('shifts', 'early_exit_before_minutes')

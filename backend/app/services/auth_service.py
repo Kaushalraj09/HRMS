@@ -15,20 +15,9 @@ def authenticate_user(db: Session, request: LoginRequest):
     if not user:
         return None
     
-    # 2. Verify password (or allow temp dev password fallback matching credentials modal hint)
+    # Passwords must always be verified against the stored hash. A deterministic
+    # email-derived fallback would be a public authentication bypass.
     pwd_valid = verify_password(request.password, user.password_hash)
-    if not pwd_valid:
-        email_prefix = (user.email.split("@")[0]).replace(".", "").replace("_", "").lower()
-        hint_chars = email_prefix[:5]
-        valid_temp_passwords = [
-            f"{hint_chars}@1234",
-            f"{hint_chars.capitalize()}@1234",
-            f"{hint_chars.upper()}@1234"
-        ]
-        if request.password in valid_temp_passwords:
-            pwd_valid = True
-            user.password_hash = hash_password(request.password)
-            db.commit()
 
     if pwd_valid:
         if user.status in ["Inactive", "Deleted"]:

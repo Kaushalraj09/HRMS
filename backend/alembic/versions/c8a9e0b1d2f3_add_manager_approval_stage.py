@@ -13,14 +13,16 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("employees", sa.Column("reporting_manager_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_employees_reporting_manager", "employees", "employees", ["reporting_manager_id"], ["id"])
-    op.create_index("ix_employees_reporting_manager_id", "employees", ["reporting_manager_id"])
+    with op.batch_alter_table("employees", schema=None) as batch_op:
+        batch_op.add_column(sa.Column("reporting_manager_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key("fk_employees_reporting_manager", "employees", ["reporting_manager_id"], ["id"])
+        batch_op.create_index("ix_employees_reporting_manager_id", ["reporting_manager_id"])
     op.add_column("timeoff_requests", sa.Column("approval_stage", sa.String(length=20), nullable=False, server_default="Manager"))
 
 
 def downgrade():
     op.drop_column("timeoff_requests", "approval_stage")
-    op.drop_index("ix_employees_reporting_manager_id", table_name="employees")
-    op.drop_constraint("fk_employees_reporting_manager", "employees", type_="foreignkey")
-    op.drop_column("employees", "reporting_manager_id")
+    with op.batch_alter_table("employees", schema=None) as batch_op:
+        batch_op.drop_index("ix_employees_reporting_manager_id")
+        batch_op.drop_constraint("fk_employees_reporting_manager", type_="foreignkey")
+        batch_op.drop_column("reporting_manager_id")

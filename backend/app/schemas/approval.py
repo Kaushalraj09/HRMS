@@ -4,8 +4,10 @@ from typing import Optional, List, Literal
 
 class ApprovalDecisionRequest(BaseModel):
     decision: Literal["approved", "rejected"]
-    comment: Optional[str] = None
+    comment: Optional[str] = Field(None, max_length=500)
     approved_hours: Optional[float] = Field(None, alias="approvedHours")
+    override: bool = False
+    override_reason: Optional[str] = Field(None, alias="overrideReason", max_length=500)
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -46,6 +48,9 @@ class ApprovalTaskResponse(BaseModel):
     reviewed_by: Optional[int] = Field(None, alias="reviewedBy")
     reviewed_at: Optional[datetime] = Field(None, alias="reviewedAt")
     decision_comment: Optional[str] = Field(None, alias="decisionComment")
+    manager_reviewed_by: Optional[int] = Field(None, alias="managerReviewedBy")
+    manager_reviewed_at: Optional[datetime] = Field(None, alias="managerReviewedAt")
+    manager_decision_comment: Optional[str] = Field(None, alias="managerDecisionComment")
     created_at: datetime = Field(..., alias="createdAt")
 
     model_config = ConfigDict(

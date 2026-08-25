@@ -9,6 +9,7 @@ from app.models.hr_user import HrUser
 from app.models.user import User, Role
 from app.models.dashboard_cache import DashboardCache
 from app.models.timeoff import TimeOffRequest
+from app.models.approval_task import ApprovalTask
 from app.seeds.seed_demo_users import seed_users
 from app.seeds.seed_master_data import seed_roles
 from app.services.dashboard_service import get_admin_dashboard_data, invalidate_dashboard_cache
@@ -213,3 +214,178 @@ def test_hr_creation_rolls_back_when_email_setup_fails(db_session, monkeypatch):
 
     user = db_session.query(User).filter(User.email == "Chandrashekhar@gmail.com").first()
     assert user is None
+
+
+def test_login_rejects_email_derived_temporary_password(db_session):
+    from app.core.security import hash_password
+    from app.schemas.auth import LoginRequest
+    from app.services.auth_service import authenticate_user
+
+    user = db_session.query(User).filter(User.email == "hr@hrms.com").first()
+    user.password_hash = hash_password("SecureLogin@123")
+    db_session.commit()
+
+    assert authenticate_user(
+        db_session,
+        LoginRequest(email=user.email, password="hr@1234"),
+    ) is None
+    assert authenticate_user(
+        db_session,
+        LoginRequest(email=user.email, password="SecureLogin@123"),
+    ) is not None
+
+
+def test_missing_smtp_configuration_fails_closed_without_logging_reset_link(monkeypatch, caplog):
+    from app.core.config import settings
+    from app.services.mail_service import send_reset_email
+
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+    secret_link = "https://hrms.example/reset?token=do-not-log"
+
+    with caplog.at_level("ERROR"):
+        assert send_reset_email("employee@example.com", "Employee", secret_link) is False
+
+    assert secret_link not in caplog.text
+
+
+def test_reset_access_does_not_report_success_when_email_delivery_fails(db_session, monkeypatch):
+    from fastapi import HTTPException
+    from app.api.v1.employee_routes import reset_user_access
+
+    hr_user = db_session.query(User).join(Role).filter(func.lower(Role.name) == "hr").first()
+    employee = db_session.query(Employee).filter(Employee.user_id != hr_user.id).first()
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *args, **kwargs: False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        reset_user_access(employee.id, db_session, hr_user)
+
+    assert exc_info.value.status_code == 503
+
+
+def test_hr_cannot_skip_reporting_manager_approval(db_session):
+    from datetime import date
+    from app.services.approval_service import decide_task, require_hr_stage
+
+    employee_role = db_session.query(Role).filter(Role.name == "Employee").first()
+    hr_role = db_session.query(Role).filter(Role.name == "HR").first()
+    manager_user = User(
+        email="manager@example.com",
+        password_hash="hash",
+        display_name="Reporting Manager",
+        role_id=employee_role.id,
+    )
+    target_user = User(
+        email="approval-target@example.com",
+        password_hash="hash",
+        display_name="Approval Target",
+        role_id=employee_role.id,
+    )
+    db_session.add_all([manager_user, target_user])
+    db_session.flush()
+    manager_employee = Employee(
+        user_id=manager_user.id,
+        employee_code="MGR-001",
+        first_name="Reporting",
+        last_name="Manager",
+        official_email=manager_user.email,
+        mobile="9000000001",
+    )
+    db_session.add(manager_employee)
+    db_session.flush()
+    target_employee = Employee(
+        user_id=target_user.id,
+        reporting_manager_id=manager_employee.id,
+        employee_code="EMP-APP-001",
+        first_name="Approval",
+        last_name="Target",
+        official_email=target_user.email,
+        mobile="9000000002",
+    )
+    db_session.add(target_employee)
+    db_session.flush()
+    approval_task = ApprovalTask(
+        request_type="timeoff",
+        request_id=999,
+        employee_id=target_employee.id,
+        assigned_role="manager",
+        submitted_by=target_user.id,
+    )
+    db_session.add(approval_task)
+    db_session.commit()
+    hr_user = db_session.query(User).filter(User.role_id == hr_role.id).first()
+
+    with pytest.raises(Exception) as manager_stage_error:
+        require_hr_stage(db_session, "timeoff", 999, hr_user.id)
+    assert getattr(manager_stage_error.value, "status_code", None) == 409
+
+    with pytest.raises(Exception) as bypass_error:
+        decide_task(db_session, approval_task.id, hr_user.id, "approved")
+    assert getattr(bypass_error.value, "status_code", None) == 403
+
+    request = TimeOffRequest(
+        employee_id=target_employee.id,
+        date=date(2026, 8, 25),
+        leave_type="Hourly",
+        duration_hours=1.0,
+        status="Pending",
+    )
+    db_session.add(request)
+    db_session.flush()
+    approval_task.request_id = request.id
+    db_session.commit()
+
+    override_result = decide_task(
+        db_session,
+        approval_task.id,
+        hr_user.id,
+        "approved",
+        override=True,
+        override_reason="Manager unavailable during payroll cutoff",
+    )
+    assert override_result.status == "approved"
+    assert "HR override:" in override_result.decision_comment
+    assert db_session.get(TimeOffRequest, request.id).status == "Approved"
+
+    # A normal request must pass through the reporting manager and then the
+    # final HR stage without the legacy time-off service rejecting the second
+    # decision after the unified task has transitioned out of pending.
+    two_step_request = TimeOffRequest(
+        employee_id=target_employee.id,
+        date=date(2026, 8, 26),
+        leave_type="Hourly",
+        duration_hours=1.0,
+        status="Pending",
+    )
+    db_session.add(two_step_request)
+    db_session.flush()
+    two_step_task = ApprovalTask(
+        request_type="timeoff",
+        request_id=two_step_request.id,
+        employee_id=target_employee.id,
+        assigned_role="manager",
+        submitted_by=target_user.id,
+    )
+    db_session.add(two_step_task)
+    db_session.commit()
+
+    manager_result = decide_task(
+        db_session,
+        two_step_task.id,
+        manager_user.id,
+        "approved",
+        comment="Reviewed by reporting manager",
+    )
+    assert manager_result.assigned_role == "hr"
+    assert manager_result.manager_reviewed_by == manager_user.id
+    assert db_session.get(TimeOffRequest, two_step_request.id).approval_stage == "HR"
+
+    hr_result = decide_task(
+        db_session,
+        two_step_task.id,
+        hr_user.id,
+        "approved",
+        comment="Final HR approval",
+    )
+    assert hr_result.status == "approved"
+    assert db_session.get(TimeOffRequest, two_step_request.id).status == "Approved"

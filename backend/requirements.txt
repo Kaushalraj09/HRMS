@@ -26,7 +26,9 @@ typing-inspection>=0.4.0
 
 # Authentication, Security & Cryptography
 passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.0
+# passlib 1.7.4 is not compatible with bcrypt 5.x. Keep the existing bcrypt
+# hash format while avoiding the runtime self-test failure in clean installs.
+bcrypt==4.0.1
 PyJWT>=2.8.0
 
 # System, Configuration & Scheduling
