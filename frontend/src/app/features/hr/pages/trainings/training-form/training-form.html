@@ -1,0 +1,177 @@
+<div class="trainings-page-wrapper">
+  <!-- Page Header Card -->
+  <div class="trainings-header-card">
+    <div class="header-main-info">
+      <div class="header-titles">
+        <div class="title-with-badge">
+          <h1 class="page-title">{{ isEditMode ? 'Edit Training Program' : 'Create New Training Program' }}</h1>
+          <span class="portal-badge">Program Setup</span>
+        </div>
+        <p class="page-subtitle">Fill in program details, schedule, category, and trainer information.</p>
+      </div>
+
+      <a [routerLink]="getTrainingsListRoute()" class="btn-header-secondary">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Trainings</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Form Container Card -->
+  <div class="form-container-card">
+    <div *ngIf="isLoading" class="table-loading-state">
+      <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+      <p>Loading program details...</p>
+    </div>
+
+    <form *ngIf="!isLoading" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <!-- Section 1: Basic Information -->
+      <div class="form-section-block">
+        <div class="form-section-head">
+          <div class="section-icon blue">
+            <i class="fas fa-info-circle"></i>
+          </div>
+          <div>
+            <h3>Basic Information</h3>
+            <p>Title, identification code, category, and course overview.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <div class="form-group-item">
+              <label class="form-label-custom">Training Title <span class="required-star">*</span></label>
+              <input
+                type="text"
+                class="custom-form-input"
+                formControlName="title"
+                placeholder="e.g. Workplace Safety & Emergency Procedures"
+              />
+              <div *ngIf="form.get('title')?.touched && form.get('title')?.invalid" class="field-error-msg">
+                Title is required (max 200 characters).
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-group-item">
+              <label class="form-label-custom">Training Code <span class="required-star">*</span></label>
+              <input
+                type="text"
+                class="custom-form-input font-monospace"
+                formControlName="code"
+                placeholder="e.g. TRN-1001"
+              />
+              <div *ngIf="form.get('code')?.touched && form.get('code')?.invalid" class="field-error-msg">
+                Code is required.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="form-group-item">
+              <label class="form-label-custom">Category <span class="required-star">*</span></label>
+              <select class="custom-form-select" formControlName="category">
+                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group-item">
+              <label class="form-label-custom">Trainer / Instructor</label>
+              <input
+                type="text"
+                class="custom-form-input"
+                formControlName="trainer_name"
+                placeholder="e.g. HR Safety Team / External Expert"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-item mb-3">
+          <label class="form-label-custom">Description</label>
+          <textarea
+            class="custom-form-textarea"
+            rows="3"
+            formControlName="description"
+            placeholder="Brief overview of what this training program covers..."
+          ></textarea>
+        </div>
+
+        <div class="form-group-item mb-4">
+          <label class="form-label-custom">Learning Objective</label>
+          <textarea
+            class="custom-form-textarea"
+            rows="2"
+            formControlName="learning_objective"
+            placeholder="What employees will achieve after completing this program..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Section 2: Schedule & Configuration -->
+      <div class="form-section-block pt-4 border-top">
+        <div class="form-section-head">
+          <div class="section-icon emerald">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <div>
+            <h3>Schedule & Configuration</h3>
+            <p>Set duration, start/end dates, and publishing visibility status.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="form-group-item">
+              <label class="form-label-custom">Estimated Duration (Minutes) <span class="required-star">*</span></label>
+              <input
+                type="number"
+                class="custom-form-input"
+                formControlName="estimated_duration_minutes"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-group-item">
+              <label class="form-label-custom">Start Date</label>
+              <input type="date" class="custom-form-input" formControlName="start_date" />
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-group-item">
+              <label class="form-label-custom">End Date / Deadline</label>
+              <input type="date" class="custom-form-input" formControlName="end_date" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-item mb-4">
+          <label class="form-label-custom">Publishing Status <span class="required-star">*</span></label>
+          <select class="custom-form-select" formControlName="status">
+            <option value="Draft">Draft (Only visible to HR)</option>
+            <option value="Published">Published (Active & Assignable)</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Form Actions Footer -->
+      <div class="form-actions-bar pt-4 border-top">
+        <a [routerLink]="getTrainingsListRoute()" class="btn-cancel-custom">Cancel</a>
+        <button type="submit" class="btn-submit-custom" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin me-2" *ngIf="isSubmitting"></i>
+          <span>{{ isEditMode ? 'Save Changes' : 'Create & Proceed to Content' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

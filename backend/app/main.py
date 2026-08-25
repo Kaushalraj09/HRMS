@@ -27,9 +27,11 @@ from app.api.v1 import (
     master_data_routes,
     approval_routes,
     document_routes,
+    training_routes,
 )
 
 logger = logging.getLogger(__name__)
+
 
 
 @asynccontextmanager
@@ -156,3 +158,5 @@ app.include_router(report_routes.router, prefix="/api/v1")
 app.include_router(master_data_routes.router, prefix="/api/v1")
 app.include_router(approval_routes.router, prefix="/api/v1")
 app.include_router(document_routes.router, prefix="/api/v1")
+app.include_router(training_routes.router, prefix="/api/v1")
+

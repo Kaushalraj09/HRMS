@@ -49,6 +49,12 @@ export const routes: Routes = [
       { path: 'regularization-requests', component: RegularizationRequestsComponent },
       { path: 'documents', loadComponent: () => import('./features/hr/pages/hr-documents/hr-documents').then(m => m.HrDocumentsComponent) },
       { path: 'reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) },
+      { path: 'trainings', loadComponent: () => import('./features/hr/pages/trainings/training-list/training-list').then(m => m.TrainingListComponent) },
+      { path: 'trainings/create', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/edit', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/manage', loadComponent: () => import('./features/hr/pages/trainings/training-manage/training-manage').then(m => m.TrainingManageComponent) },
+      { path: 'trainings/:id/assessment', loadComponent: () => import('./features/hr/pages/trainings/assessment-builder/assessment-builder').then(m => m.AssessmentBuilderComponent) },
+      { path: 'training-reports', loadComponent: () => import('./features/hr/pages/trainings/training-reports/training-reports').then(m => m.TrainingReportsComponent) },
     ]
   },
   { 
@@ -62,7 +68,11 @@ export const routes: Routes = [
       { path: 'regularization', component: RegularizationComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'change-password', component: ChangePasswordComponent },
-      { path: 'time-off', component: EmpTimeOffComponent }
+      { path: 'time-off', component: EmpTimeOffComponent },
+      { path: 'my-trainings', loadComponent: () => import('./features/emp/pages/my-trainings/my-trainings').then(m => m.MyTrainingsComponent) },
+      { path: 'my-trainings/:id', loadComponent: () => import('./features/emp/pages/training-view/training-view').then(m => m.TrainingViewComponent) },
+      { path: 'assessment/:id', loadComponent: () => import('./features/emp/pages/assessment-exam/assessment-exam').then(m => m.AssessmentExamComponent) },
+      { path: 'assessment-result/:id', loadComponent: () => import('./features/emp/pages/assessment-result/assessment-result').then(m => m.AssessmentResultComponent) },
     ]
   },
   {
@@ -81,7 +91,13 @@ export const routes: Routes = [
       { path: 'login-activity/:id', component: LoginActivityDetail },
       { path: 'regularization-requests', component: RegularizationRequestsComponent },
       { path: 'reports', loadComponent: () => import('./features/master/pages/reports/reports').then(m => m.AdminReportsComponent) },
-      { path: 'master-data', component: MasterDataComponent }
+      { path: 'master-data', component: MasterDataComponent },
+      { path: 'trainings', loadComponent: () => import('./features/hr/pages/trainings/training-list/training-list').then(m => m.TrainingListComponent) },
+      { path: 'trainings/create', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/edit', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/manage', loadComponent: () => import('./features/hr/pages/trainings/training-manage/training-manage').then(m => m.TrainingManageComponent) },
+      { path: 'trainings/:id/assessment', loadComponent: () => import('./features/hr/pages/trainings/assessment-builder/assessment-builder').then(m => m.AssessmentBuilderComponent) },
+      { path: 'training-reports', loadComponent: () => import('./features/hr/pages/trainings/training-reports/training-reports').then(m => m.TrainingReportsComponent) },
     ]
   },
   { path: 'login-activity', component: LoginActivityRedirect, canActivate: [authGuard] },

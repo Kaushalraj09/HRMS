@@ -40,6 +40,7 @@ export class EmpSidebar implements OnInit {
               { label: 'My Documents', icon: 'fas fa-folder-open', route: '/emp-dashboard/my-documents' },
               { label: 'Time Off', icon: 'fas fa-clock', route: '/emp-dashboard/time-off' },
               { label: 'Regularization', icon: 'fas fa-business-time', route: '/emp-dashboard/regularization' },
+              { label: 'My Trainings', icon: 'fas fa-graduation-cap', route: '/emp-dashboard/my-trainings' },
               { label: 'My Profile', icon: 'far fa-user', route: '/emp-dashboard/my-profile' },
               { label: 'Change Password', icon: 'fas fa-key', route: '/emp-dashboard/change-password' },
               { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }

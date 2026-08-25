@@ -51,7 +51,6 @@
                 <span class="menu-text">{{ item.label }}</span>
                 <span class="notification-dot" *ngIf="isParentActive(item) && !(isSidebarOpen$ | async)"></span>
                 <span class="menu-arrow">
-                  <span class="notification-dot position-relative mr-2" *ngIf="isParentActive(item)"></span>
                   <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>
                 </span>
               </a>

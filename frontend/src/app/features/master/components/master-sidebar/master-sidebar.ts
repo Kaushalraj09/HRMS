@@ -56,7 +56,15 @@ export class MasterSidebar implements OnInit {
         { label: 'Documents', icon: 'fas fa-folder-open', route: '/master-dashboard/documents' },
         { label: 'Attendance', icon: 'far fa-clock', route: '/master-dashboard/attendance' },
         { label: 'Time Off Oversight', icon: 'fas fa-calendar-times', route: '/master-dashboard/time-off' },
-        { label: 'Regularization Oversight', icon: 'fas fa-business-time', route: '/master-dashboard/regularization-requests' }
+        { label: 'Regularization Oversight', icon: 'fas fa-business-time', route: '/master-dashboard/regularization-requests' },
+        {
+          label: 'Training & Development',
+          icon: 'fas fa-graduation-cap',
+          children: [
+            { label: 'All Trainings', route: '/master-dashboard/trainings' },
+            { label: 'Training Reports', route: '/master-dashboard/training-reports' }
+          ]
+        }
       ]
     },
     {
@@ -109,6 +117,7 @@ export class MasterSidebar implements OnInit {
 
   ngOnInit(): void {
     this.checkMobileCollapse();
+    this.checkActiveRoutes();
     this.isSidebarOpen$.subscribe(open => {
       this.collapsed = !open;
     });
@@ -119,14 +128,16 @@ export class MasterSidebar implements OnInit {
       this.checkActiveRoutes();
       this.checkMobileCollapse();
     });
-    
-    // Initial check
-    setTimeout(() => this.checkActiveRoutes(), 100);
   }
 
   toggleExpand(item: MenuItem): void {
     if (item.children) {
       item.expanded = !item.expanded;
+      if (item.route) {
+        this.router.navigate([item.route]);
+      } else if (item.children.length > 0 && item.children[0].route) {
+        this.router.navigate([item.children[0].route]);
+      }
     }
   }
 

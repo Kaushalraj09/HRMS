@@ -1,0 +1,178 @@
+<div class="container-fluid p-4">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center">
+      <a routerLink="/emp-dashboard/my-trainings" class="btn btn-outline-secondary btn-sm me-3">
+        <i class="fas fa-arrow-left me-1"></i>Back to My Trainings
+      </a>
+      <div *ngIf="data">
+        <h3 class="fw-bold mb-0">{{ data.title }}</h3>
+        <span class="badge bg-primary-subtle text-primary me-2 font-monospace">{{ data.code }}</span>
+        <span class="badge bg-secondary-subtle text-secondary me-2">{{ data.category }}</span>
+        <span class="small text-muted"><i class="far fa-user me-1"></i>Trainer: {{ data.trainer_name || 'HR Team' }}</span>
+      </div>
+    </div>
+
+    <!-- Assessment Action Button -->
+    <div *ngIf="data && data.has_assessment">
+      <button
+        *ngIf="data.can_take_assessment"
+        class="btn btn-success btn-lg px-4 shadow-sm"
+        (click)="startAssessment()"
+      >
+        <i class="fas fa-file-signature me-2"></i>Start Assessment Test
+      </button>
+
+      <button
+        *ngIf="!data.can_take_assessment && data.last_attempt_result"
+        class="btn btn-outline-info"
+        [routerLink]="['/emp-dashboard/assessment-result', data.last_attempt_result.attempt_id]"
+      >
+        <i class="fas fa-poll me-2"></i>View Last Attempt Score ({{ data.last_attempt_result.percentage }}%)
+      </button>
+
+      <button
+        *ngIf="!data.can_take_assessment && !data.last_attempt_result"
+        class="btn btn-secondary disabled"
+        title="Complete all required materials first"
+      >
+        <i class="fas fa-lock me-2"></i>Complete Materials to Unlock Assessment
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5 text-muted">
+    <i class="fas fa-spinner fa-spin fs-3 text-primary me-2"></i>Loading learning materials...
+  </div>
+
+  <div *ngIf="!isLoading && data">
+    <!-- Overall Progress Banner -->
+    <div class="card border-0 shadow-sm mb-4 bg-light">
+      <div class="card-body p-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 me-4">
+          <div class="fw-bold text-dark me-2">Overall Program Progress:</div>
+          <div class="progress flex-grow-1" style="height: 10px;">
+            <div
+              class="progress-bar bg-success"
+              role="progressbar"
+              [style.width.%]="data.progress_percentage"
+            ></div>
+          </div>
+          <div class="fw-bold text-success">{{ data.progress_percentage }}%</div>
+        </div>
+        <div *ngIf="data.due_date" class="small text-muted">
+          <i class="far fa-calendar-alt me-1"></i>Due Date: {{ data.due_date | date:'mediumDate' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="row g-4">
+      <!-- Left Column: Materials Playlist -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-light fw-bold py-3">
+            <i class="fas fa-list-ul me-2 text-primary"></i>Learning Materials
+          </div>
+          <div class="list-group list-group-flush">
+            <button
+              *ngFor="let mat of data.materials"
+              class="list-group-item list-group-item-action p-3 d-flex align-items-center justify-content-between border-bottom"
+              [class.active-material]="selectedMaterial?.id === mat.id"
+              (click)="selectMaterial(mat)"
+            >
+              <div class="d-flex align-items-center me-2">
+                <i
+                  class="fs-4 me-3"
+                  [ngClass]="{
+                    'fas fa-file-pdf text-danger': mat.file_type === 'document' && mat.file_name.endsWith('.pdf'),
+                    'fas fa-file-video text-primary': mat.file_type === 'video',
+                    'fas fa-file-audio text-warning': mat.file_type === 'audio',
+                    'fas fa-file-image text-info': mat.file_type === 'image',
+                    'fas fa-file-alt text-secondary': mat.file_type === 'document'
+                  }"
+                ></i>
+                <div>
+                  <div class="fw-semibold text-dark small text-truncate" style="max-width: 180px;">
+                    {{ mat.file_name }}
+                  </div>
+                  <div class="small text-muted" style="font-size: 0.75rem;">
+                    {{ mat.file_type | titlecase }} • {{ (mat.file_size / (1024 * 1024)).toFixed(1) }} MB
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <i *ngIf="mat.is_completed" class="fas fa-check-circle text-success fs-5" title="Completed"></i>
+                <i *ngIf="!mat.is_completed" class="far fa-circle text-muted fs-5" title="Pending"></i>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Interactive Content Player/Viewer -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span>
+              <i class="fas fa-eye me-2 text-primary"></i>
+              {{ selectedMaterial?.file_name || 'Select a material' }}
+            </span>
+            <button
+              *ngIf="selectedMaterial && !selectedMaterial.is_completed"
+              class="btn btn-sm btn-success"
+              (click)="markMaterialCompleted(selectedMaterial)"
+            >
+              <i class="fas fa-check me-1"></i>Mark as Completed
+            </button>
+            <span *ngIf="selectedMaterial?.is_completed" class="badge bg-success-subtle text-success border px-2 py-1">
+              <i class="fas fa-check-circle me-1"></i>Completed
+            </span>
+          </div>
+
+          <div class="card-body p-4 text-center">
+            <div *ngIf="!selectedMaterial" class="py-5 text-muted">
+              Select a learning material from the list on the left to start reading or watching.
+            </div>
+
+            <!-- Video Player -->
+            <div *ngIf="selectedMaterial?.file_type === 'video'" class="ratio ratio-16x9 bg-black rounded shadow-sm">
+              <video controls [src]="selectedMaterial?.download_url" (ended)="selectedMaterial && markMaterialCompleted(selectedMaterial)">
+                Your browser does not support html5 video player.
+              </video>
+            </div>
+
+            <!-- Audio Player -->
+            <div *ngIf="selectedMaterial?.file_type === 'audio'" class="py-5 bg-light rounded border">
+              <i class="fas fa-headphones fs-1 text-primary mb-3"></i>
+              <h5 class="fw-bold mb-3">{{ selectedMaterial?.file_name }}</h5>
+              <audio controls [src]="selectedMaterial?.download_url" class="w-75" (ended)="selectedMaterial && markMaterialCompleted(selectedMaterial)"></audio>
+            </div>
+
+            <!-- Image Preview -->
+            <div *ngIf="selectedMaterial?.file_type === 'image'" class="py-3">
+              <img [src]="selectedMaterial?.download_url" [alt]="selectedMaterial?.file_name" class="img-fluid rounded border shadow-sm max-vh-75" />
+            </div>
+
+            <!-- PDF / Document Preview -->
+            <div *ngIf="selectedMaterial?.file_type === 'document'" class="py-4">
+              <div class="mb-3 p-4 bg-light rounded border">
+                <i class="fas fa-file-pdf fs-1 text-danger mb-2"></i>
+                <h5 class="fw-bold">{{ selectedMaterial?.file_name }}</h5>
+                <p class="text-muted small mb-3">{{ selectedMaterial?.description || 'Document learning material' }}</p>
+                <div class="d-flex justify-content-center gap-2">
+                  <a [href]="selectedMaterial?.download_url" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-2"></i>Open Document
+                  </a>
+                  <a [href]="selectedMaterial?.download_url" download class="btn btn-outline-secondary">
+                    <i class="fas fa-download me-2"></i>Download
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,215 @@
+<div class="trainings-page-wrapper">
+  <!-- Top Header & Metrics Banner -->
+  <div class="trainings-header-card">
+    <div class="header-main-info">
+      <div class="header-titles">
+        <div class="title-with-badge">
+          <h1 class="page-title">My Assigned Trainings</h1>
+          <span class="portal-badge">Learning Portal</span>
+        </div>
+        <p class="page-subtitle">
+          Access learning materials, complete assigned programs, and track your certifications.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="btn-refresh-header"
+        (click)="loadMyTrainings()"
+        [disabled]="isLoading"
+        title="Refresh training list"
+      >
+        <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+        <span>Refresh List</span>
+      </button>
+    </div>
+
+    <!-- Summary KPI Metric Cards (4 Cards) -->
+    <div class="trainings-metrics-grid">
+      <div
+        class="metric-card"
+        (click)="setFilter('ALL')"
+        [class.active]="activeFilter === 'ALL'"
+      >
+        <div class="metric-icon-wrap blue">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ trainings.length }}</span>
+          <span class="metric-title">All Programs</span>
+        </div>
+      </div>
+
+      <div
+        class="metric-card"
+        (click)="setFilter('IN_PROGRESS')"
+        [class.active]="activeFilter === 'IN_PROGRESS'"
+      >
+        <div class="metric-icon-wrap amber">
+          <i class="fas fa-spinner"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ inProgressCount }}</span>
+          <span class="metric-title">In Progress</span>
+        </div>
+      </div>
+
+      <div
+        class="metric-card"
+        (click)="setFilter('NOT_STARTED')"
+        [class.active]="activeFilter === 'NOT_STARTED'"
+      >
+        <div class="metric-icon-wrap purple">
+          <i class="fas fa-book-open"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ notStartedCount }}</span>
+          <span class="metric-title">Not Started</span>
+        </div>
+      </div>
+
+      <div
+        class="metric-card"
+        (click)="setFilter('COMPLETED')"
+        [class.active]="activeFilter === 'COMPLETED'"
+      >
+        <div class="metric-icon-wrap emerald">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="metric-data">
+          <span class="metric-num">{{ completedCount }}</span>
+          <span class="metric-title">Completed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Category Filter Toolbar Card -->
+  <div class="filter-toolbar-card">
+    <div class="search-input-box">
+      <i class="fas fa-search search-icon"></i>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search training programs by title, topic, or description..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+
+    <div class="category-pills-row" *ngIf="categories.length > 1">
+      <button
+        type="button"
+        class="cat-pill"
+        *ngFor="let cat of categories"
+        [class.active]="selectedCategory === cat"
+        (click)="setCategory(cat)"
+      >
+        {{ cat === 'ALL' ? 'All Topics' : cat }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="table-loading-state">
+    <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+    <p>Loading your training modules...</p>
+  </div>
+
+  <!-- Empty State View -->
+  <div *ngIf="!isLoading && filteredTrainings.length === 0" class="empty-docs-box">
+    <div class="empty-illustration-container">
+      <div class="empty-glow-ring"></div>
+      <div class="empty-icon-circle">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+        </svg>
+      </div>
+    </div>
+    <h3 class="empty-docs-title">No Training Programs Found</h3>
+    <p class="empty-docs-sub">
+      You currently have no training programs assigned in this category or search filter.
+    </p>
+    <button
+      type="button"
+      class="btn-clear-filters"
+      (click)="clearFilters()"
+      *ngIf="activeFilter !== 'ALL' || selectedCategory !== 'ALL' || searchQuery"
+    >
+      <i class="fas fa-undo-alt"></i> Reset All Filters
+    </button>
+  </div>
+
+  <!-- Training Cards Grid -->
+  <div class="trainings-grid-container" *ngIf="!isLoading && filteredTrainings.length > 0">
+    <div class="training-card-item" *ngFor="let item of filteredTrainings">
+      <div class="card-head-bar">
+        <span class="category-pill-tag">{{ item.category || 'General' }}</span>
+        <span
+          class="status-pill-badge"
+          [ngClass]="{
+            'status-completed': item.status === 'COMPLETED',
+            'status-in-progress': item.status === 'IN_PROGRESS',
+            'status-not-started': item.status === 'NOT_STARTED'
+          }"
+        >
+          <span class="status-dot"></span>
+          {{ item.status === 'COMPLETED' ? 'Completed' : item.status === 'IN_PROGRESS' ? 'In Progress' : 'Not Started' }}
+        </span>
+      </div>
+
+      <div class="card-body-content">
+        <div class="course-icon-badge">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <h3 class="course-title">{{ item.title }}</h3>
+        <p class="course-description">
+          {{ item.description || 'No detailed course description provided for this module.' }}
+        </p>
+
+        <div class="meta-strip">
+          <span class="meta-item">
+            <i class="far fa-clock"></i> {{ item.estimated_duration_minutes || 30 }} mins
+          </span>
+          <span *ngIf="item.due_date" class="meta-item due-date">
+            <i class="far fa-calendar-alt"></i> Due {{ item.due_date | date:'mediumDate' }}
+          </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-labels">
+            <span class="lbl-text">Progress</span>
+            <span class="lbl-val">{{ item.progress_percentage || 0 }}%</span>
+          </div>
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              [class.completed]="item.status === 'COMPLETED'"
+              [style.width.%]="item.progress_percentage || 0"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer-action">
+        <a
+          [routerLink]="['/emp-dashboard/my-trainings', item.training_id]"
+          class="btn-training-action"
+          [class.action-completed]="item.status === 'COMPLETED'"
+          [class.action-in-progress]="item.status === 'IN_PROGRESS'"
+          [class.action-start]="item.status === 'NOT_STARTED'"
+        >
+          <i class="fas fa-play" *ngIf="item.status === 'IN_PROGRESS'"></i>
+          <i class="fas fa-rocket" *ngIf="item.status === 'NOT_STARTED'"></i>
+          <i class="fas fa-eye" *ngIf="item.status === 'COMPLETED'"></i>
+          <span>{{ item.status === 'COMPLETED' ? 'Review Content' : item.status === 'IN_PROGRESS' ? 'Continue Training' : 'Start Training' }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
