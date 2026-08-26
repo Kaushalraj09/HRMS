@@ -102,7 +102,7 @@
                     <label for="fromDate">
                         <i class="far fa-calendar-alt"></i> FROM DATE
                     </label>
-                    <input type="date" id="fromDate" name="fromDate" class="input-control" formControlName="fromDate" (change)="activeRange = 'custom'">
+                    <app-custom-datepicker inputId="fromDate" formControlName="fromDate" (valueChange)="activeRange = 'custom'" placeholder="Select From Date"></app-custom-datepicker>
                 </div>
 
                 <!-- To Date -->
@@ -110,7 +110,7 @@
                     <label for="toDate">
                         <i class="far fa-calendar-check"></i> TO DATE
                     </label>
-                    <input type="date" id="toDate" name="toDate" class="input-control" formControlName="toDate" (change)="activeRange = 'custom'">
+                    <app-custom-datepicker inputId="toDate" formControlName="toDate" (valueChange)="activeRange = 'custom'" placeholder="Select To Date"></app-custom-datepicker>
                 </div>
 
                 <!-- Status Filter -->
@@ -118,15 +118,11 @@
                     <label for="statusFilter">
                         <i class="fas fa-tag"></i> ATTENDANCE STATUS
                     </label>
-                    <select id="statusFilter" name="statusFilter" class="select-control" formControlName="status">
-                        <option value="">All Statuses</option>
-                        <option value="Present">Present</option>
-                        <option value="Working">Working</option>
-                        <option value="Absent">Absent</option>
-                        <option value="Half Day">Half Day</option>
-                        <option value="Time Off">Time Off / Leave</option>
-                        <option value="Not Marked">Not Marked</option>
-                    </select>
+                    <app-custom-select 
+                      [options]="statusSelectOptions" 
+                      formControlName="status" 
+                      placeholder="All Statuses"
+                    ></app-custom-select>
                 </div>
 
                 <!-- Action Buttons -->

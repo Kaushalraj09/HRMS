@@ -76,6 +76,11 @@ class AdminDashboardData(BaseModel):
     payrollStatus: Optional[str] = None
     payrollPeriod: Optional[str] = None
     
+    headcountTrend: Optional[List[float]] = None
+    attendanceTrend: Optional[List[float]] = None
+    leaveTrend: Optional[List[float]] = None
+    payrollTrend: Optional[List[float]] = None
+    
     adminProfile: Optional[AdminProfileInfo] = None
     attendanceOverview: Optional[List[AttendanceOverviewPoint]] = None
     departmentDistribution: Optional[List[DepartmentDistributionItem]] = None
@@ -83,6 +88,12 @@ class AdminDashboardData(BaseModel):
     recentJoiners: Optional[List[RecentJoinerItem]] = None
     todayBirthdays: Optional[List[BirthdayItem]] = None
     pendingApprovals: Optional[PendingApprovalsSummary] = None
+    
+    # Detailed Analytics Models
+    attendanceAnalytics: Optional[dict] = None
+    employeeAnalytics: Optional[dict] = None
+    leaveAnalytics: Optional[dict] = None
+    payrollAnalytics: Optional[dict] = None
 
 class QuickStat(BaseModel):
     total: int
@@ -127,5 +138,23 @@ class HrDashboardData(BaseModel):
     recentTimeSheets: List[RecentTimeSheet]
     upcomingEvents: List[UpcomingEvent]
     weeklyAttendanceTrend: List[WeeklyAttendanceTrendItem]
+    
+    headcountTrend: Optional[List[float]] = None
+    attendanceTrend: Optional[List[float]] = None
+    leaveTrend: Optional[List[float]] = None
+    payrollTrend: Optional[List[float]] = None
+    employeeGrowthCount: Optional[int] = None
+    employeeGrowthRate: Optional[float] = None
+    attendanceRate: Optional[float] = None
+    attendanceGrowthRate: Optional[float] = None
+    pendingLeavesCount: Optional[int] = None
+    payrollStatus: Optional[str] = None
+    payrollPeriod: Optional[str] = None
+    
+    attendanceAnalytics: Optional[dict] = None
+    employeeAnalytics: Optional[dict] = None
+    leaveAnalytics: Optional[dict] = None
+    payrollAnalytics: Optional[dict] = None
+
 
 

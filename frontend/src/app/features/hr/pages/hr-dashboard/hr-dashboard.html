@@ -31,42 +31,38 @@
             <div class="filter-fields-group">
               <div class="filter-field">
                 <label class="filter-label">Department</label>
-                <div class="select-wrapper">
-                  <select [(ngModel)]="selectedDepartment" class="filter-select">
-                    <option *ngFor="let opt of departmentOptions" [value]="opt">{{ opt }}</option>
-                  </select>
-                  <i class="fas fa-chevron-down select-chevron"></i>
-                </div>
+                <app-custom-select 
+                  [options]="deptSelectOptions" 
+                  [(ngModel)]="selectedDepartment"
+                  placeholder="All Departments">
+                </app-custom-select>
               </div>
 
               <div class="filter-field">
                 <label class="filter-label">Work Mode</label>
-                <div class="select-wrapper">
-                  <select [(ngModel)]="selectedWorkMode" class="filter-select">
-                    <option *ngFor="let opt of workModeOptions" [value]="opt">{{ opt }}</option>
-                  </select>
-                  <i class="fas fa-chevron-down select-chevron"></i>
-                </div>
+                <app-custom-select 
+                  [options]="workModeSelectOptions" 
+                  [(ngModel)]="selectedWorkMode"
+                  placeholder="All Modes">
+                </app-custom-select>
               </div>
 
               <div class="filter-field">
                 <label class="filter-label">Location</label>
-                <div class="select-wrapper">
-                  <select [(ngModel)]="selectedLocation" class="filter-select">
-                    <option *ngFor="let opt of locationOptions" [value]="opt">{{ opt }}</option>
-                  </select>
-                  <i class="fas fa-chevron-down select-chevron"></i>
-                </div>
+                <app-custom-select 
+                  [options]="locationSelectOptions" 
+                  [(ngModel)]="selectedLocation"
+                  placeholder="All Locations">
+                </app-custom-select>
               </div>
 
               <div class="filter-field">
                 <label class="filter-label">Date Range</label>
-                <div class="select-wrapper">
-                  <select [(ngModel)]="selectedDateRange" class="filter-select">
-                    <option *ngFor="let opt of dateRangeOptions" [value]="opt">{{ opt }}</option>
-                  </select>
-                  <i class="fas fa-chevron-down select-chevron"></i>
-                </div>
+                <app-custom-select 
+                  [options]="dateRangeSelectOptions" 
+                  [(ngModel)]="selectedDateRange"
+                  placeholder="Today">
+                </app-custom-select>
               </div>
             </div>
 
@@ -96,10 +92,64 @@
                 </span>
               </div>
 
-              <div class="kpi-sparkline-wrapper">
-                <svg viewBox="0 0 180 24" class="kpi-sparkline-svg" preserveAspectRatio="none">
-                  <path [attr.d]="kpi.sparklineD" fill="none" [attr.stroke]="kpi.sparklineColor" stroke-width="2" stroke-linecap="round"/>
+              <div class="kpi-sparkline-wrapper" (mouseleave)="clearKpiHover()">
+                <svg viewBox="0 0 180 30" class="kpi-sparkline-svg" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient [id]="'hrSparkGrad_' + kpi.id" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" [attr.stop-color]="kpi.sparklineColor" stop-opacity="0.25"/>
+                      <stop offset="100%" [attr.stop-color]="kpi.sparklineColor" stop-opacity="0.0"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Gradient Area Fill -->
+                  <path [attr.d]="getKpiSparkline(kpi.id).areaPath" [attr.fill]="'url(#hrSparkGrad_' + kpi.id + ')'"/>
+                  <!-- Curved Line -->
+                  <path [attr.d]="getKpiSparkline(kpi.id).linePath" fill="none" [attr.stroke]="kpi.sparklineColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+                  <!-- Dotted Vertical Guide Line -->
+                  <line 
+                    *ngIf="hoveredKpiCard === kpi.id && hoveredKpiPoint" 
+                    [attr.x1]="hoveredKpiPoint.x" 
+                    y1="0" 
+                    [attr.x2]="hoveredKpiPoint.x" 
+                    y2="30" 
+                    [attr.stroke]="kpi.sparklineColor" 
+                    stroke-width="1.5" 
+                    stroke-dasharray="2 2"
+                  />
+
+                  <!-- Interactive Hover Points & Hitboxes -->
+                  <g *ngFor="let pt of getKpiSparkline(kpi.id).points; let idx = index">
+                    <rect 
+                      [attr.x]="pt.x - 14" 
+                      y="0" 
+                      width="28" 
+                      height="30" 
+                      fill="transparent" 
+                      style="cursor: pointer;"
+                      (mouseenter)="setKpiHover(kpi.id, pt, idx, $event)"
+                    />
+                    <circle 
+                      [attr.cx]="pt.x" 
+                      [attr.cy]="pt.y" 
+                      [attr.r]="(hoveredKpiCard === kpi.id && hoveredKpiIndex === idx) ? 4.5 : (idx === getKpiSparkline(kpi.id).points.length - 1 ? 2.5 : 1.5)" 
+                      [attr.fill]="(hoveredKpiCard === kpi.id && hoveredKpiIndex === idx) ? kpi.sparklineColor : '#ffffff'" 
+                      [attr.stroke]="kpi.sparklineColor" 
+                      [attr.stroke-width]="(hoveredKpiCard === kpi.id && hoveredKpiIndex === idx) ? 2 : 1"
+                      class="sparkline-point"
+                      (mouseenter)="setKpiHover(kpi.id, pt, idx, $event)"
+                    />
+                  </g>
                 </svg>
+
+                <!-- Floating Tooltip -->
+                <div 
+                  class="kpi-spark-tooltip" 
+                  *ngIf="hoveredKpiCard === kpi.id && hoveredKpiPoint"
+                  [style.left.%]="(hoveredKpiPoint.x / 180) * 100"
+                >
+                  <span class="spark-tt-date">{{ hoveredKpiPoint.dateStr }}</span>
+                  <span class="spark-tt-val">{{ hoveredKpiPoint.val }} {{ hoveredKpiPoint.unit }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -583,10 +633,14 @@
                         <span class="status-pill status-amber">{{ req.status }}</span>
                       </td>
                       <td>
-                        <div class="action-dropdown-btn-wrap">
-                          <button type="button" class="btn-action-pill" (click)="approveRequest(req.id)">
+                        <div class="action-dropdown-btn-wrap" style="display: flex; gap: 6px;">
+                          <button type="button" class="btn-action-pill" (click)="approveRequest(req.id)" title="Approve">
                             <span>Approve</span>
                             <i class="fas fa-check action-chevron"></i>
+                          </button>
+                          <button type="button" class="btn-action-pill danger-pill" (click)="rejectRequest(req.id)" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Reject">
+                            <span>Reject</span>
+                            <i class="fas fa-times action-chevron"></i>
                           </button>
                         </div>
                       </td>

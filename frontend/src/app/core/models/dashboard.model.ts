@@ -68,6 +68,53 @@ export interface AdminProfileInfo {
   status: string;
 }
 
+export interface AttendanceAnalyticsData {
+  attendanceRate: number;
+  present: number;
+  absent: number;
+  late: number;
+  onLeave: number;
+  history?: AttendanceOverviewPoint[];
+}
+
+export interface EmployeeAnalyticsData {
+  total: number;
+  active: number;
+  inactive: number;
+  newJoiners: number;
+  exited: number;
+  departmentDistribution?: DepartmentDistributionItem[];
+  growthTrend?: MonthlyHiringItem[];
+}
+
+export interface LeaveTypeBreakdownItem {
+  type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface LeaveAnalyticsData {
+  totalRequests: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  cancelled: number;
+  types?: LeaveTypeBreakdownItem[];
+}
+
+export interface PayrollAnalyticsData {
+  status: string;
+  period: string;
+  totalPayroll: string;
+  employeesProcessed: number;
+  completed: number;
+  pending: number;
+  failed: number;
+  grossPayroll?: string;
+  netPayroll?: string;
+  deductions?: string;
+}
+
 export interface AdminDashboardData {
   cards: DashboardStatCard[];
   hrUsers: DashboardTableRow[];
@@ -82,6 +129,11 @@ export interface AdminDashboardData {
   payrollStatus?: string;
   payrollPeriod?: string;
   
+  headcountTrend?: number[];
+  attendanceTrend?: number[];
+  leaveTrend?: number[];
+  payrollTrend?: number[];
+  
   adminProfile?: AdminProfileInfo;
   attendanceOverview?: AttendanceOverviewPoint[];
   departmentDistribution?: DepartmentDistributionItem[];
@@ -89,6 +141,11 @@ export interface AdminDashboardData {
   recentJoiners?: RecentJoinerItem[];
   todayBirthdays?: BirthdayItem[];
   pendingApprovals?: PendingApprovalsSummary;
+
+  attendanceAnalytics?: AttendanceAnalyticsData;
+  employeeAnalytics?: EmployeeAnalyticsData;
+  leaveAnalytics?: LeaveAnalyticsData;
+  payrollAnalytics?: PayrollAnalyticsData;
 }
 
 export interface WeeklyAttendanceTrendItem {
@@ -128,5 +185,23 @@ export interface HrDashboardData {
     role: string;
   }>;
   weeklyAttendanceTrend: WeeklyAttendanceTrendItem[];
+
+  headcountTrend?: number[];
+  attendanceTrend?: number[];
+  leaveTrend?: number[];
+  payrollTrend?: number[];
+  employeeGrowthCount?: number;
+  employeeGrowthRate?: number;
+  attendanceRate?: number;
+  attendanceGrowthRate?: number;
+  pendingLeavesCount?: number;
+  payrollStatus?: string;
+  payrollPeriod?: string;
+
+  attendanceAnalytics?: AttendanceAnalyticsData;
+  employeeAnalytics?: EmployeeAnalyticsData;
+  leaveAnalytics?: LeaveAnalyticsData;
+  payrollAnalytics?: PayrollAnalyticsData;
 }
+
 

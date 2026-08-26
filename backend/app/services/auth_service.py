@@ -69,6 +69,17 @@ def authenticate_user(db: Session, request: LoginRequest):
                 db.add(employee)
                 db.commit()
 
+        # Resolve designation
+        emp_obj = db.query(Employee).filter(Employee.user_id == user.id).first()
+        user_designation = emp_obj.designation if (emp_obj and emp_obj.designation) else None
+        if not user_designation:
+            if role_name == "admin":
+                user_designation = "System Admin"
+            elif role_name == "hr":
+                user_designation = "HR Manager"
+            else:
+                user_designation = "Software Engineer"
+
         # Handle HR role selection step
         if role_name == "hr" and not request.activeDashboard:
             return {
@@ -79,6 +90,7 @@ def authenticate_user(db: Session, request: LoginRequest):
                     "email": user.email,
                     "displayName": user.display_name,
                     "role": user.role.name,
+                    "designation": user_designation,
                     "status": user.status,
                     "accessibleDashboards": ["HR", "EMPLOYEE"],
                     "activeDashboard": None,
@@ -107,7 +119,8 @@ def authenticate_user(db: Session, request: LoginRequest):
                 "id": user.id,
                 "email": user.email,
                 "displayName": user.display_name,
-                "role": user.role.name, # Accesses the relationship from Lesson 2
+                "role": user.role.name,
+                "designation": user_designation,
                 "status": user.status,
                 "accessibleDashboards": user.accessibleDashboards,
                 "activeDashboard": active_dashboard,

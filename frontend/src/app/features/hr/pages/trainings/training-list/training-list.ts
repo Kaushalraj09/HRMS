@@ -1,14 +1,16 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { Training, TrainingKPI, Assessment, AssessmentQuestion } from '../../../../../core/models/training.model';
+import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
 
 @Component({
   selector: 'app-training-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './training-list.html',
   styleUrls: ['./training-list.css']
 })
@@ -26,6 +28,23 @@ export class TrainingListComponent implements OnInit {
   limit = 10;
   isLoading = false;
 
+  // Dropdown toggle state
+  activeDropdownId: number | null = null;
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.activeDropdownId !== null) {
+      this.activeDropdownId = null;
+      this.cdr.detectChanges();
+    }
+  }
+
+  toggleDropdown(id: number, event: Event): void {
+    event.stopPropagation();
+    this.activeDropdownId = this.activeDropdownId === id ? null : id;
+    this.cdr.detectChanges();
+  }
+
   categories = [
     'Technical', 'Compliance', 'Safety', 'HR Policy',
     'Soft Skills', 'Leadership', 'Product Training', 'Onboarding', 'Other'
@@ -34,6 +53,43 @@ export class TrainingListComponent implements OnInit {
   statuses = ['Draft', 'Published', 'Archived'];
 
   departments = ['Engineering', 'HR', 'Finance', 'Sales', 'Marketing', 'Operations', 'Legal'];
+
+  get categorySelectOptions(): { label: string; value: string }[] {
+    return this.categories.map(c => ({ label: c, value: c }));
+  }
+
+  readonly statusModalSelectOptions = [
+    { label: 'Published', value: 'Published' },
+    { label: 'Draft', value: 'Draft' },
+    { label: 'Archived', value: 'Archived' }
+  ];
+
+  readonly difficultySelectOptions = [
+    { label: 'Beginner', value: 'Beginner' },
+    { label: 'Intermediate', value: 'Intermediate' },
+    { label: 'Advanced', value: 'Advanced' }
+  ];
+
+  get categoryOptions(): SelectOption[] {
+    return [
+      { label: 'All Categories', value: '' },
+      ...this.categories.map(c => ({ label: c, value: c }))
+    ];
+  }
+
+  get statusOptions(): SelectOption[] {
+    return [
+      { label: 'All Statuses', value: '' },
+      ...this.statuses.map(s => ({ label: s, value: s }))
+    ];
+  }
+
+  get departmentOptions(): SelectOption[] {
+    return [
+      { label: 'All Departments', value: '' },
+      ...this.departments.map(d => ({ label: d, value: d }))
+    ];
+  }
 
   // Modal 1: Create Training Modal Form
   isCreateModalOpen = false;
@@ -94,6 +150,19 @@ export class TrainingListComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  private formatError(err: any): string {
+    if (!err) return 'Unknown error';
+    const detail = err.error?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join('\n');
+    }
+    if (typeof detail === 'object' && detail !== null) {
+      return JSON.stringify(detail);
+    }
+    return err.message || 'Unexpected server error';
+  }
+
   onSubmitCreateTraining(): void {
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
@@ -103,7 +172,14 @@ export class TrainingListComponent implements OnInit {
     this.isSubmittingTraining = true;
     this.cdr.detectChanges();
 
-    this.trainingService.createTraining(this.createForm.value).subscribe({
+    const raw = this.createForm.value;
+    const payload = {
+      ...raw,
+      start_date: raw.start_date ? raw.start_date : null,
+      end_date: raw.end_date ? raw.end_date : null,
+    };
+
+    this.trainingService.createTraining(payload).subscribe({
       next: (res) => {
         this.isSubmittingTraining = false;
         this.closeCreateModal();
@@ -112,7 +188,7 @@ export class TrainingListComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmittingTraining = false;
-        alert('Error creating training program: ' + (err.error?.detail || err.message));
+        alert('Error creating training program:\n' + this.formatError(err));
         this.cdr.detectChanges();
       }
     });

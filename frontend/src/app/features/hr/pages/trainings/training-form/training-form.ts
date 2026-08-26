@@ -4,10 +4,13 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 
+import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-training-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './training-form.html',
   styleUrls: ['./training-form.css']
 })
@@ -24,6 +27,16 @@ export class TrainingFormComponent implements OnInit {
   ];
 
   statuses = ['Draft', 'Published', 'Archived'];
+
+  get categorySelectOptions(): { label: string; value: string }[] {
+    return this.categories.map(c => ({ label: c, value: c }));
+  }
+
+  readonly statusSelectOptions = [
+    { label: 'Draft (Only visible to HR)', value: 'Draft' },
+    { label: 'Published (Active & Assignable)', value: 'Published' },
+    { label: 'Archived', value: 'Archived' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -100,6 +113,19 @@ export class TrainingFormComponent implements OnInit {
     });
   }
 
+  private formatError(err: any): string {
+    if (!err) return 'Unknown error';
+    const detail = err.error?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join('\n');
+    }
+    if (typeof detail === 'object' && detail !== null) {
+      return JSON.stringify(detail);
+    }
+    return err.message || 'Unexpected server error';
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -107,7 +133,12 @@ export class TrainingFormComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-    const payload = this.form.value;
+    const raw = this.form.value;
+    const payload = {
+      ...raw,
+      start_date: raw.start_date ? raw.start_date : null,
+      end_date: raw.end_date ? raw.end_date : null,
+    };
 
     if (this.isEditMode && this.trainingId) {
       this.trainingService.updateTraining(this.trainingId, payload).subscribe({
@@ -117,7 +148,7 @@ export class TrainingFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          alert('Error updating training: ' + (err.error?.detail || err.message));
+          alert('Error updating training:\n' + this.formatError(err));
         }
       });
     } else {
@@ -128,7 +159,7 @@ export class TrainingFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          alert('Error creating training: ' + (err.error?.detail || err.message));
+          alert('Error creating training:\n' + this.formatError(err));
         }
       });
     }

@@ -17,7 +17,7 @@ import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from '
 })
 export class Navbar implements OnInit, OnDestroy, OnChanges {
   @Input() userName: string = 'System Admin';
-  @Input() userRole: string = 'Software Engineer';
+  @Input() userRole: string = '';
   @Input() showSearch: boolean = true;
   @Input() searchValue: string = '';
 
@@ -57,6 +57,15 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     private readonly router: Router
   ) {}
 
+  private formatUserRole(role?: string): string {
+    if (!role) return 'System Admin';
+    const r = role.toLowerCase();
+    if (r === 'admin' || r === 'master' || r === 'system admin') return 'System Admin';
+    if (r === 'hr' || r === 'hr manager') return 'HR Manager';
+    if (r === 'employee') return 'Employee';
+    return role;
+  }
+
   ngOnInit(): void {
     this.searchTerm = this.searchValue || '';
 
@@ -79,8 +88,12 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     this.sub.add(
       this.authService.currentUser$.subscribe(user => {
         if (user) {
-          this.userName = user.displayName;
+          this.userName = user.displayName || this.userName;
           this.profileImage = user.profileImage || null;
+          
+          if (!this.userRole || this.userRole === 'Software Engineer' || this.userRole === 'Employee' || this.userRole === 'System Admin') {
+            this.userRole = user.designation || this.formatUserRole(user.role);
+          }
           
           const names = (user.displayName || '').trim().split(/\s+/).filter(Boolean);
           const first = names[0]?.[0] || '';

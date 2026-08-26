@@ -6,6 +6,7 @@ import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/ope
 import { AttendanceRecord, PaginatedAttendance } from '../../../../core/models/attendance.model';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
 
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
@@ -13,7 +14,7 @@ import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
 @Component({
   selector: 'app-attendance',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './attendance.html',
   styleUrl: './attendance.css',
   changeDetection: ChangeDetectionStrategy.OnPush, // Force IDE cache refresh

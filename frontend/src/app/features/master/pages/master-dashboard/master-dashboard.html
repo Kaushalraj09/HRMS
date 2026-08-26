@@ -4,6 +4,7 @@
     <div class="dashboard-right-wrapper">
         <app-navbar 
             [userName]="userName" 
+            [userRole]="adminRole"
             [searchValue]="searchTerm"
             (hamburgerClick)="toggleSidebar()"
             (searchChange)="onSearch($event)">
@@ -13,14 +14,19 @@
             <div class="page-content">
                 <router-outlet></router-outlet>
 
-                <div class="admin-dashboard-container" *ngIf="isMainDashboardRoute()">
+                <div class="admin-dashboard-container" *ngIf="isMainDashboardRoute()" (click)="closeAllCardMenus()">
                     <!-- Error Notification Alert if any -->
                     <div class="dashboard-error-banner" *ngIf="dashboardError">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>{{ dashboardError }}</span>
+                        <div class="error-left">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>{{ dashboardError }}</span>
+                        </div>
+                        <button type="button" class="btn-error-retry" (click)="refreshDashboard()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
                     </div>
 
-                    <!-- 1. HERO USER HEADER -->
+                    <!-- HERO USER HEADER -->
                     <div class="admin-hero-card">
                         <div class="hero-left">
                             <div class="hero-avatar-wrapper">
@@ -53,113 +59,377 @@
                         </div>
                     </div>
 
-                    <!-- 2. TOP 4 KPI STATS CARDS -->
+                    <!-- TOP 4 KPI STATS CARDS -->
                     <div class="kpi-grid">
                         <!-- Card 1: Total Employees -->
-                        <div class="kpi-card" routerLink="/master-dashboard/employees" style="cursor: pointer;">
-                            <div class="kpi-header">
+                        <div class="kpi-card" (click)="onCardAction('employees', 'details', $event)">
+                            <div class="kpi-top-row">
                                 <div class="kpi-icon-box icon-blue">
                                     <i class="fas fa-users"></i>
                                 </div>
-                                <div class="kpi-more">
+                                <div class="kpi-text-col">
+                                    <span class="kpi-label">Total Employees</span>
+                                    <h2 class="kpi-value">{{ totalEmployeesDisplay }}</h2>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-trend trend-up">
+                                            <i class="fas fa-arrow-up"></i> {{ employeeGrowthText }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="kpi-more" (click)="toggleCardMenu('employees', $event)" title="Card Options">
                                     <i class="fas fa-ellipsis-v"></i>
+                                    <div class="kpi-dropdown-menu" *ngIf="activeCardMenu === 'employees'" (click)="$event.stopPropagation()">
+                                        <!-- 1. View Details -->
+                                        <button type="button" class="menu-item" (click)="onCardAction('employees', 'details', $event)">
+                                            <i class="fas fa-user-friends"></i>
+                                            <span>View Details</span>
+                                        </button>
+
+                                        <div class="menu-divider"></div>
+
+                                        <!-- 2. Download Document -->
+                                        <button type="button" class="menu-item highlight-pdf" (click)="onCardAction('employees', 'export', $event)">
+                                            <i class="fas fa-file-pdf"></i>
+                                            <span>Download Document</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="kpi-body">
-                                <span class="kpi-label">Total Employees</span>
-                                <h2 class="kpi-value">{{ totalEmployeesDisplay }}</h2>
-                                <div class="kpi-footer">
-                                    <span class="kpi-trend trend-up">
-                                        <i class="fas fa-arrow-up"></i> {{ employeeGrowthText }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="kpi-sparkline">
-                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
-                                    <path d="M 0 32 Q 25 15, 50 28 T 100 18 T 135 22 T 160 8" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
-                                    <circle cx="160" cy="8" r="3.5" fill="#3b82f6"/>
+                            <div class="kpi-graph-wrap" title="Employee Growth Trend" (mouseleave)="clearKpiHover()">
+                                <svg viewBox="0 0 200 45" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="blueSparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stop-color="#2563eb" stop-opacity="0.25"/>
+                                            <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path [attr.d]="totalEmployeesSparkline.areaPath" fill="url(#blueSparkGrad)"/>
+                                    <path [attr.d]="totalEmployeesSparkline.linePath" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    
+                                    <!-- Vertical Guide Line -->
+                                    <line 
+                                        *ngIf="hoveredKpiCard === 'employees' && hoveredKpiPoint" 
+                                        [attr.x1]="hoveredKpiPoint.x" 
+                                        [attr.y1]="0" 
+                                        [attr.x2]="hoveredKpiPoint.x" 
+                                        [attr.y2]="45" 
+                                        stroke="#2563eb" 
+                                        stroke-width="1.5" 
+                                        stroke-dasharray="2 2"
+                                    />
+
+                                    <!-- Points & Hitboxes -->
+                                    <g *ngFor="let pt of totalEmployeesSparkline.points; let idx = index">
+                                        <rect 
+                                            [attr.x]="pt.x - 14" 
+                                            y="0" 
+                                            width="28" 
+                                            height="45" 
+                                            fill="transparent" 
+                                            style="cursor: pointer;"
+                                            (mouseenter)="setKpiHover('employees', pt, idx, $event)"
+                                        />
+                                        <circle 
+                                            [attr.cx]="pt.x" 
+                                            [attr.cy]="pt.y" 
+                                            [attr.r]="(hoveredKpiCard === 'employees' && hoveredKpiIndex === idx) ? 4.5 : (idx === totalEmployeesSparkline.points.length - 1 ? 2.5 : 1.5)" 
+                                            [attr.fill]="(hoveredKpiCard === 'employees' && hoveredKpiIndex === idx) ? '#2563eb' : '#ffffff'" 
+                                            stroke="#2563eb" 
+                                            [attr.stroke-width]="(hoveredKpiCard === 'employees' && hoveredKpiIndex === idx) ? 2 : 1"
+                                            class="sparkline-point"
+                                            (mouseenter)="setKpiHover('employees', pt, idx, $event)"
+                                        />
+                                    </g>
                                 </svg>
+
+                                <!-- Floating Tooltip -->
+                                <div 
+                                    class="kpi-spark-tooltip" 
+                                    *ngIf="hoveredKpiCard === 'employees' && hoveredKpiPoint"
+                                    [style.left.%]="(hoveredKpiPoint.x / 200) * 100"
+                                >
+                                    <span class="spark-tt-date">{{ hoveredKpiPoint.dateStr }}</span>
+                                    <span class="spark-tt-val">{{ hoveredKpiPoint.val }} {{ hoveredKpiPoint.unit }}</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Card 2: Attendance -->
-                        <div class="kpi-card" routerLink="/master-dashboard/attendance" style="cursor: pointer;">
-                            <div class="kpi-header">
+                        <div class="kpi-card" (click)="onCardAction('attendance', 'details', $event)">
+                            <div class="kpi-top-row">
                                 <div class="kpi-icon-box icon-green">
                                     <i class="far fa-calendar-check"></i>
                                 </div>
-                                <div class="kpi-more">
+                                <div class="kpi-text-col">
+                                    <span class="kpi-label">Attendance</span>
+                                    <h2 class="kpi-value">{{ attendanceRateDisplay }}</h2>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-trend" [ngClass]="isAttendanceGrowthPositive ? 'trend-up-green' : 'trend-red'">
+                                            <i class="fas" [ngClass]="isAttendanceGrowthPositive ? 'fa-arrow-up' : 'fa-arrow-down'"></i> {{ attendanceGrowthText }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="kpi-more" (click)="toggleCardMenu('attendance', $event)" title="Card Options">
                                     <i class="fas fa-ellipsis-v"></i>
+                                    <div class="kpi-dropdown-menu" *ngIf="activeCardMenu === 'attendance'" (click)="$event.stopPropagation()">
+                                        <!-- 1. View Details -->
+                                        <button type="button" class="menu-item" (click)="onCardAction('attendance', 'details', $event)">
+                                            <i class="far fa-calendar-alt"></i>
+                                            <span>View Details</span>
+                                        </button>
+
+                                        <div class="menu-divider"></div>
+
+                                        <!-- 2. Download Document -->
+                                        <button type="button" class="menu-item highlight-pdf" (click)="onCardAction('attendance', 'export', $event)">
+                                            <i class="fas fa-file-pdf"></i>
+                                            <span>Download Document</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="kpi-body">
-                                <span class="kpi-label">Attendance</span>
-                                <h2 class="kpi-value">{{ attendanceRateDisplay }}</h2>
-                                <div class="kpi-footer">
-                                    <span class="kpi-trend trend-up-green">
-                                        <i class="fas fa-arrow-up"></i> {{ attendanceGrowthText }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="kpi-sparkline">
-                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
-                                    <path d="M 0 28 Q 30 20, 60 26 T 110 14 T 140 20 T 160 6" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
-                                    <circle cx="160" cy="6" r="3.5" fill="#10b981"/>
+                            <div class="kpi-graph-wrap" title="Attendance Trend" (mouseleave)="clearKpiHover()">
+                                <svg viewBox="0 0 200 45" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="greenSparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+                                            <stop offset="100%" stop-color="#22c55e" stop-opacity="0.0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path [attr.d]="attendanceSparkline.areaPath" fill="url(#greenSparkGrad)"/>
+                                    <path [attr.d]="attendanceSparkline.linePath" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                                    <!-- Vertical Guide Line -->
+                                    <line 
+                                        *ngIf="hoveredKpiCard === 'attendance' && hoveredKpiPoint" 
+                                        [attr.x1]="hoveredKpiPoint.x" 
+                                        [attr.y1]="0" 
+                                        [attr.x2]="hoveredKpiPoint.x" 
+                                        [attr.y2]="45" 
+                                        stroke="#22c55e" 
+                                        stroke-width="1.5" 
+                                        stroke-dasharray="2 2"
+                                    />
+
+                                    <!-- Points & Hitboxes -->
+                                    <g *ngFor="let pt of attendanceSparkline.points; let idx = index">
+                                        <rect 
+                                            [attr.x]="pt.x - 14" 
+                                            y="0" 
+                                            width="28" 
+                                            height="45" 
+                                            fill="transparent" 
+                                            style="cursor: pointer;"
+                                            (mouseenter)="setKpiHover('attendance', pt, idx, $event)"
+                                        />
+                                        <circle 
+                                            [attr.cx]="pt.x" 
+                                            [attr.cy]="pt.y" 
+                                            [attr.r]="(hoveredKpiCard === 'attendance' && hoveredKpiIndex === idx) ? 4.5 : (idx === attendanceSparkline.points.length - 1 ? 2.5 : 1.5)" 
+                                            [attr.fill]="(hoveredKpiCard === 'attendance' && hoveredKpiIndex === idx) ? '#22c55e' : '#ffffff'" 
+                                            stroke="#22c55e" 
+                                            [attr.stroke-width]="(hoveredKpiCard === 'attendance' && hoveredKpiIndex === idx) ? 2 : 1"
+                                            class="sparkline-point"
+                                            (mouseenter)="setKpiHover('attendance', pt, idx, $event)"
+                                        />
+                                    </g>
                                 </svg>
+
+                                <!-- Floating Tooltip -->
+                                <div 
+                                    class="kpi-spark-tooltip" 
+                                    *ngIf="hoveredKpiCard === 'attendance' && hoveredKpiPoint"
+                                    [style.left.%]="(hoveredKpiPoint.x / 200) * 100"
+                                >
+                                    <span class="spark-tt-date">{{ hoveredKpiPoint.dateStr }}</span>
+                                    <span class="spark-tt-val">{{ hoveredKpiPoint.val }}{{ hoveredKpiPoint.unit }}</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Card 3: Leave Requests -->
-                        <div class="kpi-card" (click)="scrollToOversight()" style="cursor: pointer;">
-                            <div class="kpi-header">
+                        <div class="kpi-card" (click)="onCardAction('leaves', 'details', $event)">
+                            <div class="kpi-top-row">
                                 <div class="kpi-icon-box icon-purple">
-                                    <i class="fas fa-gift"></i>
+                                    <i class="fas fa-briefcase"></i>
                                 </div>
-                                <div class="kpi-more">
+                                <div class="kpi-text-col">
+                                    <span class="kpi-label">Leave Requests</span>
+                                    <h2 class="kpi-value">{{ pendingLeavesDisplay }}</h2>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-trend trend-orange">
+                                            Pending approvals
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="kpi-more" (click)="toggleCardMenu('leaves', $event)" title="Card Options">
                                     <i class="fas fa-ellipsis-v"></i>
+                                    <div class="kpi-dropdown-menu" *ngIf="activeCardMenu === 'leaves'" (click)="$event.stopPropagation()">
+                                        <!-- 1. View Details -->
+                                        <button type="button" class="menu-item" (click)="onCardAction('leaves', 'details', $event)">
+                                            <i class="fas fa-envelope-open-text"></i>
+                                            <span>View Details</span>
+                                        </button>
+
+                                        <div class="menu-divider"></div>
+
+                                        <!-- 2. Download Document -->
+                                        <button type="button" class="menu-item highlight-pdf" (click)="onCardAction('leaves', 'export', $event)">
+                                            <i class="fas fa-file-pdf"></i>
+                                            <span>Download Document</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="kpi-body">
-                                <span class="kpi-label">Leave Requests</span>
-                                <h2 class="kpi-value">{{ pendingLeavesDisplay }}</h2>
-                                <div class="kpi-footer">
-                                    <span class="kpi-trend trend-orange">
-                                        Pending approvals
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="kpi-sparkline">
-                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
-                                    <path d="M 0 30 Q 30 35, 60 20 T 110 18 T 140 28 T 160 5" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
-                                    <circle cx="160" cy="5" r="3.5" fill="#a855f7"/>
+                            <div class="kpi-graph-wrap" title="Leave Requests Activity" (mouseleave)="clearKpiHover()">
+                                <svg viewBox="0 0 200 45" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="purpleSparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.25"/>
+                                            <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path [attr.d]="leaveSparkline.areaPath" fill="url(#purpleSparkGrad)"/>
+                                    <path [attr.d]="leaveSparkline.linePath" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                                    <!-- Vertical Guide Line -->
+                                    <line 
+                                        *ngIf="hoveredKpiCard === 'leaves' && hoveredKpiPoint" 
+                                        [attr.x1]="hoveredKpiPoint.x" 
+                                        [attr.y1]="0" 
+                                        [attr.x2]="hoveredKpiPoint.x" 
+                                        [attr.y2]="45" 
+                                        stroke="#7c3aed" 
+                                        stroke-width="1.5" 
+                                        stroke-dasharray="2 2"
+                                    />
+
+                                    <!-- Points & Hitboxes -->
+                                    <g *ngFor="let pt of leaveSparkline.points; let idx = index">
+                                        <rect 
+                                            [attr.x]="pt.x - 14" 
+                                            y="0" 
+                                            width="28" 
+                                            height="45" 
+                                            fill="transparent" 
+                                            style="cursor: pointer;"
+                                            (mouseenter)="setKpiHover('leaves', pt, idx, $event)"
+                                        />
+                                        <circle 
+                                            [attr.cx]="pt.x" 
+                                            [attr.cy]="pt.y" 
+                                            [attr.r]="(hoveredKpiCard === 'leaves' && hoveredKpiIndex === idx) ? 4.5 : (idx === leaveSparkline.points.length - 1 ? 2.5 : 1.5)" 
+                                            [attr.fill]="(hoveredKpiCard === 'leaves' && hoveredKpiIndex === idx) ? '#7c3aed' : '#ffffff'" 
+                                            stroke="#7c3aed" 
+                                            [attr.stroke-width]="(hoveredKpiCard === 'leaves' && hoveredKpiIndex === idx) ? 2 : 1"
+                                            class="sparkline-point"
+                                            (mouseenter)="setKpiHover('leaves', pt, idx, $event)"
+                                        />
+                                    </g>
                                 </svg>
+
+                                <!-- Floating Tooltip -->
+                                <div 
+                                    class="kpi-spark-tooltip" 
+                                    *ngIf="hoveredKpiCard === 'leaves' && hoveredKpiPoint"
+                                    [style.left.%]="(hoveredKpiPoint.x / 200) * 100"
+                                >
+                                    <span class="spark-tt-date">{{ hoveredKpiPoint.dateStr }}</span>
+                                    <span class="spark-tt-val">{{ hoveredKpiPoint.val }} {{ hoveredKpiPoint.unit }}</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Card 4: Payroll Status -->
-                        <div class="kpi-card" (click)="onQuickAction('run_payroll')" style="cursor: pointer;">
-                            <div class="kpi-header">
+                        <div class="kpi-card" (click)="onCardAction('payroll', 'details', $event)">
+                            <div class="kpi-top-row">
                                 <div class="kpi-icon-box icon-orange">
                                     <i class="fas fa-rupee-sign"></i>
                                 </div>
-                                <div class="kpi-more">
+                                <div class="kpi-text-col">
+                                    <span class="kpi-label">Payroll Status</span>
+                                    <h2 class="kpi-value">{{ payrollStatusDisplay }}</h2>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-trend trend-muted">
+                                            {{ payrollPeriodDisplay }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="kpi-more" (click)="toggleCardMenu('payroll', $event)" title="Card Options">
                                     <i class="fas fa-ellipsis-v"></i>
+                                    <div class="kpi-dropdown-menu" *ngIf="activeCardMenu === 'payroll'" (click)="$event.stopPropagation()">
+                                        <!-- 1. View Details -->
+                                        <button type="button" class="menu-item" (click)="onCardAction('payroll', 'details', $event)">
+                                            <i class="fas fa-calculator"></i>
+                                            <span>View Details</span>
+                                        </button>
+
+                                        <div class="menu-divider"></div>
+
+                                        <!-- 2. Download Document -->
+                                        <button type="button" class="menu-item highlight-pdf" (click)="onCardAction('payroll', 'export', $event)">
+                                            <i class="fas fa-file-pdf"></i>
+                                            <span>Download Document</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="kpi-body">
-                                <span class="kpi-label">Payroll Status</span>
-                                <h2 class="kpi-value">{{ payrollStatusDisplay }}</h2>
-                                <div class="kpi-footer">
-                                    <span class="kpi-trend trend-muted">
-                                        {{ payrollPeriodDisplay }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="kpi-sparkline">
-                                <svg viewBox="0 0 160 40" preserveAspectRatio="none">
-                                    <path d="M 0 30 Q 30 32, 60 25 T 105 18 T 135 24 T 160 8" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
-                                    <circle cx="160" cy="8" r="3.5" fill="#f97316"/>
+                            <div class="kpi-graph-wrap" title="Payroll Processing Completion" (mouseleave)="clearKpiHover()">
+                                <svg viewBox="0 0 200 45" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="orangeSparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stop-color="#f97316" stop-opacity="0.25"/>
+                                            <stop offset="100%" stop-color="#f97316" stop-opacity="0.0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path [attr.d]="payrollSparkline.areaPath" fill="url(#orangeSparkGrad)"/>
+                                    <path [attr.d]="payrollSparkline.linePath" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                                    <!-- Vertical Guide Line -->
+                                    <line 
+                                        *ngIf="hoveredKpiCard === 'payroll' && hoveredKpiPoint" 
+                                        [attr.x1]="hoveredKpiPoint.x" 
+                                        [attr.y1]="0" 
+                                        [attr.x2]="hoveredKpiPoint.x" 
+                                        [attr.y2]="45" 
+                                        stroke="#f97316" 
+                                        stroke-width="1.5" 
+                                        stroke-dasharray="2 2"
+                                    />
+
+                                    <!-- Points & Hitboxes -->
+                                    <g *ngFor="let pt of payrollSparkline.points; let idx = index">
+                                        <rect 
+                                            [attr.x]="pt.x - 14" 
+                                            y="0" 
+                                            width="28" 
+                                            height="45" 
+                                            fill="transparent" 
+                                            style="cursor: pointer;"
+                                            (mouseenter)="setKpiHover('payroll', pt, idx, $event)"
+                                        />
+                                        <circle 
+                                            [attr.cx]="pt.x" 
+                                            [attr.cy]="pt.y" 
+                                            [attr.r]="(hoveredKpiCard === 'payroll' && hoveredKpiIndex === idx) ? 4.5 : (idx === payrollSparkline.points.length - 1 ? 2.5 : 1.5)" 
+                                            [attr.fill]="(hoveredKpiCard === 'payroll' && hoveredKpiIndex === idx) ? '#f97316' : '#ffffff'" 
+                                            stroke="#f97316" 
+                                            [attr.stroke-width]="(hoveredKpiCard === 'payroll' && hoveredKpiIndex === idx) ? 2 : 1"
+                                            class="sparkline-point"
+                                            (mouseenter)="setKpiHover('payroll', pt, idx, $event)"
+                                        />
+                                    </g>
                                 </svg>
+
+                                <!-- Floating Tooltip -->
+                                <div 
+                                    class="kpi-spark-tooltip" 
+                                    *ngIf="hoveredKpiCard === 'payroll' && hoveredKpiPoint"
+                                    [style.left.%]="(hoveredKpiPoint.x / 200) * 100"
+                                >
+                                    <span class="spark-tt-date">{{ hoveredKpiPoint.dateStr }}</span>
+                                    <span class="spark-tt-val">{{ hoveredKpiPoint.val }}{{ hoveredKpiPoint.unit }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -171,11 +441,11 @@
                             <div class="panel-header">
                                 <h3 class="panel-title">Attendance Overview</h3>
                                 <div class="panel-filter">
-                                    <select class="custom-select-sm" [(ngModel)]="attendanceFilter">
-                                        <option value="month">This Month</option>
-                                        <option value="week">This Week</option>
-                                        <option value="today">Today</option>
-                                    </select>
+                                    <app-custom-select 
+                                        [options]="attendanceFilterOptions" 
+                                        [(ngModel)]="attendanceFilter"
+                                        placeholder="This Month">
+                                    </app-custom-select>
                                 </div>
                             </div>
                             <div class="panel-body attendance-chart-wrap">
@@ -256,11 +526,11 @@
                                                 *ngIf="hoveredAttendanceIndex === idx" 
                                                 [attr.cx]="pt.x" 
                                                 [attr.cy]="pt.y" 
-                                                r="11" 
+                                                r="7" 
                                                 fill="#dbeafe" 
                                                 stroke="#2563eb" 
-                                                stroke-width="2" 
-                                                opacity="0.9" 
+                                                stroke-width="1.2" 
+                                                opacity="0.75" 
                                                 class="att-glow-halo"
                                             />
 
@@ -268,10 +538,10 @@
                                             <circle 
                                                 [attr.cx]="pt.x" 
                                                 [attr.cy]="pt.y" 
-                                                [attr.r]="hoveredAttendanceIndex === idx ? 6.5 : (idx === attendancePoints.length - 1 ? 5 : 4)" 
+                                                [attr.r]="hoveredAttendanceIndex === idx ? 4 : (idx === attendancePoints.length - 1 ? 3 : 2)" 
                                                 [attr.fill]="hoveredAttendanceIndex === idx ? '#1d4ed8' : '#ffffff'" 
                                                 stroke="#2563eb" 
-                                                [attr.stroke-width]="hoveredAttendanceIndex === idx ? 3 : 2.5" 
+                                                [attr.stroke-width]="hoveredAttendanceIndex === idx ? 2 : 1.5" 
                                                 class="att-point-circle"
                                             />
                                         </g>
@@ -347,10 +617,11 @@
                             <div class="panel-header">
                                 <h3 class="panel-title">Monthly Hiring Trend</h3>
                                 <div class="panel-filter">
-                                    <select class="custom-select-sm" [(ngModel)]="hiringFilter">
-                                        <option value="year">This Year</option>
-                                        <option value="quarter">This Quarter</option>
-                                    </select>
+                                    <app-custom-select 
+                                        [options]="hiringFilterOptions" 
+                                        [(ngModel)]="hiringFilter"
+                                        placeholder="This Year">
+                                    </app-custom-select>
                                 </div>
                             </div>
                             <div class="panel-body hiring-trend-wrap">

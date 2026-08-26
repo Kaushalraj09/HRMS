@@ -6,10 +6,12 @@ import { take } from 'rxjs';
 import { LoginActivityService, LoginActivity } from '../../core/services/login-activity.service';
 import { AuthService } from '../../core/services/auth.service';
 
+import { CustomDatepickerComponent } from '../../shared/components/custom-datepicker/custom-datepicker';
+
 @Component({
   selector: 'app-login-activity-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDatepickerComponent],
   templateUrl: './login-activity-list.html',
   styleUrl: './login-activity-list.css'
 })

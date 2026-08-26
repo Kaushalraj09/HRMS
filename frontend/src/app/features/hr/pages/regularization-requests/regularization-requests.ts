@@ -16,7 +16,7 @@ import { CustomSelectComponent, SelectOption } from '../../../../shared/componen
 })
 export class RegularizationRequestsComponent implements OnInit, OnDestroy {
   pendingRequests: RegularizationRequestItem[] = [];
-  activeTab: 'pending' | 'history' = 'pending';
+  activeTab: 'pending' | 'approved' | 'rejected' | 'all' = 'pending';
 
   // Filters
   searchTerm = '';
@@ -53,13 +53,13 @@ export class RegularizationRequestsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadPendingRequests();
+    this.loadRequests();
 
     // WebSocket updates
     this.subscriptions.add(
       this.attendanceService.wsMessage$.subscribe((msg) => {
         if (msg.type === 'REGULARIZATION_REQUEST' || msg.type === 'REGULARIZATION_UPDATE') {
-          this.loadPendingRequests();
+          this.loadRequests();
         }
       })
     );
@@ -71,31 +71,55 @@ export class RegularizationRequestsComponent implements OnInit, OnDestroy {
 
   onFilterChange(): void {
     this.currentPage = 1;
-    this.loadPendingRequests();
+    this.loadRequests();
+  }
+
+  loadRequests(): void {
+    if (this.activeTab === 'pending') {
+      this.regularizationService.getPendingRequests(
+        this.currentPage,
+        this.pageSize,
+        this.searchTerm,
+        this.selectedReasonType
+      ).subscribe({
+        next: (res: any) => {
+          this.pendingRequests = res.items || [];
+          this.totalItems = res.totalItems || res.total || this.pendingRequests.length;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading pending regularizations', err);
+        }
+      });
+    } else {
+      const statusFilter = this.activeTab;
+      this.regularizationService.getAllRequests(
+        this.currentPage,
+        this.pageSize,
+        this.searchTerm,
+        this.selectedReasonType,
+        statusFilter
+      ).subscribe({
+        next: (res: any) => {
+          this.pendingRequests = res.items || [];
+          this.totalItems = res.totalItems !== undefined ? res.totalItems : (res.total !== undefined ? res.total : this.pendingRequests.length);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading regularization history', err);
+        }
+      });
+    }
   }
 
   loadPendingRequests(): void {
-    this.regularizationService.getPendingRequests(
-      this.currentPage,
-      this.pageSize,
-      this.searchTerm,
-      this.selectedReasonType
-    ).subscribe({
-      next: (res: any) => {
-        this.pendingRequests = res.items;
-        this.totalItems = res.totalItems;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading pending regularizations', err);
-      }
-    });
+    this.loadRequests();
   }
 
-  setActiveTab(tab: 'pending' | 'history'): void {
-    // Left for potential future tab extensions, but template only renders pending requests.
+  setActiveTab(tab: 'pending' | 'approved' | 'rejected' | 'all'): void {
+    this.activeTab = tab;
     this.currentPage = 1;
-    this.loadPendingRequests();
+    this.loadRequests();
   }
 
   get totalPages(): number {

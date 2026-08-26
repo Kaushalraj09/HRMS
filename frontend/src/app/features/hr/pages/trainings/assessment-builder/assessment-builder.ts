@@ -5,10 +5,12 @@ import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { Assessment, AssessmentQuestion } from '../../../../../core/models/training.model';
 
+import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-assessment-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, CustomSelectComponent],
   templateUrl: './assessment-builder.html',
   styleUrls: ['./assessment-builder.css']
 })
@@ -18,6 +20,12 @@ export class AssessmentBuilderComponent implements OnInit {
   isLoading = true;
   isSavingAssessment = false;
   isAddingQuestion = false;
+
+  readonly difficultySelectOptions = [
+    { label: 'Easy', value: 'Easy' },
+    { label: 'Medium', value: 'Medium' },
+    { label: 'Hard', value: 'Hard' }
+  ];
 
   settingsForm!: FormGroup;
   questionForm!: FormGroup;

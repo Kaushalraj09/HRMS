@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from app.core.database import get_db
 from app.models.user import User, Role
@@ -159,7 +159,7 @@ async def get_all_regularizations(
     pageSize: int = 10,
     search: str = "",
     reason_type: str = "",
-    status: str = "pending",
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -172,8 +172,11 @@ async def get_all_regularizations(
 
     import math
     query = db.query(AttendanceRegularizationRequest)
-    if status:
-        query = query.filter(AttendanceRegularizationRequest.status == status.lower())
+    if status and status.lower() not in ("all", ""):
+        if status.lower() == "pending":
+            query = query.filter(AttendanceRegularizationRequest.status.ilike("pending%"))
+        else:
+            query = query.filter(AttendanceRegularizationRequest.status == status.lower())
         
     if search:
         search_filter = f"%{search}%"
@@ -217,15 +220,8 @@ async def get_pending_regularizations(
         )
 
     import math
-    from app.models.approval_task import ApprovalTask
-    final_stage_request_ids = db.query(ApprovalTask.request_id).filter(
-        ApprovalTask.request_type == "regularization",
-        ApprovalTask.status == "pending",
-        ApprovalTask.assigned_role == "hr",
-    )
     query = db.query(AttendanceRegularizationRequest).filter(
-        AttendanceRegularizationRequest.status.in_(["pending", "pending_hr"]),
-        AttendanceRegularizationRequest.id.in_(final_stage_request_ids),
+        AttendanceRegularizationRequest.status.ilike("pending%")
     )
 
     if search:
@@ -267,9 +263,6 @@ async def review_regularization(
             detail="Access denied. Only Admin or HR can review regularization requests."
         )
 
-    from app.services.approval_service import require_hr_stage
-    require_hr_stage(db, "regularization", request_id, current_user.id)
-
     req = db.query(AttendanceRegularizationRequest).filter(
         AttendanceRegularizationRequest.id == request_id
     ).first()
@@ -279,7 +272,7 @@ async def review_regularization(
             detail="Regularization request not found"
         )
 
-    if req.status not in {"pending", "pending_hr"}:
+    if not req.status.lower().startswith("pending"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Request is already reviewed"

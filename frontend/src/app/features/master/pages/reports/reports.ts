@@ -6,10 +6,13 @@ import { HrWorkloadRow, EmployeeStatusRow, LoginActivitySummaryRow } from '../..
 
 import { MasterDataService } from '../../../../core/services/master-data.service';
 
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-admin-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './reports.html',
   styleUrls: ['./reports.css']
 })
@@ -38,6 +41,16 @@ export class AdminReportsComponent implements OnInit {
 
   departments: string[] = ['Engineering', 'Sales', 'Marketing', 'Human Resources', 'Finance', 'Operations'];
   statuses: string[] = ['Active', 'Inactive'];
+
+  get departmentSelectOptions(): { label: string; value: string }[] {
+    const opts = [{ label: 'All Departments', value: '' }];
+    return opts.concat(this.departments.map(d => ({ label: d, value: d })));
+  }
+
+  get statusSelectOptions(): { label: string; value: string }[] {
+    const opts = [{ label: 'All Statuses', value: '' }];
+    return opts.concat(this.statuses.map(s => ({ label: s, value: s })));
+  }
 
   constructor(
     private readonly reportService: ReportService,

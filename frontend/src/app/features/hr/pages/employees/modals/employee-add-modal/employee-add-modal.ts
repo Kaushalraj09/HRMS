@@ -5,6 +5,7 @@ import { EmployeeService } from '../../../../../../core/services/employee.servic
 import { MasterDataService } from '../../../../../../core/services/master-data.service';
 import { EmployeePayload } from '../../../../../../core/models/employee.model';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../../../shared/components/custom-datepicker/custom-datepicker';
 import { finalize } from 'rxjs';
 
 function pastDateValidator(control: AbstractControl): ValidationErrors | null {
@@ -12,13 +13,13 @@ function pastDateValidator(control: AbstractControl): ValidationErrors | null {
   const selectedDate = new Date(control.value);
   const today = new Date();
   today.setHours(0,0,0,0);
-  return selectedDate >= today ? { futureDate: true } : null;
+  return selectedDate > today ? { futureDate: true } : null;
 }
 
 @Component({
   selector: 'app-employee-add-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './employee-add-modal.html',
   styleUrls: ['./employee-add-modal.css']
 })

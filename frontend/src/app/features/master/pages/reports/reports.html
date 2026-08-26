@@ -37,34 +37,39 @@
         </div>
       </div>
 
-      <!-- Department (Status tab only) -->
-      <div class="filter-group animate-fade-in" *ngIf="activeTab === 'status'">
+      <!-- Department (Workload and Status tabs) -->
+      <div class="filter-group animate-fade-in" *ngIf="activeTab !== 'login'">
         <label for="department">Department</label>
-        <select id="department" [(ngModel)]="department" (change)="applyFilters()">
-          <option value="">All Departments</option>
-          <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
-        </select>
+        <app-custom-select 
+          [options]="departmentSelectOptions" 
+          [(ngModel)]="department" 
+          (valueChange)="applyFilters()" 
+          placeholder="All Departments"
+        ></app-custom-select>
       </div>
 
       <!-- Status Filter (Status tab only) -->
       <div class="filter-group animate-fade-in" *ngIf="activeTab === 'status'">
         <label for="statusFilter">Status</label>
-        <select id="statusFilter" [(ngModel)]="statusFilter" (change)="applyFilters()">
-          <option value="">All Statuses</option>
-          <option *ngFor="let stat of statuses" [value]="stat">{{ stat }}</option>
-        </select>
+        <app-custom-select 
+          inputId="statusFilter"
+          [options]="statusSelectOptions" 
+          [(ngModel)]="statusFilter" 
+          (valueChange)="applyFilters()" 
+          placeholder="All Statuses"
+        ></app-custom-select>
       </div>
 
-      <!-- Start Date (Workload and Login tabs) -->
-      <div class="filter-group animate-fade-in" *ngIf="activeTab !== 'status'">
+      <!-- Start Date -->
+      <div class="filter-group" *ngIf="activeTab !== 'status'">
         <label for="startDate">Start Date</label>
-        <input id="startDate" type="date" [(ngModel)]="startDate" (change)="applyFilters()">
+        <app-custom-datepicker inputId="startDate" [(ngModel)]="startDate" (valueChange)="applyFilters()" placeholder="Select Start Date"></app-custom-datepicker>
       </div>
 
-      <!-- End Date (Workload and Login tabs) -->
-      <div class="filter-group animate-fade-in" *ngIf="activeTab !== 'status'">
+      <!-- End Date -->
+      <div class="filter-group" *ngIf="activeTab !== 'status'">
         <label for="endDate">End Date</label>
-        <input id="endDate" type="date" [(ngModel)]="endDate" (change)="applyFilters()">
+        <app-custom-datepicker inputId="endDate" [(ngModel)]="endDate" (valueChange)="applyFilters()" placeholder="Select End Date"></app-custom-datepicker>
       </div>
     </div>
 

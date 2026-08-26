@@ -103,24 +103,30 @@
       </div>
 
       <div class="select-box-wrap">
-        <select class="modern-select" [(ngModel)]="selectedCategory" (change)="onSearch()">
-          <option value="">All Categories</option>
-          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-        </select>
+        <app-custom-select 
+          [options]="categoryOptions" 
+          [(ngModel)]="selectedCategory" 
+          (valueChange)="onSearch()"
+          placeholder="All Categories">
+        </app-custom-select>
       </div>
 
       <div class="select-box-wrap">
-        <select class="modern-select" [(ngModel)]="selectedStatus" (change)="onSearch()">
-          <option value="">All Statuses</option>
-          <option *ngFor="let st of statuses" [value]="st">{{ st }}</option>
-        </select>
+        <app-custom-select 
+          [options]="statusOptions" 
+          [(ngModel)]="selectedStatus" 
+          (valueChange)="onSearch()"
+          placeholder="All Statuses">
+        </app-custom-select>
       </div>
 
       <div class="select-box-wrap">
-        <select class="modern-select" [(ngModel)]="selectedDepartment" (change)="onSearch()">
-          <option value="">All Departments</option>
-          <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
-        </select>
+        <app-custom-select 
+          [options]="departmentOptions" 
+          [(ngModel)]="selectedDepartment" 
+          (valueChange)="onSearch()"
+          placeholder="All Departments">
+        </app-custom-select>
       </div>
 
       <div class="filter-btn-group">
@@ -238,33 +244,33 @@
               <td class="text-right">
                 <div class="dropdown d-inline-block">
                   <button
-                    class="btn-action-dropdown dropdown-toggle"
+                    class="btn-action-dropdown"
+                    [class.active]="activeDropdownId === item.id"
                     type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
+                    (click)="toggleDropdown(item.id, $event)"
                   >
                     <span>Actions</span>
                     <i class="fas fa-chevron-down ms-1 fs-8"></i>
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3">
+                  <ul class="dropdown-menu dropdown-menu-end" [class.show]="activeDropdownId === item.id">
                     <li>
-                      <a class="dropdown-item py-2" [routerLink]="getManageRoute(item.id)">
+                      <a class="dropdown-item" [routerLink]="getManageRoute(item.id)">
                         <i class="fas fa-tasks text-primary me-2"></i>Manage Content & Assign
                       </a>
                     </li>
                     <li>
-                      <button type="button" class="dropdown-item py-2" (click)="openAssessmentModal(item)">
+                      <button type="button" class="dropdown-item" (click)="openAssessmentModal(item)">
                         <i class="fas fa-file-signature text-info me-2"></i>Assessment Builder
                       </button>
                     </li>
                     <li>
-                      <a class="dropdown-item py-2" [routerLink]="getEditRoute(item.id)">
+                      <a class="dropdown-item" [routerLink]="getEditRoute(item.id)">
                         <i class="fas fa-edit text-warning me-2"></i>Edit Training
                       </a>
                     </li>
                     <li><hr class="dropdown-divider" /></li>
                     <li>
-                      <button class="dropdown-item py-2 text-danger" (click)="archiveTraining(item.id)">
+                      <button type="button" class="dropdown-item text-danger" (click)="archiveTraining(item.id)">
                         <i class="fas fa-archive me-2"></i>Archive
                       </button>
                     </li>
@@ -317,9 +323,7 @@
           <div class="col-md-6">
             <div class="form-group-item">
               <label class="form-label-custom">Category <span class="required-star">*</span></label>
-              <select class="custom-form-select" formControlName="category">
-                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-              </select>
+              <app-custom-select formControlName="category" [options]="categorySelectOptions" placeholder="Select Category"></app-custom-select>
             </div>
           </div>
         </div>
@@ -353,17 +357,13 @@
           <div class="col-md-6">
             <div class="form-group-item">
               <label class="form-label-custom">Start Date</label>
-              <input type="date" class="custom-form-input" formControlName="start_date" />
+              <app-custom-datepicker formControlName="start_date" placeholder="Select Start Date"></app-custom-datepicker>
             </div>
           </div>
           <div class="col-md-6">
             <div class="form-group-item">
               <label class="form-label-custom">Status <span class="required-star">*</span></label>
-              <select class="custom-form-select" formControlName="status">
-                <option value="Published">Published</option>
-                <option value="Draft">Draft</option>
-                <option value="Archived">Archived</option>
-              </select>
+              <app-custom-select formControlName="status" [options]="statusModalSelectOptions" placeholder="Select Status"></app-custom-select>
             </div>
           </div>
         </div>
@@ -469,11 +469,7 @@
                   <div class="col-md-6">
                     <div class="form-group-item">
                       <label class="form-label-custom">Difficulty</label>
-                      <select class="custom-form-select" formControlName="difficulty">
-                        <option value="Easy">Easy</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Hard">Hard</option>
-                      </select>
+                      <app-custom-select formControlName="difficulty" [options]="difficultySelectOptions" placeholder="Select Difficulty"></app-custom-select>
                     </div>
                   </div>
                   <div class="col-md-6">

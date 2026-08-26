@@ -24,8 +24,8 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   selectedLeaveType = '';
   selectedStatus = ''; // For history
   
-  // Current tab: 'pending' or 'history'
-  activeTab: 'pending' | 'history' = 'pending';
+  // Current tab: 'all' | 'pending' | 'approved' | 'rejected'
+  activeTab: 'all' | 'pending' | 'approved' | 'rejected' = 'pending';
   
   // Custom Select options
   leaveTypeOptions = [
@@ -163,8 +163,22 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     });
   }
 
-  setActiveTab(tab: 'pending' | 'history'): void {
+  setActiveTab(tab: 'all' | 'pending' | 'approved' | 'rejected'): void {
     this.activeTab = tab;
+    if (tab === 'pending') {
+      this.pendingPage = 1;
+      this.loadPendingRequests();
+    } else {
+      this.historyPage = 1;
+      if (tab === 'approved') {
+        this.selectedStatus = 'Approved';
+      } else if (tab === 'rejected') {
+        this.selectedStatus = 'Rejected';
+      } else {
+        this.selectedStatus = '';
+      }
+      this.loadProcessedRequests();
+    }
   }
 
   get filteredPendingRequests(): any[] {

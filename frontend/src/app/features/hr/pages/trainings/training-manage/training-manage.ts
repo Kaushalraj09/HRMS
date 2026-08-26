@@ -7,10 +7,13 @@ import { Training, TrainingMaterial, TrainingAssignment } from '../../../../../c
 import { MasterDataService } from '../../../../../core/services/master-data.service';
 import { EmployeeService } from '../../../../../core/services/employee.service';
 
+import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-training-manage',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './training-manage.html',
   styleUrls: ['./training-manage.css']
 })
@@ -19,6 +22,12 @@ export class TrainingManageComponent implements OnInit {
   training: Training | null = null;
   activeTab: 'content' | 'assignments' = 'content';
   isLoading = true;
+
+  readonly assignmentTypeSelectOptions = [
+    { label: 'All Active Employees', value: 'All' },
+    { label: 'Selected Employees', value: 'Selected' },
+    { label: 'By Department', value: 'Department' }
+  ];
 
   // Material upload state
   selectedFile: File | null = null;

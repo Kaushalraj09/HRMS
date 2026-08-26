@@ -7,19 +7,20 @@ import { EmployeeDetailView, EmployeePayload } from '../../../../../../core/mode
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../../../shared/components/custom-datepicker/custom-datepicker';
 
 function pastDateValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) return null;
   const selectedDate = new Date(control.value);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return selectedDate >= today ? { futureDate: true } : null;
+  return selectedDate > today ? { futureDate: true } : null;
 }
 
 @Component({
   selector: 'app-employee-edit-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './employee-edit-modal.html',
   styleUrls: ['./employee-edit-modal.css']
 })

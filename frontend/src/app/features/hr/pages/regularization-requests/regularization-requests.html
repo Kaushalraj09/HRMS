@@ -36,8 +36,29 @@
 
   <!-- Requests Table Panel -->
   <div class="table-panel card bg-card-theme">
-    <div class="table-header">
-      <h2>Pending Requests ({{ totalItems }})</h2>
+    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <h2 style="margin: 0;">
+        <span *ngIf="activeTab === 'pending'">Pending Requests ({{ totalItems }})</span>
+        <span *ngIf="activeTab === 'approved'">Approved Regularizations ({{ totalItems }})</span>
+        <span *ngIf="activeTab === 'rejected'">Rejected Regularizations ({{ totalItems }})</span>
+        <span *ngIf="activeTab === 'all'">All Regularization History ({{ totalItems }})</span>
+      </h2>
+      
+      <!-- Status Tabs -->
+      <div class="status-tabs-pill-container">
+        <button type="button" (click)="setActiveTab('all')" [class.active]="activeTab === 'all'" class="tab-pill-item">
+          All Regularizations
+        </button>
+        <button type="button" (click)="setActiveTab('pending')" [class.active]="activeTab === 'pending'" class="tab-pill-item">
+          <span class="tab-dot dot-pending"></span> Pending
+        </button>
+        <button type="button" (click)="setActiveTab('approved')" [class.active]="activeTab === 'approved'" class="tab-pill-item">
+          <span class="tab-dot dot-approved"></span> Approved
+        </button>
+        <button type="button" (click)="setActiveTab('rejected')" [class.active]="activeTab === 'rejected'" class="tab-pill-item">
+          <span class="tab-dot dot-rejected"></span> Rejected
+        </button>
+      </div>
     </div>
 
     <div class="table-responsive">
@@ -49,7 +70,8 @@
             <th>Reason Type</th>
             <th>Requested In/Out</th>
             <th>Explanation</th>
-            <th>Action</th>
+            <th>Status</th>
+            <th>Action / Review</th>
           </tr>
         </thead>
         <tbody>
@@ -72,15 +94,25 @@
             </td>
             <td class="reason-cell" [title]="req.reasonText">{{ req.reasonText }}</td>
             <td>
-              <button (click)="openDecisionModal(req)" class="btn-review">
+              <span class="status-badge" [ngClass]="{
+                'badge-pending': req.status.toLowerCase().includes('pending'),
+                'badge-approved': req.status.toLowerCase() === 'approved',
+                'badge-rejected': req.status.toLowerCase() === 'rejected'
+              }">{{ req.status | uppercase }}</span>
+            </td>
+            <td>
+              <button *ngIf="req.status.toLowerCase().includes('pending')" (click)="openDecisionModal(req)" class="btn-review">
                 <i class="fas fa-edit"></i> Review
               </button>
+              <span *ngIf="!req.status.toLowerCase().includes('pending')" class="reviewed-info" [title]="req.reviewComment || ''">
+                {{ req.reviewComment || 'Reviewed' }}
+              </span>
             </td>
           </tr>
           <tr *ngIf="pendingRequests.length === 0">
-            <td colspan="6" class="empty-state">
-              <i class="fas fa-check-double empty-icon"></i>
-              <p>All regularization requests have been processed!</p>
+            <td colspan="7" class="empty-state">
+              <i class="fas fa-folder-open empty-icon"></i>
+              <p>No regularization records found.</p>
             </td>
           </tr>
         </tbody>

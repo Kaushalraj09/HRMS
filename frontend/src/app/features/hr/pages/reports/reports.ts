@@ -6,10 +6,13 @@ import { AttendanceSummaryRow, LateArrivalRow, MissingPunchRow, LeaveUsageRow } 
 
 import { MasterDataService } from '../../../../core/services/master-data.service';
 
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-hr-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './reports.html',
   styleUrls: ['./reports.css']
 })
@@ -37,6 +40,11 @@ export class HRReportsComponent implements OnInit {
   isLoading: boolean = false;
 
   departments: string[] = ['Engineering', 'Sales', 'Marketing', 'Human Resources', 'Finance', 'Operations'];
+
+  get departmentSelectOptions(): { label: string; value: string }[] {
+    const opts = [{ label: 'All Departments', value: '' }];
+    return opts.concat(this.departments.map(d => ({ label: d, value: d })));
+  }
 
   constructor(
     private readonly reportService: ReportService,

@@ -7,10 +7,13 @@ import { MyProfileService } from '../../../../core/services/profile.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-my-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './my-profile.html',
   styleUrl: './my-profile.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -22,6 +25,16 @@ export class MyProfile implements OnInit {
   profileForm!: FormGroup;
   isPunchedIn = false;
   readonly bloodOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  readonly genderSelectOptions = [
+    { label: 'Male', value: 'Male' },
+    { label: 'Female', value: 'Female' },
+    { label: 'Other', value: 'Other' }
+  ];
+
+  get bloodSelectOptions(): { label: string; value: string }[] {
+    return this.bloodOptions.map(b => ({ label: b, value: b }));
+  }
 
   showAvatarModal = false;
   tempAvatarImage: string | null = null;

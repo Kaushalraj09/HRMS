@@ -246,15 +246,11 @@
               <div class="form-row-two" style="margin-top: 15px;">
                 <div class="form-group-premium">
                   <label for="gender">Gender <span class="required">*</span></label>
-                  <select id="gender" name="gender" formControlName="gender" class="form-input-premium">
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <app-custom-select inputId="gender" formControlName="gender" [options]="genderSelectOptions" placeholder="Select Gender"></app-custom-select>
                 </div>
                 <div class="form-group-premium">
                   <label for="dateOfBirth">Date of Birth <span class="required">*</span></label>
-                  <input type="date" id="dateOfBirth" name="dateOfBirth" formControlName="dateOfBirth" class="form-input-premium">
+                  <app-custom-datepicker inputId="dateOfBirth" formControlName="dateOfBirth" placeholder="Select Date of Birth"></app-custom-datepicker>
                 </div>
               </div>
               <div class="form-row-two" style="margin-top: 15px;">
@@ -264,10 +260,7 @@
                 </div>
                 <div class="form-group-premium">
                   <label for="bloodGroup">Blood Group</label>
-                  <select id="bloodGroup" name="bloodGroup" formControlName="bloodGroup" class="form-input-premium">
-                    <option value="">Select Blood Group</option>
-                    <option *ngFor="let opt of bloodOptions" [value]="opt">{{ opt }}</option>
-                  </select>
+                  <app-custom-select inputId="bloodGroup" formControlName="bloodGroup" [options]="bloodSelectOptions" placeholder="Select Blood Group"></app-custom-select>
                 </div>
               </div>
             </div>

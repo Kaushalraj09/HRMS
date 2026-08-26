@@ -6,9 +6,13 @@ import { AttendanceService } from '../../../../core/services/attendance.service'
 import { EmployeeTimesheetRow } from '../../../../core/models/attendance.model';
 import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
 
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-my-attendance',
-  imports: [CommonModule, ReactiveFormsModule],
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './my-attendance.html',
   styleUrl: './my-attendance.css',
 })
@@ -18,6 +22,16 @@ export class MyAttendance implements OnInit {
   readonly timeSheetPageSize = 10;
   filterForm;
   activeRange: 'this-month' | 'last-month' | 'last-7-days' | 'all' | 'custom' = 'all';
+
+  readonly statusSelectOptions = [
+    { label: 'All Statuses', value: '' },
+    { label: 'Present', value: 'Present' },
+    { label: 'Working', value: 'Working' },
+    { label: 'Absent', value: 'Absent' },
+    { label: 'Half Day', value: 'Half Day' },
+    { label: 'Late', value: 'Late' },
+    { label: 'Time Off', value: 'Time Off' }
+  ];
 
   constructor(
     private readonly fb: FormBuilder,

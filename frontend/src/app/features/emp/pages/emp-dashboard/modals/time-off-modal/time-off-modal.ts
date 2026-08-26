@@ -15,10 +15,13 @@ import {
   toIsoDateLocal
 } from '../../../../../../core/utils/timeoff-time.util';
 
+import { CustomDatepickerComponent } from '../../../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-time-off-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './time-off-modal.html',
   styleUrls: ['./time-off-modal.css']
 })
@@ -37,6 +40,17 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   isDragOver = false;
 
   readonly allTimeSlots: TimeSlotOption[] = buildHalfHourSlots();
+
+  readonly leaveTypeSelectOptions = [
+    { label: 'Hourly Time Off', value: 'Hourly' },
+    { label: 'Full Day Leave', value: 'Full Day' },
+    { label: 'Half Day Leave', value: 'Half Day' }
+  ];
+
+  readonly halfDaySessionSelectOptions = [
+    { label: 'First Half (09:00 AM - 01:00 PM)', value: 'First Half' },
+    { label: 'Second Half (02:00 PM - 06:00 PM)', value: 'Second Half' }
+  ];
 
   private subscriptions = new Subscription();
 
@@ -119,6 +133,14 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       const optionMinutes = parseTimeToMinutes(option.value);
       return optionMinutes !== null && startMin !== null && optionMinutes > startMin;
     });
+  }
+
+  get startTimeSelectOptions(): { label: string; value: string }[] {
+    return this.startTimeOptions.map(s => ({ label: s.label, value: s.value }));
+  }
+
+  get endTimeSelectOptions(): { label: string; value: string }[] {
+    return this.endTimeOptions.map(s => ({ label: s.label, value: s.value }));
   }
 
   get requestedHours(): number {

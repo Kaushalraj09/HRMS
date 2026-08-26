@@ -4,11 +4,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RegularizationService } from '../../../../core/services/regularization.service';
 import { RegularizationRequestItem } from '../../../../core/models/regularization.model';
 import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
 
 @Component({
   selector: 'app-employee-regularization',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './regularization.html',
   styleUrl: './regularization.css'
 })
@@ -33,6 +34,24 @@ export class RegularizationComponent implements OnInit {
     { label: 'System/Network Issue', value: 'system_issue' },
     { label: 'Other', value: 'other' }
   ];
+
+  get timeSelectOptions(): { label: string; value: string }[] {
+    const options: { label: string; value: string }[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let min = 0; min < 60; min += 30) {
+        const hh = hour.toString().padStart(2, '0');
+        const mm = min.toString().padStart(2, '0');
+        const value = `${hh}:${mm}`;
+        
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+        const label = `${displayHour.toString().padStart(2, '0')}:${mm} ${period}`;
+        
+        options.push({ label, value });
+      }
+    }
+    return options;
+  }
 
   // Pagination
   currentPage = 1;

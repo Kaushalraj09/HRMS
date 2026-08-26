@@ -28,28 +28,32 @@
     <div class="filter-controls-row">
       <div class="select-box-wrap flex-grow-1">
         <label class="form-label-custom">Training Program</label>
-        <select class="modern-select" [(ngModel)]="selectedTrainingId" (change)="loadReports()">
-          <option [ngValue]="null">All Trainings</option>
-          <option *ngFor="let t of trainings" [value]="t.id">{{ t.title }} ({{ t.code }})</option>
-        </select>
+        <app-custom-select 
+          [options]="trainingOptions" 
+          [(ngModel)]="selectedTrainingId" 
+          (valueChange)="loadReports()"
+          placeholder="All Trainings">
+        </app-custom-select>
       </div>
 
       <div class="select-box-wrap">
         <label class="form-label-custom">Department</label>
-        <select class="modern-select" [(ngModel)]="selectedDepartment" (change)="loadReports()">
-          <option value="">All Departments</option>
-          <option *ngFor="let d of departments" [value]="d.name">{{ d.name }}</option>
-        </select>
+        <app-custom-select 
+          [options]="departmentOptions" 
+          [(ngModel)]="selectedDepartment" 
+          (valueChange)="loadReports()"
+          placeholder="All Departments">
+        </app-custom-select>
       </div>
 
       <div class="select-box-wrap">
         <label class="form-label-custom">Status</label>
-        <select class="modern-select" [(ngModel)]="selectedStatus" (change)="loadReports()">
-          <option value="">All Statuses</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="NOT_STARTED">Not Started</option>
-        </select>
+        <app-custom-select 
+          [options]="statusOptions" 
+          [(ngModel)]="selectedStatus" 
+          (valueChange)="loadReports()"
+          placeholder="All Statuses">
+        </app-custom-select>
       </div>
 
       <div class="filter-btn-group align-self-end">

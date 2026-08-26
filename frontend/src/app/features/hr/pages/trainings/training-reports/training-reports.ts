@@ -5,11 +5,12 @@ import { Router, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { TrainingReportRow, Training } from '../../../../../core/models/training.model';
 import { MasterDataService } from '../../../../../core/services/master-data.service';
+import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-select/custom-select';
 
 @Component({
   selector: 'app-training-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CustomSelectComponent],
   templateUrl: './training-reports.html',
   styleUrls: ['./training-reports.css']
 })
@@ -23,6 +24,29 @@ export class TrainingReportsComponent implements OnInit {
   selectedTrainingId: number | null = null;
   selectedDepartment = '';
   selectedStatus = '';
+
+  get trainingOptions(): SelectOption[] {
+    return [
+      { label: 'All Trainings', value: null },
+      ...this.trainings.map(t => ({ label: `${t.title} (${t.code})`, value: t.id }))
+    ];
+  }
+
+  get departmentOptions(): SelectOption[] {
+    return [
+      { label: 'All Departments', value: '' },
+      ...this.departments.map(d => ({ label: d.name, value: d.name }))
+    ];
+  }
+
+  get statusOptions(): SelectOption[] {
+    return [
+      { label: 'All Statuses', value: '' },
+      { label: 'Completed', value: 'COMPLETED' },
+      { label: 'In Progress', value: 'IN_PROGRESS' },
+      { label: 'Not Started', value: 'NOT_STARTED' }
+    ];
+  }
 
   constructor(
     private trainingService: TrainingService,

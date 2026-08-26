@@ -23,11 +23,11 @@
       <div class="custom-dates" *ngIf="filterType === 'Custom'">
         <div class="date-input-group">
           <label for="startDate">From:</label>
-          <input type="date" id="startDate" name="startDate" [(ngModel)]="startDate" (change)="onCustomDateChange()">
+          <app-custom-datepicker inputId="startDate" [(ngModel)]="startDate" (valueChange)="onCustomDateChange()" placeholder="Select From Date"></app-custom-datepicker>
         </div>
         <div class="date-input-group">
           <label for="endDate">To:</label>
-          <input type="date" id="endDate" name="endDate" [(ngModel)]="endDate" (change)="onCustomDateChange()">
+          <app-custom-datepicker inputId="endDate" [(ngModel)]="endDate" (valueChange)="onCustomDateChange()" placeholder="Select To Date"></app-custom-datepicker>
         </div>
       </div>
     </div>

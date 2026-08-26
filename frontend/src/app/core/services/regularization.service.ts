@@ -58,6 +58,21 @@ export class RegularizationService {
     );
   }
 
+  getAllRequests(page: number = 1, pageSize: number = 10, search: string = '', reasonType: string = '', status: string = ''): Observable<PaginatedResponse<RegularizationRequestItem>> {
+    let params = this.noCacheParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('search', search.trim())
+      .set('reason_type', reasonType);
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<PaginatedResponse<RegularizationRequestItem>>(
+      this.apiUrl,
+      { headers: this.noCacheHeaders, params }
+    );
+  }
+
   submitDecision(id: number, payload: RegularizationDecisionPayload): Observable<RegularizationRequestItem> {
     return this.http.put<RegularizationRequestItem>(
       `${this.apiUrl}/${id}/decision`,

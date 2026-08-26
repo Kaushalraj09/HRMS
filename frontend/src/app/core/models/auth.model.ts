@@ -10,6 +10,7 @@ export interface SessionUser {
   email: string;
   displayName: string;
   role: UserRole;
+  designation?: string;
   linkedEmployeeId?: string;
   linkedHrId?: string;
   status: 'Active' | 'Inactive';

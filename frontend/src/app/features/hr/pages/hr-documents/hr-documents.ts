@@ -11,10 +11,12 @@ import {
   EmployeeDocumentsPageResponse
 } from '../../../../core/models/document.model';
 
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-hr-documents',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomSelectComponent],
   templateUrl: './hr-documents.html',
   styleUrls: ['./hr-documents.css']
 })
@@ -47,6 +49,13 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
 
   // Departments for filter
   departments: string[] = ['All', 'Engineering', 'Human Resources', 'Design', 'Marketing', 'Sales', 'Finance', 'Operations'];
+
+  get departmentSelectOptions(): { label: string; value: string }[] {
+    return this.departments.map(d => ({
+      label: d === 'All' ? 'All Departments' : d,
+      value: d === 'All' ? '' : d
+    }));
+  }
 
   // Verify Modal State
   isVerifyModalOpen = false;

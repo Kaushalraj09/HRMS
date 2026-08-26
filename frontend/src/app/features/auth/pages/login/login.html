@@ -536,8 +536,36 @@
 
 <!-- CENTER POPUP TOAST -->
 <div *ngIf="showPopup" class="popup-overlay">
-  <div class="popup-box" [ngClass]="messageType">
-    <p>{{ message }}</p>
+  <div class="popup-card-premium" [ngClass]="messageType">
+    <div class="toast-glow-bar" [ngClass]="messageType"></div>
+    
+    <div class="toast-content-wrapper">
+      <div class="popup-icon-ring" [ngClass]="messageType">
+        <svg *ngIf="messageType === 'success'" class="checkmark-svg" viewBox="0 0 52 52">
+          <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none" />
+          <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+        </svg>
+        <svg *ngIf="messageType === 'error'" class="error-svg" viewBox="0 0 52 52">
+          <circle class="error-circle" cx="26" cy="26" r="23" fill="none" />
+          <path class="error-cross" fill="none" d="M16 16l20 20M36 16L16 36" />
+        </svg>
+      </div>
+
+      <div class="popup-text-block">
+        <div class="popup-badge-row">
+          <span class="status-pill" [ngClass]="messageType">
+            <span class="status-dot"></span>
+            {{ messageType === 'success' ? 'Authenticated' : 'Notice' }}
+          </span>
+        </div>
+        <h4 class="popup-title">{{ message }}</h4>
+        <p class="popup-subtext" *ngIf="messageType === 'success'">Redirecting to dashboard...</p>
+      </div>
+    </div>
+
+    <div class="toast-progress-track">
+      <div class="toast-progress-fill" [ngClass]="messageType"></div>
+    </div>
   </div>
 </div>
 
@@ -608,8 +636,22 @@
 
 <!-- FORGOT PASSWORD NOTIFICATION POPUP -->
 <div *ngIf="showForgotPopup" class="popup-overlay" (click)="showForgotPopup = false">
-  <div class="popup-box" [ngClass]="forgotMessageType" (click)="$event.stopPropagation()">
-    <p>{{ forgotMessage }}</p>
+  <div class="popup-card" [ngClass]="forgotMessageType" (click)="$event.stopPropagation()">
+    <div class="popup-icon-badge" [ngClass]="forgotMessageType">
+      <svg *ngIf="forgotMessageType === 'success'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <svg *ngIf="forgotMessageType === 'error'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="popup-content">
+      <h4 class="popup-title">{{ forgotMessageType === 'success' ? 'Email Sent' : 'Reset Request Error' }}</h4>
+      <p class="popup-message">{{ forgotMessage }}</p>
+    </div>
   </div>
 </div>
 

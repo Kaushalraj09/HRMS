@@ -12,15 +12,23 @@ import {
   Holiday 
 } from '../../../../core/models/master-data.model';
 
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
+import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+
 @Component({
   selector: 'app-admin-master-data',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomDatepickerComponent, CustomSelectComponent],
   templateUrl: './master-data.html',
   styleUrls: ['./master-data.css']
 })
 export class MasterDataComponent implements OnInit, OnDestroy {
   activeTab: 'departments' | 'designations' | 'shifts' | 'locations' | 'leaves' | 'holidays' = 'departments';
+
+  readonly locationTypeSelectOptions = [
+    { label: 'Office', value: 'office' },
+    { label: 'Remote', value: 'remote' }
+  ];
   
   // Data lists
   departments: Department[] = [];

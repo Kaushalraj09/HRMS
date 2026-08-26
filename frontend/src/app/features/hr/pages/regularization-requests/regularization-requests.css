@@ -263,6 +263,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
   animation: scaleUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -277,6 +278,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .modal-header h3 {
@@ -302,7 +304,10 @@
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
   max-height: calc(80vh - 120px);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .details-grid {
@@ -314,12 +319,15 @@
   padding: 16px;
   border-radius: 12px;
   border: 1px solid hsl(210, 15%, 94%);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .detail-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  box-sizing: border-box;
 }
 
 .full-width {
@@ -349,6 +357,8 @@
 
 .comment-group {
   margin-bottom: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .comment-group label {
@@ -363,20 +373,23 @@
 
 .modal-input {
   width: 100%;
-  padding: 10px 12px;
+  box-sizing: border-box;
+  padding: 12px 14px;
   border: 2px solid hsl(210, 15%, 92%);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13.5px;
   font-family: inherit;
   outline: none;
-  resize: none;
+  resize: vertical;
+  min-height: 80px;
   background: hsl(210, 20%, 99%);
   transition: all 0.2s ease;
 }
 
 .modal-input:focus {
-  border-color: #e11d48;
+  border-color: #2563eb;
   background: white;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
 .alert {
@@ -513,4 +526,100 @@
 .page-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Modern Status Tabs (Second Image Style) */
+.status-tabs-pill-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 5px 6px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.tab-pill-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.tab-pill-item:hover:not(.active) {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-pill-item.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-pending {
+  background-color: #d97706;
+}
+
+.dot-approved {
+  background-color: #10b981;
+}
+
+.dot-rejected {
+  background-color: #ef4444;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.3px;
+}
+
+.badge-pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.badge-approved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.badge-rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.reviewed-info {
+  font-size: 12.5px;
+  color: hsl(210, 10%, 45%);
+  font-style: italic;
+  max-width: 180px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

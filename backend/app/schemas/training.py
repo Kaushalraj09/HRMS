@@ -18,6 +18,12 @@ class TrainingBase(BaseModel):
     end_date: Optional[date] = None
     status: str = Field(default="Draft")  # Draft, Published, Archived
 
+    @field_validator("start_date", "end_date", mode="before")
+    def empty_dates_to_none(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
+
     @field_validator("end_date")
     def validate_dates(cls, v, values):
         start = values.data.get("start_date")
@@ -42,6 +48,12 @@ class TrainingUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Optional[str] = None
+
+    @field_validator("start_date", "end_date", mode="before")
+    def empty_dates_to_none(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
 
 
 class TrainingMaterialResponse(BaseModel):

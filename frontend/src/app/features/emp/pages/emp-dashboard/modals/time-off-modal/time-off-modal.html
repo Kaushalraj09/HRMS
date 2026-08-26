@@ -20,20 +20,17 @@
           <!-- Leave Type -->
           <div class="form-field-group">
             <label>Leave Type <span class="req-star">*</span></label>
-            <div class="select-field-box">
-              <select formControlName="leaveType" class="form-input-control select-control">
-                <option value="Hourly">Hourly Time Off</option>
-                <option value="Half Day">Half Day Leave</option>
-                <option value="Full Day">Full Day Leave</option>
-              </select>
-              <i class="fas fa-chevron-down select-arrow"></i>
-            </div>
+            <app-custom-select 
+              [options]="leaveTypeSelectOptions" 
+              formControlName="leaveType" 
+              placeholder="Select Leave Type"
+            ></app-custom-select>
           </div>
 
           <!-- Start Date -->
           <div class="form-field-group">
             <label>Start Date <span class="req-star">*</span></label>
-            <input type="date" formControlName="startDate" class="form-input-control" [min]="todayIsoMin" />
+            <app-custom-datepicker formControlName="startDate" [min]="todayIsoMin" placeholder="Select Start Date"></app-custom-datepicker>
           </div>
         </div>
 
@@ -51,7 +48,7 @@
           <div class="form-field-group" *ngIf="isMultipleDays">
             <label>End Date <span class="req-star">*</span></label>
             <div class="location-input-wrapper">
-              <input type="date" formControlName="endDate" class="form-input-control" [min]="leaveForm.value.startDate" />
+              <app-custom-datepicker formControlName="endDate" [min]="leaveForm.value.startDate" placeholder="Select End Date" style="flex: 1;"></app-custom-datepicker>
               <button type="button" class="location-refresh-btn" (click)="resetEndDate()" title="Reset End Date" style="margin-left: 8px; flex-shrink: 0;">
                 <i class="fas fa-undo-alt"></i>
               </button>
@@ -63,13 +60,11 @@
         <div class="form-grid-2" *ngIf="selectedLeaveType === 'Half Day'">
           <div class="form-field-group">
             <label>Session <span class="req-star">*</span></label>
-            <div class="select-field-box">
-              <select formControlName="halfDaySession" class="form-input-control select-control">
-                <option value="First Half">First Half (9:00 AM - 1:00 PM)</option>
-                <option value="Second Half">Second Half (2:00 PM - 6:00 PM)</option>
-              </select>
-              <i class="fas fa-chevron-down select-arrow"></i>
-            </div>
+            <app-custom-select 
+              [options]="halfDaySessionSelectOptions" 
+              formControlName="halfDaySession" 
+              placeholder="Select Session"
+            ></app-custom-select>
           </div>
           <div></div> <!-- Spacer -->
         </div>
@@ -78,22 +73,21 @@
         <div class="form-grid-2" *ngIf="selectedLeaveType === 'Hourly'">
           <div class="form-field-group">
             <label>Start Time <span class="req-star">*</span></label>
-            <div class="select-field-box">
-              <select formControlName="startTime" (change)="onStartTimeChange()" class="form-input-control select-control">
-                <option *ngFor="let s of startTimeOptions" [value]="s.value">{{ s.label }}</option>
-              </select>
-              <i class="fas fa-chevron-down select-arrow"></i>
-            </div>
+            <app-custom-select 
+              [options]="startTimeSelectOptions" 
+              formControlName="startTime" 
+              placeholder="Select Start Time"
+              (valueChange)="onStartTimeChange()"
+            ></app-custom-select>
           </div>
 
           <div class="form-field-group">
             <label>End Time <span class="req-star">*</span></label>
-            <div class="select-field-box">
-              <select formControlName="endTime" class="form-input-control select-control">
-                <option *ngFor="let s of endTimeOptions" [value]="s.value">{{ s.label }}</option>
-              </select>
-              <i class="fas fa-chevron-down select-arrow"></i>
-            </div>
+            <app-custom-select 
+              [options]="endTimeSelectOptions" 
+              formControlName="endTime" 
+              placeholder="Select End Time"
+            ></app-custom-select>
           </div>
         </div>
 

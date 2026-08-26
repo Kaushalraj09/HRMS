@@ -201,16 +201,12 @@
             <div class="panel-body">
               <div class="form-group-item mb-3">
                 <label class="form-label-custom">Assignment Scope</label>
-                <select class="custom-form-select" [(ngModel)]="assignmentType">
-                  <option value="All">All Active Employees</option>
-                  <option value="Selected">Selected Employees</option>
-                  <option value="Department">By Department</option>
-                </select>
+                <app-custom-select [(ngModel)]="assignmentType" [options]="assignmentTypeSelectOptions" placeholder="Select Scope"></app-custom-select>
               </div>
 
               <div class="form-group-item mb-3">
                 <label class="form-label-custom">Due Date / Deadline</label>
-                <input type="date" class="custom-form-input" [(ngModel)]="dueDate" />
+                <app-custom-datepicker [(ngModel)]="dueDate" placeholder="Select Due Date"></app-custom-datepicker>
               </div>
 
               <!-- Selected Employees Box -->

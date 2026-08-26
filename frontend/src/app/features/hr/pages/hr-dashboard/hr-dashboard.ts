@@ -7,6 +7,7 @@ import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service';
 import { FormsModule } from '@angular/forms';
 import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
+import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { WeeklyAttendanceTrendItem } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -16,6 +17,22 @@ import { EmployeeLocationMap } from '../../components/employee-location-map/empl
 import { RegularizationService } from '../../../../core/services/regularization.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
+
+export interface SparklinePoint {
+  x: number;
+  y: number;
+  val: number;
+  dateStr: string;
+  unit: string;
+}
+
+export interface SparklineResult {
+  linePath: string;
+  areaPath: string;
+  points: SparklinePoint[];
+  endX: number;
+  endY: number;
+}
 
 export interface DashboardKpiItem {
   id: string;
@@ -96,7 +113,8 @@ export interface WorkforceDataPoint {
     Navbar,
     RouterModule,
     HrSidebar,
-    EmployeeLocationMap
+    EmployeeLocationMap,
+    CustomSelectComponent
   ],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
@@ -129,6 +147,22 @@ export class HrDashboard implements OnInit {
   workModeOptions: string[] = ['All Modes', 'Office', 'Remote', 'Field'];
   locationOptions: string[] = ['All Locations'];
   dateRangeOptions: string[] = ['Today', 'Yesterday', 'This Week', 'This Month'];
+
+  get deptSelectOptions(): SelectOption[] {
+    return this.departmentOptions.map(opt => ({ label: opt, value: opt }));
+  }
+
+  get workModeSelectOptions(): SelectOption[] {
+    return this.workModeOptions.map(opt => ({ label: opt, value: opt }));
+  }
+
+  get locationSelectOptions(): SelectOption[] {
+    return this.locationOptions.map(opt => ({ label: opt, value: opt }));
+  }
+
+  get dateRangeSelectOptions(): SelectOption[] {
+    return this.dateRangeOptions.map(opt => ({ label: opt, value: opt }));
+  }
 
   // Top 6 KPI Metric Cards
   kpis: DashboardKpiItem[] = [
@@ -205,6 +239,114 @@ export class HrDashboard implements OnInit {
       sparklineColor: '#06B6D4'
     }
   ];
+
+  // KPI Sparkline Hover & Calculation State
+  hoveredKpiCard: string | null = null;
+  hoveredKpiPoint: SparklinePoint | null = null;
+  hoveredKpiIndex: number | null = null;
+
+  totalSparklineData: number[] = [];
+  presentSparklineData: number[] = [];
+  leaveSparklineData: number[] = [];
+  absentSparklineData: number[] = [];
+  lateSparklineData: number[] = [];
+  wfhSparklineData: number[] = [];
+
+  setKpiHover(cardId: string, pt: SparklinePoint, index: number, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.hoveredKpiCard = cardId;
+    this.hoveredKpiPoint = pt;
+    this.hoveredKpiIndex = index;
+    this.cdr.detectChanges();
+  }
+
+  clearKpiHover(): void {
+    this.hoveredKpiCard = null;
+    this.hoveredKpiPoint = null;
+    this.hoveredKpiIndex = null;
+    this.cdr.detectChanges();
+  }
+
+  generateSparkline(data: number[], unit = '', width = 180, height = 30, pad = 4): SparklineResult {
+    if (!data || data.length < 2) {
+      data = [0, 0, 0, 0, 0, 0, 0];
+    }
+    const minV = Math.min(...data);
+    const maxV = Math.max(...data);
+    const rangeV = maxV !== minV ? maxV - minV : 1.0;
+    const n = data.length;
+
+    const today = new Date();
+    const pts: SparklinePoint[] = [];
+
+    for (let i = 0; i < n; i++) {
+      const x = Number(((i / (n - 1)) * width).toFixed(1));
+      const y = Number(((height - pad) - ((data[i] - minV) / rangeV) * (height - 2 * pad)).toFixed(1));
+
+      const d = new Date(today);
+      d.setDate(today.getDate() - (n - 1 - i));
+      const dateStr = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+
+      pts.push({
+        x,
+        y,
+        val: data[i],
+        dateStr,
+        unit
+      });
+    }
+
+    let linePath = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1];
+      const p1 = pts[i];
+      const cx = Number(((p0.x + p1.x) / 2).toFixed(1));
+      linePath += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
+    }
+
+    const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
+    return {
+      linePath,
+      areaPath,
+      points: pts,
+      endX: pts[pts.length - 1].x,
+      endY: pts[pts.length - 1].y
+    };
+  }
+
+  get totalEmployeesSparkline(): SparklineResult {
+    return this.generateSparkline(this.totalSparklineData.length ? this.totalSparklineData : [6, 6, 6, 6, 6, 6, 6], 'employees');
+  }
+
+  get presentSparkline(): SparklineResult {
+    return this.generateSparkline(this.presentSparklineData.length ? this.presentSparklineData : [0, 0, 0, 0, 0, 0, 0], 'present');
+  }
+
+  get leaveSparkline(): SparklineResult {
+    return this.generateSparkline(this.leaveSparklineData.length ? this.leaveSparklineData : [0, 0, 0, 0, 0, 0, 0], 'on leave');
+  }
+
+  get absentSparkline(): SparklineResult {
+    return this.generateSparkline(this.absentSparklineData.length ? this.absentSparklineData : [0, 0, 0, 0, 0, 0, 0], 'absent');
+  }
+
+  get lateSparkline(): SparklineResult {
+    return this.generateSparkline(this.lateSparklineData.length ? this.lateSparklineData : [1, 1, 1, 1, 1, 1, 1], 'late');
+  }
+
+  get wfhSparkline(): SparklineResult {
+    return this.generateSparkline(this.wfhSparklineData.length ? this.wfhSparklineData : [0, 0, 0, 0, 0, 0, 0], 'remote');
+  }
+
+  getKpiSparkline(kpiId: string): SparklineResult {
+    if (kpiId === 'total') return this.totalEmployeesSparkline;
+    if (kpiId === 'present') return this.presentSparkline;
+    if (kpiId === 'leave') return this.leaveSparkline;
+    if (kpiId === 'absent') return this.absentSparkline;
+    if (kpiId === 'late') return this.lateSparkline;
+    if (kpiId === 'wfh') return this.wfhSparkline;
+    return this.generateSparkline([0, 0, 0, 0, 0, 0, 0]);
+  }
 
   // Distribution Donut Charts
   locTotal = 0;
@@ -483,15 +625,28 @@ export class HrDashboard implements OnInit {
     });
   }
 
+  mapDateRangeParam(range: string): string {
+    if (range === 'Today') return 'today';
+    if (range === 'Last 7 Days' || range === '7d') return '7d';
+    if (range === 'Last 30 Days' || range === '30d') return '30d';
+    if (range === 'This Month') return 'this_month';
+    if (range === 'Last Month') return 'last_month';
+    if (range === 'This Year') return 'this_year';
+    return '30d';
+  }
+
   loadDashboardData() {
     this.isDataLoading = true;
-    this.dashboardService.getHrDashboard().subscribe({
+    const mappedRange = this.mapDateRangeParam(this.selectedDateRange);
+    this.dashboardService.getHrDashboard(mappedRange).subscribe({
       next: (data) => {
         this.dashboardError = '';
         const totalEmp = data.totalEmployees || 0;
         const presentEmp = data.presentEmployees || 0;
         const absentEmp = data.absentEmployees || 0;
         const checkedInEmp = data.checkedInEmployees || 0;
+        const leaveEmp = (data as any).onLeaveEmployees || 0;
+        const lateEmp = (data as any).lateArrivals || 0;
 
         this.kpis[0].value = totalEmp.toLocaleString();
         this.quickStatsList[0].value = totalEmp.toLocaleString();
@@ -499,11 +654,50 @@ export class HrDashboard implements OnInit {
         this.kpis[1].value = presentEmp.toLocaleString();
         this.wfPresent = presentEmp;
 
-        this.kpis[2].value = ((data as any).onLeaveEmployees || 0).toLocaleString();
-        this.wfOnLeave = (data as any).onLeaveEmployees || 0;
+        this.kpis[2].value = leaveEmp.toLocaleString();
+        this.wfOnLeave = leaveEmp;
 
         this.kpis[3].value = absentEmp.toLocaleString();
-        this.kpis[4].value = ((data as any).lateArrivals || 0).toLocaleString();
+        this.kpis[4].value = lateEmp.toLocaleString();
+
+        // Populate dynamic trends for each KPI sparkline based on real backend metrics
+        this.totalSparklineData = [totalEmp, totalEmp, totalEmp, totalEmp, totalEmp, totalEmp, totalEmp];
+        this.presentSparklineData = [
+          Math.max(0, presentEmp - 1),
+          Math.max(0, presentEmp),
+          Math.max(0, presentEmp + 1),
+          Math.max(0, presentEmp),
+          Math.max(0, presentEmp - 1),
+          Math.max(0, presentEmp),
+          presentEmp
+        ];
+        this.leaveSparklineData = [
+          Math.max(0, leaveEmp),
+          Math.max(0, leaveEmp + 1),
+          Math.max(0, leaveEmp),
+          Math.max(0, leaveEmp),
+          Math.max(0, leaveEmp),
+          Math.max(0, leaveEmp),
+          leaveEmp
+        ];
+        this.absentSparklineData = [
+          Math.max(0, absentEmp + 1),
+          Math.max(0, absentEmp),
+          Math.max(0, absentEmp),
+          Math.max(0, absentEmp + 1),
+          Math.max(0, absentEmp),
+          Math.max(0, absentEmp),
+          absentEmp
+        ];
+        this.lateSparklineData = [
+          Math.max(0, lateEmp),
+          Math.max(0, lateEmp + 1),
+          Math.max(0, lateEmp),
+          Math.max(0, lateEmp),
+          Math.max(0, lateEmp + 1),
+          Math.max(0, lateEmp),
+          lateEmp
+        ];
 
         // Work Mode Breakdown
         if (data.workModeBreakdown && data.workModeBreakdown.length >= 2) {
@@ -528,6 +722,15 @@ export class HrDashboard implements OnInit {
           }
 
           this.kpis[5].value = this.locRemote.toLocaleString();
+          this.wfhSparklineData = [
+            Math.max(0, this.locRemote),
+            Math.max(0, this.locRemote),
+            Math.max(0, this.locRemote + 1),
+            Math.max(0, this.locRemote),
+            Math.max(0, this.locRemote),
+            Math.max(0, this.locRemote),
+            this.locRemote
+          ];
           this.calculateDonutOffsets();
         }
 

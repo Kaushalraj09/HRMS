@@ -38,6 +38,7 @@ class UserSession(BaseModel):
     email: str
     displayName: str
     role: str
+    designation: Optional[str] = None
     status: str
     accessibleDashboards: list[str]
     activeDashboard: Optional[str] = None

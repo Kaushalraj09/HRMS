@@ -9,23 +9,6 @@
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="tabs-container">
-      <button 
-        class="tab-btn" 
-        [class.active]="activeTab === 'pending'" 
-        (click)="setActiveTab('pending')">
-        <i class="fas fa-clock"></i> Pending Requests
-        <span class="badge" *ngIf="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
-      </button>
-      <button 
-        class="tab-btn" 
-        [class.active]="activeTab === 'history'" 
-        (click)="setActiveTab('history')">
-        <i class="fas fa-history"></i> Processed History
-      </button>
-    </div>
-
     <!-- Filters Section -->
     <div class="filter-panel">
       <div class="filter-grid">
@@ -54,7 +37,7 @@
         </div>
 
         <!-- Status Filter (Only in History Tab) -->
-        <div class="filter-group" *ngIf="activeTab === 'history'">
+        <div class="filter-group" *ngIf="activeTab !== 'pending'">
           <label for="statusFilter">Status</label>
           <app-custom-select 
             name="statusFilter" 
@@ -69,6 +52,48 @@
 
     <!-- Table Section -->
     <div class="table-card">
+      <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 750; color: #0f172a;">
+          <span *ngIf="activeTab === 'pending'">Pending Requests ({{ pendingTotal }})</span>
+          <span *ngIf="activeTab === 'approved'">Approved Requests ({{ historyTotal }})</span>
+          <span *ngIf="activeTab === 'rejected'">Rejected Requests ({{ historyTotal }})</span>
+          <span *ngIf="activeTab === 'all'">All Time Off History ({{ historyTotal }})</span>
+        </h2>
+
+        <!-- Navigation Tabs -->
+        <div class="status-tabs-pill-container" style="margin-bottom: 0;">
+          <button 
+            type="button"
+            class="tab-pill-item" 
+            [class.active]="activeTab === 'all'" 
+            (click)="setActiveTab('all')">
+            All Time Off
+          </button>
+          <button 
+            type="button"
+            class="tab-pill-item" 
+            [class.active]="activeTab === 'pending'" 
+            (click)="setActiveTab('pending')">
+            <span class="tab-dot dot-pending"></span> Pending
+            <span *ngIf="pendingRequests.length > 0">({{ pendingRequests.length }})</span>
+          </button>
+          <button 
+            type="button"
+            class="tab-pill-item" 
+            [class.active]="activeTab === 'approved'" 
+            (click)="setActiveTab('approved')">
+            <span class="tab-dot dot-approved"></span> Approved
+          </button>
+          <button 
+            type="button"
+            class="tab-pill-item" 
+            [class.active]="activeTab === 'rejected'" 
+            (click)="setActiveTab('rejected')">
+            <span class="tab-dot dot-rejected"></span> Rejected
+          </button>
+        </div>
+      </div>
+
       <div class="table-responsive">
         
         <!-- PENDING REQUESTS TABLE -->
@@ -141,7 +166,7 @@
         </table>
 
         <!-- PROCESSED HISTORY TABLE -->
-        <table *ngIf="activeTab === 'history'">
+        <table *ngIf="activeTab !== 'pending'">
           <thead>
             <tr>
               <th>Employee ID</th>
@@ -238,7 +263,7 @@
       </div>
 
       <!-- Pagination for Processed Requests -->
-      <div class="pagination-footer" *ngIf="activeTab === 'history' && processedRequests.length > 0">
+      <div class="pagination-footer" *ngIf="activeTab !== 'pending' && processedRequests.length > 0">
         <div class="pagination-info">
           Showing <span class="font-medium">{{ ((historyPage - 1) * pageSize) + 1 }}</span> to 
           <span class="font-medium">{{ ((historyPage - 1) * pageSize) + processedRequests.length }}</span> of 
@@ -276,81 +301,100 @@
 
 <!-- Request Details Modal -->
 <div class="camera-modal-overlay" *ngIf="selectedRequest" (click)="closeDetailsModal()">
-  <div class="camera-modal-box" (click)="$event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-    <div class="camera-modal-header">
-      <span class="camera-modal-title">Time Off Request Details</span>
+  <div class="camera-modal-box details-modal-box" (click)="$event.stopPropagation()" style="width: 520px;">
+    <div class="camera-modal-header details-modal-header">
+      <div class="modal-title-wrap">
+        <i class="fas fa-calendar-alt"></i>
+        <span class="camera-modal-title">Time Off Request Details</span>
+      </div>
       <button class="close-btn" (click)="closeDetailsModal()" aria-label="Close">
         <i class="fas fa-times"></i>
       </button>
     </div>
-    <div class="camera-modal-body" style="text-align: left; background: #ffffff; padding: 24px;">
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Employee</strong>
-          <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.employee_name || '—' }} ({{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }})</span>
+    
+    <div class="camera-modal-body details-modal-body">
+      <!-- Employee Banner Box -->
+      <div class="emp-info-banner">
+        <div class="emp-avatar-circle">
+          {{ (selectedRequest.employee_name || 'E').slice(0, 2).toUpperCase() }}
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Leave Type</strong>
-            <span class="status-badge" [ngClass]="{
-              'hourly-badge': selectedRequest.leave_type === 'Hourly',
-              'halfday-badge': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
-              'fullday-badge': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
-            }">{{ selectedRequest.leave_type }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Duration</strong>
-            <span style="font-size: 15px; font-weight: 600; color: #0f172a;">{{ selectedRequest.duration_hours }} hrs</span>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Date</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">{{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
-          </div>
-          <div>
-            <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Time Slot</strong>
-            <span style="font-size: 14px; color: #334155; font-weight: 550;">
-              <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
-              <span *ngIf="!selectedRequest.start_time">Full Day</span>
-            </span>
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Reason for Leave</strong>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">
-            {{ selectedRequest.reason || 'No reason specified.' }}
-          </div>
-        </div>
-        <div>
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Attachments</strong>
-          <div *ngIf="selectedRequest.attachment_name" style="display: flex; align-items: center; gap: 8px; background: #ede9fe; border: 1px solid #ddd6fe; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #4c1d95; cursor: pointer;" (click)="downloadAttachment(selectedRequest.attachment_name)">
-            <i class="fas" [class.fa-file-pdf]="selectedRequest.attachment_name.endsWith('.pdf')" [class.fa-file-image]="!selectedRequest.attachment_name.endsWith('.pdf')" style="font-size: 16px;"></i>
-            <span>{{ selectedRequest.attachment_name }}</span>
-            <i class="fas fa-download" style="margin-left: auto; color: #7c3aed;"></i>
-          </div>
-          <div *ngIf="!selectedRequest.attachment_name" style="color: #94a3b8; font-size: 13px; font-style: italic;">
-            No attachments uploaded.
-          </div>
-        </div>
-        <div *ngIf="selectedRequest.status !== 'Pending'">
-          <strong style="color: #475569; font-size: 13px; display: block; margin-bottom: 2px;">Request Status</strong>
-          <span class="status-badge" [ngClass]="{
-            'present': selectedRequest.status === 'Approved',
-            'absent': selectedRequest.status === 'Rejected'
-          }">{{ selectedRequest.status }}</span>
+        <div class="emp-banner-details">
+          <h4 class="emp-banner-name">{{ selectedRequest.employee_name || 'Employee' }}</h4>
+          <span class="emp-banner-code">{{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }}</span>
         </div>
       </div>
+
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="detail-lbl">Leave Type</span>
+          <span class="leave-type-badge" [ngClass]="{
+            'type-hourly': selectedRequest.leave_type === 'Hourly',
+            'type-halfday': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
+            'type-fullday': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
+          }">{{ selectedRequest.leave_type }}</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-lbl">Duration</span>
+          <span class="detail-val-strong">{{ selectedRequest.duration_hours }} hrs</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-lbl">Date</span>
+          <span class="detail-val-text"><i class="far fa-calendar-alt"></i> {{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-lbl">Time Slot</span>
+          <span class="detail-val-text"><i class="far fa-clock"></i> 
+            <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
+            <span *ngIf="!selectedRequest.start_time">Full Day</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <span class="detail-lbl">Reason for Leave</span>
+        <div class="reason-card">
+          {{ selectedRequest.reason || 'No reason specified.' }}
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <span class="detail-lbl">Attachments</span>
+        <div *ngIf="selectedRequest.attachment_name" class="attachment-pill" (click)="downloadAttachment(selectedRequest.attachment_name)">
+          <i class="fas" [class.fa-file-pdf]="selectedRequest.attachment_name.endsWith('.pdf')" [class.fa-file-image]="!selectedRequest.attachment_name.endsWith('.pdf')"></i>
+          <span class="attachment-name">{{ selectedRequest.attachment_name }}</span>
+          <i class="fas fa-download download-icon"></i>
+        </div>
+        <div *ngIf="!selectedRequest.attachment_name" class="no-attachment-text">
+          No attachments uploaded.
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <span class="detail-lbl">Request Status</span>
+        <span class="status-pill-badge" [ngClass]="{
+          'status-approved': selectedRequest.status === 'Approved' || selectedRequest.status === 'Active' || selectedRequest.status === 'Completed',
+          'status-rejected': selectedRequest.status === 'Rejected' || selectedRequest.status === 'Cancelled',
+          'status-pending': selectedRequest.status === 'Pending',
+          'status-expired': selectedRequest.status === 'Expired'
+        }">
+          <span class="status-dot"></span>
+          {{ selectedRequest.status }}
+        </span>
+      </div>
     </div>
-    <div class="camera-modal-footer" style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #ffffff;">
-      <button class="btn btn-secondary" type="button" (click)="closeDetailsModal()">
+
+    <div class="camera-modal-footer details-modal-footer">
+      <button class="btn btn-secondary-modern" type="button" (click)="closeDetailsModal()">
         Close
       </button>
       <ng-container *ngIf="selectedRequest.status === 'Pending'">
-        <button class="btn btn-danger" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
+        <button class="btn btn-danger-soft" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'REJECT')">
           <i class="fas fa-times"></i> Reject
         </button>
-        <button class="btn btn-primary" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')">
+        <button class="btn btn-primary-modern" [disabled]="isAdmin" (click)="processRequestFromModal(selectedRequest.id, 'APPROVE')">
           <i class="fas fa-check"></i> Approve
         </button>
       </ng-container>

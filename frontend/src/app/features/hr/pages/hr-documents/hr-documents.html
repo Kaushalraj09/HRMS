@@ -110,11 +110,13 @@
 
       <div class="filters-row">
         <!-- Department Filter -->
-        <div class="select-wrapper">
-          <i class="fas fa-building select-icon"></i>
-          <select class="form-select" [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()">
-            <option *ngFor="let d of departments" [value]="d">{{ d === 'All' ? 'All Departments' : d }}</option>
-          </select>
+        <div class="select-wrapper" style="min-width: 190px;">
+          <app-custom-select 
+            [options]="departmentSelectOptions" 
+            [(ngModel)]="selectedDepartment" 
+            (valueChange)="onDepartmentChange()" 
+            placeholder="All Departments"
+          ></app-custom-select>
         </div>
 
         <!-- Status Filter Tabs -->

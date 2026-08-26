@@ -1,0 +1,102 @@
+<div class="custom-datepicker-container" [class.disabled]="disabled">
+  <button 
+    type="button" 
+    class="datepicker-trigger" 
+    [id]="inputId" 
+    (click)="togglePicker()" 
+    [class.open]="isOpen" 
+    [disabled]="disabled"
+  >
+    <span class="selected-date-text" [class.placeholder-text]="!value">
+      {{ formattedDisplay }}
+    </span>
+    <div class="calendar-icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="calendar-svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+      </svg>
+    </div>
+  </button>
+
+  <!-- Modern Floating Calendar Card -->
+  <div class="datepicker-popup-card" *ngIf="isOpen">
+    <!-- Header Navigation Controls -->
+    <div class="dp-header">
+      <button type="button" class="dp-nav-btn" (click)="prevMonth($event)" title="Previous">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <!-- Clickable Month & Year Dropdown Trigger -->
+      <button type="button" class="dp-month-select-btn" (click)="toggleMonthYearPicker($event)">
+        <span *ngIf="viewMode === 'days'">{{ currentMonthYearLabel }}</span>
+        <span *ngIf="viewMode === 'months'">{{ selectedPickerYear }}</span>
+        <span *ngIf="viewMode === 'years'">{{ yearsGrid[0] }} - {{ yearsGrid[yearsGrid.length - 1] }}</span>
+        <i class="fas fa-chevron-down dp-chevron" [class.rotated]="viewMode !== 'days'"></i>
+      </button>
+
+      <button type="button" class="dp-nav-btn" (click)="nextMonth($event)" title="Next">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- 1. DAYS VIEW -->
+    <ng-container *ngIf="viewMode === 'days'">
+      <!-- Weekday Header Grid -->
+      <div class="dp-weekdays">
+        <span *ngFor="let day of weekDays" class="dp-weekday">{{ day }}</span>
+      </div>
+
+      <!-- Calendar Days Grid -->
+      <div class="dp-days-grid">
+        <button 
+          type="button" 
+          *ngFor="let day of calendarDays" 
+          class="dp-day-cell"
+          [class.other-month]="!day.isCurrentMonth"
+          [class.today]="day.isToday"
+          [class.selected]="day.isSelected"
+          [class.disabled]="day.isDisabled"
+          [disabled]="day.isDisabled"
+          (click)="selectDay(day, $event)"
+        >
+          <span class="day-num">{{ day.dayNumber }}</span>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- 2. MONTHS PICKER GRID VIEW -->
+    <div class="dp-months-grid" *ngIf="viewMode === 'months'">
+      <button 
+        type="button" 
+        *ngFor="let m of monthList; let idx = index" 
+        class="dp-month-cell"
+        [class.selected]="currentViewDate.getMonth() === idx && selectedPickerYear === currentViewDate.getFullYear()"
+        (click)="selectMonth(idx, $event)"
+      >
+        <span>{{ m.short }}</span>
+      </button>
+    </div>
+
+    <!-- 3. YEARS PICKER GRID VIEW -->
+    <div class="dp-years-grid" *ngIf="viewMode === 'years'">
+      <button 
+        type="button" 
+        *ngFor="let y of yearsGrid" 
+        class="dp-year-cell"
+        [class.selected]="y === selectedPickerYear"
+        (click)="selectYear(y, $event)"
+      >
+        <span>{{ y }}</span>
+      </button>
+    </div>
+
+    <!-- Dedicated Bottom Footer Actions Bar -->
+    <div class="dp-footer">
+      <button type="button" class="dp-footer-btn today" (click)="selectToday($event)">
+        <i class="far fa-calendar-check"></i> Today
+      </button>
+      <button type="button" class="dp-footer-btn clear" *ngIf="value" (click)="clearDate($event)">
+        <i class="fas fa-undo-alt"></i> Clear
+      </button>
+    </div>
+  </div>
+</div>
