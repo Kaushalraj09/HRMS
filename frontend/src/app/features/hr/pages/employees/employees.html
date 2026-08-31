@@ -122,7 +122,7 @@
       <div class="documents-overview-card">
         <div class="doc-card-head">
           <span class="doc-head-title">Documents Overview</span>
-          <a class="doc-view-link" href="javascript:void(0)">View Details <i class="fas fa-arrow-right"></i></a>
+          <a class="doc-view-link" routerLink="../documents">View Details <i class="fas fa-arrow-right"></i></a>
         </div>
 
         <div class="doc-card-content">
@@ -130,15 +130,15 @@
           <div class="donut-chart-container">
             <svg class="donut-svg" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="36" class="donut-ring-base"></circle>
-              <!-- Complete segment ~62% (stroke-dasharray="140 226") -->
-              <circle cx="50" cy="50" r="36" class="donut-segment segment-green" stroke-dasharray="140 226" stroke-dashoffset="0"></circle>
-              <!-- Partial segment ~28% (stroke-dasharray="63 226") -->
-              <circle cx="50" cy="50" r="36" class="donut-segment segment-orange" stroke-dasharray="63 226" stroke-dashoffset="-140"></circle>
-              <!-- Incomplete segment ~10% (stroke-dasharray="23 226") -->
-              <circle cx="50" cy="50" r="36" class="donut-segment segment-red" stroke-dasharray="23 226" stroke-dashoffset="-203"></circle>
+              <!-- Complete segment -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-green" [attr.stroke-dasharray]="completeDashArray" [attr.stroke-dashoffset]="completeDashOffset"></circle>
+              <!-- Partial segment -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-orange" [attr.stroke-dasharray]="partialDashArray" [attr.stroke-dashoffset]="partialDashOffset"></circle>
+              <!-- Incomplete segment -->
+              <circle cx="50" cy="50" r="36" class="donut-segment segment-red" [attr.stroke-dasharray]="incompleteDashArray" [attr.stroke-dashoffset]="incompleteDashOffset"></circle>
             </svg>
             <div class="donut-center-text">
-              <span class="donut-ratio">{{ stats.docCompleteCount }}/{{ stats.total || 4 }}</span>
+              <span class="donut-ratio">{{ stats.docCompleteCount }}/{{ stats.totalRequiredDocs }}</span>
             </div>
           </div>
 
@@ -146,17 +146,17 @@
           <div class="doc-legend-list">
             <div class="legend-item">
               <span class="legend-dot dot-green"></span>
-              <span class="legend-label">Complete (8/8)</span>
+              <span class="legend-label">Complete</span>
               <span class="legend-value">{{ stats.docCompletePct }}% ({{ stats.docCompleteCount }})</span>
             </div>
             <div class="legend-item">
               <span class="legend-dot dot-orange"></span>
-              <span class="legend-label">Partial (3-7/8)</span>
+              <span class="legend-label">Partial</span>
               <span class="legend-value">{{ stats.docPartialPct }}% ({{ stats.docPartialCount }})</span>
             </div>
             <div class="legend-item">
               <span class="legend-dot dot-red"></span>
-              <span class="legend-label">Incomplete (0-2/8)</span>
+              <span class="legend-label">Incomplete</span>
               <span class="legend-value">{{ stats.docIncompletePct }}% ({{ stats.docIncompleteCount }})</span>
             </div>
           </div>
@@ -346,11 +346,13 @@
           </div>
 
           <div class="page-size-selector-wrap">
-            <select class="page-size-select" [value]="pageSize" (change)="onPageSizeChange($event)">
-              <option [value]="10">10 / page</option>
-              <option [value]="25">25 / page</option>
-              <option [value]="50">50 / page</option>
-            </select>
+            <app-custom-select 
+              [options]="pageSizeOptions" 
+              [value]="pageSize"
+              (valueChange)="onPageSizeChangeCustom($event)"
+              [dropup]="true"
+              placeholder="10 / page">
+            </app-custom-select>
           </div>
         </div>
       </div>

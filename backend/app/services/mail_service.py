@@ -9,11 +9,10 @@ logger = logging.getLogger(__name__)
 def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD or settings.SMTP_PASSWORD == "your-smtp-app-password":
         logger.warning(
-            "SMTP credentials are not defined or placeholder in .env file. Development mock transmission for %s: %s",
+            "SMTP credentials are not defined or are placeholders; reset email was not sent to %s.",
             to_email,
-            reset_link,
         )
-        return True
+        return False
 
     # Create message container
     msg = MIMEMultipart('alternative')
@@ -159,8 +158,8 @@ def send_reset_email(to_email: str, display_name: str, reset_link: str) -> bool:
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(settings.SMTP_FROM or settings.SMTP_USER, to_email, msg.as_string())
         server.quit()
-        logger.info(f"Real password reset email dispatched successfully to {to_email}")
+        logger.info("Password reset email dispatched successfully to %s", to_email)
         return True
-    except Exception as e:
-        logger.error(f"Failed to send SMTP email to {to_email}: {str(e)}")
+    except Exception:
+        logger.exception("Failed to send SMTP email to %s", to_email)
         return False

@@ -31,6 +31,28 @@ class Attendance(Base):
     status = Column(String(50), default="Not Marked") # Present, Late, Half-Day, Leave, Absent, Not Marked
     is_working = Column(Integer, default=0) # 0 = Not Working, 1 = Working
     
+    # New Fields for Shift Attendance Rules
+    early_arrival_minutes = Column(Integer, default=0)
+    late_minutes = Column(Integer, default=0)
+    
+    # Snapshotted config from Shift at the time of punch-in
+    punch_in_grace_minutes = Column(Integer, default=0)
+    early_punch_window_minutes = Column(Integer, default=0)
+    shift_grace_minutes = Column(Integer, default=0)
+    
+    # Early Time Manager Approval logic
+    approved_early_minutes = Column(Integer, default=0)
+    unapproved_early_minutes = Column(Integer, default=0)
+    credited_work_start = Column(Time, nullable=True)
+    credited_work_end = Column(Time, nullable=True)
+    regular_work_minutes = Column(Integer, default=0)
+    approved_extra_minutes = Column(Integer, default=0)
+    
+    early_approval_status = Column(String(20), default="None") # Pending, Approved, Partial, Rejected, None
+    early_approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    early_approved_at = Column(DateTime(timezone=True), nullable=True)
+    early_approval_reason = Column(String(500), nullable=True)
+    
     # Location tracking
     work_location_id = Column(Integer, ForeignKey("work_locations.id"), nullable=True, index=True)
     work_location_name = Column(String(150), nullable=True)

@@ -126,31 +126,31 @@
             class="filter-pill" 
             [class.active]="selectedStatus === ''" 
             (click)="onStatusFilterChange('')">
-            All Reviews
-          </button>
-          <button 
-            type="button" 
-            class="filter-pill pending" 
-            [class.active]="selectedStatus === 'PENDING_REVIEW'" 
-            (click)="onStatusFilterChange('PENDING_REVIEW')">
-            <span class="pill-dot amber"></span>
-            Pending ({{ kpiData.documents_pending }})
+            All Documents
           </button>
           <button 
             type="button" 
             class="filter-pill verified" 
-            [class.active]="selectedStatus === 'VERIFIED'" 
-            (click)="onStatusFilterChange('VERIFIED')">
+            [class.active]="selectedStatus === 'Complete'" 
+            (click)="onStatusFilterChange('Complete')">
             <span class="pill-dot emerald"></span>
-            Verified
+            Complete
+          </button>
+          <button 
+            type="button" 
+            class="filter-pill pending" 
+            [class.active]="selectedStatus === 'Partial'" 
+            (click)="onStatusFilterChange('Partial')">
+            <span class="pill-dot amber"></span>
+            Partial
           </button>
           <button 
             type="button" 
             class="filter-pill rejected" 
-            [class.active]="selectedStatus === 'REJECTED'" 
-            (click)="onStatusFilterChange('REJECTED')">
+            [class.active]="selectedStatus === 'Incomplete'" 
+            (click)="onStatusFilterChange('Incomplete')">
             <span class="pill-dot rose"></span>
-            Rejected
+            Incomplete
           </button>
         </div>
       </div>
@@ -179,7 +179,7 @@
             </div>
           </div>
 
-          <div class="empty-status-tag" *ngIf="!searchQuery && (selectedStatus === 'PENDING_REVIEW' || selectedStatus === '')">
+          <div class="empty-status-tag" *ngIf="!searchQuery && selectedStatus === ''">
             <span class="pulse-dot"></span>
             <span>All Caught Up</span>
           </div>
@@ -191,9 +191,9 @@
 
           <p class="empty-state-subtitle">
             <span *ngIf="searchQuery">No submissions match "<strong>{{ searchQuery }}</strong>" in {{ selectedDepartment === 'All' ? 'any department' : selectedDepartment }}.</span>
-            <span *ngIf="!searchQuery && selectedStatus === 'PENDING_REVIEW'">All pending employee submissions have been thoroughly reviewed and verified.</span>
-            <span *ngIf="!searchQuery && selectedStatus === 'REJECTED'">There are currently no rejected documents in this category.</span>
-            <span *ngIf="!searchQuery && selectedStatus === 'VERIFIED'">No verified documents found matching the selected filters.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'Incomplete'">There are currently no incomplete documents in this category.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'Partial'">No partial documents found matching the selected filters.</span>
+            <span *ngIf="!searchQuery && selectedStatus === 'Complete'">No complete documents found matching the selected filters.</span>
             <span *ngIf="!searchQuery && selectedStatus === '' && selectedDepartment === 'All'">No employee documents currently require your immediate review.</span>
           </p>
 
@@ -233,7 +233,8 @@
               <td>
                 <div class="doc-cell">
                   <span class="doc-title">{{ item.document_type_name }}</span>
-                  <span class="file-name-meta"><i class="far fa-file-alt"></i> {{ item.file_name }}</span>
+                  <span class="file-name-meta" *ngIf="item.file_name"><i class="far fa-file-alt"></i> {{ item.file_name }}</span>
+                  <span class="file-name-meta missing-text" *ngIf="!item.file_name">—</span>
                 </div>
               </td>
 
@@ -244,10 +245,13 @@
 
               <!-- Upload Details -->
               <td>
-                <div class="upload-meta-cell">
+                <div class="upload-meta-cell" *ngIf="item.uploaded_at">
                   <span class="upload-date">{{ formatDate(item.uploaded_at) }}</span>
-                  <span class="upload-by">By: {{ item.uploaded_by_name }} ({{ item.uploaded_by_role }})</span>
-                  <span class="version-tag">v{{ item.version }} · {{ formatSize(item.file_size) }}</span>
+                  <span class="upload-by" *ngIf="item.uploaded_by_name">By: {{ item.uploaded_by_name }} ({{ item.uploaded_by_role }})</span>
+                  <span class="version-tag" *ngIf="item.version">v{{ item.version }} · {{ formatSize(item.file_size) }}</span>
+                </div>
+                <div class="upload-meta-cell missing-text" *ngIf="!item.uploaded_at">
+                  <span>—</span>
                 </div>
               </td>
 
@@ -263,12 +267,12 @@
               <td class="text-right">
                 <div class="hr-action-group">
                   <!-- Preview -->
-                  <button type="button" class="btn-icon preview" (click)="openPreview(item)" title="Preview Document">
+                  <button type="button" class="btn-icon preview" *ngIf="item.id" (click)="openPreview(item)" title="Preview Document">
                     <i class="fas fa-eye"></i>
                   </button>
 
                   <!-- Download -->
-                  <button type="button" class="btn-icon download" (click)="downloadDoc(item)" title="Download File">
+                  <button type="button" class="btn-icon download" *ngIf="item.id" (click)="downloadDoc(item)" title="Download File">
                     <i class="fas fa-download"></i>
                   </button>
 
@@ -289,9 +293,19 @@
                     (click)="openRejectModal(item)">
                     <i class="fas fa-times"></i> Reject
                   </button>
+                  
+                  <!-- Missing Document Actions -->
+                  <button 
+                    type="button" 
+                    class="btn-hr-upload" 
+                    *ngIf="!item.id" 
+                    (click)="openUploadModal(item)"
+                    title="Upload on behalf of employee">
+                    <i class="fas fa-upload"></i> Upload
+                  </button>
 
                   <!-- History -->
-                  <button type="button" class="btn-icon history" (click)="openHistory(item)" title="Version History">
+                  <button type="button" class="btn-icon history" *ngIf="item.id" (click)="openHistory(item)" title="Version History">
                     <i class="fas fa-history"></i>
                   </button>
                 </div>

@@ -206,6 +206,42 @@ def punch_in(
         current = datetime.now(APP_TIMEZONE)
     
     today = current.date()
+    current_time = current.time()
+    
+    # Get assigned shift to check rules before punching in
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
+    shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
+    
+    # Apply early punch-in logic if shift is configured
+    if shift and shift.start_time:
+        shift_start_dt = datetime.combine(today, shift.start_time)
+        current_dt = datetime.combine(today, current_time)
+        
+        # If punching in before shift start
+        if current_dt < shift_start_dt:
+            time_diff = shift_start_dt - current_dt
+            minutes_early = int(time_diff.total_seconds() / 60)
+            
+            allow_early = getattr(shift, 'allow_early_punch_in', False)
+            early_window = getattr(shift, 'early_coming_minutes', 0)
+            
+            if not allow_early and minutes_early > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "message": f"Punch-in is not available yet. Your shift starts at {shift.start_time.strftime('%I:%M %p')}.",
+                        "code": "EARLY_PUNCH_NOT_ALLOWED"
+                    }
+                )
+                
+            if minutes_early > early_window:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "message": f"Punch-in is not available yet. Your shift starts at {shift.start_time.strftime('%I:%M %p')} and early punch-in is allowed only {early_window} minutes before your shift.",
+                        "code": "OUTSIDE_EARLY_PUNCH_WINDOW"
+                    }
+                )
     
     # Get or create attendance for today
     attendance = (
@@ -255,6 +291,15 @@ def punch_in(
             work_mode=work_mode,
             status="WORKING",
         )
+        if shift:
+            attendance.shift_id = shift.id
+            attendance.scheduled_start = shift.start_time
+            attendance.scheduled_end = shift.end_time
+            # Snapshot shift config
+            attendance.punch_in_grace_minutes = getattr(shift, 'punch_in_grace_minutes', 0)
+            attendance.early_punch_window_minutes = getattr(shift, 'early_coming_minutes', 0)
+            attendance.shift_grace_minutes = getattr(shift, 'shift_grace_minutes', 0)
+            
         db.add(attendance)
         db.flush()
     else:
@@ -262,6 +307,14 @@ def punch_in(
         attendance.is_working = 1
         attendance.work_mode = work_mode
         attendance.status = "WORKING"
+        if shift and not attendance.shift_id:
+            attendance.shift_id = shift.id
+            attendance.scheduled_start = shift.start_time
+            attendance.scheduled_end = shift.end_time
+            # Snapshot shift config
+            attendance.punch_in_grace_minutes = getattr(shift, 'punch_in_grace_minutes', 0)
+            attendance.early_punch_window_minutes = getattr(shift, 'early_coming_minutes', 0)
+            attendance.shift_grace_minutes = getattr(shift, 'shift_grace_minutes', 0)
     
     # Set punch-in with location and image (first check-in of the day)
     attendance.punch_in = current.time()
@@ -269,6 +322,38 @@ def punch_in(
     attendance.punch_in_longitude = longitude
     attendance.punch_in_address = address
     attendance.punch_in_image = image
+    
+    # Calculate Early Arrival & Late constraints
+    if shift and shift.start_time:
+        shift_start_dt = datetime.combine(today, shift.start_time)
+        current_dt = datetime.combine(today, current.time())
+        grace_mins = attendance.punch_in_grace_minutes
+        
+        # Calculate credited start
+        if current_dt < shift_start_dt:
+            # Early punch
+            time_diff = shift_start_dt - current_dt
+            minutes_early = int(time_diff.total_seconds() / 60)
+            attendance.early_arrival_minutes = minutes_early
+            attendance.early_approval_status = "Pending"
+            attendance.late_minutes = 0
+            attendance.credited_work_start = shift.start_time
+            attendance.status = "EARLY_PENDING_APPROVAL"
+        else:
+            # On time or late
+            attendance.early_arrival_minutes = 0
+            attendance.credited_work_start = current.time()
+            time_diff = current_dt - shift_start_dt
+            minutes_late = int(time_diff.total_seconds() / 60)
+            
+            if minutes_late <= grace_mins:
+                attendance.late_minutes = 0
+                attendance.status = "WITHIN_GRACE"
+            else:
+                attendance.late_minutes = minutes_late
+                attendance.status = "LATE"
+    else:
+        attendance.credited_work_start = current.time()
     
     db.commit()
     db.refresh(attendance)
@@ -279,6 +364,69 @@ def punch_in(
         pass
     
     log_audit_trail_sync(db, "PUNCH_IN", employee_id, f"Punched in via {work_mode} at {current.time()}")
+    
+    return to_attendance_response(attendance, db)
+
+def get_pending_early_arrivals(db: Session, role: UserRole, manager_id: int):
+    query = db.query(Attendance).filter(Attendance.status == "EARLY_PENDING_APPROVAL")
+    
+    # If not admin/HR, only show requests for employees reporting to this manager
+    if role not in [UserRole.admin, UserRole.hr]:
+        query = query.join(Employee, Attendance.employee_id == Employee.id)\
+                     .filter(Employee.reporting_manager_id == manager_id)
+                     
+    results = query.all()
+    return [to_attendance_response(att, db) for att in results]
+
+def approve_early_time(
+    db: Session,
+    attendance_id: int,
+    manager_id: int,
+    approved_minutes: int,
+    reason: str,
+) -> AttendanceResponse:
+    from datetime import timedelta
+    
+    attendance = db.query(Attendance).filter(Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+        
+    if attendance.early_arrival_minutes <= 0:
+        raise HTTPException(status_code=400, detail="No early arrival time to approve")
+        
+    if approved_minutes > attendance.early_arrival_minutes:
+        raise HTTPException(status_code=400, detail="Cannot approve more minutes than actual early arrival")
+        
+    attendance.approved_early_minutes = approved_minutes
+    attendance.unapproved_early_minutes = attendance.early_arrival_minutes - approved_minutes
+    attendance.approved_extra_minutes = approved_minutes
+    
+    if approved_minutes > 0:
+        if approved_minutes == attendance.early_arrival_minutes:
+            attendance.early_approval_status = "Approved"
+            attendance.status = "EARLY_APPROVED"
+        else:
+            attendance.early_approval_status = "Partial"
+            attendance.status = "EARLY_PARTIAL"
+            
+        # Adjust credited start time backwards by the approved minutes
+        if attendance.scheduled_start:
+            original_start = datetime.combine(attendance.date, attendance.scheduled_start)
+            new_start = original_start - timedelta(minutes=approved_minutes)
+            attendance.credited_work_start = new_start.time()
+    else:
+        attendance.early_approval_status = "Rejected"
+        attendance.status = "EARLY_REJECTED"
+        attendance.credited_work_start = attendance.scheduled_start
+        
+    attendance.early_approved_by = manager_id
+    attendance.early_approved_at = datetime.now(APP_TIMEZONE)
+    attendance.early_approval_reason = reason
+    
+    db.commit()
+    db.refresh(attendance)
+    
+    log_audit_trail_sync(db, "EARLY_TIME_APPROVAL", attendance.employee_id, f"Manager {manager_id} {attendance.early_approval_status} {approved_minutes} minutes. Reason: {reason}")
     
     return to_attendance_response(attendance, db)
 
@@ -871,9 +1019,10 @@ def list_all_attendance(
     department: str = "",
     status_filter: str = "",
     location: str = "",
+    employee_id: int | None = None,
 ) -> dict:
     """
-    List all attendance records (HR/Admin only).
+    List attendance records (HR/Admin for all, Employee for self).
     """
     from sqlalchemy import case, and_, or_
     from app.models.user import User, Role
@@ -888,6 +1037,8 @@ def list_all_attendance(
         .filter(Attendance.date <= today)
     )
 
+    if employee_id:
+        query = query.filter(Attendance.employee_id == employee_id)
     if from_date:
         query = query.filter(Attendance.date >= from_date)
     if to_date:
@@ -938,6 +1089,8 @@ def list_all_attendance(
         func.sum(case((status_expr == "Not Marked", 1), else_=0)).label("not_marked")
     ).select_from(Attendance).join(Employee).join(User, Employee.user_id == User.id).join(Role, User.role_id == Role.id).filter(func.lower(Role.name) != "admin").filter(Attendance.date <= today)
 
+    if employee_id:
+        m_query = m_query.filter(Attendance.employee_id == employee_id)
     if from_date:
         m_query = m_query.filter(Attendance.date >= from_date)
     if to_date:

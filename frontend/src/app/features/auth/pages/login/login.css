@@ -1119,8 +1119,8 @@
 }
 
 .toast-glow-bar.success {
-  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 50%, #3b82f6 100%) !important;
-  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.6) !important;
+  background: linear-gradient(90deg, #10b981 0%, #059669 50%, #34d399 100%) !important;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.6) !important;
 }
 
 .toast-glow-bar.error {
@@ -1146,8 +1146,18 @@
 }
 
 .popup-icon-ring.success {
-  background: #eff6ff !important;
-  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.14), 0 4px 14px rgba(37, 99, 235, 0.2) !important;
+  background: #ecfdf5 !important;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.14), 0 4px 14px rgba(16, 185, 129, 0.2) !important;
+}
+
+.checkmark-circle {
+  stroke: #10b981;
+  stroke-width: 2.5;
+}
+
+.checkmark-check {
+  stroke: #10b981;
+  stroke-width: 3.5;
 }
 
 .popup-icon-ring.error {
@@ -1167,7 +1177,7 @@
   stroke-dashoffset: 166;
   stroke-width: 3;
   stroke-miterlimit: 10;
-  stroke: #2563eb !important;
+  stroke: #10b981 !important;
   animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
@@ -1178,7 +1188,7 @@
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke: #2563eb !important;
+  stroke: #10b981 !important;
   animation: stroke 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.3s forwards;
 }
 
@@ -1229,8 +1239,8 @@
 }
 
 .status-pill.success {
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
+  background: #dcfce7 !important;
+  color: #166534 !important;
 }
 
 .status-pill.error {
@@ -1283,7 +1293,7 @@
 }
 
 .toast-progress-fill.success {
-  background: linear-gradient(90deg, #2563eb, #1d4ed8) !important;
+  background: linear-gradient(90deg, #10b981, #059669) !important;
 }
 
 .toast-progress-fill.error {

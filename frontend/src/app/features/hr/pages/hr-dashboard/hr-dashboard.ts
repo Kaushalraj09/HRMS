@@ -7,6 +7,7 @@ import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service';
 import { FormsModule } from '@angular/forms';
 import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
+import { FooterComponent } from '../../../../shared/components/footer/footer';
 import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { WeeklyAttendanceTrendItem } from '../../../../core/models/dashboard.model';
@@ -33,6 +34,9 @@ export interface SparklineResult {
   endX: number;
   endY: number;
 }
+
+import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
+import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
 
 export interface DashboardKpiItem {
   id: string;
@@ -81,13 +85,37 @@ export interface RecentAttendanceItem {
 }
 
 export interface LeaveRequestRow {
-  id: number;
+  id: string | number;
   name: string;
   initials: string;
   type: string;
   date: string;
   duration: string;
   status: string;
+}
+
+export function formatGroupedDate(startStr: string, endStr: string): string {
+  if (!startStr) return 'Today';
+  const d1 = new Date(startStr);
+  const d2 = new Date(endStr || startStr);
+  const sDay = d1.toLocaleDateString('en-GB', { day: '2-digit' });
+  const sMonth = d1.toLocaleDateString('en-GB', { month: 'short' });
+  const sYear = d1.toLocaleDateString('en-GB', { year: 'numeric' });
+  
+  const eDay = d2.toLocaleDateString('en-GB', { day: '2-digit' });
+  const eMonth = d2.toLocaleDateString('en-GB', { month: 'short' });
+  const eYear = d2.toLocaleDateString('en-GB', { year: 'numeric' });
+
+  if (sYear !== eYear) {
+    return `${sDay} ${sMonth} ${sYear} - ${eDay} ${eMonth} ${eYear}`;
+  } else if (sMonth !== eMonth) {
+    return `${sDay} ${sMonth} - ${eDay} ${eMonth} ${eYear}`;
+  } else {
+    if (sDay !== eDay) {
+      return `${sDay} - ${eDay} ${sMonth} ${eYear}`;
+    }
+    return `${sDay} ${sMonth} ${eYear}`;
+  }
 }
 
 export interface WorkforceDataPoint {
@@ -114,7 +142,8 @@ export interface WorkforceDataPoint {
     RouterModule,
     HrSidebar,
     EmployeeLocationMap,
-    CustomSelectComponent
+    CustomSelectComponent,
+    FooterComponent
   ],
   templateUrl: './hr-dashboard.html',
   styleUrls: ['./hr-dashboard.css'],
@@ -500,8 +529,8 @@ export class HrDashboard implements OnInit {
   ];
 
   // Pending API Data
-  pendingRequests: any[] = [];
-  processedRequests: any[] = [];
+  pendingRequests: GroupedTimeOffRequest[] = [];
+  processedRequests: GroupedTimeOffRequest[] = [];
   pendingRegularizations: any[] = [];
   weeklyTrendData: WeeklyAttendanceTrendItem[] = [];
 
@@ -932,20 +961,38 @@ export class HrDashboard implements OnInit {
 
   loadPendingRequests() {
     this.timeoffService.getPendingTimeOffRequests(1, 20).subscribe(res => {
-      this.pendingRequests = res.items || [];
-      this.pendingTimeoffCount = (res as any).total || (res as any).totalItems || this.pendingRequests.length || 0;
+      this.pendingRequests = groupTimeOffRequests(res.items || []);
+      this.pendingTimeoffCount = (res as any).total || (res as any).totalItems || res.items?.length || 0;
       this.updatePendingApprovalsCount();
 
       if (this.activeRequestTab === 'pending') {
-        this.displayLeaveRequests = this.pendingRequests.slice(0, 5).map(req => ({
-          id: req.id,
-          name: req.employee_name || 'Employee',
-          initials: this.getInitials(req.employee_name || 'EM'),
-          type: req.leave_type || 'Leave',
-          date: req.date ? new Date(req.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today',
-          duration: req.duration_days ? `${req.duration_days} Day${req.duration_days > 1 ? 's' : ''}` : `${req.duration_hours || 1} Day`,
-          status: req.status || 'Pending'
-        }));
+        this.displayLeaveRequests = this.pendingRequests.slice(0, 5).map(req => {
+          let formattedDate = 'Today';
+          if (req.isGrouped) {
+            formattedDate = formatGroupedDate(req.startDate, req.endDate);
+          } else if (req.startDate) {
+            formattedDate = new Date(req.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          }
+
+          let formattedDuration = `${req.totalDurationHours || 1} hrs`;
+          if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+            const days = req.requests.length;
+            formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
+          } else if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+            const days = req.requests.length * 0.5;
+            formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
+          }
+
+          return {
+            id: req.id,
+            name: req.employee_name || 'Employee',
+            initials: this.getInitials(req.employee_name || 'EM'),
+            type: req.leave_type || 'Leave',
+            date: formattedDate,
+            duration: formattedDuration,
+            status: req.status || 'Pending'
+          };
+        });
       }
       this.cdr.detectChanges();
     });
@@ -953,7 +1000,7 @@ export class HrDashboard implements OnInit {
 
   loadProcessedRequests() {
     this.timeoffService.getProcessedTimeOffRequests(1, 20).subscribe(res => {
-      this.processedRequests = res.items || [];
+      this.processedRequests = groupTimeOffRequests(res.items || []);
       this.cdr.detectChanges();
     });
   }
@@ -1070,22 +1117,40 @@ export class HrDashboard implements OnInit {
         status: req.status || 'Pending'
       }));
     } else {
-      this.displayLeaveRequests = this.pendingRequests.slice(0, 5).map(req => ({
-        id: req.id,
-        name: req.employee_name || 'Employee',
-        initials: this.getInitials(req.employee_name || 'EM'),
-        type: req.leave_type || 'Leave',
-        date: req.date ? new Date(req.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today',
-        duration: req.duration_days ? `${req.duration_days} Day${req.duration_days > 1 ? 's' : ''}` : `${req.duration_hours || 1} Day`,
-        status: req.status || 'Pending'
-      }));
+      this.displayLeaveRequests = this.pendingRequests.slice(0, 5).map(req => {
+        let formattedDate = 'Today';
+        if (req.isGrouped) {
+          formattedDate = formatGroupedDate(req.startDate, req.endDate);
+        } else if (req.startDate) {
+          formattedDate = new Date(req.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        let formattedDuration = `${req.totalDurationHours || 1} hrs`;
+        if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+          const days = req.requests.length;
+          formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
+        } else if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+          const days = req.requests.length * 0.5;
+          formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
+        }
+
+        return {
+          id: req.id,
+          name: req.employee_name || 'Employee',
+          initials: this.getInitials(req.employee_name || 'EM'),
+          type: req.leave_type || 'Leave',
+          date: formattedDate,
+          duration: formattedDuration,
+          status: req.status || 'Pending'
+        };
+      });
     }
     this.cdr.detectChanges();
   }
 
-  approveRequest(id: number) {
+  approveRequest(id: string | number) {
     if (this.activeRequestTab === 'regularization') {
-      this.regularizationService.submitDecision(id, { status: 'approved', reviewComment: 'Approved via HR Dashboard' }).subscribe({
+      this.regularizationService.submitDecision(id as number, { status: 'approved', reviewComment: 'Approved via HR Dashboard' }).subscribe({
         next: () => {
           this.loadPendingRegularizations();
           this.loadDashboardData();
@@ -1093,19 +1158,35 @@ export class HrDashboard implements OnInit {
         error: (err) => alert(err?.error?.detail || 'Error approving regularization request')
       });
     } else {
-      this.timeoffService.approveTimeOffRequest(id, 'APPROVE').subscribe({
-        next: () => {
-          this.loadPendingRequests();
-          this.loadDashboardData();
-        },
-        error: (err) => alert(err?.error?.detail || 'Error approving time-off request')
+      const groupedReq = this.pendingRequests.find(r => r.id === id);
+      if (!groupedReq) return;
+      const reqIds = groupedReq.requests.map(r => r.id);
+      let completedCount = 0;
+      let hasError = false;
+
+      reqIds.forEach(rId => {
+        this.timeoffService.approveTimeOffRequest(rId, 'APPROVE').subscribe({
+          next: () => {
+            completedCount++;
+            if (completedCount === reqIds.length) {
+              this.loadPendingRequests();
+              this.loadDashboardData();
+            }
+          },
+          error: (err) => {
+            if (!hasError) {
+              hasError = true;
+              alert(err?.error?.detail || 'Error approving time-off request');
+            }
+          }
+        });
       });
     }
   }
 
-  rejectRequest(id: number) {
+  rejectRequest(id: string | number) {
     if (this.activeRequestTab === 'regularization') {
-      this.regularizationService.submitDecision(id, { status: 'rejected', reviewComment: 'Rejected via HR Dashboard' }).subscribe({
+      this.regularizationService.submitDecision(id as number, { status: 'rejected', reviewComment: 'Rejected via HR Dashboard' }).subscribe({
         next: () => {
           this.loadPendingRegularizations();
           this.loadDashboardData();
@@ -1113,12 +1194,28 @@ export class HrDashboard implements OnInit {
         error: (err) => alert(err?.error?.detail || 'Error rejecting regularization request')
       });
     } else {
-      this.timeoffService.approveTimeOffRequest(id, 'REJECT').subscribe({
-        next: () => {
-          this.loadPendingRequests();
-          this.loadDashboardData();
-        },
-        error: (err) => alert(err?.error?.detail || 'Error rejecting time-off request')
+      const groupedReq = this.pendingRequests.find(r => r.id === id);
+      if (!groupedReq) return;
+      const reqIds = groupedReq.requests.map(r => r.id);
+      let completedCount = 0;
+      let hasError = false;
+
+      reqIds.forEach(rId => {
+        this.timeoffService.approveTimeOffRequest(rId, 'REJECT').subscribe({
+          next: () => {
+            completedCount++;
+            if (completedCount === reqIds.length) {
+              this.loadPendingRequests();
+              this.loadDashboardData();
+            }
+          },
+          error: (err) => {
+            if (!hasError) {
+              hasError = true;
+              alert(err?.error?.detail || 'Error rejecting time-off request');
+            }
+          }
+        });
       });
     }
   }

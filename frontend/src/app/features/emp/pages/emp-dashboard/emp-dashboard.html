@@ -86,7 +86,7 @@
                                 <span class="kpi-label">Today's Attendance</span>
                                 <div class="kpi-value-row">
                                     <span class="kpi-main-val">{{ punchInTime || 'Not Marked' }}</span>
-                                    <span class="kpi-pill-badge" [ngClass]="isPunchedIn ? 'green-pill' : 'gray-pill'">{{ isPunchedIn ? 'Working' : 'Not Marked' }}</span>
+                                    <span class="kpi-pill-badge" [ngClass]="todayAttendancePillClass">{{ todayAttendancePillLabel }}</span>
                                 </div>
                             </div>
                         </div>
@@ -103,7 +103,7 @@
                                 </div>
                                 <div class="target-progress-bar">
                                     <div class="progress-track"><div class="progress-fill" [style.width.%]="workProgressPercent"></div></div>
-                                    <span class="target-text">Target: 09h 00m</span>
+                                    <span class="target-text">Target: {{ targetWorkHoursDisplay }}</span>
                                 </div>
                             </div>
                         </div>
@@ -169,6 +169,14 @@
                                 </div>
                             </div>
 
+                            <div class="alert alert-warning m-3 py-2 px-3 d-flex align-items-center" *ngIf="attendanceStatusLabel === 'EARLY_PENDING_APPROVAL'" style="font-size: 0.85rem; border-radius: 8px;">
+                                <i class="fas fa-exclamation-triangle me-2 text-warning" style="font-size: 1.2rem;"></i>
+                                <div class="mb-0">
+                                    <strong class="d-block">Early Arrival Pending Approval</strong>
+                                    <span>Your punch-in is awaiting manager approval.</span>
+                                </div>
+                            </div>
+
                             <div class="punch-arc-center-container">
                                 <div class="punch-dial-wrapper" [class.is-punched-in]="isPunchedIn">
                                     <div class="dial-ambient-glow"></div>
@@ -215,7 +223,7 @@
                                         <span class="punch-label-action">{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</span>
                                         <div class="punch-status-badge" [class.badge-active]="isPunchedIn" [class.badge-not-marked]="!isPunchedIn">
                                             <span class="status-pulse-dot" *ngIf="isPunchedIn"></span>
-                                            {{ attendanceStatusLabel || (isPunchedIn ? 'Working' : 'Not Marked') }}
+                                            {{ formattedAttendanceStatus }}
                                         </div>
                                     </button>
                                 </div>
@@ -239,8 +247,8 @@
                                     </div>
                                 </div>
                                 <div class="location-verified-bar">
-                                    <span class="loc-text"><i class="fas fa-map-marker-alt"></i> {{ punchInAddress || 'AiVan 360 Office, Delhi' }}</span>
-                                    <span class="loc-badge">Location Verified</span>
+                                    <span class="loc-text"><i class="fas fa-map-marker-alt"></i> {{ displayOfficeLocation }}</span>
+                                    <span class="loc-badge">{{ punchInAddress ? 'Location Verified' : 'Assigned Location' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -253,54 +261,22 @@
                             </div>
 
                             <div class="schedule-timeline-list">
-                                <div class="schedule-item">
-                                    <span class="sch-time">{{ shiftStart }}</span>
+                                <div class="schedule-item" *ngFor="let item of selectedDayScheduleItems">
+                                    <span class="sch-time">{{ item.time }}</span>
                                     <div class="sch-track">
-                                        <div class="sch-line line-down"></div>
-                                        <span class="sch-dot blue-dot"></span>
+                                        <div class="sch-line" [ngClass]="{
+                                            'line-down': item.lineType === 'down',
+                                            'line-both': item.lineType === 'both',
+                                            'line-up': item.lineType === 'up',
+                                            'line-none': item.lineType === 'none'
+                                        }"></div>
+                                        <span class="sch-dot" [ngClass]="item.dotColor + '-dot'"></span>
                                     </div>
                                     <div class="sch-details">
-                                        <span class="sch-title">{{ shiftName || 'General Shift' }}</span>
-                                        <span class="sch-sub">{{ status || 'Office' }}</span>
+                                        <span class="sch-title">{{ item.title }}</span>
+                                        <span class="sch-sub" *ngIf="item.sub">{{ item.sub }}</span>
                                     </div>
-                                    <span class="sch-span">{{ shiftStart }} - {{ lunchStart }}</span>
-                                </div>
-
-                                <div class="schedule-item">
-                                    <span class="sch-time">{{ lunchStart }}</span>
-                                    <div class="sch-track">
-                                        <div class="sch-line line-both"></div>
-                                        <span class="sch-dot orange-dot"></span>
-                                    </div>
-                                    <div class="sch-details">
-                                        <span class="sch-title">Lunch Break</span>
-                                    </div>
-                                    <span class="sch-span">{{ lunchStart }} - {{ lunchEnd }}</span>
-                                </div>
-
-                                <div class="schedule-item">
-                                    <span class="sch-time">{{ lunchEnd }}</span>
-                                    <div class="sch-track">
-                                        <div class="sch-line line-both"></div>
-                                        <span class="sch-dot blue-dot"></span>
-                                    </div>
-                                    <div class="sch-details">
-                                        <span class="sch-title">{{ shiftName || 'General Shift' }}</span>
-                                        <span class="sch-sub">{{ status || 'Office' }}</span>
-                                    </div>
-                                    <span class="sch-span">{{ lunchEnd }} - {{ shiftEnd }}</span>
-                                </div>
-
-                                <div class="schedule-item">
-                                    <span class="sch-time">{{ shiftEnd }}</span>
-                                    <div class="sch-track">
-                                        <div class="sch-line line-up"></div>
-                                        <span class="sch-dot purple-dot"></span>
-                                    </div>
-                                    <div class="sch-details">
-                                        <span class="sch-title">Overtime <span class="sch-title-muted">(If Required)</span></span>
-                                    </div>
-                                    <span class="sch-span">{{ shiftEnd }} Onwards</span>
+                                    <span class="sch-span" *ngIf="item.span">{{ item.span }}</span>
                                 </div>
                             </div>
                         </div>
@@ -546,17 +522,58 @@
                             </div>
 
                             <div class="trend-stats-three">
+                                <!-- Box 1: Avg -->
                                 <div class="stat-mini-box box-blue">
-                                    <span class="sm-lbl">Avg. {{ trendPeriod }}</span>
-                                    <span class="sm-val blue-text">{{ trendAvgThisWeek }}</span>
+                                    <div class="stat-box-top">
+                                        <span class="sm-lbl">Avg. {{ trendPeriod === 'This Month' ? 'Month' : (trendPeriod === 'This Week' ? 'Week' : 'Last Wk') }}</span>
+                                        <div class="sm-icon-pill icon-blue">
+                                            <i class="fas fa-chart-line"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-box-body">
+                                        <span class="sm-val blue-text">{{ trendAvgThisWeek }}</span>
+                                    </div>
+                                    <div class="stat-box-bottom">
+                                        <span class="stat-foot-lbl">Overall Avg</span>
+                                    </div>
                                 </div>
+
+                                <!-- Box 2: Best Day -->
                                 <div class="stat-mini-box box-green">
-                                    <span class="sm-lbl">Best Day</span>
-                                    <span class="sm-val green-text">{{ trendBestDay }} <small class="day-hint">{{ trendBestDayName }}</small></span>
+                                    <div class="stat-box-top">
+                                        <span class="sm-lbl">Best Day</span>
+                                        <div class="sm-icon-pill icon-green">
+                                            <i class="fas fa-arrow-trend-up"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-box-body">
+                                        <span class="sm-val green-text">{{ trendBestDay }}</span>
+                                    </div>
+                                    <div class="stat-box-bottom">
+                                        <span class="stat-foot-pill pill-green" *ngIf="trendBestDayName && trendBestDayName !== '-'">
+                                            <i class="far fa-calendar-alt"></i> {{ trendBestDayName }}
+                                        </span>
+                                        <span class="stat-foot-lbl" *ngIf="!trendBestDayName || trendBestDayName === '-'">-</span>
+                                    </div>
                                 </div>
+
+                                <!-- Box 3: Lowest Day -->
                                 <div class="stat-mini-box box-red">
-                                    <span class="sm-lbl">Lowest Day</span>
-                                    <span class="sm-val red-text">{{ trendLowestDay }} <small class="day-hint red">{{ trendLowestDayName }}</small></span>
+                                    <div class="stat-box-top">
+                                        <span class="sm-lbl">Lowest Day</span>
+                                        <div class="sm-icon-pill icon-red">
+                                            <i class="fas fa-arrow-trend-down"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-box-body">
+                                        <span class="sm-val red-text">{{ trendLowestDay }}</span>
+                                    </div>
+                                    <div class="stat-box-bottom">
+                                        <span class="stat-foot-pill pill-red" *ngIf="trendLowestDayName && trendLowestDayName !== '-'">
+                                            <i class="far fa-calendar-alt"></i> {{ trendLowestDayName }}
+                                        </span>
+                                        <span class="stat-foot-lbl" *ngIf="!trendLowestDayName || trendLowestDayName === '-'">-</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -587,6 +604,11 @@
                                     <span class="req-type">{{ req.type }}</span>
                                     <span class="req-status-pill" [ngClass]="req.statusClass">{{ req.status }}</span>
                                 </div>
+
+                                <div class="req-empty-state" *ngIf="recentRequestsList.length === 0" style="padding: 28px 16px; text-align: center; color: #64748B;">
+                                    <i class="far fa-folder-open" style="font-size: 24px; margin-bottom: 8px; color: #94A3B8; display: block;"></i>
+                                    <span style="font-size: 12px; font-weight: 500;">No recent requests found.</span>
+                                </div>
                             </div>
                         </div>
 
@@ -603,7 +625,7 @@
                                 <a routerLink="/emp-dashboard/my-attendance" class="card-head-link">View Full Timesheet →</a>
                             </div>
 
-                            <div class="table-responsive-wrapper">
+                            <div class="table-responsive-wrapper" *ngIf="displayTimesheetRows.length > 0">
                                 <table class="timesheet-mini-table">
                                     <thead>
                                         <tr>
@@ -628,6 +650,11 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div class="empty-timesheet-state" *ngIf="displayTimesheetRows.length === 0">
+                                <i class="far fa-calendar-alt empty-timesheet-icon"></i>
+                                <span>No recent timesheet data available.</span>
                             </div>
                         </div>
 
@@ -735,6 +762,7 @@
 
                 </ng-container>
             </div>
+            <app-footer></app-footer>
         </div>
     </div>
 </div>
@@ -754,7 +782,14 @@
     <div class="camera-modal-body">
       <!-- Punch Details Row -->
       <div class="punch-modal-info-bar">
-        <span class="info-pill"><i class="fas fa-briefcase"></i> Mode: <strong>{{ pendingPunchWorkMode }}</strong></span>
+        <div class="mode-toggle-group" *ngIf="!isPunchedIn">
+          <span class="info-pill"><i class="fas fa-briefcase"></i> Mode:</span>
+          <div class="btn-group-pill">
+            <button type="button" class="mini-pill-btn" [class.active]="pendingPunchWorkMode === 'Office'" (click)="setModalPunchWorkMode('Office')">Office</button>
+            <button type="button" class="mini-pill-btn" [class.active]="pendingPunchWorkMode === 'Remote'" (click)="setModalPunchWorkMode('Remote')">Remote</button>
+          </div>
+        </div>
+        <span class="info-pill" *ngIf="isPunchedIn"><i class="fas fa-briefcase"></i> Mode: <strong>{{ pendingPunchWorkMode }}</strong></span>
         <span class="info-pill"><i class="fas fa-clock"></i> Action: <strong>{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</strong></span>
       </div>
 

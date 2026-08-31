@@ -98,7 +98,7 @@ async def create_notification_for_roles(
 ) -> List[Notification]:
     from app.models.user import User, Role
     lower_roles = [r.lower() for r in roles]
-    users = db.query(User).join(Role).filter(func.lower(Role.name).in_(lower_roles)).all()
+    users = db.query(User).join(Role).filter(func.lower(Role.name).in_(lower_roles)).distinct().all()
     
     created_notifications = []
     for user in users:

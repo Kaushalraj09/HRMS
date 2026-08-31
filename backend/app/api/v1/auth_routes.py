@@ -1,6 +1,6 @@
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 import logging
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -62,6 +62,7 @@ def _clear_rate_limit(key: str) -> None:
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
+    response: Response,
     payload: LoginRequest,
     db: Session = Depends(get_db)
 ):
@@ -98,8 +99,31 @@ async def login(
             user_agent_string=user_agent,
             status="Success"
         )
+        # Keep the credential out of JavaScript-accessible storage. The cookie
+        # is host-only, HttpOnly, and sent only over HTTPS in production.
+        response.set_cookie(
+            key=settings.SESSION_COOKIE_NAME,
+            value=result.pop("accessToken"),
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            httponly=True,
+            secure=settings.SESSION_COOKIE_SECURE,
+            samesite="lax",
+            path="/",
+        )
         
     return result
+
+
+@router.post("/logout", response_model=StandardResponse)
+def logout(response: Response):
+    response.delete_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+    )
+    return {"success": True, "message": "Signed out successfully."}
 
 @router.post("/change-password", response_model=StandardResponse)
 def change_password(

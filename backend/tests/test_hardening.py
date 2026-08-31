@@ -163,7 +163,7 @@ def test_websocket_ticket_has_a_dedicated_token_type():
     assert ticket_claims["uid"] == 42
 
 
-def test_employee_creation_uses_temporary_password_when_email_setup_is_unavailable(db_session, monkeypatch):
+def test_employee_creation_rejects_predictable_temporary_password(db_session, monkeypatch):
     from app.core.config import settings
     from app.models.user import User
     from app.schemas.auth import LoginRequest
@@ -174,30 +174,28 @@ def test_employee_creation_uses_temporary_password_when_email_setup_is_unavailab
     monkeypatch.setattr(settings, "SMTP_USER", "")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
 
-    create_employee(
-        db_session,
-        EmployeeCreate(
-            first_name="Vivek",
-            last_name="Mehta",
-            official_email="Vivekkumarmehta02@gmail.com",
-            mobile="9876543210",
-            department="Engineering",
-            designation="Frontend Developer",
-            employee_type="Full-Time",
-            work_location="Main Office",
-            shift_type="General Shift",
-        ),
-    )
+    from app.services.account_access_service import InvitationDeliveryError
 
-    user = db_session.query(User).filter(User.email == "Vivekkumarmehta02@gmail.com").first()
-    assert user is not None
-    assert authenticate_user(
-        db_session,
-        LoginRequest(email=user.email, password="Vivek@1234"),
-    ) is not None
+    with pytest.raises(InvitationDeliveryError):
+        create_employee(
+            db_session,
+            EmployeeCreate(
+                first_name="Vivek",
+                last_name="Mehta",
+                official_email="Vivekkumarmehta02@gmail.com",
+                mobile="9876543210",
+                department="Engineering",
+                designation="Frontend Developer",
+                employee_type="Full-Time",
+                work_location="Main Office",
+                shift_type="General Shift",
+            ),
+        )
+
+    assert db_session.query(User).filter(User.email == "Vivekkumarmehta02@gmail.com").first() is None
 
 
-def test_hr_creation_uses_temporary_password_when_email_setup_is_unavailable(db_session, monkeypatch):
+def test_hr_creation_rejects_predictable_temporary_password(db_session, monkeypatch):
     from app.core.config import settings
     from app.models.user import User
     from app.schemas.auth import LoginRequest
@@ -208,24 +206,22 @@ def test_hr_creation_uses_temporary_password_when_email_setup_is_unavailable(db_
     monkeypatch.setattr(settings, "SMTP_USER", "")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
 
-    create_hr(
-        db_session,
-        HrCreate(
-            fullName="Chandra Shekhar",
-            email="Chandrashekhar@gmail.com",
-            phone="9876543211",
-            department="Human Resources",
-            designation="HR Manager",
-            status="Active",
-        ),
-    )
+    from app.services.account_access_service import InvitationDeliveryError
 
-    user = db_session.query(User).filter(User.email == "Chandrashekhar@gmail.com").first()
-    assert user is not None
-    assert authenticate_user(
-        db_session,
-        LoginRequest(email=user.email, password="Chand@1234"),
-    ) is not None
+    with pytest.raises(InvitationDeliveryError):
+        create_hr(
+            db_session,
+            HrCreate(
+                fullName="Chandra Shekhar",
+                email="Chandrashekhar@gmail.com",
+                phone="9876543211",
+                department="Human Resources",
+                designation="HR Manager",
+                status="Active",
+            ),
+        )
+
+    assert db_session.query(User).filter(User.email == "Chandrashekhar@gmail.com").first() is None
 
 
 def test_login_accepts_email_derived_temporary_password(db_session):
@@ -247,7 +243,7 @@ def test_login_accepts_email_derived_temporary_password(db_session):
     ) is None
 
 
-def test_missing_smtp_configuration_uses_temporary_mock_delivery(monkeypatch, caplog):
+def test_missing_smtp_configuration_never_logs_reset_link(monkeypatch, caplog):
     from app.core.config import settings
     from app.services.mail_service import send_reset_email
 
@@ -256,9 +252,9 @@ def test_missing_smtp_configuration_uses_temporary_mock_delivery(monkeypatch, ca
     secret_link = "https://hrms.example/reset?token=do-not-log"
 
     with caplog.at_level("WARNING"):
-        assert send_reset_email("employee@example.com", "Employee", secret_link) is True
+        assert send_reset_email("employee@example.com", "Employee", secret_link) is False
 
-    assert "Development mock transmission" in caplog.text
+    assert secret_link not in caplog.text
 
 
 def test_reset_access_reports_mock_success_when_email_delivery_is_unavailable(db_session, monkeypatch):

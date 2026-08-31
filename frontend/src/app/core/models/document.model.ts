@@ -105,12 +105,18 @@ export interface HrDocumentOverviewKPI {
   complete_employees: number;
   attention_employees?: number;
   total_required_docs?: number;
+  complete_documents?: number;
+  partial_documents?: number;
+  incomplete_documents?: number;
+  complete_pct?: number;
+  partial_pct?: number;
+  incomplete_pct?: number;
   overall_compliance_rate: number;
   categories_breakdown: any[];
 }
 
 export interface HrPendingReviewItem {
-  id: number;
+  id?: number | null;
   employee_id: number;
   employee_name: string;
   employee_code: string;
@@ -118,16 +124,17 @@ export interface HrPendingReviewItem {
   document_type_id: number;
   document_type_name: string;
   category: string;
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  version: number;
+  file_name?: string | null;
+  file_size?: number | null;
+  mime_type?: string | null;
+  version?: number | null;
   status: string;
-  uploaded_by_name: string;
-  uploaded_by_role: string;
-  uploaded_at: string;
+  uploaded_by_name?: string | null;
+  uploaded_by_role?: string | null;
+  uploaded_at?: string | null;
   rejection_reason?: string | null;
   remarks?: string | null;
+  bucket?: string;
 }
 
 export interface HrPendingReviewsResponse {

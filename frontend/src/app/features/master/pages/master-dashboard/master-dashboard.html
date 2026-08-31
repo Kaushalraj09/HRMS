@@ -498,10 +498,10 @@
                                         <line x1="0" y1="195" x2="500" y2="195" stroke="#e2e8f0" stroke-width="1"/>
 
                                         <!-- Area Fill -->
-                                        <path d="M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25 L 480 195 L 20 195 Z" fill="url(#areaGradient)"/>
+                                        <path [attr.d]="attendanceAreaPath" fill="url(#areaGradient)"/>
                                         
                                         <!-- Spline Curve -->
-                                        <path d="M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25" fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+                                        <path [attr.d]="attendanceSplinePath" fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
 
                                         <!-- Dotted vertical guideline when hovering -->
                                         <line 
@@ -674,6 +674,10 @@
                                     </div>
                                     <span class="item-meta">{{ item.doj }}</span>
                                 </div>
+                                <div class="empty-widget-state" *ngIf="recentJoiners.length === 0" style="padding: 24px 16px; text-align: center; color: #64748b; font-size: 13px;">
+                                    <i class="fas fa-user-plus" style="font-size: 20px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+                                    No recent joiners
+                                </div>
                             </div>
                         </div>
 
@@ -695,6 +699,10 @@
                                     <div class="gift-box-icon" title="Birthday Today / Upcoming">
                                         <i class="fas fa-gift"></i>
                                     </div>
+                                </div>
+                                <div class="empty-widget-state" *ngIf="todayBirthdays.length === 0" style="padding: 24px 16px; text-align: center; color: #64748b; font-size: 13px;">
+                                    <i class="fas fa-birthday-cake" style="font-size: 20px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+                                    No upcoming birthdays
                                 </div>
                             </div>
                         </div>
@@ -823,13 +831,13 @@
                                 </div>
                             </div>
 
-                            <!-- Sub Tabs for Timeoff (Pending vs History) -->
-                            <div class="oversight-subtabs" *ngIf="activeCategoryTab === 'timeoff'">
+                            <!-- Sub Tabs for Timeoff & Regularization -->
+                            <div class="oversight-subtabs">
                                 <button class="subtab-btn" [class.active]="activeOversightTab === 'pending'" (click)="setOversightTab('pending')">
-                                    Pending Approvals ({{ pendingRequests.length }})
+                                    Pending Approvals
                                 </button>
                                 <button class="subtab-btn" [class.active]="activeOversightTab === 'history'" (click)="setOversightTab('history')">
-                                    Decision Logs ({{ processedRequests.length }})
+                                    Decision Logs
                                 </button>
                             </div>
 
@@ -860,7 +868,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
-                                                        <span class="user-subcode">{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</span>
+                                                        <span class="user-subcode">{{ 'EMP-' + ('0000' + req.employee_id).slice(-4) }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -871,12 +879,19 @@
                                                     'type-fullday': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                                                 }">{{ req.leave_type }}</span>
                                             </td>
-                                            <td>{{ req.date | date:'dd MMM yyyy' }}</td>
                                             <td>
-                                                <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                                                <span *ngIf="!req.start_time">Full Day</span>
+                                                <ng-container *ngIf="!req.isGrouped; else mdGroupedDatePending">
+                                                  {{ req.startDate | date:'dd MMM yyyy' }}
+                                                </ng-container>
+                                                <ng-template #mdGroupedDatePending>
+                                                  {{ req.startDate | date:'dd MMM yyyy' }} – {{ req.endDate | date:'dd MMM yyyy' }}
+                                                </ng-template>
                                             </td>
-                                            <td><strong>{{ req.duration_hours }}</strong> hrs</td>
+                                            <td>
+                                                <span *ngIf="req.leave_type !== 'Full-Day' && req.leave_type !== 'Full Day'">{{ req.start_time }} - {{ req.end_time }}</span>
+                                                <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
+                                            </td>
+                                            <td><strong>{{ formatDuration(req) }}</strong></td>
                                             <td>
                                                 <div class="table-actions-group">
                                                     <button class="btn-action btn-view" (click)="viewRequestDetails(req)" title="View Details">
@@ -919,7 +934,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
-                                                        <span class="user-subcode">{{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}</span>
+                                                        <span class="user-subcode">{{ 'EMP-' + ('0000' + req.employee_id).slice(-4) }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -930,12 +945,19 @@
                                                     'type-fullday': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                                                 }">{{ req.leave_type }}</span>
                                             </td>
-                                            <td>{{ req.date | date:'dd MMM yyyy' }}</td>
                                             <td>
-                                                <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                                                <span *ngIf="!req.start_time">Full Day</span>
+                                                <ng-container *ngIf="!req.isGrouped; else mdGroupedDateProcessed">
+                                                  {{ req.startDate | date:'dd MMM yyyy' }}
+                                                </ng-container>
+                                                <ng-template #mdGroupedDateProcessed>
+                                                  {{ req.startDate | date:'dd MMM yyyy' }} – {{ req.endDate | date:'dd MMM yyyy' }}
+                                                </ng-template>
                                             </td>
-                                            <td><strong>{{ req.duration_hours }}</strong> hrs</td>
+                                            <td>
+                                                <span *ngIf="req.leave_type !== 'Full-Day' && req.leave_type !== 'Full Day'">{{ req.start_time }} - {{ req.end_time }}</span>
+                                                <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
+                                            </td>
+                                            <td><strong>{{ formatDuration(req) }}</strong></td>
                                             <td>
                                                 <span class="status-tag" [ngClass]="{
                                                     'tag-approved': req.status === 'Approved',
@@ -952,7 +974,7 @@
                                 </table>
 
                                 <!-- REGULARIZATION REQUESTS TABLE -->
-                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'regularization'">
+                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'regularization' && activeOversightTab === 'pending'">
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
@@ -1002,25 +1024,66 @@
                                         </tr>
                                     </tbody>
                                 </table>
+
+                                <!-- REGULARIZATION DECISION LOGS TABLE -->
+                                <table class="modern-oversight-table" *ngIf="activeCategoryTab === 'regularization' && activeOversightTab === 'history'">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Attendance Date</th>
+                                            <th>Requested Punch In</th>
+                                            <th>Requested Punch Out</th>
+                                            <th>Reason Type</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngIf="processedRegularizations.length === 0">
+                                            <td colspan="7" class="table-empty-cell">
+                                                <span>No processed decision logs found.</span>
+                                            </td>
+                                        </tr>
+                                        <tr *ngFor="let req of processedRegularizations">
+                                            <td>
+                                                <div class="table-user-info">
+                                                    <div class="user-avatar-sm">{{ (req.employeeName || 'EM').slice(0,2).toUpperCase() }}</div>
+                                                    <div>
+                                                        <strong class="user-fullname">{{ req.employeeName || '—' }}</strong>
+                                                        <span class="user-subcode">{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ req.attendanceDate | date:'dd MMM yyyy' }}</td>
+                                            <td><strong>{{ formatTime(req.requestedPunchIn) }}</strong></td>
+                                            <td><strong>{{ formatTime(req.requestedPunchOut) }}</strong></td>
+                                            <td>
+                                                <span class="badge-reason">{{ getReasonTypeLabel(req.reasonType) }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="status-tag" [ngClass]="{
+                                                    'tag-approved': req.status === 'approved',
+                                                    'tag-rejected': req.status === 'rejected'
+                                                }">{{ req.status | titlecase }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="table-actions-group">
+                                                    <button class="btn-action btn-view" (click)="viewRegularizationDetails(req)">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 6. CLEAN MODERN FOOTER -->
-                    <footer class="dashboard-footer">
-                        <div class="footer-left">
-                            <span>&copy; 2026 AIVAN 360 Solutions Pvt. Ltd. All rights reserved.</span>
-                        </div>
-                        <div class="footer-right">
-                            <span>Version 1.0.0</span>
-                            <span class="footer-sep">|</span>
-                            <a href="javascript:void(0)" class="footer-link">Privacy Policy</a>
-                            <span class="footer-sep">|</span>
-                            <a href="javascript:void(0)" class="footer-link">Support</a>
-                        </div>
-                    </footer>
+                    <!-- Old static footer removed -->
                 </div>
             </div>
+            <app-footer></app-footer>
         </div>
     </div>
 </div>
@@ -1039,13 +1102,20 @@
         <label>Employee</label>
         <div class="modal-emp-info">
             <strong>{{ selectedRequest.employee_name || '—' }}</strong>
-            <span>{{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }}</span>
+            <span>{{ 'EMP-' + ('0000' + selectedRequest.employee_id).slice(-4) }}</span>
         </div>
       </div>
       <div class="modal-detail-grid">
         <div>
           <label>Date</label>
-          <span class="val-text">{{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
+          <span class="val-text">
+            <ng-container *ngIf="!selectedRequest.isGrouped; else modalGroupedDateMD">
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }}
+            </ng-container>
+            <ng-template #modalGroupedDateMD>
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }} – {{ selectedRequest.endDate | date:'dd MMM yyyy' }}
+            </ng-template>
+          </span>
         </div>
         <div>
           <label>Leave Type</label>
@@ -1060,14 +1130,25 @@
         <div>
           <label>Time Slot</label>
           <span class="val-text">
-            <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
-            <span *ngIf="!selectedRequest.start_time">Full Day</span>
+            <span *ngIf="selectedRequest.leave_type !== 'Full-Day' && selectedRequest.leave_type !== 'Full Day'">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
+            <span *ngIf="selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'">Full Day</span>
           </span>
         </div>
         <div>
           <label>Duration</label>
-          <span class="val-text"><strong>{{ selectedRequest.duration_hours }}</strong> hrs</span>
+          <span class="val-text"><strong>{{ formatDuration(selectedRequest) }}</strong></span>
         </div>
+      </div>
+      <div class="modal-detail-row" *ngIf="selectedRequest.isGrouped">
+        <label>Leave Dates</label>
+        <ul class="leave-dates-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; color: #52525b;">
+          <li *ngFor="let r of selectedRequest.requests" style="margin-bottom: 4px;">
+            <i class="fas fa-circle" style="font-size: 6px; margin-right: 6px; color: #a1a1aa; vertical-align: middle;"></i>
+            {{ r.date | date:'dd MMM yyyy' }} &mdash; 
+            <span *ngIf="r.leave_type === 'Full-Day' || r.leave_type === 'Full Day'">Full Day</span>
+            <span *ngIf="r.leave_type !== 'Full-Day' && r.leave_type !== 'Full Day'">{{ r.start_time }} - {{ r.end_time }}</span>
+          </li>
+        </ul>
       </div>
       <div class="modal-detail-row">
         <label>Reason</label>

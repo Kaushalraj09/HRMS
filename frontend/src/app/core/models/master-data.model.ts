@@ -39,6 +39,10 @@ export interface Shift {
   max_overtime_minutes?: number;
   late_mark_after_minutes?: number;
   early_exit_before_minutes?: number;
+  allow_early_punch_in?: boolean;
+  early_coming_minutes?: number;
+  punch_in_grace_minutes?: number;
+  shift_grace_minutes?: number;
   is_night_shift?: boolean;
   timezone?: string;
   is_active: boolean;

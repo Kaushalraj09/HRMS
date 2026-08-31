@@ -7,6 +7,7 @@ import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { MasterSidebar } from '../../components/master-sidebar/master-sidebar';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
+import { FooterComponent } from '../../../../shared/components/footer/footer';
 import { filter } from 'rxjs/operators';
 import { MasterSidebarService } from '../../components/master-sidebar/master-sidebar.service';
 import { Subscription } from 'rxjs';
@@ -17,6 +18,8 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { RegularizationService } from '../../../../core/services/regularization.service';
+import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
+import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
 
 export interface MasterAttendancePoint {
   label: string;
@@ -47,7 +50,7 @@ export interface SparklineResult {
 
 @Component({
   selector: 'app-master-dashboard',
-  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, MasterSidebar, RouterModule, CustomSelectComponent],
+  imports: [MatFormFieldModule, MatSelectModule, CommonModule, FormsModule, Navbar, MasterSidebar, RouterModule, CustomSelectComponent, FooterComponent],
   standalone: true,
   templateUrl: './master-dashboard.html',
   styleUrl: './master-dashboard.css',
@@ -104,6 +107,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
   activeOversightTab = 'pending';
 
   pendingRegularizations: any[] = [];
+  processedRegularizations: any[] = [];
   selectedRegularization: any = null;
   activeCategoryTab: 'timeoff' | 'regularization' = 'timeoff';
   showOversightSection = true;
@@ -162,6 +166,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
     this.loadPendingRequests();
     this.loadProcessedRequests();
     this.loadPendingRegularizations();
+    this.loadProcessedRegularizations();
 
     // WebSocket updates
     this.sub.add(
@@ -169,6 +174,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
         this.loadPendingRequests();
         this.loadProcessedRequests();
         this.loadPendingRegularizations();
+        this.loadProcessedRegularizations();
         this.fetchAdminDashboard();
       })
     );
@@ -178,6 +184,9 @@ export class MasterDashboard implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
+  attendanceSplinePath: string = 'M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25';
+  attendanceAreaPath: string = 'M 20 160 C 90 150, 120 70, 160 70 C 200 70, 220 140, 260 140 C 300 140, 320 60, 370 60 C 420 60, 440 25, 480 25 L 480 195 L 20 195 Z';
+
   fetchAdminDashboard() {
     this.isRefreshing = true;
     this.sub.add(
@@ -185,6 +194,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
         next: (data) => {
           this.dashboardError = '';
           this.dashboardData = data;
+          this.updateAttendancePointsFromData();
           this.isRefreshing = false;
           this.cdr.detectChanges();
         },
@@ -197,6 +207,57 @@ export class MasterDashboard implements OnInit, OnDestroy {
     );
   }
 
+  private updateAttendancePointsFromData(): void {
+    if (!this.dashboardData?.attendanceOverview || this.dashboardData.attendanceOverview.length === 0) {
+      return;
+    }
+
+    const overview = this.dashboardData.attendanceOverview;
+    const xCoords = [20, 135, 250, 365, 480];
+    const topY = 25;
+    const bottomY = 175;
+    const yRange = bottomY - topY;
+
+    const newPoints: MasterAttendancePoint[] = overview.map((pt, idx) => {
+      const x = xCoords[idx] !== undefined ? xCoords[idx] : 20 + idx * 100;
+      const normalizedPct = Math.max(0, Math.min(100, pt.percentage));
+      // Invert Y: 100% is at topY (25), 0% is at bottomY (175)
+      const y = Math.round(bottomY - (normalizedPct / 100) * yRange);
+      let status = 'Working Day';
+      if (normalizedPct === 0) status = 'Weekend / Not Marked';
+      else if (normalizedPct >= 85) status = 'High Attendance';
+      else if (normalizedPct >= 50) status = 'Moderate Attendance';
+
+      return {
+        label: pt.date,
+        dateStr: `${pt.date} ${new Date().getFullYear()}`,
+        pct: pt.percentage,
+        x,
+        y,
+        presentCount: pt.present,
+        totalCount: pt.total,
+        status
+      };
+    });
+
+    this.attendancePoints = newPoints;
+
+    // Generate smooth SVG paths
+    if (newPoints.length > 0) {
+      let spline = `M ${newPoints[0].x} ${newPoints[0].y}`;
+      for (let i = 1; i < newPoints.length; i++) {
+        const p0 = newPoints[i - 1];
+        const p1 = newPoints[i];
+        const cx = Math.round((p0.x + p1.x) / 2);
+        spline += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
+      }
+      const lastX = newPoints[newPoints.length - 1].x;
+      const firstX = newPoints[0].x;
+      this.attendanceSplinePath = spline;
+      this.attendanceAreaPath = `${spline} L ${lastX} 195 L ${firstX} 195 Z`;
+    }
+  }
+
   onDateRangeChange(newRange: string) {
     this.selectedDateRange = newRange;
     this.fetchAdminDashboard();
@@ -207,6 +268,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
     this.loadPendingRequests();
     this.loadProcessedRequests();
     this.loadPendingRegularizations();
+    this.loadProcessedRegularizations();
   }
 
   toggleCardMenu(cardName: string, event: MouseEvent) {
@@ -475,58 +537,19 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   get departmentDistribution(): DepartmentDistributionItem[] {
-    if (this.dashboardData?.departmentDistribution && this.dashboardData.departmentDistribution.length > 0) {
-      return this.dashboardData.departmentDistribution;
-    }
-    return [
-      { name: 'Engineering', count: 499, percentage: 40, color: '#3b82f6' },
-      { name: 'Operations', count: 374, percentage: 30, color: '#8b5cf6' },
-      { name: 'HR', count: 187, percentage: 15, color: '#10b981' },
-      { name: 'Finance', count: 187, percentage: 15, color: '#f97316' }
-    ];
+    return this.dashboardData?.departmentDistribution || [];
   }
 
   get monthlyHiring(): MonthlyHiringItem[] {
-    if (this.dashboardData?.monthlyHiringTrend && this.dashboardData.monthlyHiringTrend.length > 0) {
-      return this.dashboardData.monthlyHiringTrend;
-    }
-    return [
-      { month: 'Jan', count: 20 },
-      { month: 'Feb', count: 14 },
-      { month: 'Mar', count: 30 },
-      { month: 'Apr', count: 19 },
-      { month: 'May', count: 26 },
-      { month: 'Jun', count: 36 },
-      { month: 'Jul', count: 28 },
-      { month: 'Aug', count: 40 },
-      { month: 'Sep', count: 27 },
-      { month: 'Oct', count: 33 },
-      { month: 'Nov', count: 28 },
-      { month: 'Dec', count: 58 }
-    ];
+    return this.dashboardData?.monthlyHiringTrend || [];
   }
 
   get recentJoiners(): RecentJoinerItem[] {
-    if (this.dashboardData?.recentJoiners && this.dashboardData.recentJoiners.length > 0) {
-      return this.dashboardData.recentJoiners;
-    }
-    return [
-      { id: 1, name: 'Amit Sharma', designation: 'Software Engineer', department: 'Engineering', doj: '01 Jun 2026', initials: 'AS' },
-      { id: 2, name: 'Neha Reddy', designation: 'HR Executive', department: 'Human Resources', doj: '31 May 2026', initials: 'NR' },
-      { id: 3, name: 'Pawan Kumar', designation: 'Finance Associate', department: 'Finance', doj: '30 May 2026', initials: 'PK' },
-      { id: 4, name: 'Sara Mistry', designation: 'UI/UX Designer', department: 'Engineering', doj: '29 May 2026', initials: 'SM' }
-    ];
+    return this.dashboardData?.recentJoiners || [];
   }
 
   get todayBirthdays(): BirthdayItem[] {
-    if (this.dashboardData?.todayBirthdays && this.dashboardData.todayBirthdays.length > 0) {
-      return this.dashboardData.todayBirthdays;
-    }
-    return [
-      { id: 1, name: 'Rohit Verma', designation: 'Software Developer', department: 'Engineering', dob: '17 Aug', initials: 'RV', isToday: true },
-      { id: 2, name: 'Anjali Mehta', designation: 'HR Generalist', department: 'Human Resources', dob: '19 Aug', initials: 'AM', isToday: false },
-      { id: 3, name: 'Vikram Singh', designation: 'Operations Executive', department: 'Operations', dob: '22 Aug', initials: 'VS', isToday: false }
-    ];
+    return this.dashboardData?.todayBirthdays || [];
   }
 
   get pendingApprovalsSummary(): PendingApprovalsSummary {
@@ -684,34 +707,69 @@ export class MasterDashboard implements OnInit, OnDestroy {
   // Approval oversight logic
   loadPendingRequests() {
     this.timeoffService.getPendingTimeOffRequests(1, 100).subscribe(res => {
-      this.pendingRequests = res.items || [];
+      this.pendingRequests = groupTimeOffRequests(res.items || []);
       this.cdr.detectChanges();
     });
   }
 
   loadProcessedRequests() {
     this.timeoffService.getProcessedTimeOffRequests(1, 100).subscribe(res => {
-      this.processedRequests = res.items || [];
+      this.processedRequests = groupTimeOffRequests(res.items || []);
       this.cdr.detectChanges();
     });
   }
 
-  processRequest(requestId: number, action: string) {
-    let approvedHours: number | undefined;
-    if (action === 'APPROVE') {
-      const req = this.pendingRequests.find(r => r.id === requestId);
-      approvedHours = req?.duration_hours;
+  formatHours(hours: number): string {
+    if (hours === 0 || !hours) return '0h 0m';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m`;
+  }
+
+  formatDuration(req: GroupedTimeOffRequest): string {
+    if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+      const days = req.requests.length;
+      return `${days} Day${days > 1 ? 's' : ''}`;
     }
-    
-    this.timeoffService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
-      next: () => {
-        alert(`Request ${action.toLowerCase()}d successfully`);
-        this.loadPendingRequests();
-        this.loadProcessedRequests();
-        this.fetchAdminDashboard();
-      },
-      error: (err) => alert(err?.error?.detail || "Error processing request")
-    });
+    if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+      const days = req.requests.length * 0.5;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    return this.formatHours(req.totalDurationHours);
+  }
+
+  processRequest(batchId: string, action: string) {
+    const reqGroup = this.pendingRequests.find((r: any) => r.id === batchId);
+    if (!reqGroup) return;
+
+    let processedCount = 0;
+    const reqIds = reqGroup.requests.map((r: any) => r.id);
+
+    for (const rId of reqIds) {
+      let approvedHours: number | undefined;
+      if (action === 'APPROVE') {
+        const r = reqGroup.requests.find((x: any) => x.id === rId);
+        approvedHours = r?.duration_hours;
+      }
+      
+      this.timeoffService.approveTimeOffRequest(rId, action as 'APPROVE' | 'REJECT', approvedHours).subscribe({
+        next: () => {
+          processedCount++;
+          if (processedCount === reqIds.length) {
+            alert(`Request ${action.toLowerCase()}d successfully`);
+            this.loadPendingRequests();
+            this.loadProcessedRequests();
+            this.fetchAdminDashboard();
+          }
+        },
+        error: (err) => {
+          if (processedCount === 0) {
+            alert(err?.error?.detail || "Error processing request");
+          }
+        }
+      });
+    }
   }
 
   viewRequestDetails(req: any): void {
@@ -722,8 +780,8 @@ export class MasterDashboard implements OnInit, OnDestroy {
     this.selectedRequest = null;
   }
 
-  processRequestFromModal(requestId: number, action: string): void {
-    this.processRequest(requestId, action);
+  processRequestFromModal(batchId: string, action: string): void {
+    this.processRequest(batchId, action);
     this.closeDetailsModal();
   }
 
@@ -743,11 +801,19 @@ export class MasterDashboard implements OnInit, OnDestroy {
     });
   }
 
+  loadProcessedRegularizations() {
+    this.regularizationService.getProcessedRequests(1, 100).subscribe(res => {
+      this.processedRegularizations = res.items || [];
+      this.cdr.detectChanges();
+    });
+  }
+
   processRegularization(requestId: number, status: 'approved' | 'rejected') {
     this.regularizationService.submitDecision(requestId, { status, reviewComment: 'Admin Oversight Decision' }).subscribe({
       next: () => {
         alert(`Regularization request ${status} successfully`);
         this.loadPendingRegularizations();
+        this.loadProcessedRegularizations();
         this.fetchAdminDashboard();
       },
       error: (err) => alert(err?.error?.detail || "Error processing regularization request")

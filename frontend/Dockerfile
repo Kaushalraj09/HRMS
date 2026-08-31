@@ -1,11 +1,11 @@
-FROM node:22-alpine AS build
+FROM node:22.14.0-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.27.4-alpine
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 COPY deploy/nginx/hrms-ssl.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80 443

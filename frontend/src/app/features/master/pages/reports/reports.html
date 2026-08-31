@@ -111,7 +111,7 @@
             <th class="text-center">Pending Regularizations</th>
             <th class="text-center">Approved/Rejected Time-Off</th>
             <th class="text-center">Approved/Rejected Regularizations</th>
-            <th class="text-right">Total Requests Handled</th>
+            <th class="text-center">Total Requests Handled</th>
           </tr>
         </thead>
         <tbody>
@@ -121,7 +121,7 @@
             <td class="text-center"><span class="badge" [class.badge-warning]="row.pendingRegularization > 0" [class.badge-secondary]="row.pendingRegularization === 0">{{ row.pendingRegularization }}</span></td>
             <td class="text-center">{{ row.processedTimeoff }}</td>
             <td class="text-center">{{ row.processedRegularization }}</td>
-            <td class="text-right font-semibold text-dark">{{ row.totalHandled }}</td>
+            <td class="text-center font-semibold text-dark">{{ row.totalHandled }}</td>
           </tr>
         </tbody>
       </ng-container>

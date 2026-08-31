@@ -248,6 +248,52 @@ async def get_pending_regularizations(
         "totalPages": total_pages
     }
 
+
+@router.get("/processed", response_model=RegularizationRequestPaginatedResponse)
+async def get_processed_regularizations(
+    page: int = 1,
+    pageSize: int = 10,
+    search: str = "",
+    reason_type: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Only Admin or HR roles
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only Admin or HR can view processed regularization requests."
+        )
+
+    import math
+    query = db.query(AttendanceRegularizationRequest).filter(
+        AttendanceRegularizationRequest.status.not_ilike("pending%")
+    )
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if reason_type:
+        query = query.filter(AttendanceRegularizationRequest.reason_type == reason_type)
+
+    total_items = query.count()
+    total_pages = math.ceil(total_items / pageSize) if total_items > 0 else 0
+    offset = (page - 1) * pageSize
+    requests = query.order_by(AttendanceRegularizationRequest.updated_at.desc()).offset(offset).limit(pageSize).all()
+
+    return {
+        "items": [_map_request_to_response(r) for r in requests],
+        "page": page,
+        "pageSize": pageSize,
+        "totalItems": total_items,
+        "totalPages": total_pages
+    }
+
 @router.put("/{request_id}/decision", response_model=RegularizationRequestResponse)
 @router.post("/{request_id}/decision", response_model=RegularizationRequestResponse)
 async def review_regularization(

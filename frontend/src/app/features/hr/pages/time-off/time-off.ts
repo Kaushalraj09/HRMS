@@ -6,6 +6,8 @@ import { AttendanceService } from '../../../../core/services/attendance.service'
 import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
+import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
+import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
 
 @Component({
   selector: 'app-hr-time-off',
@@ -16,8 +18,8 @@ import { CustomSelectComponent } from '../../../../shared/components/custom-sele
 })
 export class HrTimeOffComponent implements OnInit, OnDestroy {
   isAdmin = false;
-  pendingRequests: any[] = [];
-  processedRequests: any[] = [];
+  pendingRequests: GroupedTimeOffRequest[] = [];
+  processedRequests: GroupedTimeOffRequest[] = [];
   
   // Search & Filter state
   searchTerm = '';
@@ -47,6 +49,11 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   pageSize = 10;
   pendingTotal = 0;
   historyTotal = 0;
+  
+  // Counts for pills
+  allTotal = 0;
+  approvedTotal = 0;
+  rejectedTotal = 0;
 
   private readonly subscriptions = new Subscription();
 
@@ -63,12 +70,14 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
 
     this.loadPendingRequests();
     this.loadProcessedRequests();
+    this.loadCounts();
 
     // WebSocket updates
     this.subscriptions.add(
       this.timeoffService.timeoffUpdate$.subscribe(() => {
         this.loadPendingRequests();
         this.loadProcessedRequests();
+        this.loadCounts();
       })
     );
   }
@@ -82,6 +91,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     this.historyPage = 1;
     this.loadPendingRequests();
     this.loadProcessedRequests();
+    this.loadCounts();
   }
 
   setPendingPage(page: number): void {
@@ -122,7 +132,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
       this.selectedLeaveType
     ).subscribe({
       next: (res) => {
-        this.pendingRequests = res.items;
+        this.pendingRequests = groupTimeOffRequests(res.items);
         this.pendingTotal = res.totalItems;
         this.cdr.detectChanges();
       }
@@ -138,29 +148,78 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
       this.selectedStatus
     ).subscribe({
       next: (res) => {
-        this.processedRequests = res.items;
+        this.processedRequests = groupTimeOffRequests(res.items);
         this.historyTotal = res.totalItems;
         this.cdr.detectChanges();
       }
     });
   }
 
-  processRequest(requestId: number, action: 'APPROVE' | 'REJECT'): void {
-    let approvedHours: number | undefined;
-    if (action === 'APPROVE') {
-      const req = this.pendingRequests.find((r) => r.id === requestId);
-      approvedHours = req?.duration_hours;
-    }
-
-    this.timeoffService.approveTimeOffRequest(requestId, action, approvedHours).subscribe({
-      next: () => {
-        this.loadPendingRequests();
-        this.loadProcessedRequests();
-      },
-      error: (err) => {
-        alert(err?.error?.detail || `Error performing ${action.toLowerCase()} action.`);
+  loadCounts(): void {
+    this.timeoffService.getTimeOffCounts(
+      this.searchTerm,
+      this.selectedLeaveType
+    ).subscribe({
+      next: (counts) => {
+        this.allTotal = counts.all;
+        this.pendingTotal = counts.pending; // Also updates pendingTotal in case it's useful
+        this.approvedTotal = counts.approved;
+        this.rejectedTotal = counts.rejected;
+        this.cdr.detectChanges();
       }
     });
+  }
+
+  formatHours(hours: number): string {
+    if (hours === 0 || !hours) return '0h 0m';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m`;
+  }
+
+  formatDuration(req: GroupedTimeOffRequest): string {
+    if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+      const days = req.requests.length;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+      const days = req.requests.length * 0.5;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    return this.formatHours(req.totalDurationHours);
+  }
+
+  processRequest(batchId: string, action: 'APPROVE' | 'REJECT'): void {
+    const reqGroup = this.pendingRequests.find((r) => r.id === batchId) || this.processedRequests.find((r) => r.id === batchId);
+    if (!reqGroup) return;
+
+    let processedCount = 0;
+    const reqIds = reqGroup.requests.map(r => r.id);
+
+    for (const rId of reqIds) {
+      let approvedHours: number | undefined;
+      if (action === 'APPROVE') {
+        const r = reqGroup.requests.find(x => x.id === rId);
+        approvedHours = r?.duration_hours;
+      }
+
+      this.timeoffService.approveTimeOffRequest(rId, action, approvedHours).subscribe({
+        next: () => {
+          processedCount++;
+          if (processedCount === reqIds.length) {
+            this.loadPendingRequests();
+            this.loadProcessedRequests();
+            this.loadCounts();
+          }
+        },
+        error: (err) => {
+          if (processedCount === 0) { // Only alert on first error
+            alert(err?.error?.detail || `Error performing ${action.toLowerCase()} action.`);
+          }
+        }
+      });
+    }
   }
 
   setActiveTab(tab: 'all' | 'pending' | 'approved' | 'rejected'): void {
@@ -189,9 +248,9 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     return this.processedRequests;
   }
 
-  selectedRequest: any = null;
+  selectedRequest: GroupedTimeOffRequest | null = null;
 
-  viewRequestDetails(req: any): void {
+  viewRequestDetails(req: GroupedTimeOffRequest): void {
     this.selectedRequest = req;
   }
 
@@ -199,8 +258,8 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     this.selectedRequest = null;
   }
 
-  processRequestFromModal(requestId: number, action: 'APPROVE' | 'REJECT'): void {
-    this.processRequest(requestId, action);
+  processRequestFromModal(batchId: string, action: 'APPROVE' | 'REJECT'): void {
+    this.processRequest(batchId, action);
     this.closeDetailsModal();
   }
 

@@ -123,7 +123,7 @@
                 <th>Name</th>
                 <th>Shift Timings</th>
                 <th>Work Hours</th>
-                <th>Grace Mins</th>
+                <th>Punch-In Grace</th>
                 <th>Lunch Mins</th>
                 <th>Night Shift</th>
                 <th>Status</th>
@@ -135,7 +135,7 @@
                 <td><span class="font-bold">{{ item.name }}</span> <span class="code-badge ml-2" *ngIf="item.code">{{ item.code }}</span></td>
                 <td>{{ item.start_time }} - {{ item.end_time }}</td>
                 <td>{{ item.working_hours || 8 }} hrs</td>
-                <td>{{ item.grace_minutes || 30 }} mins</td>
+                <td>{{ item.punch_in_grace_minutes || 10 }} mins</td>
                 <td>{{ item.lunch_duration_minutes || 40 }} mins</td>
                 <td><span class="badge-type">{{ item.is_night_shift ? 'Yes' : 'No' }}</span></td>
                 <td>
@@ -355,7 +355,7 @@
             </div>
           </div>
 
-          <!-- Row 3: Working Hours (auto-calc, read-only) | Grace Time -->
+          <!-- Row 3: Working Hours (auto-calc, read-only) | Punch-In Grace -->
           <div class="shift-row">
             <div class="form-group">
               <label for="modal-work-hours">
@@ -374,43 +374,44 @@
               />
             </div>
             <div class="form-group">
-              <label for="modal-grace">Grace Time (mins)</label>
+              <label for="modal-punch-in-grace">Punch-In Grace (Mins) <span class="required">*</span></label>
               <input 
-                id="modal-grace"
+                id="modal-punch-in-grace"
                 type="number" 
                 min="0"
-                [(ngModel)]="formModel.grace_minutes" 
-                name="grace_minutes" 
+                required
+                [(ngModel)]="formModel.punch_in_grace_minutes" 
+                name="punch_in_grace_minutes" 
                 class="premium-input" 
-                placeholder="e.g. 30"
+                placeholder="e.g. 10"
               />
             </div>
           </div>
 
-          <!-- Row 4: Late Mark After | Early Exit Before -->
+          <!-- Row 4: Shift End Grace | Max Overtime -->
           <div class="shift-row">
             <div class="form-group">
-              <label for="modal-late-mark">Late Mark After (mins)</label>
+              <label for="modal-shift-grace">Shift End Grace (Mins)</label>
               <input 
-                id="modal-late-mark"
+                id="modal-shift-grace"
                 type="number" 
                 min="0"
-                [(ngModel)]="formModel.late_mark_after_minutes" 
-                name="late_mark_after_minutes" 
+                [(ngModel)]="formModel.shift_grace_minutes" 
+                name="shift_grace_minutes" 
                 class="premium-input" 
-                placeholder="e.g. 30"
+                placeholder="e.g. 15"
               />
             </div>
             <div class="form-group">
-              <label for="modal-early-exit">Early Exit Before (mins)</label>
+              <label for="modal-max-overtime">Max Overtime (mins)</label>
               <input 
-                id="modal-early-exit"
+                id="modal-max-overtime"
                 type="number" 
                 min="0"
-                [(ngModel)]="formModel.early_exit_before_minutes" 
-                name="early_exit_before_minutes" 
+                [(ngModel)]="formModel.max_overtime_minutes" 
+                name="max_overtime_minutes" 
                 class="premium-input" 
-                placeholder="e.g. 0"
+                placeholder="e.g. 120"
               />
             </div>
           </div>
@@ -498,6 +499,37 @@
             </div>
           </div>
 
+          <!-- Row 8: Attendance Rules Toggle -->
+          <div class="shift-row shift-row-mixed mt-4">
+            <div class="form-group shift-checkbox-group">
+              <label class="shift-toggle-label">Attendance Rules</label>
+              <label class="toggle-pill" for="modal-allow-early-punch">
+                <input 
+                  id="modal-allow-early-punch"
+                  type="checkbox" 
+                  [(ngModel)]="formModel.allow_early_punch_in" 
+                  name="allow_early_punch_in"
+                />
+                <span class="toggle-track"></span>
+                <span class="toggle-text">Allow Early Punch-In</span>
+              </label>
+            </div>
+            <div class="form-group" *ngIf="formModel.allow_early_punch_in">
+              <label for="modal-early-coming">Early Punch Window (Mins)</label>
+              <input 
+                id="modal-early-coming"
+                type="number" 
+                min="0"
+                [(ngModel)]="formModel.early_coming_minutes" 
+                name="early_coming_minutes" 
+                class="premium-input" 
+                placeholder="e.g. 60"
+              />
+            </div>
+          </div>
+
+
+
         </div>
 
         <!-- Location details -->
@@ -530,7 +562,13 @@
               />
             </div>
           </div>
-          <div class="shift-row mt-4" *ngIf="formModel.location_type !== 'remote'">
+          <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="formModel.location_type !== 'remote'">
+            <span style="font-size: 13px; font-weight: 600; color: #475569;"><i class="fas fa-crosshairs me-1 text-primary"></i> GPS Coordinates (Geofencing)</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 12px; border-radius: 6px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px;" (click)="detectCurrentLocationForModal()">
+              <i class="fas fa-location-arrow"></i> Fetch My Current GPS
+            </button>
+          </div>
+          <div class="shift-row mt-2" *ngIf="formModel.location_type !== 'remote'">
             <div class="form-group">
               <label for="modal-latitude">Latitude</label>
               <input 
@@ -540,7 +578,7 @@
                 [(ngModel)]="formModel.latitude" 
                 name="latitude" 
                 class="premium-input" 
-                placeholder="e.g. 15.8716667"
+                placeholder="e.g. 24.907061"
               />
             </div>
             <div class="form-group">
@@ -552,7 +590,7 @@
                 [(ngModel)]="formModel.longitude" 
                 name="longitude" 
                 class="premium-input" 
-                placeholder="e.g. 74.5085833"
+                placeholder="e.g. 84.074397"
               />
             </div>
           </div>

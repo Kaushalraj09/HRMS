@@ -54,6 +54,12 @@ class ShiftBase(BaseModel):
     is_night_shift: bool = False
     timezone: str = "Asia/Kolkata"
     is_active: bool = True
+    
+    # New Attendance Rules
+    allow_early_punch_in: bool = False
+    early_coming_minutes: int = 60
+    punch_in_grace_minutes: int = 10
+    shift_grace_minutes: int = 15
 
 class ShiftCreate(ShiftBase):
     pass

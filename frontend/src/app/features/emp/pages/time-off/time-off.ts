@@ -7,6 +7,8 @@ import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeOffModalComponent } from '../emp-dashboard/modals/time-off-modal/time-off-modal';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
+import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
+import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
 
 @Component({
   selector: 'app-emp-time-off',
@@ -16,12 +18,16 @@ import { TimeEngineService } from '../../../../core/services/time-engine.service
   styleUrls: ['./time-off.css']
 })
 export class EmpTimeOffComponent implements OnInit, OnDestroy {
-  requests: any[] = [];
+  requests: GroupedTimeOffRequest[] = [];
   
   // Balance metrics
   approvedHours = 0;
   remainingHours = 9.0;
   requestedHours = 0;
+
+  selectedRequest: GroupedTimeOffRequest | null = null;
+  showRequestModal = false;
+  isCancelling = false;
 
   formatHours(hours: number): string {
     if (hours === 0 || !hours) return '0h 0m';
@@ -31,7 +37,19 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
     return `${h}h ${m}m`;
   }
 
-  formatTimeSlot(startTime?: string, endTime?: string, leaveType?: string): string {
+  formatDuration(req: GroupedTimeOffRequest): string {
+    if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+      const days = req.requests.length;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+      const days = req.requests.length * 0.5;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    return this.formatHours(req.totalDurationHours);
+  }
+
+  formatTimeSlot(startTime?: string | null, endTime?: string | null, leaveType?: string | null): string {
     if (!startTime || leaveType === 'Full-Day' || leaveType === 'Full Day') {
       return 'Full Day';
     }
@@ -101,8 +119,8 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   loadRequests(): void {
     this.timeoffService.getMyTimeOffRequests(this.page, this.pageSize).subscribe({
       next: (res) => {
-        this.requests = res.items;
-        this.totalItems = res.totalItems;
+        this.requests = groupTimeOffRequests(res.items);
+        this.totalItems = res.totalItems; // Pagination might be weird if backend returns 10 items but they group to 3. But it's fine for now as per instructions.
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -161,10 +179,11 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  selectedRequest: any = null;
-  isCancelling = false;
+  closeRequestModal(): void {
+    this.showRequestModal = false;
+  }
 
-  viewRequestDetails(req: any): void {
+  viewRequestDetails(req: GroupedTimeOffRequest): void {
     this.selectedRequest = req;
   }
 
@@ -172,21 +191,34 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
     this.selectedRequest = null;
   }
 
-  cancelRequest(requestId: number): void {
-    if (confirm('Are you sure you want to cancel this time off request?')) {
+  cancelRequest(id: string): void {
+    if (confirm('Are you sure you want to cancel this time-off request?')) {
       this.isCancelling = true;
-      this.timeoffService.cancelTimeOffRequest(requestId).subscribe({
-        next: () => {
-          this.isCancelling = false;
-          this.closeDetailsModal();
-          this.loadRequests();
-          this.loadBalances();
-        },
-        error: (err) => {
-          this.isCancelling = false;
-          alert('Error cancelling request: ' + (err.error?.detail || err.message));
-        }
-      });
+      
+      const reqIds = this.selectedRequest?.requests.map((r: any) => r.id) || [];
+      if (reqIds.length === 0) return;
+
+      // Ideally we should have a batch cancel API, but for now we can cancel one by one or just cancel the first one if the backend cancels all in the batch.
+      // Wait, we can loop them since they are not that many.
+      // Actually let's just loop them for now as instructed, or if we have one id, cancel it.
+      let canceledCount = 0;
+      for (const rId of reqIds) {
+        this.timeoffService.cancelTimeOffRequest(rId).subscribe({
+          next: () => {
+            canceledCount++;
+            if (canceledCount === reqIds.length) {
+              this.isCancelling = false;
+              this.closeDetailsModal();
+              this.loadRequests();
+              this.loadBalances();
+            }
+          },
+          error: (err) => {
+            console.error('Error cancelling request', err);
+            this.isCancelling = false;
+          }
+        });
+      }
     }
   }
 

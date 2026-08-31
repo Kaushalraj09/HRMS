@@ -275,6 +275,28 @@ def get_hr_pending_documents(
     )
 
 
+@router.get("/hr/all-documents")
+def get_all_hr_documents(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str = "",
+    department: str = "",
+    status_filter: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all required documents across eligible employees (including missing ones)."""
+    _require_admin_or_hr(current_user)
+    return document_service.get_all_employee_documents(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        department=department,
+        status_filter=status_filter
+    )
+
+
 @router.get("/hr/employees/{employee_id}", response_model=EmployeeDocumentsPageResponse)
 def get_employee_documents_for_hr(
     employee_id: int,

@@ -21,9 +21,32 @@ class Settings:
             raise ValueError("DATABASE_URL is not set in the environment variables.")
         if not self.SECRET_KEY:
             raise ValueError("JWT_SECRET_KEY is not set in the environment variables.")
+        if self.APP_ENV == "production":
+            insecure_secret_values = {
+                "change_me_use_a_long_random_secret",
+                "generate-a-secure-random-secret-key-here",
+                "test-secret",
+            }
+            if len(self.SECRET_KEY) < 32 or self.SECRET_KEY.lower() in insecure_secret_values:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be a unique, randomly generated value of at least 32 characters in production."
+                )
+            if "*" in self.BACKEND_CORS_ORIGINS:
+                raise ValueError("BACKEND_CORS_ORIGINS cannot contain '*' in production.")
+            if self.ALGORITHM != "HS256":
+                raise ValueError("JWT_ALGORITHM must be HS256 in production.")
+            if any(not origin.startswith("https://") for origin in self.BACKEND_CORS_ORIGINS):
+                raise ValueError("BACKEND_CORS_ORIGINS must use HTTPS in production.")
+            if not self.FRONTEND_URL.startswith("https://"):
+                raise ValueError("FRONTEND_URL must use HTTPS in production.")
+            smtp_values = (self.SMTP_HOST, self.SMTP_USER, self.SMTP_PASSWORD, self.SMTP_FROM)
+            if not all(smtp_values) or self.SMTP_HOST == "smtp.example.com" or self.SMTP_PASSWORD == "CHANGE_ME":
+                raise ValueError("Production requires valid SMTP configuration for secure account activation and password resets.")
 
     ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+    SESSION_COOKIE_NAME: str = os.getenv("SESSION_COOKIE_NAME", "hrms_access_token")
+    SESSION_COOKIE_SECURE: bool = _get_bool("SESSION_COOKIE_SECURE", APP_ENV == "production")
     BACKEND_CORS_ORIGINS: list[str] = [
         origin.strip()
         for origin in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200").split(",")

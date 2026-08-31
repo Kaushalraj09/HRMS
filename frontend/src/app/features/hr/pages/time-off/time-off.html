@@ -75,7 +75,6 @@
             [class.active]="activeTab === 'pending'" 
             (click)="setActiveTab('pending')">
             <span class="tab-dot dot-pending"></span> Pending
-            <span *ngIf="pendingRequests.length > 0">({{ pendingRequests.length }})</span>
           </button>
           <button 
             type="button"
@@ -122,12 +121,19 @@
                   'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                 }">{{ req.leave_type }}</span>
               </td>
-              <td>{{ req.date | date:'mediumDate' }}</td>
               <td>
-                <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                <span *ngIf="!req.start_time">Full Day</span>
+                <ng-container *ngIf="!req.isGrouped; else hrGroupedDatePending">
+                  {{ req.startDate | date:'mediumDate' }}
+                </ng-container>
+                <ng-template #hrGroupedDatePending>
+                  {{ req.startDate | date:'mediumDate' }} – {{ req.endDate | date:'mediumDate' }}
+                </ng-template>
               </td>
-              <td>{{ req.duration_hours }} hrs</td>
+              <td>
+                <span *ngIf="req.leave_type !== 'Full-Day' && req.leave_type !== 'Full Day'">{{ req.start_time }} - {{ req.end_time }}</span>
+                <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
+              </td>
+              <td>{{ formatDuration(req) }}</td>
               <td>
                 <div class="action-buttons-cell">
                   <button 
@@ -192,12 +198,19 @@
                   'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                 }">{{ req.leave_type }}</span>
               </td>
-              <td>{{ req.date | date:'mediumDate' }}</td>
               <td>
-                <span *ngIf="req.start_time">{{ req.start_time }} - {{ req.end_time }}</span>
-                <span *ngIf="!req.start_time">Full Day</span>
+                <ng-container *ngIf="!req.isGrouped; else hrGroupedDateProcessed">
+                  {{ req.startDate | date:'mediumDate' }}
+                </ng-container>
+                <ng-template #hrGroupedDateProcessed>
+                  {{ req.startDate | date:'mediumDate' }} – {{ req.endDate | date:'mediumDate' }}
+                </ng-template>
               </td>
-              <td>{{ req.duration_hours }} hrs</td>
+              <td>
+                <span *ngIf="req.leave_type !== 'Full-Day' && req.leave_type !== 'Full Day'">{{ req.start_time }} - {{ req.end_time }}</span>
+                <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
+              </td>
+              <td>{{ formatDuration(req) }}</td>
               <td>
                 <span class="status-badge" [ngClass]="{
                   'present': req.status === 'Approved',
@@ -301,7 +314,7 @@
 
 <!-- Request Details Modal -->
 <div class="camera-modal-overlay" *ngIf="selectedRequest" (click)="closeDetailsModal()">
-  <div class="camera-modal-box details-modal-box" (click)="$event.stopPropagation()" style="width: 520px;">
+  <div class="camera-modal-box details-modal-box" (click)="$event.stopPropagation()" style="width: 640px;">
     <div class="camera-modal-header details-modal-header">
       <div class="modal-title-wrap">
         <i class="fas fa-calendar-alt"></i>
@@ -320,7 +333,7 @@
         </div>
         <div class="emp-banner-details">
           <h4 class="emp-banner-name">{{ selectedRequest.employee_name || 'Employee' }}</h4>
-          <span class="emp-banner-code">{{ selectedRequest.employee_code || ('EMP-' + ('0000' + selectedRequest.employee_id).slice(-4)) }}</span>
+          <span class="emp-banner-code">{{ 'EMP-' + ('0000' + selectedRequest.employee_id).slice(-4) }}</span>
         </div>
       </div>
 
@@ -336,21 +349,41 @@
 
         <div class="detail-item">
           <span class="detail-lbl">Duration</span>
-          <span class="detail-val-strong">{{ selectedRequest.duration_hours }} hrs</span>
+          <span class="detail-val-strong">{{ formatDuration(selectedRequest) }}</span>
         </div>
 
         <div class="detail-item">
           <span class="detail-lbl">Date</span>
-          <span class="detail-val-text"><i class="far fa-calendar-alt"></i> {{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
+          <span class="detail-val-text">
+            <i class="far fa-calendar-alt"></i> 
+            <ng-container *ngIf="!selectedRequest.isGrouped; else modalGroupedDateHr">
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }}
+            </ng-container>
+            <ng-template #modalGroupedDateHr>
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }} – {{ selectedRequest.endDate | date:'dd MMM yyyy' }}
+            </ng-template>
+          </span>
         </div>
 
         <div class="detail-item">
           <span class="detail-lbl">Time Slot</span>
           <span class="detail-val-text"><i class="far fa-clock"></i> 
-            <span *ngIf="selectedRequest.start_time">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
-            <span *ngIf="!selectedRequest.start_time">Full Day</span>
+            <span *ngIf="selectedRequest.leave_type !== 'Full-Day' && selectedRequest.leave_type !== 'Full Day'">{{ selectedRequest.start_time }} - {{ selectedRequest.end_time }}</span>
+            <span *ngIf="selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'">Full Day</span>
           </span>
         </div>
+      </div>
+
+      <div class="detail-block" *ngIf="selectedRequest.isGrouped">
+        <span class="detail-lbl">Leave Dates</span>
+        <ul class="leave-dates-list" style="list-style: none; padding-left: 0; margin-top: 8px;">
+          <li *ngFor="let r of selectedRequest.requests">
+            <i class="fas fa-circle" style="font-size: 6px; margin-right: 6px; color: #a1a1aa; vertical-align: middle;"></i>
+            {{ r.date | date:'dd MMM yyyy' }} &mdash; 
+            <span *ngIf="r.leave_type === 'Full-Day' || r.leave_type === 'Full Day'">Full Day</span>
+            <span *ngIf="r.leave_type !== 'Full-Day' && r.leave_type !== 'Full Day'">{{ r.start_time }} - {{ r.end_time }}</span>
+          </li>
+        </ul>
       </div>
 
       <div class="detail-block">

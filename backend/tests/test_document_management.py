@@ -235,7 +235,7 @@ def test_hr_verification_workflow(client, test_data, db_session):
     doc_type = db_session.query(DocumentType).filter(DocumentType.code == "PAN").first()
 
     # Employee uploads PAN
-    files = {"file": ("pan_card.png", io.BytesIO(b"dummy image bytes"), "image/png")}
+    files = {"file": ("pan_card.png", io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"dummy image bytes"), "image/png")}
     upload_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"},
@@ -263,29 +263,29 @@ def test_hr_verification_workflow(client, test_data, db_session):
     assert hr_verify_res.json()["status"] == "VERIFIED"
 
     # Verify completion percentage increased
-    summary_res = client.get(
+    summary_after = client.get(
         "/api/v1/documents/my-documents",
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"}
-    )
-    summary = summary_res.json()["summary"]
-    assert summary["verified"] == 1
-    assert summary["completion_percentage"] > 0
+    ).json()
+    assert summary_after["summary"]["verified"] == 1
+    assert summary_after["summary"]["completion_percentage"] > 0
 
 
-def test_hr_rejection_and_employee_resubmission(client, test_data, db_session):
+def test_hr_rejection_and_resubmission_workflow(client, test_data, db_session):
     doc_type = db_session.query(DocumentType).filter(DocumentType.code == "AADHAAR").first()
 
-    # 1. Employee uploads Version 1
-    files1 = {"file": ("aadhaar_blurry.jpg", io.BytesIO(b"version 1 blurry content"), "image/jpeg")}
+    # 1. Employee uploads Aadhaar
+    files1 = {"file": ("aadhaar_blurry.pdf", io.BytesIO(b"%PDF-1.4 blurry content"), "application/pdf")}
     up1 = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"},
         files=files1,
         data={"document_type_id": str(doc_type.id)}
     )
+    assert up1.status_code == 200
     doc_id = up1.json()["document_id"]
 
-    # 2. HR rejects without reason -> should fail validation
+    # 2. HR rejects without reason -> Bad Request (400)
     bad_reject = client.post(
         f"/api/v1/documents/hr/{doc_id}/reject",
         headers={"Authorization": f"Bearer {test_data['hr_token']}"},
@@ -312,7 +312,7 @@ def test_hr_rejection_and_employee_resubmission(client, test_data, db_session):
     assert "blurry" in aadhaar_item["rejection_reason"]
 
     # 4. Employee re-uploads Version 2 (Resubmission)
-    files2 = {"file": ("aadhaar_clear.pdf", io.BytesIO(b"version 2 clear content"), "application/pdf")}
+    files2 = {"file": ("aadhaar_clear.pdf", io.BytesIO(b"%PDF-1.4 version 2 clear content"), "application/pdf")}
     up2 = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"},
@@ -342,7 +342,7 @@ def test_cross_employee_document_isolation(client, test_data, db_session):
     doc_type = db_session.query(DocumentType).filter(DocumentType.code == "PAN").first()
 
     # Employee 1 uploads PAN
-    files = {"file": ("emp1_pan.pdf", io.BytesIO(b"emp1 secret doc"), "application/pdf")}
+    files = {"file": ("emp1_pan.pdf", io.BytesIO(b"%PDF-1.4 emp1 secret doc"), "application/pdf")}
     up_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"},
@@ -364,7 +364,7 @@ def test_cross_employee_document_isolation(client, test_data, db_session):
         headers={"Authorization": f"Bearer {test_data['emp1_token']}"}
     )
     assert e1_dl.status_code == 200
-    assert e1_dl.content == b"emp1 secret doc"
+    assert e1_dl.content == b"%PDF-1.4 emp1 secret doc"
 
     # HR can download Employee 1's document -> Success (200)
     hr_dl = client.get(
@@ -372,13 +372,13 @@ def test_cross_employee_document_isolation(client, test_data, db_session):
         headers={"Authorization": f"Bearer {test_data['hr_token']}"}
     )
     assert hr_dl.status_code == 200
-    assert hr_dl.content == b"emp1 secret doc"
+    assert hr_dl.content == b"%PDF-1.4 emp1 secret doc"
 
 
 def test_hr_upload_on_behalf_of_employee(client, test_data, db_session):
     doc_type = db_session.query(DocumentType).filter(DocumentType.code == "OFFER_LETTER").first()
 
-    files = {"file": ("offer_letter.pdf", io.BytesIO(b"Signed offer letter"), "application/pdf")}
+    files = {"file": ("offer_letter.pdf", io.BytesIO(b"%PDF-1.4 Signed offer letter"), "application/pdf")}
     hr_up = client.post(
         f"/api/v1/documents/hr/employees/{test_data['emp2'].id}/upload",
         headers={"Authorization": f"Bearer {test_data['hr_token']}"},

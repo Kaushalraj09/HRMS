@@ -53,6 +53,26 @@ export class TimeoffService {
     });
   }
 
+  requestTimeOffBatch(
+    dates: string[],
+    leaveType: string,
+    startTime: string | null,
+    endTime: string | null,
+    durationHours: number,
+    reason?: string,
+    attachmentName?: string
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/request/batch`, {
+      dates,
+      leave_type: leaveType,
+      start_time: startTime,
+      end_time: endTime,
+      duration_hours: durationHours,
+      reason: reason || null,
+      attachment_name: attachmentName || null
+    });
+  }
+
   cancelTimeOffRequest(requestId: number): Observable<any> {
     return this.http.put(`${this.apiUrl}/requests/${requestId}/cancel`, {});
   }
@@ -104,6 +124,20 @@ export class TimeoffService {
       .set('status', status)
       .set('_ts', Date.now().toString());
     return this.http.get<PaginatedResponse<TimeOffRequest>>(`${this.apiUrl}/history`, { 
+      headers: this.noCacheHeaders, 
+      params 
+    });
+  }
+
+  getTimeOffCounts(
+    search: string = '', 
+    leaveType: string = ''
+  ): Observable<{all: number, pending: number, approved: number, rejected: number}> {
+    const params = new HttpParams()
+      .set('search', search.trim())
+      .set('leave_type', leaveType)
+      .set('_ts', Date.now().toString());
+    return this.http.get<{all: number, pending: number, approved: number, rejected: number}>(`${this.apiUrl}/counts`, { 
       headers: this.noCacheHeaders, 
       params 
     });

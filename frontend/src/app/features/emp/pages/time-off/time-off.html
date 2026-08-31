@@ -97,7 +97,12 @@
               <td>
                 <span class="date-cell">
                   <i class="far fa-calendar-alt"></i>
-                  {{ req.date | date:'dd MMM yyyy' }}
+                  <ng-container *ngIf="!req.isGrouped; else groupedDate">
+                    {{ req.startDate | date:'dd MMM yyyy' }}
+                  </ng-container>
+                  <ng-template #groupedDate>
+                    {{ req.startDate | date:'dd MMM yyyy' }} – {{ req.endDate | date:'dd MMM yyyy' }}
+                  </ng-template>
                 </span>
               </td>
               <td>
@@ -108,7 +113,7 @@
               </td>
               <td>
                 <span class="duration-badge">
-                  {{ formatHours(req.duration_hours) }}
+                  {{ formatDuration(req) }}
                 </span>
               </td>
               <td>
@@ -187,7 +192,7 @@
 
 <!-- Request Details Modal -->
 <div class="camera-modal-overlay" *ngIf="selectedRequest" (click)="closeDetailsModal()">
-  <div class="camera-modal-box details-modal-box" (click)="$event.stopPropagation()">
+  <div class="camera-modal-box details-modal-box" (click)="$event.stopPropagation()" style="width: 640px;">
     <div class="camera-modal-header details-modal-header">
       <div class="modal-title-wrap">
         <i class="fas fa-calendar-alt"></i>
@@ -211,18 +216,38 @@
 
         <div class="detail-item">
           <span class="detail-lbl">Duration</span>
-          <span class="detail-val-strong">{{ selectedRequest.duration_hours }} hrs ({{ formatHours(selectedRequest.duration_hours) }})</span>
+          <span class="detail-val-strong">{{ formatDuration(selectedRequest) }}</span>
         </div>
 
         <div class="detail-item">
           <span class="detail-lbl">Date</span>
-          <span class="detail-val-text"><i class="far fa-calendar-alt"></i> {{ selectedRequest.date | date:'dd MMM yyyy' }}</span>
+          <span class="detail-val-text">
+            <i class="far fa-calendar-alt"></i> 
+            <ng-container *ngIf="!selectedRequest.isGrouped; else modalGroupedDate">
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }}
+            </ng-container>
+            <ng-template #modalGroupedDate>
+              {{ selectedRequest.startDate | date:'dd MMM yyyy' }} – {{ selectedRequest.endDate | date:'dd MMM yyyy' }}
+            </ng-template>
+          </span>
         </div>
 
         <div class="detail-item">
           <span class="detail-lbl">Time Slot</span>
           <span class="detail-val-text"><i class="far fa-clock"></i> {{ formatTimeSlot(selectedRequest.start_time, selectedRequest.end_time, selectedRequest.leave_type) }}</span>
         </div>
+      </div>
+
+      <div class="detail-block" *ngIf="selectedRequest.isGrouped">
+        <span class="detail-lbl">Leave Dates</span>
+        <ul class="leave-dates-list" style="list-style: none; padding-left: 0; margin-top: 8px;">
+          <li *ngFor="let r of selectedRequest.requests">
+            <i class="fas fa-circle" style="font-size: 6px; margin-right: 6px; color: #a1a1aa; vertical-align: middle;"></i>
+            {{ r.date | date:'dd MMM yyyy' }} &mdash; 
+            <span *ngIf="r.leave_type === 'Full-Day' || r.leave_type === 'Full Day'">Full Day</span>
+            <span *ngIf="r.leave_type !== 'Full-Day' && r.leave_type !== 'Full Day'">{{ formatTimeSlot(r.start_time, r.end_time, r.leave_type) }}</span>
+          </li>
+        </ul>
       </div>
 
       <div class="detail-block">

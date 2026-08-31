@@ -60,6 +60,12 @@ interface BackendTodayAttendanceState {
   shiftElapsedSeconds: number;
   shiftStart: string;
   shiftEnd: string;
+  shiftName?: string;
+  shiftCode?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
+  graceMinutes?: number;
+  lunchDurationMinutes?: number;
   workMode: WorkMode;
   punchIn: string | null;
   punchOut: string | null;
@@ -75,6 +81,9 @@ interface BackendTodayAttendanceState {
   requiresRegularization?: boolean;
   overtimeApproved?: boolean;
   overtimeExtended?: boolean;
+  maxOvertimeMinutes?: number;
+  overtimeAllowed?: boolean;
+  overtimeStartTime?: string;
 }
 
 interface WebSocketTicketResponse {
@@ -248,11 +257,11 @@ export class AttendanceService {
       .set('department', department)
       .set('status', status)
       .set('location', location || '');
-    if (fromDate) {
-      options.params = options.params.set('fromDate', fromDate);
+    if (fromDate && fromDate.trim()) {
+      options.params = options.params.set('fromDate', fromDate.trim());
     }
-    if (toDate) {
-      options.params = options.params.set('toDate', toDate);
+    if (toDate && toDate.trim()) {
+      options.params = options.params.set('toDate', toDate.trim());
     }
 
     return this.http.get<BackendAttendanceListResponse>(`${this.apiUrl}/all`, options).pipe(
@@ -294,6 +303,12 @@ export class AttendanceService {
         shiftElapsedSeconds: Number(state.shiftElapsedSeconds) || 0,
         shiftStart: state.shiftStart,
         shiftEnd: state.shiftEnd,
+        shiftName: state.shiftName,
+        shiftCode: state.shiftCode,
+        lunchStart: state.lunchStart,
+        lunchEnd: state.lunchEnd,
+        graceMinutes: state.graceMinutes,
+        lunchDurationMinutes: state.lunchDurationMinutes,
         workMode: state.workMode || 'Office',
         punchIn: state.punchIn ?? null,
         punchOut: state.punchOut ?? null,
@@ -308,7 +323,10 @@ export class AttendanceService {
         yesterdayAutoCheckedOut: state.yesterdayAutoCheckedOut,
         requiresRegularization: state.requiresRegularization,
         overtimeApproved: state.overtimeApproved,
-        overtimeExtended: state.overtimeExtended
+        overtimeExtended: state.overtimeExtended,
+        maxOvertimeMinutes: state.maxOvertimeMinutes,
+        overtimeAllowed: state.overtimeAllowed,
+        overtimeStartTime: state.overtimeStartTime
       }))
     );
   }

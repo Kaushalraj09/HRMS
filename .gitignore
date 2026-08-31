@@ -13,6 +13,7 @@ dist/
 
 # Node
 node_modules/
+frontend/.npm-cache/
 dist/
 .angular/
 .vscode/

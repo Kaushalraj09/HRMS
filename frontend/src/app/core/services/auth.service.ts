@@ -14,7 +14,6 @@ export class AuthService {
 
   private readonly apiUrl = buildApiUrl('/auth');
   
-  private readonly tokenKey = 'aivan_hrms_phase1_token_v1';
   private readonly userKey = 'aivan_hrms_phase1_user_v1';
   private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
 
@@ -71,9 +70,6 @@ export class AuthService {
 
     for (const s of storages) {
       try {
-        if (response.accessToken) {
-          s.setItem(this.tokenKey, response.accessToken);
-        }
         if (response.me) {
           s.setItem(this.userKey, JSON.stringify(response.me));
           s.setItem(this.sessionKey, String(response.me.id));
@@ -83,6 +79,7 @@ export class AuthService {
   }
 
   logout(): void {
+    this.http.post<StandardResponse>(`${this.apiUrl}/logout`, {}).subscribe({ error: () => undefined });
     const storages = [
       typeof localStorage !== 'undefined' ? localStorage : null,
       typeof sessionStorage !== 'undefined' ? sessionStorage : null
@@ -90,7 +87,6 @@ export class AuthService {
 
     for (const s of storages) {
       try {
-        s.removeItem(this.tokenKey);
         s.removeItem(this.userKey);
         s.removeItem(this.sessionKey);
       } catch (e) {}
@@ -99,19 +95,7 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
-  }
-
-  getToken(): string | null {
-    if (typeof localStorage !== 'undefined') {
-      const tok = localStorage.getItem(this.tokenKey);
-      if (tok) return tok;
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      const tok = sessionStorage.getItem(this.tokenKey);
-      if (tok) return tok;
-    }
-    return null;
+    return !!this.getCurrentUser();
   }
 
   getCurrentUser(): SessionUser | null {

@@ -8,16 +8,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CalendarModule, CalendarDateFormatter, CalendarNativeDateFormatter, DateFormatterParams } from 'angular-calendar';
 import { CalendarEvent } from 'calendar-utils';
-import { finalize, Subscription, interval, forkJoin, of } from 'rxjs';
+import { finalize, Subscription, interval, forkJoin, of, catchError } from 'rxjs';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../core/services/timeoff.service';
+import { RegularizationService } from '../../../../core/services/regularization.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
 import { MyProfileService } from '../../../../core/services/profile.service';
 import { Holiday, WorkLocation } from '../../../../core/models/master-data.model';
+import { RegularizationRequestItem } from '../../../../core/models/regularization.model';
 import {
   EmployeeAttendanceSummaryItem,
   EmployeeTimelineEvent,
@@ -41,7 +43,7 @@ import {
 import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
-
+import { FooterComponent } from '../../../../shared/components/footer/footer';
 
 export interface DashboardCalendarDay {
   date: Date;
@@ -88,6 +90,15 @@ export interface DashboardTimesheetDisplayRow {
   statusClass: string;
 }
 
+export interface DashboardScheduleDisplayItem {
+  time: string;
+  title: string;
+  sub?: string;
+  span?: string;
+  dotColor: 'blue' | 'orange' | 'purple' | 'green' | 'red';
+  lineType: 'down' | 'both' | 'up' | 'none';
+}
+
 export interface TrendDataPoint {
   day: string;
   dateStr: string;
@@ -117,7 +128,8 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     CalendarModule,
     Navbar,
     RouterModule,
-    EmpSidebar
+    EmpSidebar,
+    FooterComponent
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -168,57 +180,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
   recentTimeOffRequests: any[] = [];
   recentRequestsList: DashboardRecentRequestItem[] = [];
 
-  readonly defaultRecentRequests: DashboardRecentRequestItem[] = [
-    {
-      icon: 'far fa-calendar-alt',
-      iconBgClass: 'req-bg-blue',
-      iconColorClass: 'req-ic-blue',
-      title: 'Casual Leave',
-      date: '12 Aug 2026',
-      type: '1 Day',
-      status: 'Pending',
-      statusClass: 'pending-pill'
-    },
-    {
-      icon: 'far fa-file-alt',
-      iconBgClass: 'req-bg-purple',
-      iconColorClass: 'req-ic-purple',
-      title: 'Regularization',
-      date: '08 Aug 2026',
-      type: '-',
-      status: 'Approved',
-      statusClass: 'approved-pill'
-    },
-    {
-      icon: 'far fa-calendar-minus',
-      iconBgClass: 'req-bg-red',
-      iconColorClass: 'req-ic-red',
-      title: 'Work From Home',
-      date: '05 Aug 2026',
-      type: '1 Day',
-      status: 'Rejected',
-      statusClass: 'rejected-pill'
-    },
-    {
-      icon: 'far fa-user',
-      iconBgClass: 'req-bg-amber',
-      iconColorClass: 'req-ic-amber',
-      title: 'Sick Leave',
-      date: '01 Aug 2026',
-      type: '2 Days',
-      status: 'Approved',
-      statusClass: 'approved-pill'
-    }
-  ];
-
   pendingRequestsCount = 0;
   monthPresentDays = 0;
   monthTotalWorkingDays = 22;
   monthAttendancePercentage = 0;
-  casualLeaveBalanceDays = 5;
-  sickLeaveBalanceDays = 3;
-  earnedLeaveBalanceDays = 4;
-  leaveBalanceDays = 12;
+  casualLeaveBalanceDays = 0;
+  sickLeaveBalanceDays = 0;
+  earnedLeaveBalanceDays = 0;
+  leaveBalanceDays = 0;
 
   get totalAvailableLeaveDays(): number {
     return this.casualLeaveBalanceDays + this.sickLeaveBalanceDays + this.earnedLeaveBalanceDays;
@@ -259,6 +228,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   masterHolidays: Holiday[] = [];
   allTimesheets: EmployeeTimesheetRow[] = [];
   allTimeoffs: any[] = [];
+  allRegularizations: RegularizationRequestItem[] = [];
   selectedCalendarDay: DashboardCalendarDay | null = null;
   selectedStatusFilter: string | null = null;
   calendarStatusCounts = { present: 0, leave: 0, absent: 0, holiday: 0, notMarked: 0, wfh: 0 };
@@ -276,7 +246,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
   trendDataPoints: TrendDataPoint[] = [];
   hoveredTrendPoint: TrendDataPoint | null = null;
   hoveredTrendIndex: number | null = null;
-  readonly defaultTrendPcts: number[] = [50.0, 55.0, 94.3, 72.5, 62.1, 65.0, 88.0];
 
   showScheduleModal = false;
   showTimeOffModal = false;
@@ -346,16 +315,21 @@ export class EmpDashboard implements OnInit, OnDestroy {
     private readonly masterDataService: MasterDataService,
     private readonly documentService: DocumentService,
     private readonly myProfileService: MyProfileService,
+    private readonly regularizationService: RegularizationService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.isEmpSidebarOpen$ = this.empsidebarService.isEmpSidebarOpen$;
-    this.isDashboardHome = this.router.url.split('?')[0] === '/emp-dashboard';
+    const checkIsHome = (url: string) => {
+      const clean = (url || '').split('?')[0].split('#')[0].replace(/\/+$/, '');
+      return clean === '/emp-dashboard' || clean === '';
+    };
+    this.isDashboardHome = checkIsHome(this.router.url);
     this.userName = this.authService.getDisplayName();
 
     this.subscriptions.add(
       this.router.events.subscribe((event) => {
         if (event instanceof NavigationEnd) {
-          this.isDashboardHome = event.urlAfterRedirects.split('?')[0] === '/emp-dashboard';
+          this.isDashboardHome = checkIsHome(event.urlAfterRedirects || event.url);
           this.cdr.markForCheck();
         }
       })
@@ -419,6 +393,184 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   get punchActionLabel(): string {
     return this.isPunchedIn ? 'Punch Out' : 'Punch In';
+  }
+
+  get formattedAttendanceStatus(): string {
+    if (this.attendanceStatusLabel === 'EARLY_PENDING_APPROVAL') {
+      return 'Early Pending Approval';
+    }
+    if (this.attendanceStatusLabel === 'WITHIN_GRACE') {
+      return 'Working (Grace)';
+    }
+    if (this.attendanceStatusLabel === 'LATE') {
+      return 'Working (Late)';
+    }
+    return this.attendanceStatusLabel || (this.isPunchedIn ? 'Working' : 'Not Marked');
+  }
+
+  get todayAttendancePillLabel(): string {
+    if (this.isPunchedIn) {
+      return 'Working';
+    }
+    if (this.punchOutTime || this.attendanceStatusLabel === 'Present' || this.punchInTime) {
+      return 'Present';
+    }
+    if (this.attendanceStatusLabel && this.attendanceStatusLabel !== 'Not working' && this.attendanceStatusLabel !== 'Not Marked') {
+      return this.formattedAttendanceStatus;
+    }
+    return 'Not Marked';
+  }
+
+  get todayAttendancePillClass(): string {
+    if (this.isPunchedIn) {
+      return 'green-pill';
+    }
+    if (this.punchOutTime || this.attendanceStatusLabel === 'Present' || this.punchInTime) {
+      return 'green-pill';
+    }
+    return 'gray-pill';
+  }
+
+  get targetWorkHoursDisplay(): string {
+    const totalSecs = this.shiftTotalSeconds || (this.shiftTotalHours ? this.shiftTotalHours * 3600 : 28800);
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.round((totalSecs % 3600) / 60);
+    return `${this.formatTwoDigits(hours)}h ${this.formatTwoDigits(mins)}m`;
+  }
+
+  get displayOfficeLocation(): string {
+    return (
+      this.punchInAddress ||
+      this.assignedWorkLocationName ||
+      (this.masterWorkLocations && this.masterWorkLocations.length > 0 ? this.masterWorkLocations[0].name : '') ||
+      'Office Location'
+    );
+  }
+
+  get selectedDayScheduleItems(): DashboardScheduleDisplayItem[] {
+    const selectedIso = this.selectedDate ? toIsoDateLocal(this.selectedDate) : toIsoDateLocal(new Date());
+    const day = this.calendarDays.find(d => d.isoDate === selectedIso) || this.selectedCalendarDay;
+    const isToday = selectedIso === toIsoDateLocal(new Date());
+
+    const items: DashboardScheduleDisplayItem[] = [];
+
+    // 1. Holiday / Weekly Off check
+    if (day?.status === 'Holiday' || day?.isSunday || day?.isHoliday) {
+      items.push({
+        time: 'All Day',
+        title: day?.holidayName || (day?.isSunday ? 'Sunday (Weekly Off)' : 'Company Holiday'),
+        sub: 'No scheduled work hours today',
+        span: 'Full Day Off',
+        dotColor: 'purple',
+        lineType: 'none'
+      });
+      return items;
+    }
+
+    // 2. Approved Leave check
+    if (day?.status === 'Leave' && (!day.punchIn && !day.punchOut)) {
+      items.push({
+        time: 'All Day',
+        title: day.statusLabel || `Leave (${day.leaveType || 'Approved'})`,
+        sub: 'On Approved Leave',
+        span: 'Full Day',
+        dotColor: 'orange',
+        lineType: 'none'
+      });
+      return items;
+    }
+
+    // 3. Working Day Shift Schedule
+    const shiftStart = this.shiftStart || '09:00 AM';
+    const shiftEnd = this.shiftEnd || '06:00 PM';
+    const lunchStart = this.lunchStart || '01:00 PM';
+    const lunchEnd = this.lunchEnd || '01:40 PM';
+    const shiftName = this.shiftName || 'General Shift';
+    const workMode = isToday ? (this.status || 'Office') : (day?.workMode || 'Office');
+
+    // Morning block
+    items.push({
+      time: shiftStart,
+      title: shiftName,
+      sub: workMode,
+      span: `${shiftStart} - ${lunchStart}`,
+      dotColor: 'blue',
+      lineType: 'down'
+    });
+
+    // If there is a real punch-in on this day
+    const effectivePunchIn = isToday ? this.punchInTime : day?.punchIn;
+    if (effectivePunchIn) {
+      items.push({
+        time: this.formatTime12h(effectivePunchIn),
+        title: 'Punch In Recorded',
+        sub: isToday ? (this.isPunchedIn ? 'Currently Working' : 'Completed') : 'Punched In',
+        span: `In: ${this.formatTime12h(effectivePunchIn)}`,
+        dotColor: 'green',
+        lineType: 'both'
+      });
+    }
+
+    // Lunch break
+    items.push({
+      time: lunchStart,
+      title: 'Lunch Break',
+      sub: 'Break Time',
+      span: `${lunchStart} - ${lunchEnd}`,
+      dotColor: 'orange',
+      lineType: 'both'
+    });
+
+    // Afternoon block
+    items.push({
+      time: lunchEnd,
+      title: shiftName,
+      sub: workMode,
+      span: `${lunchEnd} - ${shiftEnd}`,
+      dotColor: 'blue',
+      lineType: 'both'
+    });
+
+    // If there is a real punch-out on this day
+    const effectivePunchOut = isToday ? this.punchOutTime : day?.punchOut;
+    if (effectivePunchOut) {
+      items.push({
+        time: this.formatTime12h(effectivePunchOut),
+        title: 'Punch Out Recorded',
+        sub: 'Shift Completed',
+        span: `Out: ${this.formatTime12h(effectivePunchOut)}`,
+        dotColor: 'purple',
+        lineType: 'both'
+      });
+    }
+
+    // Overtime
+    items.push({
+      time: shiftEnd,
+      title: 'Overtime',
+      sub: isToday && this.overtimeApproved ? 'Active Overtime' : '(If Required)',
+      span: `${shiftEnd} Onwards`,
+      dotColor: isToday && this.overtimeApproved ? 'green' : 'purple',
+      lineType: 'up'
+    });
+
+    // Add any scheduled tasks from selectedEvents
+    if (this.selectedEvents && this.selectedEvents.length > 0) {
+      for (const ev of this.selectedEvents) {
+        if (ev.type === 'schedule') {
+          items.push({
+            time: ev.time || 'Scheduled',
+            title: ev.title || 'Scheduled Task',
+            sub: ev.taskDescription || ev.location,
+            span: ev.location,
+            dotColor: 'blue',
+            lineType: 'both'
+          });
+        }
+      }
+    }
+
+    return items;
   }
 
   get isPunchDisabled(): boolean {
@@ -692,7 +844,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     }
 
     if (!sourceRows || sourceRows.length === 0) {
-      return this.defaultTimesheetRows;
+      return [];
     }
 
     return sourceRows.slice(0, 3).map((row) => {
@@ -845,6 +997,15 @@ export class EmpDashboard implements OnInit, OnDestroy {
     this.fetchCurrentLocation();
   }
 
+  setModalPunchWorkMode(mode: WorkMode): void {
+    this.pendingPunchWorkMode = mode;
+    this.status = mode;
+    if (this.pendingPunchLatitude != null && this.pendingPunchLongitude != null) {
+      this.fetchCurrentLocation();
+    }
+    this.cdr.detectChanges();
+  }
+
   fetchCurrentLocation(): void {
     this.isLocationLoading = true;
     this.punchMessage = 'Checking your office location...';
@@ -854,14 +1015,16 @@ export class EmpDashboard implements OnInit, OnDestroy {
       this.pendingPunchLatitude = lat;
       this.pendingPunchLongitude = lon;
 
-      const assignedName = (this.assignedWorkLocationName || '').trim();
+      const isRemoteWorkMode = this.pendingPunchWorkMode === 'Remote';
+      const assignedName = (this.assignedWorkLocationName || '').trim().toLowerCase();
       const matchedLoc = this.masterWorkLocations.find(
-        (l) => l.name.toLowerCase() === assignedName.toLowerCase()
+        (l) => (l.name || '').trim().toLowerCase() === assignedName ||
+               (l.code || '').trim().toLowerCase() === assignedName
       );
 
-      const locType = matchedLoc?.location_type || (assignedName.toLowerCase() === 'remote' ? 'remote' : 'office');
+      const locType = matchedLoc?.location_type || (assignedName === 'remote' ? 'remote' : 'office');
 
-      if (locType === 'remote') {
+      if (isRemoteWorkMode || locType === 'remote') {
         this.isLocationLoading = false;
         this.punchMessage = '';
         this.cdr.detectChanges();
@@ -1389,36 +1552,36 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   updateRecentRequests(): void {
-    if (!this.allTimeoffs || this.allTimeoffs.length === 0) {
-      this.recentRequestsList = [...this.defaultRecentRequests];
-      return;
-    }
+    const timeoffMapped: (DashboardRecentRequestItem & { sortDate: number })[] = (this.allTimeoffs || []).map((req: any) => {
+      const statusLower = (req.status || 'Pending').toLowerCase();
+      const isPending = statusLower === 'pending';
+      const isApproved = ['approved', 'completed', 'active'].includes(statusLower);
+      const isRejected = ['rejected', 'cancelled', 'expired'].includes(statusLower);
 
-    const mapped: DashboardRecentRequestItem[] = this.allTimeoffs.slice(0, 4).map((req: any) => {
-      const isPending = req.status === 'Pending';
-      const isApproved = ['Approved', 'Completed', 'Active'].includes(req.status);
-      const isRejected = ['Rejected', 'Cancelled', 'Expired'].includes(req.status);
-      
       let icon = 'far fa-calendar-alt';
       let iconBgClass = 'req-bg-blue';
       let iconColorClass = 'req-ic-blue';
-      
+
       const typeLower = (req.leave_type || '').toLowerCase();
-      if (typeLower.includes('regular') || typeLower.includes('missed')) {
-        icon = 'far fa-file-alt';
-        iconBgClass = 'req-bg-purple';
-        iconColorClass = 'req-ic-purple';
+      if (typeLower.includes('sick')) {
+        icon = 'far fa-user';
+        iconBgClass = 'req-bg-amber';
+        iconColorClass = 'req-ic-amber';
+      } else if (typeLower.includes('casual')) {
+        icon = 'far fa-calendar-alt';
+        iconBgClass = 'req-bg-blue';
+        iconColorClass = 'req-ic-blue';
+      } else if (typeLower.includes('earned') || typeLower.includes('privilege')) {
+        icon = 'far fa-calendar-check';
+        iconBgClass = 'req-bg-green';
+        iconColorClass = 'req-ic-green';
       } else if (typeLower.includes('home') || typeLower.includes('wfh') || typeLower.includes('remote')) {
         icon = 'far fa-calendar-minus';
         iconBgClass = 'req-bg-red';
         iconColorClass = 'req-ic-red';
-      } else if (typeLower.includes('sick') || typeLower.includes('casual')) {
-        icon = 'far fa-user';
-        iconBgClass = 'req-bg-amber';
-        iconColorClass = 'req-ic-amber';
       }
 
-      const d = req.date ? new Date(req.date) : new Date();
+      const d = req.date ? new Date(req.date) : (req.created_at ? new Date(req.created_at) : new Date());
       const formattedDate = isNaN(d.getTime()) ? req.date : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
       let durationLabel = '1 Day';
@@ -1426,28 +1589,49 @@ export class EmpDashboard implements OnInit, OnDestroy {
         durationLabel = `${req.duration_days} Day${req.duration_days > 1 ? 's' : ''}`;
       } else if (req.duration_hours) {
         durationLabel = `${req.duration_hours} hrs`;
-      } else if (typeLower.includes('regular')) {
-        durationLabel = '-';
       }
 
       return {
         icon,
         iconBgClass,
         iconColorClass,
-        title: req.leave_type || 'Leave Request',
+        title: req.leave_type || 'Time Off Request',
         date: formattedDate,
         type: durationLabel,
         status: req.status || 'Pending',
-        statusClass: isPending ? 'pending-pill' : (isApproved ? 'approved-pill' : (isRejected ? 'rejected-pill' : 'pending-pill'))
+        statusClass: isPending ? 'pending-pill' : (isApproved ? 'approved-pill' : (isRejected ? 'rejected-pill' : 'pending-pill')),
+        sortDate: isNaN(d.getTime()) ? 0 : d.getTime()
       };
     });
 
-    if (mapped.length < 4) {
-      const remaining = this.defaultRecentRequests.slice(mapped.length);
-      this.recentRequestsList = [...mapped, ...remaining];
-    } else {
-      this.recentRequestsList = mapped;
-    }
+    const regMapped: (DashboardRecentRequestItem & { sortDate: number })[] = (this.allRegularizations || []).map((reg: RegularizationRequestItem) => {
+      const statusLower = (reg.status || 'pending').toLowerCase();
+      const isPending = statusLower === 'pending';
+      const isApproved = statusLower === 'approved';
+      const isRejected = statusLower === 'rejected';
+
+      const d = reg.attendanceDate ? new Date(reg.attendanceDate) : (reg.createdAt ? new Date(reg.createdAt) : new Date());
+      const formattedDate = isNaN(d.getTime()) ? reg.attendanceDate : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      const reasonDisplay = (reg.reasonType || 'regularization')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      return {
+        icon: 'far fa-file-alt',
+        iconBgClass: 'req-bg-purple',
+        iconColorClass: 'req-ic-purple',
+        title: 'Regularization',
+        date: formattedDate,
+        type: reasonDisplay,
+        status: isPending ? 'Pending' : (isApproved ? 'Approved' : 'Rejected'),
+        statusClass: isPending ? 'pending-pill' : (isApproved ? 'approved-pill' : 'rejected-pill'),
+        sortDate: isNaN(d.getTime()) ? 0 : d.getTime()
+      };
+    });
+
+    const combined = [...timeoffMapped, ...regMapped].sort((a, b) => b.sortDate - a.sortDate);
+    this.recentRequestsList = combined.slice(0, 4);
   }
 
   private ensureTimeSelectionsValid(): void {
@@ -1474,14 +1658,16 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
     this.subscriptions.add(
       forkJoin({
-        timesheets: this.attendanceService.getMyTimesheets(),
-        timeoffs: this.timeoffService.getMyTimeOffRequests(),
-        masterData: this.masterDataService.getBootstrapData()
-      }).subscribe(({ timesheets, timeoffs, masterData }) => {
+        timesheets: this.attendanceService.getMyTimesheets().pipe(catchError(() => of([]))),
+        timeoffs: this.timeoffService.getMyTimeOffRequests(1, 100).pipe(catchError(() => of({ items: [], totalItems: 0 } as any))),
+        regularizations: this.regularizationService.getMyRequests(1, 100).pipe(catchError(() => of({ items: [], totalItems: 0 } as any))),
+        masterData: this.masterDataService.getBootstrapData().pipe(catchError(() => of({ holidays: [], workLocations: [], leaveTypes: [] } as any)))
+      }).subscribe(({ timesheets, timeoffs, regularizations, masterData }) => {
         const todayIso = this.toIsoDate(new Date());
 
         this.allTimesheets = timesheets || [];
-        this.allTimeoffs = timeoffs.items || [];
+        this.allTimeoffs = timeoffs?.items || [];
+        this.allRegularizations = regularizations?.items || [];
         this.masterHolidays = masterData?.holidays || [];
         this.masterWorkLocations = masterData?.workLocations || [];
 
@@ -1498,9 +1684,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
         const rawTimeoffItems = this.allTimeoffs;
         this.recentTimeOffRequests = rawTimeoffItems.slice(0, 5);
         this.updateRecentRequests();
-        this.pendingRequestsCount = rawTimeoffItems.filter((req: any) => req.status === 'Pending').length;
 
-        // Calculate leave balances dynamically from actual approved timeoff requests
+        const pendingTimeoff = rawTimeoffItems.filter((req: any) => (req.status || '').toLowerCase() === 'pending').length;
+        const pendingReg = this.allRegularizations.filter((reg: any) => (reg.status || '').toLowerCase() === 'pending').length;
+        this.pendingRequestsCount = pendingTimeoff + pendingReg;
+
+        // Calculate leave balances dynamically from actual approved timeoff requests and Master Data quotas
         const casualUsed = this.allTimeoffs
           .filter(r => (r.status === 'Approved' || r.status === 'Completed') && String(r.leave_type || '').toLowerCase().includes('casual'))
           .reduce((acc, r) => acc + (r.duration_days || (r.duration_hours ? r.duration_hours / 8 : 1)), 0);
@@ -1513,9 +1702,19 @@ export class EmpDashboard implements OnInit, OnDestroy {
           .filter(r => (r.status === 'Approved' || r.status === 'Completed') && (String(r.leave_type || '').toLowerCase().includes('earned') || String(r.leave_type || '').toLowerCase().includes('privilege')))
           .reduce((acc, r) => acc + (r.duration_days || (r.duration_hours ? r.duration_hours / 8 : 1)), 0);
 
-        this.casualLeaveBalanceDays = Math.max(0, Math.round(5 - casualUsed));
-        this.sickLeaveBalanceDays = Math.max(0, Math.round(3 - sickUsed));
-        this.earnedLeaveBalanceDays = Math.max(0, Math.round(4 - earnedUsed));
+        const leaveTypesList: any[] = masterData?.leaveTypes || (masterData as any)?.leave_types || [];
+        const clType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('casual') || (l.code || '').toUpperCase() === 'CL');
+        const slType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('sick') || (l.code || '').toUpperCase() === 'SL');
+        const elType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('earned') || (l.name || '').toLowerCase().includes('privilege') || (l.code || '').toUpperCase() === 'EL' || (l.code || '').toUpperCase() === 'PL');
+
+        const shiftHours = (this.shiftTotalSeconds ? this.shiftTotalSeconds / 3600 : 8) || 8;
+        const clQuotaDays = clType?.default_balance_hours ? Math.round(Number(clType.default_balance_hours) / shiftHours) : (clType?.max_days ?? 12);
+        const slQuotaDays = slType?.default_balance_hours ? Math.round(Number(slType.default_balance_hours) / shiftHours) : (slType?.max_days ?? 8);
+        const elQuotaDays = elType?.default_balance_hours ? Math.round(Number(elType.default_balance_hours) / shiftHours) : (elType?.max_days ?? 10);
+
+        this.casualLeaveBalanceDays = Math.max(0, clQuotaDays - Math.round(casualUsed));
+        this.sickLeaveBalanceDays = Math.max(0, slQuotaDays - Math.round(sickUsed));
+        this.earnedLeaveBalanceDays = Math.max(0, elQuotaDays - Math.round(earnedUsed));
         this.leaveBalanceDays = this.casualLeaveBalanceDays + this.sickLeaveBalanceDays + this.earnedLeaveBalanceDays;
 
         const now = new Date();
@@ -1527,7 +1726,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
 
-        const presentCount = monthSheets.filter((row: any) => row.entry !== '-' || row.status === 'Present' || row.status === 'Late' || row.status === 'Working').length;
+        let presentCount = monthSheets.filter((row: any) => row.entry !== '-' || row.status === 'Present' || row.status === 'Late' || row.status === 'Working').length;
+        const todayInMonthSheets = monthSheets.some((r: any) => r.date === todayIso);
+        if (!todayInMonthSheets && (this.isPunchedIn || this.punchInTime)) {
+          presentCount++;
+        }
         this.monthPresentDays = presentCount;
 
         let workingDays = 0;
@@ -1763,28 +1966,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
         status = 'Not Marked';
         statusClass = 'not-marked-day';
         statusLabel = 'Not Marked';
-      }
-
-      // If we don't have real timesheet records for this month, provide sample attendance dots matching the mockup
-      if (!timesheetRow && !timeoffReq && this.allTimesheets.length === 0 && isCurrentMonth) {
-        const day = currentDate.getDate();
-        if ([5, 6, 12, 13, 15].includes(day) && !isSunday) {
-          status = 'Present';
-          statusClass = 'present-day';
-          statusLabel = 'Present';
-        } else if (day === 8) {
-          status = 'Leave';
-          statusClass = 'leave-day';
-          statusLabel = 'Leave';
-        } else if (day === 16) {
-          status = 'Absent';
-          statusClass = 'absent-day';
-          statusLabel = 'Absent';
-        } else if (day === 1) {
-          status = 'WFH';
-          statusClass = 'wfh-day';
-          statusLabel = 'Work From Home';
-        }
       }
 
       if (isCurrentMonth) {
@@ -2125,106 +2306,327 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   updateAttendanceTrend(): void {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon ...
-    const mondayOffset = (dayOfWeek + 6) % 7; // days since Monday
+    const todayIso = toIsoDateLocal(now);
+    const targetSeconds = (this.shiftTotalHours || 9) * 3600;
+    const targetMins = (this.shiftTotalHours || 9) * 60;
 
-    let startMonday = new Date(now);
-    startMonday.setDate(now.getDate() - mondayOffset);
-
-    if (this.trendPeriod === 'Last Week') {
-      startMonday.setDate(startMonday.getDate() - 7);
+    // Calculate baseline from employee's actual timesheet history if available
+    const pastRecordsWithTotal = (this.allTimesheets || []).filter(t => t.total && t.total !== '-');
+    let historicalAvgPct = 88.4;
+    if (pastRecordsWithTotal.length > 0) {
+      const sumPcts = pastRecordsWithTotal.map(t => {
+        const mins = this.parseDurationMinutes(t.total);
+        return targetMins > 0 ? Math.min(100, Math.round((mins / targetMins) * 100)) : 85;
+      });
+      historicalAvgPct = Math.round(sumPcts.reduce((a, b) => a + b, 0) / sumPcts.length) || 88.4;
     }
 
     const xCoords = [15, 65, 115, 165, 215, 265, 305];
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const pcts: number[] = [];
     const points: { x: number; y: number }[] = [];
     const trendPoints: TrendDataPoint[] = [];
+    const dayNames: string[] = [];
 
-    const todayIso = toIsoDateLocal(now);
+    if (this.trendPeriod === 'This Month') {
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-    for (let i = 0; i < 7; i++) {
-      const currentD = new Date(startMonday);
-      currentD.setDate(startMonday.getDate() + i);
-      const iso = toIsoDateLocal(currentD);
-      const dayName = dayNames[i];
+      // Retrieve all records belonging to the current month sorted chronologically
+      const monthSheets = (this.allTimesheets || [])
+        .filter(t => t.date && t.date.startsWith(monthPrefix))
+        .sort((a, b) => a.date.localeCompare(b.date));
 
-      let dayPct = 0;
-      let pointStatus = 'Present';
-      let pointDuration = '';
-      const sheet = this.allTimesheets.find(t => t.date === iso);
+      let targetDates: { iso: string; label: string; sheet?: EmployeeTimesheetRow }[] = [];
 
-      if (sheet) {
-        const statusStr = String(sheet.status || '');
-        pointStatus = statusStr || 'Present';
-        if (sheet.total && sheet.total !== '-') {
-          pointDuration = sheet.total;
-          const parsedMins = this.parseDurationMinutes(sheet.total);
-          const targetMins = (this.shiftTotalHours || 9) * 60;
-          dayPct = targetMins > 0 ? Math.min(100, Math.round((parsedMins / targetMins) * 100)) : 85;
-        } else if (statusStr === 'Working' || statusStr === 'Present') {
-          dayPct = 94.3;
-        } else if (statusStr === 'Half Day' || statusStr === 'Time Off') {
-          dayPct = 50.0;
-        } else if (statusStr === 'Absent') {
-          dayPct = 0;
-        } else if (statusStr === 'Holiday') {
-          dayPct = 0;
-        } else {
-          dayPct = 0;
+      if (monthSheets.length >= 7) {
+        // Sample 7 evenly distributed actual records across the employee's month
+        const step = (monthSheets.length - 1) / 6;
+        for (let i = 0; i < 7; i++) {
+          const idx = Math.round(i * step);
+          const s = monthSheets[idx];
+          const dObj = new Date(s.date);
+          targetDates.push({
+            iso: s.date,
+            label: `${dObj.getDate()} ${this.getMonthName(month)}`,
+            sheet: s
+          });
         }
-      } else if (this.allTimesheets.length === 0 || iso > todayIso) {
-        pointStatus = iso > todayIso ? 'Upcoming' : 'Scheduled';
-        dayPct = this.defaultTrendPcts[i];
+      } else if (monthSheets.length > 0) {
+        // Less than 7 records: include all existing records first
+        monthSheets.forEach(s => {
+          const dObj = new Date(s.date);
+          targetDates.push({
+            iso: s.date,
+            label: `${dObj.getDate()} ${this.getMonthName(month)}`,
+            sheet: s
+          });
+        });
+        // Pad with calendar dates to make 7 points if needed
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        let dayNum = 1;
+        while (targetDates.length < 7 && dayNum <= lastDay) {
+          const iso = `${monthPrefix}-${String(dayNum).padStart(2, '0')}`;
+          if (!targetDates.some(td => td.iso === iso)) {
+            const dObj = new Date(year, month, dayNum);
+            targetDates.push({
+              iso,
+              label: `${dayNum} ${this.getMonthName(month)}`,
+              sheet: (this.allTimesheets || []).find(t => t.date === iso)
+            });
+          }
+          dayNum += Math.max(1, Math.floor(lastDay / 7));
+        }
+        targetDates.sort((a, b) => a.iso.localeCompare(b.iso));
+        targetDates = targetDates.slice(0, 7);
       } else {
-        pointStatus = 'Present';
-        dayPct = this.defaultTrendPcts[i];
+        // Fallback when no month sheets exist yet: use 7 evenly spaced calendar days
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const daySteps = [1, Math.round(lastDay * 0.16), Math.round(lastDay * 0.33), Math.round(lastDay * 0.5), Math.round(lastDay * 0.67), Math.round(lastDay * 0.84), lastDay];
+        for (let i = 0; i < 7; i++) {
+          const dNum = daySteps[i];
+          const currentD = new Date(year, month, dNum);
+          const iso = toIsoDateLocal(currentD);
+          targetDates.push({
+            iso,
+            label: `${dNum} ${this.getMonthName(month)}`,
+            sheet: (this.allTimesheets || []).find(t => t.date === iso)
+          });
+        }
       }
 
-      pcts.push(dayPct);
+      for (let i = 0; i < targetDates.length; i++) {
+        const item = targetDates[i];
+        const iso = item.iso;
+        const dName = item.label;
+        dayNames.push(dName);
 
-      // Y coordinate calculation (viewBox height is 100, top margin 10, bottom margin 15)
-      // 100% -> y = 10; 0% -> y = 85
-      const y = Math.round(85 - ((dayPct / 100) * 75));
-      const x = xCoords[i];
+        let dayPct = 0;
+        let pointStatus = 'Scheduled';
+        let pointDuration = '';
 
-      points.push({ x, y });
-      trendPoints.push({
-        day: dayName,
-        dateStr: iso,
-        pct: dayPct,
-        x,
-        y,
-        label: `${dayPct.toFixed(1)}%`,
-        status: pointStatus,
-        duration: pointDuration
-      });
+        const sheet = item.sheet || (this.allTimesheets || []).find(t => t.date === iso);
+        const timeoff = (this.allTimeoffs || []).find(r => r.date === iso && ['Approved', 'Completed', 'Active'].includes(r.status));
+        const currentD = new Date(iso);
+        const isSun = currentD.getDay() === 0;
+        const isHol = (this.masterHolidays || []).some(h => h.date === iso && h.is_active !== false);
+
+        if (iso === todayIso && (this.isPunchedIn || this.punchInTime)) {
+          if (this.isPunchedIn) {
+            dayPct = targetSeconds > 0 ? Math.min(100, Math.round((this.totalWorkedSecondsToday / targetSeconds) * 1000) / 10) : 80;
+            pointStatus = 'Working';
+            pointDuration = this.liveTimerDisplay;
+          } else {
+            dayPct = targetSeconds > 0 ? Math.min(100, Math.round((this.totalWorkedSecondsToday / targetSeconds) * 1000) / 10) : 100;
+            pointStatus = 'Present';
+            pointDuration = this.totalWorkedTodayDisplay;
+          }
+        } else if (sheet && sheet.total && sheet.total !== '-') {
+          pointDuration = sheet.total;
+          const parsedMins = this.parseDurationMinutes(sheet.total);
+          dayPct = targetMins > 0 ? Math.min(100, Math.round((parsedMins / targetMins) * 1000) / 10) : 85;
+          pointStatus = sheet.status || 'Present';
+        } else if (timeoff) {
+          dayPct = 100;
+          pointStatus = 'Leave';
+          pointDuration = 'Full Day';
+        } else if (sheet && (sheet.status === 'Present' || sheet.status === 'Working')) {
+          dayPct = 100;
+          pointStatus = 'Present';
+          pointDuration = `${this.shiftTotalHours || 9}h 00m`;
+        } else if (sheet && (sheet.status === 'Half Day' || sheet.status === 'Time Off')) {
+          dayPct = 50;
+          pointStatus = 'Half Day';
+          pointDuration = '4h 00m';
+        } else if (isHol || isSun) {
+          dayPct = 0;
+          pointStatus = 'Holiday';
+          pointDuration = 'Off';
+        } else {
+          dayPct = 0;
+          pointStatus = iso > todayIso ? 'Scheduled' : (sheet?.status || 'Not Marked');
+          pointDuration = '-';
+        }
+
+        pcts.push(dayPct);
+        const y = Math.round(85 - ((dayPct / 100) * 75));
+        const x = xCoords[i];
+        points.push({ x, y });
+        trendPoints.push({
+          day: dName,
+          dateStr: iso,
+          pct: dayPct,
+          x,
+          y,
+          label: `${dayPct.toFixed(1)}%`,
+          status: pointStatus,
+          duration: pointDuration
+        });
+      }
+    } else {
+      // 'This Week' or 'Last Week'
+      const dayOfWeek = now.getDay();
+      const mondayOffset = (dayOfWeek + 6) % 7;
+
+      let startMonday = new Date(now);
+      startMonday.setDate(now.getDate() - mondayOffset);
+
+      if (this.trendPeriod === 'Last Week') {
+        startMonday.setDate(startMonday.getDate() - 7);
+      }
+
+      const standardDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      for (let i = 0; i < 7; i++) {
+        const currentD = new Date(startMonday);
+        currentD.setDate(startMonday.getDate() + i);
+        const iso = toIsoDateLocal(currentD);
+        const dayName = standardDayNames[i];
+        dayNames.push(dayName);
+
+        let dayPct = 0;
+        let pointStatus = 'Scheduled';
+        let pointDuration = '';
+
+        const sheet = (this.allTimesheets || []).find(t => t.date === iso);
+        const timeoff = (this.allTimeoffs || []).find(r => r.date === iso && ['Approved', 'Completed', 'Active'].includes(r.status));
+        const isSun = currentD.getDay() === 0;
+        const isHol = (this.masterHolidays || []).some(h => h.date === iso && h.is_active !== false);
+
+        if (iso === todayIso && (this.isPunchedIn || this.punchInTime)) {
+          if (this.isPunchedIn) {
+            dayPct = targetSeconds > 0 ? Math.min(100, Math.round((this.totalWorkedSecondsToday / targetSeconds) * 1000) / 10) : 80;
+            pointStatus = 'Working';
+            pointDuration = this.liveTimerDisplay;
+          } else {
+            dayPct = targetSeconds > 0 ? Math.min(100, Math.round((this.totalWorkedSecondsToday / targetSeconds) * 1000) / 10) : 100;
+            pointStatus = 'Present';
+            pointDuration = this.totalWorkedTodayDisplay;
+          }
+        } else if (sheet && sheet.total && sheet.total !== '-') {
+          pointDuration = sheet.total;
+          const parsedMins = this.parseDurationMinutes(sheet.total);
+          dayPct = targetMins > 0 ? Math.min(100, Math.round((parsedMins / targetMins) * 1000) / 10) : 85;
+          pointStatus = sheet.status || 'Present';
+        } else if (timeoff) {
+          dayPct = 100;
+          pointStatus = 'Leave';
+          pointDuration = 'Full Day';
+        } else if (sheet && (sheet.status === 'Present' || sheet.status === 'Working')) {
+          dayPct = 100;
+          pointStatus = 'Present';
+          pointDuration = `${this.shiftTotalHours || 9}h 00m`;
+        } else if (sheet && (sheet.status === 'Half Day' || sheet.status === 'Time Off')) {
+          dayPct = 50;
+          pointStatus = 'Half Day';
+          pointDuration = '4h 00m';
+        } else if (isHol || isSun) {
+          dayPct = 0;
+          pointStatus = 'Holiday';
+          pointDuration = 'Off';
+        } else {
+          dayPct = 0;
+          pointStatus = iso > todayIso ? 'Scheduled' : (sheet?.status || 'Not Marked');
+          pointDuration = '-';
+        }
+
+        pcts.push(dayPct);
+        const y = Math.round(85 - ((dayPct / 100) * 75));
+        const x = xCoords[i];
+        points.push({ x, y });
+        trendPoints.push({
+          day: dayName,
+          dateStr: iso,
+          pct: dayPct,
+          x,
+          y,
+          label: `${dayPct.toFixed(1)}%`,
+          status: pointStatus,
+          duration: pointDuration
+        });
+      }
     }
 
     this.trendDataPoints = trendPoints;
     this.trendLinePathD = this.buildSmoothPath(points);
-    this.trendAreaPathD = `${this.trendLinePathD} L ${xCoords[6]} 95 L ${xCoords[0]} 95 Z`;
+    this.trendAreaPathD = points.length > 0
+      ? `${this.trendLinePathD} L ${xCoords[points.length - 1]} 95 L ${xCoords[0]} 95 Z`
+      : '';
 
-    // Compute stats
-    const validPcts = pcts.filter(p => p > 0);
-    const avg = validPcts.length > 0
-      ? (validPcts.reduce((sum, p) => sum + p, 0) / validPcts.length)
-      : (pcts.reduce((sum, p) => sum + p, 0) / 7);
+    // Compute stats purely from employee's actual attendance records
+    if (this.trendPeriod === 'This Month') {
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const monthSheets = (this.allTimesheets || []).filter(t => t.date && t.date.startsWith(monthPrefix));
 
-    this.trendAvgThisWeek = `${avg.toFixed(1)}%`;
+      const monthPcts: { date: string; pct: number; label: string }[] = [];
+      for (const s of monthSheets) {
+        let p = 0;
+        if (s.total && s.total !== '-') {
+          const parsed = this.parseDurationMinutes(s.total);
+          p = targetMins > 0 ? Math.min(100, Math.round((parsed / targetMins) * 1000) / 10) : 85;
+        } else if (s.status === 'Present' || s.status === 'Working') {
+          p = 100;
+        } else if (s.status === 'Half Day' || s.status === 'Time Off') {
+          p = 50;
+        }
+        if (p > 0) {
+          const dObj = new Date(s.date);
+          const dName = `${dObj.getDate()} ${this.getMonthName(month)}`;
+          monthPcts.push({ date: s.date, pct: p, label: dName });
+        }
+      }
 
-    let maxIdx = 0;
-    let minIdx = 0;
-    for (let i = 0; i < pcts.length; i++) {
-      if (pcts[i] > pcts[maxIdx]) maxIdx = i;
-      if (pcts[i] < pcts[minIdx] && pcts[i] > 0) minIdx = i;
+      if (monthPcts.length > 0) {
+        const avg = monthPcts.reduce((sum, item) => sum + item.pct, 0) / monthPcts.length;
+        this.trendAvgThisWeek = `${avg.toFixed(1)}%`;
+
+        let best = monthPcts[0];
+        let lowest = monthPcts[0];
+        for (const item of monthPcts) {
+          if (item.pct > best.pct) best = item;
+          if (item.pct < lowest.pct) lowest = item;
+        }
+        this.trendBestDay = `${best.pct.toFixed(1)}%`;
+        this.trendBestDayName = best.label;
+        this.trendLowestDay = `${lowest.pct.toFixed(1)}%`;
+        this.trendLowestDayName = lowest.label;
+      } else {
+        this.trendAvgThisWeek = '0.0%';
+        this.trendBestDay = '0.0%';
+        this.trendBestDayName = '-';
+        this.trendLowestDay = '0.0%';
+        this.trendLowestDayName = '-';
+      }
+    } else {
+      // 'This Week' or 'Last Week'
+      const workedPcts = pcts.filter((p, idx) => {
+        const pt = trendPoints[idx];
+        return pt && pt.status !== 'Scheduled' && p > 0;
+      });
+
+      const avg = workedPcts.length > 0
+        ? (workedPcts.reduce((sum, p) => sum + p, 0) / workedPcts.length)
+        : 0.0;
+
+      this.trendAvgThisWeek = `${avg.toFixed(1)}%`;
+
+      let maxIdx = -1;
+      let minIdx = -1;
+      for (let i = 0; i < pcts.length; i++) {
+        if (trendPoints[i]?.status === 'Scheduled') continue;
+        if (pcts[i] > 0) {
+          if (maxIdx === -1 || pcts[i] > pcts[maxIdx]) maxIdx = i;
+          if (minIdx === -1 || pcts[i] < pcts[minIdx]) minIdx = i;
+        }
+      }
+
+      this.trendBestDay = maxIdx !== -1 ? `${pcts[maxIdx].toFixed(1)}%` : '0.0%';
+      this.trendBestDayName = maxIdx !== -1 ? dayNames[maxIdx] : '-';
+      this.trendLowestDay = minIdx !== -1 ? `${pcts[minIdx].toFixed(1)}%` : '0.0%';
+      this.trendLowestDayName = minIdx !== -1 ? dayNames[minIdx] : '-';
     }
-
-    this.trendBestDay = `${pcts[maxIdx].toFixed(1)}%`;
-    this.trendBestDayName = dayNames[maxIdx];
-
-    this.trendLowestDay = `${pcts[minIdx].toFixed(1)}%`;
-    this.trendLowestDayName = dayNames[minIdx];
   }
 
   private buildSmoothPath(points: { x: number; y: number }[]): string {

@@ -27,12 +27,23 @@ def validate_employee_geofence(
     db: Session,
     employee: Employee,
     current_lat: Optional[float],
-    current_lon: Optional[float]
+    current_lon: Optional[float],
+    work_mode: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Validates employee's assigned work location and enforces 40-meter geofence
+    Validates employee's assigned work location and enforces geofence
     for office locations. Returns location metadata dictionary if validation passes.
     """
+    mode_str = (work_mode or "").strip().lower()
+    if mode_str in ["remote", "work from home", "wfh", "field"]:
+        return {
+            "is_remote": True,
+            "work_location_id": None,
+            "work_location_name": "Remote",
+            "distance_meters": None,
+            "allowed_radius_meters": None,
+        }
+
     assigned_location_name = (employee.work_location or "").strip()
     if not assigned_location_name or assigned_location_name.lower() in ["remote", "remote home office", "wfh", "hybrid"]:
         return {
@@ -51,10 +62,13 @@ def validate_employee_geofence(
     )
 
     if not work_location:
-        # Fallback case-insensitive match
+        # Fallback case-insensitive match by name or code
         work_location = (
             db.query(WorkLocation)
-            .filter(WorkLocation.name.ilike(assigned_location_name))
+            .filter(
+                (WorkLocation.name.ilike(assigned_location_name)) |
+                (WorkLocation.code.ilike(assigned_location_name))
+            )
             .first()
         )
 

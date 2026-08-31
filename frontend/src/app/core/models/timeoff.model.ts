@@ -10,6 +10,30 @@ export interface TimeOffRequest {
   reason?: string | null;
   attachment_name?: string | null;
   employee_name?: string | null;
+  batch_id?: string | null;
+}
+
+export interface GroupedTimeOffRequest {
+  id: string; // the batch_id or fallback single id
+  isGrouped: boolean;
+  requests: TimeOffRequest[];
+  
+  employee_id: number;
+  employee_name?: string | null;
+  
+  leave_type: string;
+  startDate: string;
+  endDate: string;
+  
+  totalDurationHours: number;
+  
+  status: string;
+  reason?: string | null;
+  attachment_name?: string | null;
+  
+  // Keep start_time / end_time for rendering time slots if all same
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export interface TimeOffApplyResponse {

@@ -8,21 +8,19 @@ import { AuthService } from './services/auth.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const token = auth.getToken();
-
-  // Only attach the Authorization header if calling our local backend
+  // Send the HttpOnly session cookie only to this application's API.
   const isLocalApi = isAppApiUrl(req.url);
 
   let processedReq = req;
-  if (token && isLocalApi) {
+  if (isLocalApi) {
     processedReq = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
+      withCredentials: true
     });
   }
 
   return next(processedReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && isLocalApi) {
+      if (error.status === 401 && isLocalApi && !req.url.endsWith('/auth/logout')) {
         // Token has expired or is invalid. Clear the session and redirect to login.
         auth.logout();
         router.navigate(['/auth/login']);

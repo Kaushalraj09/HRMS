@@ -26,6 +26,7 @@ export class CustomSelectComponent implements ControlValueAccessor {
   @Input() placeholder: string = 'Select an option';
   @Input() disabled: boolean = false;
   @Input() inputId: string = '';
+  @Input() dropup: boolean = false;
   
   // To bind when not explicitly applying formControl objects
   @Input() value: any = null;

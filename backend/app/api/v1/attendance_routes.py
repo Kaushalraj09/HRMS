@@ -50,7 +50,7 @@ from app.core.enums import WorkMode, UserRole
 
 
 
-from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics, EmployeeLocationResponse
+from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics, EmployeeLocationResponse, ApproveEarlyTimeRequest
 
 
 
@@ -154,10 +154,51 @@ async def punch_in(
 
 
 
+@router.get("/pending-early-arrivals", response_model=AttendanceListResponse)
+async def get_pending_early_arrivals(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role not in [UserRole.admin, UserRole.hr, UserRole.manager]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers or HR/Admin can view pending early arrivals"
+        )
+        
+    manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    manager_id = manager_employee.id if manager_employee else current_user.id
+    
+    return attendance_service.get_pending_early_arrivals(db, current_user.role, manager_id)
+
+@router.post("/{attendance_id}/approve-early-time", response_model=AttendanceResponse)
+async def approve_early_time(
+    attendance_id: int,
+    request: ApproveEarlyTimeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Approve early arrival time for an employee's attendance record.
+    Only managers and HR/Admin can approve.
+    """
+    if current_user.role not in [UserRole.admin, UserRole.hr, UserRole.manager]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers or HR/Admin can approve early time"
+        )
+        
+    manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    manager_id = manager_employee.id if manager_employee else current_user.id
+    
+    return attendance_service.approve_early_time(
+        db=db,
+        attendance_id=attendance_id,
+        manager_id=manager_id,
+        approved_minutes=request.approved_minutes,
+        reason=request.reason
+    )
+
 @router.post("/punch-out", response_model=AttendanceResponse)
-
-
-
 async def punch_out(
 
 
@@ -1105,114 +1146,53 @@ def get_all_attendance_records(
 
 
 
-    from_date: date | None = Query(None, alias="fromDate"),
-
-
-
-    to_date: date | None = Query(None, alias="toDate"),
-
-
-
+    from_date: str | None = Query(None, alias="fromDate"),
+    to_date: str | None = Query(None, alias="toDate"),
     search: str = "",
-
-
-
     department: str = "",
-
-
-
     status_filter: str = Query("", alias="status"),
-
-
-
     location: str = "",
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
-    Get all attendance records for monitoring (HR and Admin only).
-
-
-
+    Get all attendance records for monitoring (HR and Admin for all, Employee for self).
     """
-
-
-
+    employee_id = None
     if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not employee:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Employee profile not found"
+            )
+        employee_id = employee.id
 
+    parsed_from_date: date | None = None
+    if from_date and str(from_date).strip():
+        try:
+            parsed_from_date = date.fromisoformat(str(from_date).strip())
+        except (ValueError, TypeError):
+            parsed_from_date = None
 
-
-        raise HTTPException(
-
-
-
-            status_code=status.HTTP_403_FORBIDDEN,
-
-
-
-            detail="Not authorized to view all records"
-
-
-
-        )
-
-
+    parsed_to_date: date | None = None
+    if to_date and str(to_date).strip():
+        try:
+            parsed_to_date = date.fromisoformat(str(to_date).strip())
+        except (ValueError, TypeError):
+            parsed_to_date = None
 
     return attendance_service.list_all_attendance(
-
-
-
         db,
-
-
-
         page=page,
-
-
-
         limit=limit,
-
-
-
-        from_date=from_date,
-
-
-
-        to_date=to_date,
-
-
-
+        from_date=parsed_from_date,
+        to_date=parsed_to_date,
         search=search,
-
-
-
         department=department,
-
-
-
         status_filter=status_filter,
-
-
-
         location=location,
-
-
-
+        employee_id=employee_id
     )
 
 

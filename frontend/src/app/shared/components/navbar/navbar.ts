@@ -8,6 +8,13 @@ import { AttendanceService } from '../../../core/services/attendance.service';
 import { TimeEngineService } from '../../../core/services/time-engine.service';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from 'rxjs';
 
+export interface SearchModule {
+  name: string;
+  route: string;
+  icon: string;
+  roles: string[];
+}
+
 @Component({
   selector: 'app-navbar',
   standalone: true,
@@ -33,6 +40,28 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   profileImage: string | null = null;
   userInitials: string = 'U';
   isPunchedIn = false;
+
+  // Omni-Search State
+  isSearchDropdownOpen = false;
+  searchResults: SearchModule[] = [];
+  readonly allModules: SearchModule[] = [
+    { name: 'Dashboard', route: '', icon: 'fas fa-home', roles: ['admin', 'hr', 'employee'] },
+    { name: 'Employees', route: 'employees', icon: 'fas fa-users', roles: ['admin', 'hr'] },
+    { name: 'Attendance', route: 'attendance', icon: 'fas fa-clock', roles: ['admin', 'hr'] },
+    { name: 'My Attendance', route: 'my-attendance', icon: 'fas fa-clock', roles: ['employee'] },
+    { name: 'Time Off', route: 'time-off', icon: 'fas fa-calendar-alt', roles: ['admin', 'hr', 'employee'] },
+    { name: 'Documents', route: 'documents', icon: 'fas fa-file-alt', roles: ['admin', 'hr'] },
+    { name: 'My Documents', route: 'my-documents', icon: 'fas fa-file-alt', roles: ['employee'] },
+    { name: 'Trainings', route: 'trainings', icon: 'fas fa-graduation-cap', roles: ['admin', 'hr'] },
+    { name: 'My Trainings', route: 'my-trainings', icon: 'fas fa-graduation-cap', roles: ['employee'] },
+    { name: 'Regularizations', route: 'regularization-requests', icon: 'fas fa-exchange-alt', roles: ['admin', 'hr'] },
+    { name: 'My Regularization', route: 'regularization', icon: 'fas fa-exchange-alt', roles: ['employee'] },
+    { name: 'Reports', route: 'reports', icon: 'fas fa-chart-bar', roles: ['admin', 'hr'] },
+    { name: 'HR Users', route: 'hr-users', icon: 'fas fa-user-tie', roles: ['admin'] },
+    { name: 'Master Data', route: 'master-data', icon: 'fas fa-database', roles: ['admin'] },
+    { name: 'Login Activity', route: 'login-activity', icon: 'fas fa-history', roles: ['admin', 'hr'] },
+    { name: 'My Profile', route: 'my-profile', icon: 'fas fa-user', roles: ['admin', 'hr', 'employee'] },
+  ];
 
   // New notification fields
   currentFilterTab = 'all'; // 'all' | 'attendance' | 'leave' | 'unread'
@@ -286,6 +315,9 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     if (!target.closest('.language-selector')) {
       this.isLanguageDropdownOpen = false;
     }
+    if (!target.closest('.searchbar')) {
+      this.isSearchDropdownOpen = false;
+    }
   }
 
   onHamburgerClick() {
@@ -297,12 +329,51 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     const value = (event.target as HTMLInputElement).value;
     this.searchTerm = value;
     this.searchInput$.next(value);
+    
+    if (value.trim().length > 0) {
+      this.isSearchDropdownOpen = true;
+      this.filterSearchResults(value.trim());
+    } else {
+      this.isSearchDropdownOpen = false;
+      this.searchResults = [];
+    }
+  }
+
+  getDashboardPrefix(): string {
+    const r = (this.userRole || '').toLowerCase();
+    if (r === 'admin' || r === 'system admin' || r === 'master') return '/master-dashboard';
+    if (r === 'hr' || r === 'hr manager') return '/hr-dashboard';
+    return '/emp-dashboard';
+  }
+
+  filterSearchResults(term: string) {
+    const lowerTerm = term.toLowerCase();
+    let currentRole = 'employee';
+    const r = (this.userRole || '').toLowerCase();
+    if (r === 'admin' || r === 'system admin' || r === 'master') currentRole = 'admin';
+    else if (r === 'hr' || r === 'hr manager') currentRole = 'hr';
+
+    this.searchResults = this.allModules.filter(m => 
+      m.roles.includes(currentRole) && 
+      m.name.toLowerCase().includes(lowerTerm)
+    );
+  }
+
+  navigateToModule(module: SearchModule) {
+    this.isSearchDropdownOpen = false;
+    this.searchTerm = '';
+    this.searchInput$.next('');
+    
+    const prefix = this.getDashboardPrefix();
+    const targetRoute = module.route ? `${prefix}/${module.route}` : prefix;
+    this.router.navigate([targetRoute]);
   }
 
   clearSearch(event?: Event) {
     event?.stopPropagation();
     this.searchTerm = '';
     this.searchInput$.next('');
+    this.isSearchDropdownOpen = false;
   }
 
   onProfileClick(event?: MouseEvent) {
@@ -396,15 +467,15 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     }
 
     if (type === 'LEAVE' || category.startsWith('LEAVE_')) {
-      return baseRoute === '/emp-dashboard'
-        ? ['/emp-dashboard']
-        : [baseRoute, 'attendance'];
+      return baseRoute === '/master-dashboard'
+        ? [baseRoute]
+        : [baseRoute, 'time-off'];
     }
 
     if (type === 'TIMEOFF_APPLY' || type === 'TIMEOFF_REQUEST' || type === 'TIMEOFF_UPDATE') {
-      return baseRoute === '/emp-dashboard'
-        ? ['/emp-dashboard']
-        : [baseRoute, 'attendance'];
+      return baseRoute === '/master-dashboard'
+        ? [baseRoute]
+        : [baseRoute, 'time-off'];
     }
 
     if (type === 'ATTENDANCE_AUTO_CHECKOUT') {

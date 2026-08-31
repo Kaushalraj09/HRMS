@@ -136,6 +136,8 @@ class DocumentSummaryStats(BaseModel):
     verified: int = 0
     rejected: int = 0
     missing: int = 0
+    required_uploaded: int = 0
+    required_verified: int = 0
     completion_percentage: float = 0.0
 
 
@@ -176,6 +178,12 @@ class HrDocumentOverviewKPI(BaseModel):
     complete_employees: int = 0
     attention_employees: int = 0
     total_required_docs: int = 8
+    complete_documents: int = 0
+    partial_documents: int = 0
+    incomplete_documents: int = 0
+    complete_pct: float = 0.0
+    partial_pct: float = 0.0
+    incomplete_pct: float = 0.0
     overall_compliance_rate: float = 0.0
     categories_breakdown: List[dict] = []
 

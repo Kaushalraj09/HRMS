@@ -50,6 +50,12 @@ class Shift(Base):
     max_overtime_minutes = Column(Integer, default=120)
     timezone = Column(String(50), default="Asia/Kolkata")
     
+    # New Attendance Rules
+    allow_early_punch_in = Column(Boolean, default=False)
+    early_coming_minutes = Column(Integer, default=60)
+    punch_in_grace_minutes = Column(Integer, default=10)
+    shift_grace_minutes = Column(Integer, default=15)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

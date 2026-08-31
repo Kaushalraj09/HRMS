@@ -36,6 +36,30 @@
                 <i class="fas fa-times"></i>
             </button>
             <i class="fas fa-search search-icon" aria-hidden="true"></i> 
+            
+            <!-- Omni-Search Dropdown -->
+            <div class="omni-search-dropdown" *ngIf="isSearchDropdownOpen">
+                <div class="search-results-list" *ngIf="searchResults.length > 0">
+                    <div class="search-category-title">Modules & Pages</div>
+                    <a class="search-result-item" 
+                       *ngFor="let result of searchResults" 
+                       (click)="navigateToModule(result)">
+                        <div class="search-icon-box">
+                            <i [class]="result.icon"></i>
+                        </div>
+                        <div class="search-result-text">
+                            <span class="search-result-name">{{ result.name }}</span>
+                            <span class="search-result-path">Jump to {{ result.name }}</span>
+                        </div>
+                        <i class="fas fa-chevron-right search-chevron"></i>
+                    </a>
+                </div>
+                <div class="search-empty-state" *ngIf="searchResults.length === 0">
+                    <i class="fas fa-search-minus empty-search-icon"></i>
+                    <p class="empty-search-text">No modules found for "{{ searchTerm }}"</p>
+                    <p class="empty-search-subtext">Try checking your spelling or use different keywords</p>
+                </div>
+            </div>
         </div>
     </div>
 

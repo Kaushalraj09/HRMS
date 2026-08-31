@@ -77,8 +77,13 @@ export class Employees implements OnInit {
 
   // Pagination & Loading State
   pageSubject = new BehaviorSubject<number>(1);
+  pageSizeOptions = [
+    { label: '10 / page', value: 10 },
+    { label: '25 / page', value: 25 },
+    { label: '50 / page', value: 50 }
+  ];
   pageSize = 10;
-  totalRecords = 0;
+  totalItems = 0;
   isLoading$ = new BehaviorSubject<boolean>(true);
   employeesData$!: Observable<{ data: Employee[], total: number }>;
   paginationArray$!: Observable<number[]>;
@@ -88,6 +93,7 @@ export class Employees implements OnInit {
   // Stats for the top overview cards
   stats = {
     total: 0,
+    globalTotal: 0,
     active: 0,
     onLeave: 0,
     inactive: 0,
@@ -96,7 +102,8 @@ export class Employees implements OnInit {
     docPartialPct: 0,
     docPartialCount: 0,
     docIncompletePct: 0,
-    docIncompleteCount: 0
+    docIncompleteCount: 0,
+    totalRequiredDocs: 8
   };
 
   // Modal State
@@ -108,6 +115,39 @@ export class Employees implements OnInit {
   sortAscending: boolean = true;
   docCompletionMap: Record<string, { count: number, total: number, label: string, color: string }> = {};
   docDataMap: Record<string, EmployeeDocSummaryInfo> = {};
+
+  get circumference(): number {
+    return 2 * Math.PI * 36;
+  }
+
+  get completeDashArray(): string {
+    const val = (this.stats.docCompletePct / 100) * this.circumference;
+    return `${val} ${this.circumference}`;
+  }
+
+  get completeDashOffset(): string {
+    return `0`;
+  }
+
+  get partialDashArray(): string {
+    const val = (this.stats.docPartialPct / 100) * this.circumference;
+    return `${val} ${this.circumference}`;
+  }
+
+  get partialDashOffset(): string {
+    const prev = (this.stats.docCompletePct / 100) * this.circumference;
+    return `-${prev}`;
+  }
+
+  get incompleteDashArray(): string {
+    const val = (this.stats.docIncompletePct / 100) * this.circumference;
+    return `${val} ${this.circumference}`;
+  }
+
+  get incompleteDashOffset(): string {
+    const prev = ((this.stats.docCompletePct + this.stats.docPartialPct) / 100) * this.circumference;
+    return `-${prev}`;
+  }
 
   constructor(
     private readonly employeeService: EmployeeService, 
@@ -205,12 +245,21 @@ export class Employees implements OnInit {
     this.pageSubject.next(page);
   }
 
-  onPageSizeChange(event: any) {
-    const size = parseInt(event.target.value, 10);
-    if (!isNaN(size) && size > 0) {
-      this.pageSize = size;
-      this.setPage(1);
-    }
+  onPageSizeChange(event: any): void {
+    const newVal = parseInt(event.target.value, 10);
+    this.pageSize = newVal;
+    this.pageSubject.next(1);
+    this.loadEmployees();
+  }
+
+  onPageSizeChangeCustom(newVal: number): void {
+    this.pageSize = newVal;
+    this.pageSubject.next(1);
+    this.loadEmployees();
+  }
+
+  loadEmployees(): void {
+    this.searchTrigger$.next(true);
   }
 
   onSearch() {
@@ -280,20 +329,16 @@ export class Employees implements OnInit {
       next: (kpi) => {
         if (kpi) {
           const total = kpi.total_employees || 0;
-          this.stats.total = total;
-          this.stats.docCompleteCount = kpi.complete_employees || 0;
-          this.stats.docIncompleteCount = kpi.incomplete_employees || 0;
-          this.stats.docPartialCount = Math.max(0, total - (this.stats.docCompleteCount + this.stats.docIncompleteCount));
+          this.stats.globalTotal = total;
           
-          if (total > 0) {
-            this.stats.docCompletePct = Math.round((this.stats.docCompleteCount / total) * 100);
-            this.stats.docPartialPct = Math.round((this.stats.docPartialCount / total) * 100);
-            this.stats.docIncompletePct = Math.max(0, 100 - (this.stats.docCompletePct + this.stats.docPartialPct));
-          } else {
-            this.stats.docCompletePct = 0;
-            this.stats.docPartialPct = 0;
-            this.stats.docIncompletePct = 0;
-          }
+          this.stats.totalRequiredDocs = kpi.total_required_docs || 0;
+          this.stats.docCompleteCount = kpi.complete_documents || 0;
+          this.stats.docPartialCount = kpi.partial_documents || 0;
+          this.stats.docIncompleteCount = kpi.incomplete_documents || 0;
+          
+          this.stats.docCompletePct = kpi.complete_pct || 0;
+          this.stats.docPartialPct = kpi.partial_pct || 0;
+          this.stats.docIncompletePct = kpi.incomplete_pct || 0;
           this.cdr.markForCheck();
           this.cdr.detectChanges();
         }

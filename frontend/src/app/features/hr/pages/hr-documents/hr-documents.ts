@@ -145,7 +145,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
 
     const dept = this.selectedDepartment === 'All' ? '' : this.selectedDepartment;
 
-    this.documentService.getHrPendingReviews(
+    this.documentService.getHrAllDocuments(
       this.currentPage,
       this.pageSize,
       this.searchQuery,
@@ -232,7 +232,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
 
     this.isVerifying = true;
     this.documentService.verifyDocument(
-      this.selectedDocForVerify.id,
+      this.selectedDocForVerify.id!,
       this.verifyRemarks
     ).subscribe({
       next: () => {
@@ -259,6 +259,10 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
     this.isRejectModalOpen = true;
   }
 
+  openUploadModal(doc: HrPendingReviewItem): void {
+    alert('To upload a document on behalf of an employee, please navigate to their Employee Profile.');
+  }
+
   closeRejectModal(): void {
     this.isRejectModalOpen = false;
     this.selectedDocForReject = null;
@@ -278,7 +282,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
     this.rejectionError = '';
 
     this.documentService.rejectDocument(
-      this.selectedDocForReject.id,
+      this.selectedDocForReject.id!,
       this.rejectionReason,
       this.rejectRemarks
     ).subscribe({
@@ -301,12 +305,12 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
 
   openPreview(doc: HrPendingReviewItem): void {
     this.cleanupBlobUrls();
-    this.activePreviewDocId = doc.id;
+    this.activePreviewDocId = doc.id!;
     this.previewDocTitle = `${doc.employee_name} — ${doc.document_type_name}`;
     this.isPreviewLoading = true;
     this.isPreviewModalOpen = true;
 
-    this.documentService.previewDocument(doc.id).subscribe({
+    this.documentService.previewDocument(doc.id!).subscribe({
       next: (blob) => {
         this.rawBlobUrl = URL.createObjectURL(blob);
         this.previewMimeType = blob.type || doc.mime_type || 'application/pdf';
@@ -329,7 +333,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
   }
 
   downloadDoc(doc: HrPendingReviewItem): void {
-    this.documentService.downloadDocument(doc.id).subscribe({
+    this.documentService.downloadDocument(doc.id!).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -355,7 +359,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
     this.isHistoryLoading = true;
     this.isHistoryModalOpen = true;
 
-    this.documentService.getDocumentHistory(doc.id).subscribe({
+    this.documentService.getDocumentHistory(doc.id!).subscribe({
       next: (history) => {
         this.versionHistory = history || [];
         this.isHistoryLoading = false;

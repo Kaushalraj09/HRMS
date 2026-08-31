@@ -92,6 +92,13 @@
   box-sizing: border-box;
 }
 
+/* Dropup */
+.custom-select-container.dropup .dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation: slideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .dropdown-menu ul {
   list-style: none;
   margin: 0;
@@ -131,6 +138,17 @@
   from {
     opacity: 0;
     transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
   to {
     opacity: 1;

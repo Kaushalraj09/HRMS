@@ -70,17 +70,17 @@ class ShiftCalculationService:
     @classmethod
     def calculate_punch_in_status(cls, punch_in: Optional[time], shift: Optional[Shift]) -> str:
         """
-        Determines Punch In status based on shift start and grace period:
+        Determines Punch In status based on shift start and late mark period:
         - On Time: Punch In <= Shift Start
-        - Within Grace: Shift Start < Punch In <= Shift Start + Grace
-        - Late: Punch In > Shift Start + Grace
+        - Within Grace: Shift Start < Punch In <= Shift Start + Late Mark
+        - Late: Punch In > Shift Start + Late Mark
         """
         if not punch_in:
             return "Not Marked"
 
         shift = cls.get_effective_shift(shift)
         start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
-        grace_mins = shift.grace_minutes if shift.grace_minutes is not None else 30
+        late_mark_mins = shift.late_mark_after_minutes if getattr(shift, 'late_mark_after_minutes', None) is not None else 30
         in_mins = cls.time_to_minutes(punch_in)
 
         # Handle night shift cross midnight if punch in happens very early/late
@@ -89,25 +89,25 @@ class ShiftCalculationService:
 
         if in_mins <= start_mins:
             return "On Time"
-        elif in_mins <= start_mins + grace_mins:
+        elif in_mins <= start_mins + late_mark_mins:
             return "Within Grace"
         else:
             return "Late"
 
     @classmethod
     def calculate_late_minutes(cls, punch_in: Optional[time], shift: Optional[Shift]) -> int:
-        """Calculate late minutes beyond grace period."""
+        """Calculate late minutes beyond late mark period."""
         if not punch_in:
             return 0
         shift = cls.get_effective_shift(shift)
         start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
-        grace_mins = shift.grace_minutes if shift.grace_minutes is not None else 30
+        late_mark_mins = shift.late_mark_after_minutes if getattr(shift, 'late_mark_after_minutes', None) is not None else 30
         in_mins = cls.time_to_minutes(punch_in)
 
         if shift.is_night_shift and in_mins < start_mins - 720:
             in_mins += 1440
 
-        if in_mins <= start_mins + grace_mins:
+        if in_mins <= start_mins + late_mark_mins:
             return 0
         return max(0, in_mins - start_mins)
 

@@ -679,3 +679,149 @@
   color: #64748B;
   font-weight: 500;
 }
+
+/* Omni-Search Dropdown */
+.omni-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideDownFade 0.2s ease-out;
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.search-category-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px 8px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.search-result-item:hover {
+  background: #f8fafc;
+}
+
+.search-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.search-result-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.search-result-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.search-result-path {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.search-chevron {
+  color: #cbd5e1;
+  font-size: 0.875rem;
+  transition: transform 0.2s;
+}
+
+.search-result-item:hover .search-chevron {
+  color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.search-empty-state {
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.empty-search-icon {
+  font-size: 2rem;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+}
+
+.empty-search-text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.empty-search-subtext {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* RESPONSIVE NAVBAR STYLES */
+@media (max-width: 1023px) {
+  .app-top-navbar, nav {
+    padding: 0 16px;
+  }
+  .centernav {
+    margin: 0 10px;
+  }
+  .brand-logo-text {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 767px) {
+  .brand-title-wrap {
+    display: none; /* Hide logo text on mobile to save space */
+  }
+  .language-selector span {
+    display: none; /* Hide "English" text, just show icon */
+  }
+  .profilename, .profilesub, .profile-info-column {
+    display: none; /* Hide profile text, just show avatar */
+  }
+  .rightnav {
+    gap: 12px;
+  }
+  .searchbar input {
+    font-size: 12px;
+    padding: 0 30px 0 12px;
+  }
+}
+
+@media (max-width: 479px) {
+  .app-top-navbar, nav {
+    padding: 0 12px;
+  }
+}

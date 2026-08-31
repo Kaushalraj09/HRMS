@@ -135,6 +135,30 @@ export class DocumentService {
     return this.http.get<HrPendingReviewsResponse>(`${this.baseUrl}/hr/pending`, { params });
   }
 
+  getHrAllDocuments(
+    page: number = 1,
+    limit: number = 10,
+    search: string = '',
+    department: string = '',
+    statusFilter: string = ''
+  ): Observable<HrPendingReviewsResponse> {
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('limit', String(limit));
+
+    if (search.trim()) {
+      params = params.set('search', search.trim());
+    }
+    if (department) {
+      params = params.set('department', department);
+    }
+    if (statusFilter) {
+      params = params.set('status_filter', statusFilter);
+    }
+
+    return this.http.get<HrPendingReviewsResponse>(`${this.baseUrl}/hr/all-documents`, { params });
+  }
+
   // ─── Version History & File Streaming ──────────────────────────────────────
 
   getDocumentHistory(documentId: number): Observable<DocumentVersion[]> {

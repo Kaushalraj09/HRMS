@@ -40,6 +40,8 @@
   min-height: 0;
   box-sizing: border-box;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-content {
@@ -50,6 +52,7 @@
   flex-direction: column;
   gap: 14px;
   box-sizing: border-box;
+  flex: 1;
 }
 
 
@@ -390,6 +393,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .card-head-simple {
@@ -1214,17 +1218,17 @@
 /* HR Quick Stats (2x3 Grid) */
 .quick-stats-2x3-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   flex: 1;
 }
 
 .quick-stat-box {
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 12px 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -1282,7 +1286,7 @@
 
 .oversight-row-4-grid {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 14px;
   width: 100%;
 }
@@ -1351,7 +1355,7 @@
   font-size: 10px;
   font-weight: 700;
   text-align: left;
-  padding: 8px 10px;
+  padding: 8px 6px;
   border-bottom: 1px solid #E2E8F0;
   letter-spacing: 0.04em;
 }
@@ -1370,7 +1374,7 @@
 }
 
 .clean-oversight-table td {
-  padding: 10px 10px;
+  padding: 10px 6px;
   color: #334155;
   vertical-align: middle;
 }
@@ -1851,7 +1855,7 @@
    RESPONSIVE DESIGN BREAKPOINTS
    ========================================================================== */
 
-@media (max-width: 1400px) {
+@media (max-width: 1199px) {
   .top-6-kpis-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1901,5 +1905,20 @@
     border-left: none;
     border-top: 1px solid #F1F5F9;
     padding-top: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .top-6-kpis-grid,
+  .analytics-row-top-grid,
+  .analytics-row-bottom-grid,
+  .oversight-row-4-grid,
+  .compliance-news-row-grid,
+  .compliance-body-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .card-location-map,
+  .card-workforce-analytics,
+  .card-recruitment-pipeline {
+    grid-column: span 1 !important;
   }
 }

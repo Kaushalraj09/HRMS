@@ -9,6 +9,7 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #f8fafc;
   color: #1e293b;
+  overflow-x: hidden;
 }
 
 :root {
@@ -879,4 +880,51 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
+
+/* GLOBAL RESPONSIVE TABLES */
+@media (max-width: 1023px) {
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* GLOBAL RESPONSIVE MODALS */
+@media (max-width: 767px) {
+  .camera-modal-box,
+  .photo-modal-box,
+  .modal-card,
+  .custom-modal-card {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 32px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* GLOBAL RESPONSIVE FORMS AND GRIDS */
+@media (max-width: 767px) {
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-group, .form-row {
+    width: 100% !important;
+  }
+  
+  /* Automatically collapse 2-column grids inside modals and main content */
+  .form-grid, .details-grid, .info-grid, .filter-grid, .detail-grid, .modal-detail-grid, .predefined-grid, .kpi-summary-grid, .filter-fields-grid, .version-details-grid, .simple-details-grid, .kpi-grid, .charts-grid, .widgets-grid, .metrics-overview-grid, .trainings-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* PREVENT CHART OVERFLOW */
+.chart-container,
+.chart-wrapper,
+apx-chart {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}

@@ -21,6 +21,7 @@ class TimeOffRequest(Base):
     reason = Column(String(500), nullable=True)
     attachment_name = Column(String(255), nullable=True)
     approval_stage = Column(String(20), nullable=False, default="Manager")
+    batch_id = Column(String(50), nullable=True, index=True) # Used to group multi-day requests
     
     # Relationships
     employee = relationship("Employee", backref="timeoff_requests")

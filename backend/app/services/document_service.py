@@ -33,6 +33,29 @@ logger = logging.getLogger(__name__)
 # Base private storage directory for documents
 STORAGE_BASE_DIR = Path(__file__).resolve().parents[2] / "storage" / "documents"
 
+_FILE_SIGNATURES = {
+    "pdf": (b"%PDF-",),
+    "png": (b"\x89PNG\r\n\x1a\n",),
+    "jpg": (b"\xff\xd8\xff",),
+    "jpeg": (b"\xff\xd8\xff",),
+}
+
+
+def _validate_document_content(file_ext: str, contents: bytes) -> str:
+    """Reject files whose bytes do not match the permitted document format."""
+    signatures = _FILE_SIGNATURES.get(file_ext)
+    if not signatures or not contents.startswith(signatures):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File contents do not match the selected file type.",
+        )
+    return {
+        "pdf": "application/pdf",
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+    }[file_ext]
+
 
 def _ensure_storage_dir(employee_id: int) -> Path:
     target_dir = STORAGE_BASE_DIR / str(employee_id)
@@ -437,9 +460,11 @@ def get_employee_documents_data(db: Session, employee_id: int) -> EmployeeDocume
         ))
 
     # Calculate completion percentage: verified_required / total_required * 100
-    verified_required = sum(1 for item in items if item.is_required and item.status == "VERIFIED")
+    required_verified = sum(1 for item in items if item.is_required and item.status == "VERIFIED")
+    required_uploaded = sum(1 for item in items if item.is_required and item.status in ["VERIFIED", "PENDING_REVIEW", "REJECTED", "RESUBMISSION_REQUIRED"])
+    
     completion_percentage = (
-        round((verified_required / total_required) * 100, 1) if total_required > 0 else 100.0
+        round((required_verified / total_required) * 100, 1) if total_required > 0 else 100.0
     )
 
     summary = DocumentSummaryStats(
@@ -450,6 +475,8 @@ def get_employee_documents_data(db: Session, employee_id: int) -> EmployeeDocume
         verified=verified_count,
         rejected=rejected_count,
         missing=missing_count,
+        required_uploaded=required_uploaded,
+        required_verified=required_verified,
         completion_percentage=completion_percentage
     )
 
@@ -511,7 +538,9 @@ async def upload_employee_document(
     if file_size == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    mime_type = file.content_type or "application/octet-stream"
+    # Never trust a browser-provided content type; validate the actual bytes
+    # before storing a document in private application storage.
+    mime_type = _validate_document_content(file_ext, contents)
 
     # 3. Store file safely in private storage directory
     target_dir = _ensure_storage_dir(employee_id)
@@ -953,7 +982,12 @@ def get_hr_documents_kpi_overview(db: Session) -> HrDocumentOverviewKPI:
     employees = (
         db.query(Employee)
         .join(User, Employee.user_id == User.id)
-        .filter(Employee.status == "Active", User.status == "Active")
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            Employee.status == "Active", 
+            User.status == "Active",
+            func.lower(Role.name).notin_(["admin", "superadmin", "system"])
+        )
         .all()
     )
     total_employees = len(employees)
@@ -982,15 +1016,30 @@ def get_hr_documents_kpi_overview(db: Session) -> HrDocumentOverviewKPI:
     partial_emps = 0
     incomplete_emps = 0
     total_verified_pct_sum = 0.0
-    total_req_docs_count = 8
+    
+    total_required_docs = 0
+    complete_documents = 0
+    partial_documents = 0
+    incomplete_documents = 0
 
     for emp in employees:
         data = get_employee_documents_data(db, emp.id)
         pct = data.summary.completion_percentage
-        v_count = data.summary.verified
-        u_count = data.summary.uploaded
-        tot_req = data.summary.total_required or 8
-        total_req_docs_count = tot_req
+        v_count = data.summary.required_verified
+        u_count = data.summary.required_uploaded
+        tot_req = data.summary.total_required
+        
+        total_required_docs += tot_req
+        complete_documents += v_count
+        
+        # Calculate incomplete (missing) documents
+        missing = max(0, tot_req - u_count)
+        incomplete_documents += missing
+        
+        # Calculate partial documents (uploaded but not verified)
+        # We ensure it doesn't exceed total_req by bounding it.
+        partial = max(0, min(u_count - v_count, tot_req - v_count))
+        partial_documents += partial
 
         total_verified_pct_sum += pct
         if pct >= 100.0 or v_count >= tot_req:
@@ -1002,6 +1051,10 @@ def get_hr_documents_kpi_overview(db: Session) -> HrDocumentOverviewKPI:
 
     attention_emps = total_employees - complete_emps
     overall_rate = round(total_verified_pct_sum / total_employees, 1) if total_employees > 0 else 0.0
+    
+    complete_pct = round((complete_documents / total_required_docs * 100), 1) if total_required_docs > 0 else 0.0
+    partial_pct = round((partial_documents / total_required_docs * 100), 1) if total_required_docs > 0 else 0.0
+    incomplete_pct = round((incomplete_documents / total_required_docs * 100), 1) if total_required_docs > 0 else 0.0
 
     return HrDocumentOverviewKPI(
         total_employees=total_employees,
@@ -1012,7 +1065,13 @@ def get_hr_documents_kpi_overview(db: Session) -> HrDocumentOverviewKPI:
         partial_employees=partial_emps,
         complete_employees=complete_emps,
         attention_employees=attention_emps,
-        total_required_docs=total_req_docs_count,
+        total_required_docs=total_required_docs,
+        complete_documents=complete_documents,
+        partial_documents=partial_documents,
+        incomplete_documents=incomplete_documents,
+        complete_pct=complete_pct,
+        partial_pct=partial_pct,
+        incomplete_pct=incomplete_pct,
         overall_compliance_rate=overall_rate
     )
 
@@ -1090,6 +1149,100 @@ def get_hr_pending_reviews(
 
     return {
         "data": formatted_items,
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
+
+
+# ─── 10. HR All Documents Review ──────────────────────────────────────────────
+
+def get_all_employee_documents(
+    db: Session,
+    page: int = 1,
+    limit: int = 10,
+    search: str = "",
+    department: str = "",
+    status_filter: str = ""
+) -> Dict[str, Any]:
+    """Retrieve all required documents across eligible employees, including missing ones."""
+    # Find active employees (excluding admins)
+    employees_query = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            Employee.status == "Active",
+            User.status == "Active",
+            func.lower(Role.name).notin_(["admin", "superadmin", "system"])
+        )
+    )
+
+    if department:
+        employees_query = employees_query.filter(Employee.department == department)
+        
+    employees = employees_query.all()
+    
+    all_docs = []
+    
+    for emp in employees:
+        emp_data = get_employee_documents_data(db, emp.id)
+        
+        for doc in emp_data.documents:
+            # Determine mapped status
+            mapped_status = doc.status if doc.status else "MISSING"
+            
+            # Map statuses to higher level buckets if needed for filtering
+            # Complete: VERIFIED
+            # Partial: PENDING_REVIEW, REJECTED, RESUBMISSION_REQUIRED
+            # Incomplete: MISSING, NOT_UPLOADED
+            
+            bucket = "Incomplete"
+            if mapped_status == "VERIFIED":
+                bucket = "Complete"
+            elif mapped_status in ["PENDING_REVIEW", "REJECTED", "RESUBMISSION_REQUIRED"]:
+                bucket = "Partial"
+                
+            if status_filter and status_filter.title() != bucket:
+                continue
+                
+            # Filter by search term
+            if search:
+                term = search.lower()
+                if not (term in (emp.first_name or "").lower() or
+                        term in (emp.last_name or "").lower() or
+                        term in (emp.employee_code or "").lower() or
+                        term in (doc.document_type_name or "").lower() or
+                        term in (doc.file_name or "").lower()):
+                    continue
+            
+            all_docs.append({
+                "id": doc.document_id, # Can be None if missing
+                "employee_id": emp.id,
+                "employee_name": f"{emp.first_name} {emp.last_name}".strip(),
+                "employee_code": emp.employee_code,
+                "department": emp.department,
+                "document_type_id": doc.document_type_id,
+                "document_type_name": doc.document_type_name,
+                "category": doc.category,
+                "file_name": doc.file_name,
+                "status": mapped_status,
+                "uploaded_at": doc.uploaded_at,
+                "bucket": bucket
+            })
+
+    # Sort descending by upload date (putting missing ones at bottom or top?)
+    # Let's sort by employee name, then document name
+    all_docs.sort(key=lambda x: (x["employee_name"], x["document_type_name"]))
+    
+    total = len(all_docs)
+    start = (page - 1) * limit
+    end = start + limit
+    
+    paginated = all_docs[start:end]
+
+    return {
+        "data": paginated,
         "total": total,
         "page": page,
         "limit": limit

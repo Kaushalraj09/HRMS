@@ -7,6 +7,15 @@ export interface PdfExportOptions {
   rows: (string | number)[][];
 }
 
+function escapeHtml(value: string | number): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
  * Generates an executive-styled, printable A4 PDF document and triggers the print/save-as-PDF dialog.
  */
@@ -18,17 +27,17 @@ export function exportTableToPdf(options: PdfExportOptions): void {
     ? `<div class="meta-grid">
         ${metadata.map(m => `
           <div class="meta-card">
-            <span class="meta-label">${m.label}</span>
-            <span class="meta-value">${m.value}</span>
+            <span class="meta-label">${escapeHtml(m.label)}</span>
+            <span class="meta-value">${escapeHtml(m.value)}</span>
           </div>
         `).join('')}
        </div>`
     : '';
 
-  const tableHeaderHtml = headers.map(h => `<th>${h}</th>`).join('');
+  const tableHeaderHtml = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
   const tableRowsHtml = rows.map((r, idx) => `
     <tr class="${idx % 2 === 0 ? 'even' : 'odd'}">
-      ${r.map(cell => `<td>${cell !== null && cell !== undefined ? cell : '-'}</td>`).join('')}
+      ${r.map(cell => `<td>${escapeHtml(cell !== null && cell !== undefined ? cell : '-')}</td>`).join('')}
     </tr>
   `).join('');
 
@@ -37,7 +46,7 @@ export function exportTableToPdf(options: PdfExportOptions): void {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
@@ -185,8 +194,8 @@ export function exportTableToPdf(options: PdfExportOptions): void {
   <div class="report-header">
     <div>
       <div class="brand-title">AIVAN 360 HR+</div>
-      <div class="doc-title">${title}</div>
-      ${subtitle ? `<div class="doc-subtitle">${subtitle}</div>` : ''}
+      <div class="doc-title">${escapeHtml(title)}</div>
+      ${subtitle ? `<div class="doc-subtitle">${escapeHtml(subtitle)}</div>` : ''}
     </div>
     <div class="report-meta-right">
       <div><strong>Generated On:</strong> ${nowStr}</div>

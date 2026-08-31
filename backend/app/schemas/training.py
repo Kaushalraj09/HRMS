@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import date, datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ─── Training Schemas ────────────────────────────────────────────────────────
@@ -70,8 +70,7 @@ class TrainingMaterialResponse(BaseModel):
     uploaded_by_user_id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MaterialReorderItem(BaseModel):
@@ -91,8 +90,7 @@ class AssessmentOptionHrResponse(BaseModel):
     is_correct: bool
     display_order: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssessmentQuestionHrResponse(BaseModel):
@@ -103,10 +101,9 @@ class AssessmentQuestionHrResponse(BaseModel):
     difficulty: str
     display_order: int
     explanation: Optional[str] = None
-    options: List[AssessmentOptionHrResponse] = []
+    options: List[AssessmentOptionHrResponse] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssessmentHrResponse(BaseModel):
@@ -124,10 +121,9 @@ class AssessmentHrResponse(BaseModel):
     show_correct_answers: bool
     status: str
     questions_count: int = 0
-    questions: List[AssessmentQuestionHrResponse] = []
+    questions: List[AssessmentQuestionHrResponse] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrainingResponse(BaseModel):
@@ -146,14 +142,13 @@ class TrainingResponse(BaseModel):
     created_by_user_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    materials: List[TrainingMaterialResponse] = []
+    materials: List[TrainingMaterialResponse] = Field(default_factory=list)
     has_assessment: bool = False
     assigned_count: int = 0
     completed_count: int = 0
     completion_percentage: float = 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Assignment Schemas ──────────────────────────────────────────────────────
@@ -183,8 +178,7 @@ class TrainingAssignmentResponse(BaseModel):
     assessment_status: Optional[str] = "Not Attempted"
     assessment_score: Optional[str] = "N/A"
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Assessment & MCQ Question Builder Schemas (HR) ────────────────────────
@@ -239,8 +233,7 @@ class AssessmentOptionEmployeeResponse(BaseModel):
     option_text: str
     display_order: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssessmentQuestionEmployeeResponse(BaseModel):
@@ -249,10 +242,9 @@ class AssessmentQuestionEmployeeResponse(BaseModel):
     marks: float
     difficulty: str
     display_order: int
-    options: List[AssessmentOptionEmployeeResponse] = []
+    options: List[AssessmentOptionEmployeeResponse] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssessmentAttemptStartResponse(BaseModel):
@@ -264,11 +256,10 @@ class AssessmentAttemptStartResponse(BaseModel):
     started_at: datetime
     time_remaining_seconds: int
     total_questions: int
-    questions: List[AssessmentQuestionEmployeeResponse] = []
-    saved_answers: dict = {}  # {question_id: selected_option_id}
+    questions: List[AssessmentQuestionEmployeeResponse] = Field(default_factory=list)
+    saved_answers: dict = Field(default_factory=dict)  # {question_id: selected_option_id}
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SaveAnswerRequest(BaseModel):
@@ -321,7 +312,7 @@ class EmployeeTrainingViewResponse(BaseModel):
     due_date: Optional[date] = None
     assignment_status: str
     progress_percentage: float
-    materials: List[dict] = []
+    materials: List[dict] = Field(default_factory=list)
     has_assessment: bool = False
     assessment_id: Optional[int] = None
     assessment_title: Optional[str] = None

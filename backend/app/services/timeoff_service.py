@@ -23,14 +23,7 @@ def get_timeoff_by_date(db: Session, employee_id: int, target_date: date):
     ).first()
 
 def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate):
-    # For same-day requests, user must be actively working (per product rule).
-    if request.date == date.today():
-        today_state = get_today_state(db, employee_id)
-        if not today_state["isWorking"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Time off can only be requested while you are working.",
-            )
+    # Removed same-day working requirement to allow sick leaves and full-day same-day requests.
 
     shift = ShiftRepository.get_assigned_shift(db, employee_id, request.date)
     eff_shift = ShiftCalculationService.get_effective_shift(shift)
@@ -113,7 +106,8 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         duration_hours=duration_hours,
         status="Pending",
         reason=request.reason,
-        attachment_name=request.attachment_name
+        attachment_name=request.attachment_name,
+        batch_id=request.batch_id
     )
     
     db.add(new_request)

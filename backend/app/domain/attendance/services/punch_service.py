@@ -86,7 +86,7 @@ class PunchService:
             if not employee:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
                 
-            geofence_data = validate_employee_geofence(db, employee, latitude, longitude)
+            geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=work_mode)
             
             # Create or update record
             shift = ShiftRepository.get_assigned_shift(db, employee_id, today)

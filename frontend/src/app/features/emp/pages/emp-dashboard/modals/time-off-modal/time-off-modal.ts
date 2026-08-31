@@ -287,10 +287,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     const datesToSubmit: string[] = [];
     const temp = new Date(startDt.getTime());
     while (temp <= endDt) {
-      const dayOfWeek = temp.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclude weekends
-        datesToSubmit.push(temp.toISOString().split('T')[0]);
-      }
+      datesToSubmit.push(temp.toISOString().split('T')[0]);
       temp.setDate(temp.getDate() + 1);
     }
 
@@ -312,20 +309,31 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
 
     const durationBackend = this.requestedHours;
 
-    const requests$ = datesToSubmit.map(dStr => 
-      this.timeoffService.requestTimeOff(
-        dStr,
+    let requestObs$;
+    if (datesToSubmit.length === 1) {
+      requestObs$ = this.timeoffService.requestTimeOff(
+        datesToSubmit[0],
         backendLeaveType,
         startTimeBackend,
         endTimeBackend,
         durationBackend,
         reason,
         this.uploadedFileName
-      )
-    );
+      );
+    } else {
+      requestObs$ = this.timeoffService.requestTimeOffBatch(
+        datesToSubmit,
+        backendLeaveType,
+        startTimeBackend,
+        endTimeBackend,
+        durationBackend,
+        reason,
+        this.uploadedFileName
+      );
+    }
 
     this.subscriptions.add(
-      forkJoin(requests$)
+      requestObs$
         .pipe(
           finalize(() => {
             this.isSubmitting = false;
@@ -334,7 +342,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
         )
         .subscribe({
           next: () => {
-            this.successMessage = `Successfully requested ${datesToSubmit.length} working day(s) of time off.`;
+            this.successMessage = `Successfully requested ${datesToSubmit.length} day(s) of time off.`;
             this.leaveForm.reset();
             this.removeUploadedFile();
             setTimeout(() => {
@@ -342,8 +350,8 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
             }, 1800);
           },
           error: (err) => {
-            const detail = err?.error?.detail;
-            this.errorMessage = typeof detail === 'string' ? detail : 'Failed to submit request. Please try again.';
+            console.error('Submit Time Off Error:', err);
+            this.errorMessage = err.error?.detail || 'Failed to submit request. Please try again.';
           }
         })
     );

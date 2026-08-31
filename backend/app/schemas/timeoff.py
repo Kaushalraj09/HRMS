@@ -10,7 +10,20 @@ class TimeOffRequestCreate(BaseModel):
     duration_hours: float
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
+    batch_id: Optional[str] = None
 
+class TimeOffBatchRequestCreate(BaseModel):
+    dates: list[date]
+    leave_type: str
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    duration_hours: float
+    reason: Optional[str] = None
+    attachment_name: Optional[str] = None
+
+class TimeOffBatchResponse(BaseModel):
+    created_requests: list[TimeOffRequestResponse]
+    
 class TimeOffRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,6 +39,7 @@ class TimeOffRequestResponse(BaseModel):
     employee_name: Optional[str] = None
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
+    batch_id: Optional[str] = None
 
 
 class TimeOffApplyPayload(BaseModel):

@@ -58,6 +58,18 @@ export class RegularizationService {
     );
   }
 
+  getProcessedRequests(page: number = 1, pageSize: number = 10, search: string = '', reasonType: string = ''): Observable<PaginatedResponse<RegularizationRequestItem>> {
+    const params = this.noCacheParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString())
+      .set('search', search.trim())
+      .set('reason_type', reasonType);
+    return this.http.get<PaginatedResponse<RegularizationRequestItem>>(
+      `${this.apiUrl}/processed`,
+      { headers: this.noCacheHeaders, params }
+    );
+  }
+
   getAllRequests(page: number = 1, pageSize: number = 10, search: string = '', reasonType: string = '', status: string = ''): Observable<PaginatedResponse<RegularizationRequestItem>> {
     let params = this.noCacheParams()
       .set('page', page.toString())

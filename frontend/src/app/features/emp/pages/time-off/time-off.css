@@ -548,8 +548,10 @@ tr:hover td {
   backdrop-filter: blur(4px);
   z-index: 2000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
   animation: fadeOverlay 0.2s ease;
 }
 
@@ -561,13 +563,14 @@ tr:hover td {
 .details-modal-box {
   width: 520px;
   max-width: calc(100vw - 32px);
-  max-height: 85vh;
   background: #FFFFFF;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: auto;
+  flex-shrink: 0;
   animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -622,7 +625,6 @@ tr:hover td {
 
 .details-modal-body {
   padding: 22px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -775,3 +777,6 @@ tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+.leave-dates-list { list-style: none; padding: 0; margin: 0; } 
+.leave-dates-list li { margin-bottom: 4px; font-size: 0.9rem; color: #52525b; }

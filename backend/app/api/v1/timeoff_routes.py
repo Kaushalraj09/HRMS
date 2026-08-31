@@ -4,8 +4,10 @@ from typing import List
 from datetime import date
 from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.models.user import User, Role
 from app.models.employee import Employee
+from app.models.timeoff import TimeOffRequest
+import uuid
 from app.schemas.timeoff import (
     TimeOffRequestCreate,
     TimeOffRequestResponse,
@@ -13,9 +15,12 @@ from app.schemas.timeoff import (
     TimeOffApplyResponse,
     TimeOffRequestPaginatedResponse,
     TimeOffDecisionRequest,
+    TimeOffBatchRequestCreate,
+    TimeOffBatchResponse,
 )
-from app.services import timeoff_service, attendance_service
+from app.services import timeoff_service, attendance_service, notification_service
 from app.core.websocket_manager import manager
+from sqlalchemy import func
 
 router = APIRouter(prefix="/timeoff", tags=["timeoff"])
 
@@ -54,6 +59,9 @@ async def request_timeoff(
             detail="Only employees can request time-off"
         )
     
+    if not request.batch_id:
+        request.batch_id = str(uuid.uuid4())
+        
     created = timeoff_service.request_timeoff(db, employee.id, request)
 
     # Notify connected HR/Admin dashboards to refresh pending requests.
@@ -79,12 +87,8 @@ async def request_timeoff(
 
     # Dispatch notifications
     try:
-        from app.services.notification_service import create_notification
-        from app.models.user import User, Role
-        from sqlalchemy import func
-
         # 1. Notify the employee
-        await create_notification(
+        await notification_service.create_notification(
             db=db,
             user_id=current_user.id,
             type="TIMEOFF_APPLY",
@@ -95,8 +99,7 @@ async def request_timeoff(
 
         # 2. Notify all HR and Admin users
         try:
-            from app.services.notification_service import create_notification_for_roles
-            await create_notification_for_roles(
+            await notification_service.create_notification_for_roles(
                 db=db,
                 roles=["HR", "Admin"],
                 type="LEAVE",
@@ -120,6 +123,105 @@ async def request_timeoff(
 
     return created
 
+@router.post("/request/batch", response_model=TimeOffBatchResponse)
+async def request_timeoff_batch(
+    request: TimeOffBatchRequestCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Request time-off for multiple days at once. Emits a single grouped notification.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Only employees can request time-off"
+        )
+    
+    if not request.dates:
+        raise HTTPException(status_code=400, detail="No dates provided")
+        
+    batch_id = str(uuid.uuid4())
+    created_requests = []
+    for d in request.dates:
+        single_req = TimeOffRequestCreate(
+            date=d,
+            leave_type=request.leave_type,
+            start_time=request.start_time,
+            end_time=request.end_time,
+            duration_hours=request.duration_hours,
+            reason=request.reason,
+            attachment_name=request.attachment_name,
+            batch_id=batch_id
+        )
+        created = timeoff_service.request_timeoff(db, employee.id, single_req)
+        created_requests.append(created)
+        
+        # Dispatch individual websocket messages to keep dashboard in sync
+        await manager.broadcast(
+            {
+                "type": "TIMEOFF_REQUEST",
+                "message": f"New time off request from employee #{employee.id}",
+                "request": {
+                    "id": created.id,
+                    "employee_id": created.employee_id,
+                    "date": str(created.date),
+                    "leave_type": created.leave_type,
+                    "start_time": str(created.start_time) if created.start_time else None,
+                    "end_time": str(created.end_time) if created.end_time else None,
+                    "duration_hours": created.duration_hours,
+                    "status": created.status,
+                    "employee_name": created.employee_name,
+                    "reason": created.reason,
+                    "attachment_name": created.attachment_name,
+                },
+            }
+        )
+
+    # Grouped Notifications
+    try:
+        sorted_dates = sorted(request.dates)
+        if len(sorted_dates) > 1:
+            date_str = f"from {sorted_dates[0]} to {sorted_dates[-1]}"
+        else:
+            date_str = f"on {sorted_dates[0]}"
+            
+        # 1. Notify the employee
+        await notification_service.create_notification(
+            db=db,
+            user_id=current_user.id,
+            type="TIMEOFF_APPLY",
+            title="Time Off Request Submitted",
+            message=f"You have successfully applied for {len(sorted_dates)} day(s) of time off ({request.leave_type}) {date_str}.",
+            reference_id=created_requests[0].id
+        )
+
+        # 2. Notify HR and Admin users
+        try:
+            await notification_service.create_notification_for_roles(
+                db=db,
+                roles=["HR", "Admin"],
+                type="LEAVE",
+                category="LEAVE_REQUEST",
+                severity="WARNING",
+                title="New Time Off Request",
+                message=f"{employee.first_name} {employee.last_name} requested {len(sorted_dates)} day(s) of {request.leave_type} {date_str}.",
+                employee_id=employee.id,
+                created_by=current_user.id,
+                reference_id=created_requests[0].id,
+                notification_metadata={
+                    "leave_type": request.leave_type,
+                    "date_range": date_str,
+                    "total_days": len(sorted_dates)
+                }
+            )
+        except Exception as e:
+            print(f"Failed to create admin timeoff apply notification: {e}")
+    except Exception as e:
+        print(f"Error dispatching apply notifications: {e}")
+
+    return {"created_requests": created_requests}
 
 @router.post("/apply", response_model=TimeOffApplyResponse)
 def apply_time_off_inline(
@@ -218,6 +320,51 @@ def get_my_timeoffs(
         "totalPages": total_pages
     }
 
+@router.get("/counts")
+def get_timeoff_counts(
+    search: str = "",
+    leave_type: str = "",
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get counts of time-off requests by status (HR/Admin only).
+    """
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not authorized to view timeoff counts"
+        )
+    
+    from app.models.timeoff import TimeOffRequest
+    from app.models.employee import Employee
+    
+    query = db.query(TimeOffRequest)
+    
+    if search:
+        search_filter = f"%{search}%"
+        query = query.join(Employee).filter(
+            (Employee.first_name.ilike(search_filter)) | 
+            (Employee.last_name.ilike(search_filter)) | 
+            (Employee.employee_code.ilike(search_filter))
+        )
+        
+    if leave_type:
+        query = query.filter(TimeOffRequest.leave_type == leave_type)
+        
+    all_count = query.count()
+    pending_count = query.filter(TimeOffRequest.status == "Pending").count()
+    approved_count = query.filter(TimeOffRequest.status == "Approved").count()
+    rejected_count = query.filter(TimeOffRequest.status == "Rejected").count()
+    
+    return {
+        "all": all_count,
+        "pending": pending_count,
+        "approved": approved_count,
+        "rejected": rejected_count
+    }
+
+
 @router.get("/pending", response_model=TimeOffRequestPaginatedResponse)
 def get_pending_requests(
     page: int = 1,
@@ -239,16 +386,8 @@ def get_pending_requests(
     import math
     from app.models.timeoff import TimeOffRequest
     from app.models.employee import Employee
-    from app.models.approval_task import ApprovalTask
-    
-    final_stage_request_ids = db.query(ApprovalTask.request_id).filter(
-        ApprovalTask.request_type == "timeoff",
-        ApprovalTask.status == "pending",
-        ApprovalTask.assigned_role == "hr",
-    )
     query = db.query(TimeOffRequest).filter(
-        TimeOffRequest.status == "Pending",
-        TimeOffRequest.id.in_(final_stage_request_ids),
+        TimeOffRequest.status == "Pending"
     )
     
     if search:
@@ -370,7 +509,15 @@ async def approve_request(
             detail="Not authorized to process requests"
         )
     
-    result = timeoff_service.approve_request(db, request_id, action, current_user.id, comments, approved_duration_hours)
+    result = timeoff_service.approve_request(
+        db=db, 
+        request_id=request_id, 
+        action=action, 
+        admin_user_id=current_user.id, 
+        comments=comments, 
+        approved_duration_hours=approved_duration_hours,
+        enforce_approval_stage=False
+    )
     
     # Broadcast to the employee who made the request
     employee = db.query(Employee).filter(Employee.id == result.employee_id).first()
