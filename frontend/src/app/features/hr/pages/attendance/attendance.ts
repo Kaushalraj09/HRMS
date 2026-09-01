@@ -61,14 +61,22 @@ export class AttendanceComponent implements OnInit {
     this.selectedPhotoEmployeeName = '';
   }
 
+  activePreset: string = 'today';
+
   constructor(
     private fb: FormBuilder, 
     private attendanceService: AttendanceService,
     private masterDataService: MasterDataService
   ) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
     this.filterForm = this.fb.group({
-      fromDate: [''],
-      toDate: [''],
+      fromDate: [todayStr],
+      toDate: [todayStr],
       employeeSearch: [''],
       department: [''],
       status: [''],
@@ -162,8 +170,6 @@ export class AttendanceComponent implements OnInit {
     );
   }
 
-  activePreset: string = 'all';
-
   getInitials(name?: string): string {
     if (!name) return 'EM';
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -213,16 +219,13 @@ export class AttendanceComponent implements OnInit {
   }
 
   onReset() {
-    this.activePreset = 'all';
-    this.filterForm.reset({
-      fromDate: '',
-      toDate: '',
+    this.setQuickPreset('today');
+    this.filterForm.patchValue({
       employeeSearch: '',
       department: '',
       status: '',
       location: ''
     });
-    this.onSearch(); // Explicitly trigger the rebuild with empty flags
   }
 
   setPage(page: number) {

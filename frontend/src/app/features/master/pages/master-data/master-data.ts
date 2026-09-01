@@ -50,7 +50,9 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   // Shared Form Model
   formModel: any = {};
   toastMessage: string | null = null;
+  toastSubMessage: string = '';
   isErrorToast: boolean = false;
+  private toastTimeout: any = null;
 
   private subscriptions = new Subscription();
 
@@ -65,6 +67,9 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
     this.subscriptions.unsubscribe();
   }
 
@@ -141,14 +146,28 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   }
 
   // Add/Edit Actions
-  showToast(message: string, isError: boolean = false): void {
+  showToast(message: string, isError: boolean = false, subMessage: string = ''): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
     this.toastMessage = message;
     this.isErrorToast = isError;
+    this.toastSubMessage = subMessage;
     this.cdr.detectChanges();
-    setTimeout(() => {
+    this.toastTimeout = setTimeout(() => {
       this.toastMessage = null;
+      this.toastSubMessage = '';
       this.cdr.detectChanges();
-    }, 3000);
+    }, 2800);
+  }
+
+  closeToast(): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+    this.toastMessage = null;
+    this.toastSubMessage = '';
+    this.cdr.detectChanges();
   }
 
   openAddModal(): void {
@@ -217,19 +236,19 @@ export class MasterDataComponent implements OnInit, OnDestroy {
 
   detectCurrentLocationForModal(): void {
     if (!navigator.geolocation) {
-      this.showToast('Geolocation is not supported by your browser', true);
+      this.showToast('Geolocation Not Supported', true, 'Your browser does not support GPS coordinate detection.');
       return;
     }
-    this.showToast('Fetching current GPS coordinates...');
+    this.showToast('Detecting GPS Coordinates...', false, 'Please allow location permission in your browser.');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         this.formModel.latitude = parseFloat(pos.coords.latitude.toFixed(7));
         this.formModel.longitude = parseFloat(pos.coords.longitude.toFixed(7));
-        this.showToast(`Fetched GPS: ${this.formModel.latitude}, ${this.formModel.longitude}`);
+        this.showToast('GPS Coordinates Captured', false, `Lat: ${this.formModel.latitude}, Lon: ${this.formModel.longitude}`);
         this.cdr.detectChanges();
       },
       (err) => {
-        this.showToast('Unable to fetch GPS: ' + (err.message || 'Permission denied'), true);
+        this.showToast('GPS Detection Failed', true, err.message || 'Permission denied');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -281,12 +300,12 @@ export class MasterDataComponent implements OnInit, OnDestroy {
 
   submitForm(): void {
     if (!this.formModel.name && this.activeTab !== 'holidays') {
-      this.showToast('Please fill in the required name field.', true);
+      this.showToast('Missing Required Fields', true, 'Please fill in the required name field before saving.');
       return;
     }
 
     if (this.activeTab === 'holidays' && (!this.formModel.name || !this.formModel.date)) {
-      this.showToast('Name and date are required for holidays.', true);
+      this.showToast('Missing Required Fields', true, 'Holiday description and date are required.');
       return;
     }
 
@@ -329,11 +348,25 @@ export class MasterDataComponent implements OnInit, OnDestroy {
         next: () => {
           this.isModalOpen = false;
           this.loadBootstrapData();
-          this.showToast(`Successfully ${this.modalMode === 'add' ? 'created' : 'updated'} record.`);
+          const actionText = this.modalMode === 'add' ? 'Created' : 'Updated';
+          const tabLabel = this.activeTab === 'locations' ? 'Location' : 
+            (this.activeTab === 'leaves' ? 'Leave Type' : 
+            (this.activeTab === 'holidays' ? 'Holiday' : 
+            this.activeTab.slice(0, -1)));
+          const tabTitle = tabLabel.charAt(0).toUpperCase() + tabLabel.slice(1);
+          this.showToast(
+            `${tabTitle} ${actionText} Successfully!`,
+            false,
+            'Configuration synced across all organization dashboards'
+          );
         },
         error: (err: any) => {
           this.isDataLoading = false;
-          this.showToast('Error updating master data: ' + (err.error?.detail || err.message), true);
+          this.showToast(
+            'Error Updating Master Data',
+            true,
+            err.error?.detail || err.message || 'Server request failed'
+          );
           this.cdr.detectChanges();
         }
       })

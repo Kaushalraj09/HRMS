@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
@@ -27,7 +27,7 @@ import { HrAddModalComponent } from './modals/hr-add-modal/hr-add-modal';
   styleUrl: './hr-users.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HrUsersComponent implements OnInit {
+export class HrUsersComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   deleteModalOpen = false;
   hrToDelete: HrUser | null = null;
@@ -49,10 +49,16 @@ export class HrUsersComponent implements OnInit {
     { label: 'Inactive', value: 'Inactive' }
   ];
 
+  toastMessage: string | null = null;
+  toastSubMessage: string = '';
+  isErrorToast: boolean = false;
+  private toastTimeout: any = null;
+
   constructor(
     private readonly hrService: HrService,
     private readonly authService: AuthService,
-    private readonly employeeService: EmployeeService
+    private readonly employeeService: EmployeeService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -69,6 +75,39 @@ export class HrUsersComponent implements OnInit {
     this.pages$ = this.hrData$.pipe(
       map((result: PaginatedResult<HrUser>) => Array.from({ length: Math.max(1, Math.ceil(result.total / this.pageSize)) }, (_: unknown, index: number) => index + 1))
     );
+  }
+
+  ngOnDestroy(): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+  }
+
+  showToast(message: string, isError: boolean = false, subMessage: string = ''): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+    this.toastMessage = message;
+    this.isErrorToast = isError;
+    this.toastSubMessage = subMessage;
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
+    this.toastTimeout = setTimeout(() => {
+      this.toastMessage = null;
+      this.toastSubMessage = '';
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    }, 2800);
+  }
+
+  closeToast(): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+    this.toastMessage = null;
+    this.toastSubMessage = '';
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   onSearch(): void {
@@ -98,17 +137,21 @@ export class HrUsersComponent implements OnInit {
     this.activeModal = null;
     if (refresh) {
       this.onSearch();
+      this.showToast('HR User Created Successfully!', false, 'Credentials setup email has been dispatched to their inbox.');
     }
+    this.cdr.markForCheck();
   }
 
   confirmDelete(hr: HrUser): void {
     this.hrToDelete = hr;
     this.deleteModalOpen = true;
+    this.cdr.markForCheck();
   }
 
   closeDeleteModal(): void {
     this.deleteModalOpen = false;
     this.hrToDelete = null;
+    this.cdr.markForCheck();
   }
 
   executeDelete(): void {
@@ -118,16 +161,16 @@ export class HrUsersComponent implements OnInit {
     this.isLoading$.next(true);
     this.employeeService.deleteEmployee(hr.id).subscribe({
       next: () => {
-        alert('HR user deleted successfully.');
+        this.showToast('HR User Deleted Successfully', false, `${hr.fullName} has been removed from active HR directories.`);
         this.onSearch();
       },
       error: (err: any) => {
         this.isLoading$.next(false);
         console.error('Failed to delete HR user:', err);
-        alert(err?.error?.detail || 'An error occurred while deleting the HR user.');
+        this.showToast('Failed to Delete HR User', true, err?.error?.detail || 'An error occurred while deleting.');
+        this.cdr.markForCheck();
       }
     });
   }
-
 }
 

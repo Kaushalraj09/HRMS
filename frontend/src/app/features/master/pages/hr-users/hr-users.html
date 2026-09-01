@@ -149,3 +149,38 @@
   </div>
 </div>
 
+<!-- ULTRA PREMIUM CENTER POPUP TOAST MODAL -->
+<div *ngIf="toastMessage" class="popup-overlay" (click)="closeToast()">
+  <div class="popup-card-premium" [ngClass]="isErrorToast ? 'error' : 'success'" (click)="$event.stopPropagation()">
+    <div class="toast-glow-bar" [ngClass]="isErrorToast ? 'error' : 'success'"></div>
+    
+    <div class="toast-content-wrapper">
+      <div class="popup-icon-ring" [ngClass]="isErrorToast ? 'error' : 'success'">
+        <svg *ngIf="!isErrorToast" class="checkmark-svg" viewBox="0 0 52 52">
+          <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none" />
+          <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+        </svg>
+        <svg *ngIf="isErrorToast" class="error-svg" viewBox="0 0 52 52">
+          <circle class="error-circle" cx="26" cy="26" r="23" fill="none" />
+          <path class="error-cross" fill="none" d="M16 16l20 20M36 16L16 36" />
+        </svg>
+      </div>
+
+      <div class="popup-text-block">
+        <div class="popup-badge-row">
+          <span class="status-pill" [ngClass]="isErrorToast ? 'error' : 'success'">
+            <span class="status-dot"></span>
+            {{ isErrorToast ? 'Notice' : 'HR Management' }}
+          </span>
+        </div>
+        <h4 class="popup-title">{{ toastMessage }}</h4>
+        <p class="popup-subtext" *ngIf="toastSubMessage">{{ toastSubMessage }}</p>
+      </div>
+    </div>
+
+    <div class="toast-progress-track">
+      <div class="toast-progress-fill" [ngClass]="isErrorToast ? 'error' : 'success'"></div>
+    </div>
+  </div>
+</div>
+

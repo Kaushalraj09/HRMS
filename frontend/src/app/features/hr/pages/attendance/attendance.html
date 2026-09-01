@@ -95,9 +95,6 @@
 
         <!-- Quick Date Preset Chips -->
         <div class="quick-preset-chips">
-          <button type="button" class="preset-chip" [class.active]="activePreset === 'all'" (click)="setQuickPreset('all')">
-            All Time
-          </button>
           <button type="button" class="preset-chip" [class.active]="activePreset === 'today'" (click)="setQuickPreset('today')">
             Today
           </button>
@@ -109,6 +106,9 @@
           </button>
           <button type="button" class="preset-chip" [class.active]="activePreset === 'month'" (click)="setQuickPreset('month')">
             This Month
+          </button>
+          <button type="button" class="preset-chip" [class.active]="activePreset === 'all'" (click)="setQuickPreset('all')">
+            All Time
           </button>
         </div>
       </div>

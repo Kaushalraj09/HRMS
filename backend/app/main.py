@@ -127,7 +127,17 @@ app.add_middleware(
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
+    # The SPA explicitly sends no-cache headers for live HR and attendance
+    # data, so they must be permitted during CORS preflight requests.
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "Cache-Control",
+        "Pragma",
+        "Expires",
+    ],
 )
 
 
