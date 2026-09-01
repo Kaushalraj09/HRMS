@@ -367,11 +367,11 @@ def punch_in(
     
     return to_attendance_response(attendance, db)
 
-def get_pending_early_arrivals(db: Session, role: UserRole, manager_id: int):
+def get_pending_early_arrivals(db: Session, role_name: str, manager_id: int | None):
     query = db.query(Attendance).filter(Attendance.status == "EARLY_PENDING_APPROVAL")
     
     # If not admin/HR, only show requests for employees reporting to this manager
-    if role not in [UserRole.admin, UserRole.hr]:
+    if role_name not in {"admin", "hr"}:
         query = query.join(Employee, Attendance.employee_id == Employee.id)\
                      .filter(Employee.reporting_manager_id == manager_id)
                      
@@ -381,7 +381,9 @@ def get_pending_early_arrivals(db: Session, role: UserRole, manager_id: int):
 def approve_early_time(
     db: Session,
     attendance_id: int,
-    manager_id: int,
+    manager_id: int | None,
+    approver_user_id: int,
+    role_name: str,
     approved_minutes: int,
     reason: str,
 ) -> AttendanceResponse:
@@ -390,6 +392,14 @@ def approve_early_time(
     attendance = db.query(Attendance).filter(Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance record not found")
+
+    if role_name not in {"admin", "hr"}:
+        is_direct_report = db.query(Employee.id).filter(
+            Employee.id == attendance.employee_id,
+            Employee.reporting_manager_id == manager_id,
+        ).first()
+        if not is_direct_report:
+            raise HTTPException(status_code=403, detail="You can only approve early time for your direct reports")
         
     if attendance.early_arrival_minutes <= 0:
         raise HTTPException(status_code=400, detail="No early arrival time to approve")
@@ -419,7 +429,7 @@ def approve_early_time(
         attendance.status = "EARLY_REJECTED"
         attendance.credited_work_start = attendance.scheduled_start
         
-    attendance.early_approved_by = manager_id
+    attendance.early_approved_by = approver_user_id
     attendance.early_approved_at = datetime.now(APP_TIMEZONE)
     attendance.early_approval_reason = reason
     

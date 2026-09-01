@@ -62,6 +62,23 @@ from app.core.access import resolve_attendance_employee_id
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
 
+def _resolve_early_approval_manager_id(db: Session, current_user: User) -> tuple[str, int | None]:
+    """Return the effective role and manager employee id for early approvals."""
+    role_name = (current_user.role.name if current_user.role else "employee").lower()
+    if role_name in {"admin", "hr"}:
+        return role_name, None
+
+    manager = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not manager or not db.query(Employee.id).filter(
+        Employee.reporting_manager_id == manager.id
+    ).first():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers or HR/Admin can approve early time",
+        )
+    return role_name, manager.id
+
+
 
 @router.post("/punch-in", response_model=AttendanceResponse)
 
@@ -159,16 +176,8 @@ async def get_pending_early_arrivals(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in [UserRole.admin, UserRole.hr, UserRole.manager]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only managers or HR/Admin can view pending early arrivals"
-        )
-        
-    manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-    manager_id = manager_employee.id if manager_employee else current_user.id
-    
-    return attendance_service.get_pending_early_arrivals(db, current_user.role, manager_id)
+    role_name, manager_id = _resolve_early_approval_manager_id(db, current_user)
+    return attendance_service.get_pending_early_arrivals(db, role_name, manager_id)
 
 @router.post("/{attendance_id}/approve-early-time", response_model=AttendanceResponse)
 async def approve_early_time(
@@ -181,19 +190,14 @@ async def approve_early_time(
     Approve early arrival time for an employee's attendance record.
     Only managers and HR/Admin can approve.
     """
-    if current_user.role not in [UserRole.admin, UserRole.hr, UserRole.manager]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only managers or HR/Admin can approve early time"
-        )
-        
-    manager_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-    manager_id = manager_employee.id if manager_employee else current_user.id
+    role_name, manager_id = _resolve_early_approval_manager_id(db, current_user)
     
     return attendance_service.approve_early_time(
         db=db,
         attendance_id=attendance_id,
         manager_id=manager_id,
+        approver_user_id=current_user.id,
+        role_name=role_name,
         approved_minutes=request.approved_minutes,
         reason=request.reason
     )
