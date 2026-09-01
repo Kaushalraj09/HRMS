@@ -276,12 +276,18 @@ DEFAULT_DOCUMENT_TYPES = [
 
 def seed_default_document_types(db: Session) -> None:
     """Seed standard document types into document_types table if missing, or update metadata."""
+    now_utc = datetime.now(timezone.utc)
     for dt_data in DEFAULT_DOCUMENT_TYPES:
         existing = db.query(DocumentType).filter(
             or_(DocumentType.code == dt_data["code"], DocumentType.name == dt_data["name"])
         ).first()
         if not existing:
-            doc_type = DocumentType(**dt_data, is_active=True)
+            doc_type = DocumentType(
+                **dt_data,
+                is_active=True,
+                created_at=now_utc,
+                updated_at=now_utc
+            )
             db.add(doc_type)
             print(f"Added document type: {dt_data['name']}")
         else:
@@ -290,6 +296,7 @@ def seed_default_document_types(db: Session) -> None:
             existing.max_file_size_mb = dt_data["max_file_size_mb"]
             existing.category = dt_data["category"]
             existing.is_active = True
+            existing.updated_at = now_utc
     db.commit()
 
 
@@ -301,6 +308,7 @@ def get_active_document_types(db: Session) -> List[DocumentType]:
 
 def initialize_employee_requirements(db: Session, employee_id: int) -> None:
     """Safely initialize default document requirements for an employee."""
+    now_utc = datetime.now(timezone.utc)
     active_types = get_active_document_types(db)
     for dt in active_types:
         req = db.query(EmployeeDocumentRequirement).filter(
@@ -312,7 +320,9 @@ def initialize_employee_requirements(db: Session, employee_id: int) -> None:
                 employee_id=employee_id,
                 document_type_id=dt.id,
                 is_required=dt.required_default,
-                status="NOT_UPLOADED"
+                status="NOT_UPLOADED",
+                created_at=now_utc,
+                updated_at=now_utc
             )
             db.add(req)
     db.commit()

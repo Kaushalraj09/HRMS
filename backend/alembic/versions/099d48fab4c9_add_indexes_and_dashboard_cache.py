@@ -26,8 +26,8 @@ def upgrade() -> None:
     sa.Column('cache_key', sa.String(length=255), nullable=False),
     sa.Column('cached_data', sa.Text(), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_dashboard_caches_cache_key'), 'dashboard_caches', ['cache_key'], unique=True)

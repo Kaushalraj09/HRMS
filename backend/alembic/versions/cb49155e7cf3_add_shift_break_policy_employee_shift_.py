@@ -31,8 +31,8 @@ def upgrade() -> None:
     sa.Column('early_exit_policy', sa.String(length=255), nullable=True),
     sa.Column('overtime_policy', sa.String(length=255), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -45,8 +45,8 @@ def upgrade() -> None:
     sa.Column('end_time', sa.Time(), nullable=False),
     sa.Column('paid_break', sa.Boolean(), nullable=True),
     sa.Column('mandatory', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['shift_id'], ['shifts.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -57,8 +57,8 @@ def upgrade() -> None:
     sa.Column('shift_id', sa.Integer(), nullable=False),
     sa.Column('effective_from', sa.Date(), nullable=False),
     sa.Column('effective_to', sa.Date(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employees.id'], ),
     sa.ForeignKeyConstraint(['shift_id'], ['shifts.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -70,12 +70,12 @@ def upgrade() -> None:
     sa.Column('attendance_id', sa.Integer(), nullable=True),
     sa.Column('requested_minutes', sa.Integer(), nullable=False),
     sa.Column('reason', sa.String(length=500), nullable=True),
-    sa.Column('requested_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('requested_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('approved_by', sa.Integer(), nullable=True),
     sa.Column('approved_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
     sa.ForeignKeyConstraint(['attendance_id'], ['attendance.id'], ),
     sa.ForeignKeyConstraint(['employee_id'], ['employees.id'], ),

@@ -72,6 +72,15 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
+    if connectable.dialect.name == "sqlite":
+        from sqlalchemy import event
+        @event.listens_for(connectable, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            import sqlite3
+            from datetime import datetime, timezone
+            if isinstance(dbapi_connection, sqlite3.Connection):
+                dbapi_connection.create_function("now", 0, lambda: datetime.now(timezone.utc).isoformat())
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection, target_metadata=target_metadata
