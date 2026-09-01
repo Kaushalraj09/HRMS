@@ -39,7 +39,17 @@ def upgrade() -> None:
         )
     )
 
-    # Backfill attendance table
+    # Backfill document types & employee requirements if empty
+    from sqlalchemy.orm import Session
+    from app.services.document_service import seed_default_document_types, ensure_all_employees_have_requirements
+    
+    bind = op.get_bind()
+    session = Session(bind=bind)
+    try:
+        seed_default_document_types(session)
+        ensure_all_employees_have_requirements(session)
+    finally:
+        session.close()
     op.execute(
         sa.text(
             """
