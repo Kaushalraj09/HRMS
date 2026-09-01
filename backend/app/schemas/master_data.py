@@ -56,10 +56,10 @@ class ShiftBase(BaseModel):
     is_active: bool = True
     
     # New Attendance Rules
-    allow_early_punch_in: bool = False
-    early_coming_minutes: int = 60
-    punch_in_grace_minutes: int = 10
-    shift_grace_minutes: int = 15
+    allow_early_punch_in: Optional[bool] = False
+    early_coming_minutes: Optional[int] = 60
+    punch_in_grace_minutes: Optional[int] = 10
+    shift_grace_minutes: Optional[int] = 15
 
 class ShiftCreate(ShiftBase):
     pass
@@ -73,10 +73,10 @@ class WorkLocationBase(BaseModel):
     name: str = Field(..., max_length=150)
     code: str = Field(..., max_length=30)
     description: Optional[str] = Field(None, max_length=255)
-    location_type: str = Field(default="office", alias="location_type")
+    location_type: Optional[str] = Field(default="office", alias="location_type")
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    geofence_radius_meters: float = Field(default=40.0, alias="geofence_radius_meters")
+    geofence_radius_meters: Optional[float] = Field(default=40.0, alias="geofence_radius_meters")
     is_active: bool = True
 
 class WorkLocationCreate(WorkLocationBase):

@@ -119,19 +119,19 @@ class AttendanceResponse(BaseModel):
     early_exit_minutes: int = Field(default=0, alias="earlyExitMinutes")
     
     # New Fields for Shift Attendance Rules & Approval
-    early_arrival_minutes: int = Field(default=0, alias="earlyArrivalMinutes")
-    punch_in_grace_minutes: int = Field(default=0, alias="punchInGraceMinutes")
-    early_punch_window_minutes: int = Field(default=0, alias="earlyPunchWindowMinutes")
-    shift_grace_minutes: int = Field(default=0, alias="shiftGraceMinutes")
+    early_arrival_minutes: Optional[int] = Field(default=0, alias="earlyArrivalMinutes")
+    punch_in_grace_minutes: Optional[int] = Field(default=0, alias="punchInGraceMinutes")
+    early_punch_window_minutes: Optional[int] = Field(default=0, alias="earlyPunchWindowMinutes")
+    shift_grace_minutes: Optional[int] = Field(default=0, alias="shiftGraceMinutes")
     
-    approved_early_minutes: int = Field(default=0, alias="approvedEarlyMinutes")
-    unapproved_early_minutes: int = Field(default=0, alias="unapprovedEarlyMinutes")
+    approved_early_minutes: Optional[int] = Field(default=0, alias="approvedEarlyMinutes")
+    unapproved_early_minutes: Optional[int] = Field(default=0, alias="unapprovedEarlyMinutes")
     credited_work_start: Optional[time] = Field(default=None, alias="creditedWorkStart")
     credited_work_end: Optional[time] = Field(default=None, alias="creditedWorkEnd")
-    regular_work_minutes: int = Field(default=0, alias="regularWorkMinutes")
-    approved_extra_minutes: int = Field(default=0, alias="approvedExtraMinutes")
+    regular_work_minutes: Optional[int] = Field(default=0, alias="regularWorkMinutes")
+    approved_extra_minutes: Optional[int] = Field(default=0, alias="approvedExtraMinutes")
     
-    early_approval_status: str = Field(default="None", alias="earlyApprovalStatus")
+    early_approval_status: Optional[str] = Field(default="None", alias="earlyApprovalStatus")
     early_approved_by: Optional[int] = Field(default=None, alias="earlyApprovedBy")
     early_approved_at: Optional[datetime] = Field(default=None, alias="earlyApprovedAt")
     early_approval_reason: Optional[str] = Field(default=None, alias="earlyApprovalReason")
