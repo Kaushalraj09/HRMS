@@ -152,7 +152,7 @@ def list_trainings(
         # Filter trainings assigned to employees in department
         query = query.join(TrainingAssignment).join(Employee).filter(Employee.department == department)
 
-    total = query.distinct(Training.id).count()
+    total = query.distinct().count()
     offset = (page - 1) * limit
     trainings = query.order_by(Training.created_at.desc()).offset(offset).limit(limit).all()
 

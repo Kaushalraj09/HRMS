@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 from datetime import date, time
 from typing import Optional, Literal
@@ -21,9 +22,6 @@ class TimeOffBatchRequestCreate(BaseModel):
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
 
-class TimeOffBatchResponse(BaseModel):
-    created_requests: list[TimeOffRequestResponse]
-    
 class TimeOffRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,6 +38,9 @@ class TimeOffRequestResponse(BaseModel):
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
     batch_id: Optional[str] = None
+
+class TimeOffBatchResponse(BaseModel):
+    created_requests: list[TimeOffRequestResponse]
 
 
 class TimeOffApplyPayload(BaseModel):
