@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -22,7 +22,8 @@ export class MyTrainingsComponent implements OnInit {
 
   constructor(
     private trainingService: TrainingService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -34,16 +35,20 @@ export class MyTrainingsComponent implements OnInit {
     this.cdr.detectChanges();
     this.trainingService.getMyTrainings().subscribe({
       next: (data) => {
-        this.trainings = data || [];
-        this.extractCategories();
-        this.applyFilter();
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          this.trainings = data || [];
+          this.extractCategories();
+          this.applyFilter();
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Error loading my trainings:', err);
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          console.error('Error loading my trainings:', err);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       }
     });
   }

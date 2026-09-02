@@ -44,6 +44,7 @@ import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
 import { FooterComponent } from '../../../../shared/components/footer/footer';
+import { TrainingWidgetComponent } from '../../components/training-widget/training-widget';
 
 export interface DashboardCalendarDay {
   date: Date;
@@ -129,7 +130,8 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     Navbar,
     RouterModule,
     EmpSidebar,
-    FooterComponent
+    FooterComponent,
+    TrainingWidgetComponent
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],

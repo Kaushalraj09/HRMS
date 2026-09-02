@@ -1,102 +1,117 @@
-<div class="container-fluid p-4">
-  <div class="d-flex align-items-center mb-4">
-    <a routerLink="/emp-dashboard/my-trainings" class="btn btn-outline-secondary btn-sm me-3">
-      <i class="fas fa-arrow-left me-1"></i>Back to My Trainings
-    </a>
-    <div>
-      <h3 class="fw-bold mb-0">Assessment Result</h3>
-      <p class="text-muted small mb-0">{{ result?.assessment_title || 'Completed Assessment Evaluation' }}</p>
+<div class="trainings-page-wrapper">
+  <!-- Page Header Card -->
+  <div class="trainings-header-card">
+    <div class="header-main-info">
+      <div class="header-titles">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <a routerLink="/emp-dashboard/my-trainings" class="btn-back-link">
+            <i class="fas fa-arrow-left"></i>
+            <span>My Trainings</span>
+          </a>
+        </div>
+        <div class="title-with-badge">
+          <h1 class="page-title">Assessment Result</h1>
+          <span class="portal-badge">Test Evaluation</span>
+        </div>
+        <p class="page-subtitle">{{ result?.assessment_title || 'Completed Assessment Evaluation' }}</p>
+      </div>
+
+      <a routerLink="/emp-dashboard/my-trainings" class="btn-header-secondary">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to My Trainings</span>
+      </a>
     </div>
   </div>
 
-  <div *ngIf="isLoading" class="text-center py-5 text-muted">
-    <i class="fas fa-spinner fa-spin fs-3 text-primary me-2"></i>Evaluating attempt score...
+  <div *ngIf="isLoading" class="table-loading-state">
+    <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+    <p>Evaluating score and generating attempt review...</p>
   </div>
 
-  <div *ngIf="!isLoading && result" class="col-lg-10 mx-auto">
-    <!-- Result Summary Card -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div
-        class="card-body p-4 p-md-5 text-center text-white rounded-top-3"
-        [ngClass]="result.passed ? 'bg-gradient-success' : 'bg-gradient-danger'"
-      >
-        <i
-          class="fs-1 mb-3"
-          [ngClass]="result.passed ? 'fas fa-trophy' : 'fas fa-times-circle'"
-        ></i>
-
-        <h1 class="display-4 fw-bold mb-2">{{ result.percentage }}%</h1>
-
-        <div class="badge px-3 py-2 fs-6 mb-3 border border-white" [ngClass]="result.passed ? 'bg-success' : 'bg-danger'">
-          {{ result.passed ? 'PASSED' : 'FAILED' }}
+  <div *ngIf="!isLoading && result" class="result-content-wrap">
+    <!-- Result Hero Banner Card -->
+    <div class="result-hero-card" [ngClass]="result.passed ? 'passed' : 'failed'">
+      <div class="result-hero-inner">
+        <div class="result-trophy-circle">
+          <i [ngClass]="result.passed ? 'fas fa-trophy' : 'fas fa-times-circle'"></i>
         </div>
 
-        <p class="mb-0 text-white-50">
-          Score: <strong>{{ result.score }}</strong> / {{ result.total_marks }} Marks • Submitted at {{ result.submitted_at | date:'medium' }}
+        <div class="result-score-number">{{ result.percentage }}%</div>
+
+        <div class="result-status-pill">
+          {{ result.passed ? 'PASSED' : 'NOT PASSED' }}
+        </div>
+
+        <p class="result-subtext">
+          Final Score: <strong>{{ result.score }} / {{ result.total_marks }} Marks</strong>
+          <span class="mx-2">•</span>
+          Submitted on {{ result.submitted_at | date:'medium' }}
         </p>
       </div>
 
-      <div class="card-footer bg-white p-4">
-        <div class="row text-center g-3">
-          <div class="col-4 border-end">
-            <div class="small text-muted text-uppercase fw-semibold">Correct</div>
-            <div class="fs-4 fw-bold text-success">{{ result.correct_answers_count || 0 }}</div>
-          </div>
-          <div class="col-4 border-end">
-            <div class="small text-muted text-uppercase fw-semibold">Incorrect</div>
-            <div class="fs-4 fw-bold text-danger">{{ result.incorrect_answers_count || 0 }}</div>
-          </div>
-          <div class="col-4">
-            <div class="small text-muted text-uppercase fw-semibold">Unanswered</div>
-            <div class="fs-4 fw-bold text-secondary">{{ result.unanswered_count || 0 }}</div>
-          </div>
+      <!-- Stats Metric Breakdown Bar -->
+      <div class="result-stats-bar">
+        <div class="stat-box">
+          <div class="stat-label">CORRECT</div>
+          <div class="stat-num text-success">{{ result.correct_answers_count || 0 }}</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-box">
+          <div class="stat-label">INCORRECT</div>
+          <div class="stat-num text-danger">{{ result.incorrect_answers_count || 0 }}</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-box">
+          <div class="stat-label">UNANSWERED</div>
+          <div class="stat-num text-secondary">{{ result.unanswered_count || 0 }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Question-by-Question Review (If enabled) -->
-    <div *ngIf="result.show_correct_answers && result.review" class="card border-0 shadow-sm rounded-3">
-      <div class="card-header bg-light fw-bold py-3">
-        <i class="fas fa-list-check me-2 text-primary"></i>Question-by-Question Review
+    <!-- Question-by-Question Review -->
+    <div *ngIf="result.show_correct_answers && result.review" class="review-panel-card mt-4">
+      <div class="review-panel-head">
+        <i class="fas fa-list-check text-primary"></i>
+        <h3>Question-by-Question Performance Review</h3>
       </div>
-      <div class="card-body p-0">
-        <div *ngFor="let item of result.review; let idx = index" class="border-bottom p-4">
+      <div class="review-questions-list">
+        <div *ngFor="let item of result.review; let idx = index" class="review-q-item">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="fw-bold text-dark mb-0">
-              Q{{ idx + 1 }}. {{ item.question_text }}
-            </h6>
+            <h4 class="review-q-title">Q{{ idx + 1 }}. {{ item.question_text }}</h4>
             <span
-              class="badge px-2 py-1"
-              [ngClass]="item.is_correct ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'"
+              class="status-badge"
+              [ngClass]="item.is_correct ? 'status-verified' : 'status-missing'"
             >
+              <i [ngClass]="item.is_correct ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger'"></i>
               {{ item.is_correct ? 'Correct' : 'Incorrect' }}
             </span>
           </div>
 
-          <div class="row g-2 mt-2">
+          <div class="row g-2 mt-1">
             <div class="col-md-6">
-              <div class="small text-muted">Your Answer:</div>
-              <div class="fw-semibold" [ngClass]="item.is_correct ? 'text-success' : 'text-danger'">
-                {{ item.your_option }}
+              <div class="answer-card user-answer" [class.is-correct]="item.is_correct">
+                <div class="answer-label">Your Submitted Answer:</div>
+                <div class="answer-value">{{ item.your_option || '(No Answer)' }}</div>
               </div>
             </div>
             <div class="col-md-6" *ngIf="!item.is_correct">
-              <div class="small text-muted">Correct Answer:</div>
-              <div class="fw-semibold text-success">
-                {{ item.correct_option }}
+              <div class="answer-card correct-answer">
+                <div class="answer-label">Correct Answer:</div>
+                <div class="answer-value text-success font-bold">{{ item.correct_option }}</div>
               </div>
             </div>
           </div>
 
-          <div *ngIf="item.explanation" class="mt-2 p-2 bg-light rounded border small text-muted">
-            <strong class="text-dark">Explanation:</strong> {{ item.explanation }}
+          <div *ngIf="item.explanation" class="explanation-box mt-2">
+            <strong>Explanation:</strong> {{ item.explanation }}
           </div>
         </div>
       </div>
     </div>
 
-    <div *ngIf="!result.show_correct_answers" class="text-center p-4 bg-light rounded border text-muted">
-      <i class="fas fa-info-circle me-1"></i>Detailed question review has been disabled for this assessment by HR.
+    <div *ngIf="!result.show_correct_answers" class="info-alert-card mt-4">
+      <i class="fas fa-info-circle text-primary"></i>
+      <span>Detailed question-by-question review is disabled for this assessment by the trainer.</span>
     </div>
   </div>
 </div>

@@ -147,27 +147,28 @@
 .filter-toolbar-card {
   background: #ffffff;
   border-radius: 14px;
-  padding: 1.15rem;
+  padding: 0.85rem 1.15rem;
   border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
 .filter-controls-row {
   display: flex;
   align-items: flex-end;
-  gap: 0.85rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .select-box-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  flex: 1 1 160px;
-  min-width: 150px;
+  gap: 0.25rem;
+  flex: 1 1 150px;
+  min-width: 140px;
 }
 
 .form-label-custom {
-  font-size: 0.825rem;
+  font-size: 0.785rem;
   font-weight: 600;
   color: #475569;
 }
@@ -182,29 +183,27 @@
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 14px 14px;
-  padding: 0.65rem 2.25rem 0.65rem 1rem;
+  padding: 0.55rem 2.25rem 0.55rem 0.85rem;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #1e293b;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   transition: all 0.2s ease;
 }
 
 .modern-select:hover {
   background-color: #f8fafc;
   border-color: #cbd5e1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .modern-select:focus {
   background-color: #ffffff;
   border-color: #2563eb;
-  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.14), 0 4px 12px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .filter-btn-group {
@@ -214,35 +213,38 @@
 }
 
 .btn-filter-submit {
-  padding: 0.65rem 1.2rem;
+  padding: 0.55rem 1.15rem;
   background: #2563eb;
   color: #ffffff;
   border: none;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
 }
 
 .btn-filter-submit:hover {
   background: #1d4ed8;
+  transform: translateY(-1px);
 }
 
 .btn-filter-reset {
-  padding: 0.65rem 1.2rem;
-  background: #f8fafc;
+  padding: 0.55rem 1.15rem;
+  background: #ffffff;
   color: #475569;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .btn-filter-reset:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
+  border-color: #cbd5e1;
   color: #0f172a;
 }
 
@@ -250,9 +252,9 @@
 
 .documents-container-card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
   overflow: hidden;
 }
 
@@ -371,39 +373,51 @@
 }
 
 .documents-modern-table th {
-  padding: 0.9rem 1.25rem;
-  font-size: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.725rem;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748b;
   letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.documents-modern-table th:first-child,
+.documents-modern-table td:first-child {
+  padding-left: 1.25rem;
+}
+
+.documents-modern-table th:last-child,
+.documents-modern-table td:last-child {
+  padding-right: 1.25rem;
 }
 
 .documents-modern-table td {
-  padding: 1.1rem 1.25rem;
+  padding: 0.85rem 0.85rem;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .doc-row:hover {
-  background-color: #fafafa;
+  background-color: #f8fafc;
 }
 
 .doc-name-cell {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .doc-icon-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
   flex-shrink: 0;
   background: #eff6ff;
   color: #2563eb;
@@ -412,34 +426,38 @@
 .doc-meta-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .doc-main-name {
-  font-size: 0.925rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: #0f172a;
+  line-height: 1.3;
 }
 
 .code-badge-pill {
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   background: #f1f5f9;
   color: #475569;
-  padding: 0.1rem 0.45rem;
+  padding: 0.08rem 0.45rem;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
   width: fit-content;
+  white-space: nowrap !important;
 }
 
 .category-tag {
   display: inline-block;
-  padding: 0.25rem 0.65rem;
+  padding: 0.2rem 0.55rem;
   background: #f1f5f9;
   border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: #475569;
+  white-space: nowrap;
 }
 
 .table-progress-wrap {
@@ -517,4 +535,108 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+}
+
+/* ─── 4. In-App Modern Floating Toast Popup (Top-Center) ─────────────────── */
+
+.app-toast-container {
+  position: fixed;
+  top: 1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background: #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 20px 30px -6px rgba(15, 23, 42, 0.16), 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e2e8f0;
+  animation: toastDropIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+
+@keyframes toastDropIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.toast-icon-circle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.app-toast-container.success .toast-icon-circle {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #16a34a;
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
+}
+
+.app-toast-container.error .toast-icon-circle {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.25);
+}
+
+.app-toast-container.info .toast-icon-circle {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.25);
+}
+
+.toast-message-content {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-grow: 1;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.toast-title-text {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.toast-body-text {
+  color: #475569;
+  font-weight: 500;
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toast-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }

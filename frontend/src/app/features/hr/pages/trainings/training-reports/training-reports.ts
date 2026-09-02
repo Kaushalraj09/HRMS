@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -48,10 +48,45 @@ export class TrainingReportsComponent implements OnInit {
     ];
   }
 
+  // In-App Toast Popup State
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info',
+    timeout: null as any
+  };
+
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast = {
+        show: true,
+        message,
+        type,
+        timeout: setTimeout(() => {
+          this.ngZone.run(() => {
+            this.toast.show = false;
+            this.cdr.detectChanges();
+          });
+        }, duration)
+      };
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeToast(): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    });
+  }
+
   constructor(
     private trainingService: TrainingService,
     private masterDataService: MasterDataService,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private router: Router,
     private location: Location
   ) {}
@@ -75,7 +110,7 @@ export class TrainingReportsComponent implements OnInit {
   }
 
   loadTrainings(): void {
-    this.trainingService.getTrainings({ limit: 100 }).subscribe((res) => {
+    this.trainingService.getTrainings({ limit: 1000 }).subscribe((res: any) => {
       this.trainings = res.items || [];
       this.cdr.detectChanges();
     });
@@ -120,7 +155,7 @@ export class TrainingReportsComponent implements OnInit {
 
   exportToCSV(): void {
     if (!this.reports || this.reports.length === 0) {
-      alert('No report data available to export.');
+      this.showToast('No report data available to export.', 'info');
       return;
     }
 

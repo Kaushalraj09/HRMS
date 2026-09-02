@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -38,12 +38,47 @@ export class TrainingFormComponent implements OnInit {
     { label: 'Archived', value: 'Archived' }
   ];
 
+  // In-App Toast Popup State
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info',
+    timeout: null as any
+  };
+
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast = {
+        show: true,
+        message,
+        type,
+        timeout: setTimeout(() => {
+          this.ngZone.run(() => {
+            this.toast.show = false;
+            this.cdr.detectChanges();
+          });
+        }, duration)
+      };
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeToast(): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    });
+  }
+
   constructor(
     private fb: FormBuilder,
     private trainingService: TrainingService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private location: Location
   ) {}
 
@@ -53,7 +88,9 @@ export class TrainingFormComponent implements OnInit {
     if (idParam) {
       this.isEditMode = true;
       this.trainingId = +idParam;
-      this.loadTraining(this.trainingId);
+      this.loadTraining();
+    } else {
+      this.isLoading = false;
     }
   }
 
@@ -69,44 +106,42 @@ export class TrainingFormComponent implements OnInit {
     this.location.back();
   }
 
-  private initForm(): void {
-    const randomCode = 'TRN-' + Math.floor(1000 + Math.random() * 9000);
+  initForm(): void {
     this.form = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
-      code: [randomCode, [Validators.required, Validators.maxLength(50)]],
-      category: ['Technical', [Validators.required]],
+      category: ['Technical', Validators.required],
       description: [''],
       learning_objective: [''],
-      trainer_name: ['HR Training Team'],
-      estimated_duration_minutes: [60, [Validators.required, Validators.min(1)]],
-      start_date: [''],
-      end_date: [''],
-      status: ['Draft', [Validators.required]]
+      trainer_name: [''],
+      estimated_duration_minutes: [null, [Validators.min(1)]],
+      start_date: [null],
+      end_date: [null],
+      status: ['Draft', Validators.required]
     });
   }
 
-  loadTraining(id: number): void {
+  loadTraining(): void {
     this.isLoading = true;
     this.cdr.detectChanges();
-    this.trainingService.getTrainingById(id).subscribe({
+    this.trainingService.getTrainingById(this.trainingId!).subscribe({
       next: (t) => {
         this.form.patchValue({
-          title: t.title,
-          code: t.code,
-          category: t.category,
-          description: t.description,
-          learning_objective: t.learning_objective,
-          trainer_name: t.trainer_name,
-          estimated_duration_minutes: t.estimated_duration_minutes,
-          start_date: t.start_date,
-          end_date: t.end_date,
-          status: t.status
+          title: t.title || '',
+          category: t.category || 'Technical',
+          description: t.description || '',
+          learning_objective: t.learning_objective || '',
+          trainer_name: t.trainer_name || '',
+          estimated_duration_minutes: t.estimated_duration_minutes || null,
+          start_date: t.start_date || null,
+          end_date: t.end_date || null,
+          status: t.status || 'Draft'
         });
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        alert('Failed to load training details: ' + (err.error?.detail || err.message));
+        this.isLoading = false;
+        this.showToast('Failed to load training details: ' + (err.error?.detail || err.message), 'error');
         this.router.navigate([this.getTrainingsListRoute()]);
         this.cdr.detectChanges();
       }
@@ -129,6 +164,7 @@ export class TrainingFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.showToast('Please fill in all required fields.', 'error');
       return;
     }
 
@@ -148,7 +184,7 @@ export class TrainingFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          alert('Error updating training:\n' + this.formatError(err));
+          this.showToast('Error updating training: ' + this.formatError(err), 'error');
         }
       });
     } else {
@@ -159,7 +195,7 @@ export class TrainingFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          alert('Error creating training:\n' + this.formatError(err));
+          this.showToast('Error creating training: ' + this.formatError(err), 'error');
         }
       });
     }

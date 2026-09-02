@@ -118,8 +118,9 @@ def update_employee_profile(db: Session, user_id: int, payload: ProfileUpdate):
         employee.personal_email = c.personalEmail
         employee.mobile = c.mobileNumber
         employee.alternate_mobile = c.alternateMobile
-        employee.work_location = c.location
-        
+        # Note: work_location is an administrative setting controlling geofence policies
+        # and cannot be modified via self-service profile update.
+
     if payload.profileImage is not None:
         if user:
             user.profile_image = payload.profileImage

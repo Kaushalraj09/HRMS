@@ -1,63 +1,37 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-
-
-
-import urllib.request
-
-
-
+from datetime import date, time, datetime
+from zoneinfo import ZoneInfo
+import ipaddress
 import json
-
-
-
-from sqlalchemy.orm import Session
-
-
-
+import urllib.request
 from typing import List
 
-
-
-from datetime import date, time, datetime
-
-
-
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from pydantic import BaseModel, Field
-
-
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-
-
-
 from app.api.deps import get_current_user
-
-
-
 from app.models.user import User
-
-
-
 from app.models.employee import Employee
-
-
-
 from app.models.attendance import Attendance
-
-
-
+from app.models.timeoff import TimeOffRequest
 from app.core.enums import WorkMode, UserRole
-
-
-
-from app.schemas.attendance import PunchRequest, ScheduleRequest, AttendanceResponse, AttendanceListResponse, TodayAttendanceState, EmployeeAnalytics, EmployeeLocationResponse, ApproveEarlyTimeRequest
-
-
-
+from app.schemas.attendance import (
+    PunchRequest,
+    ScheduleRequest,
+    AttendanceResponse,
+    AttendanceListResponse,
+    TodayAttendanceState,
+    EmployeeAnalytics,
+    EmployeeLocationResponse,
+    ApproveEarlyTimeRequest,
+)
 from app.services import attendance_service
 from app.core.access import resolve_attendance_employee_id
-
-
+from app.domain.attendance.services.punch_service import PunchService
+from app.domain.attendance.repositories.shift_repository import ShiftRepository
+from app.services.attendance_service import calculate_attendance_metrics, log_audit_trail_sync
+from app.services.time_calculator import calculate_late_minutes
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -79,39 +53,14 @@ def _resolve_early_approval_manager_id(db: Session, current_user: User) -> tuple
     return role_name, manager.id
 
 
-
 @router.post("/punch-in", response_model=AttendanceResponse)
-
-
-
 async def punch_in(
-
-
-
     request: PunchRequest,
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Punch In for the current employee or specified employee.
-
-
-
     """
     own_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
     try:
@@ -127,48 +76,21 @@ async def punch_in(
     if not employee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee with ID {employee_id} not found")
 
-    from app.domain.attendance.services.punch_service import PunchService
+    user_role = (current_user.role.name if current_user.role else "employee").lower()
+    effective_custom_time = request.custom_time if user_role in {"admin", "hr"} else None
 
     res = PunchService.punch_in(
-
         db,
-
-
-
         employee.id,
-
-
-
         request.work_mode,
-
-
-
         request.latitude,
-
-
-
         request.longitude,
-
-
-
         request.address,
-
-
-
         request.image,
-
-
-
-        request.custom_time
-
-
-
+        effective_custom_time
     )
 
-
-
     return attendance_service.to_attendance_response(res, db)
-
 
 
 @router.get("/pending-early-arrivals", response_model=AttendanceListResponse)
@@ -178,6 +100,7 @@ async def get_pending_early_arrivals(
 ):
     role_name, manager_id = _resolve_early_approval_manager_id(db, current_user)
     return attendance_service.get_pending_early_arrivals(db, role_name, manager_id)
+
 
 @router.post("/{attendance_id}/approve-early-time", response_model=AttendanceResponse)
 async def approve_early_time(
@@ -202,35 +125,15 @@ async def approve_early_time(
         reason=request.reason
     )
 
+
 @router.post("/punch-out", response_model=AttendanceResponse)
 async def punch_out(
-
-
-
     request: PunchRequest,
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Punch Out for the current employee or specified employee.
-
-
-
     """
     own_employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
     try:
@@ -246,910 +149,263 @@ async def punch_out(
     if not employee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee with ID {employee_id} not found")
 
-    from app.domain.attendance.services.punch_service import PunchService
+    user_role = (current_user.role.name if current_user.role else "employee").lower()
+    effective_custom_time = request.custom_time if user_role in {"admin", "hr"} else None
 
     res = PunchService.punch_out(
-
         db,
-
-
-
         employee.id,
-
-
-
         request.work_mode,
-
-
-
         request.latitude,
-
-
-
         request.longitude,
-
-
-
         request.address,
-
-
-
         request.image,
-
-
-
-        request.custom_time
-
-
-
+        effective_custom_time
     )
-
-
 
     return attendance_service.to_attendance_response(res, db)
 
 
-
 @router.post("/me/punch", response_model=TodayAttendanceState)
-
-
-
 async def punch_dynamic(
-
-
-
     request: PunchRequest,
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Dynamic Punch In / Punch Out depending on active session state.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can punch attendance"
-
-
-
         )
 
-
-
-    # Check today's state
-
-
-
     today_state = attendance_service.get_today_state(db, employee.id)
-
-
-
     if not today_state.get("punchIn"):
-
-
-
         await punch_in(request, db, current_user)
-
-
-
     else:
-
-
-
         await punch_out(request, db, current_user)
 
-
-
     return attendance_service.get_today_state(db, employee.id)
-
 
 
 class ChangeWorkModeRequest(BaseModel):
-
-
-
     work_mode: WorkMode = Field(alias="workMode")
 
 
-
 @router.post("/work-mode", response_model=TodayAttendanceState)
-
-
-
 def change_work_mode(
-
-
-
     request: ChangeWorkModeRequest,
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Update the work mode (Office/Remote) for today's active session or pre-punch state.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can change work mode"
-
-
-
         )
-
-
-
     return attendance_service.update_today_work_mode(db, employee.id, request.work_mode)
 
 
-
 @router.post("/continue-working", response_model=TodayAttendanceState)
-
-
-
 def continue_working(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Acknowledge shift end reminder and request overtime.
-
-
-
     This marks overtime_approved = True.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can use this endpoint"
-
-
-
         )
-
-
 
     # Get today's attendance record
-
-
-
-    from datetime import datetime
-
-
-
-    from zoneinfo import ZoneInfo
-
-
-
     APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
-
-
-
     current = datetime.now(APP_TIMEZONE)
-
-
-
     today = current.date()
 
-
-
     attendance = (
-
-
-
         db.query(Attendance)
-
-
-
         .filter(Attendance.employee_id == employee.id, Attendance.date == today)
-
-
-
         .first()
-
-
-
     )
 
-
-
     if not attendance:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="No active attendance record found for today"
-
-
-
         )
 
-
-
     attendance.overtime_approved = True
-    from app.domain.attendance.repositories.shift_repository import ShiftRepository
     shift = ShiftRepository.get_assigned_shift(db, employee.id, today)
     attendance.overtime_start = shift.overtime_start_time or shift.end_time or time(18, 0)
-    attendance.shift_end_reminder_sent = 3 # Acknowledged/dismissed
-
-
+    attendance.shift_end_reminder_sent = 3  # Acknowledged/dismissed
 
     # Recalculate metrics
-
-
-
-    from app.services.attendance_service import calculate_attendance_metrics, log_audit_trail_sync
-
-
-
     calculate_attendance_metrics(attendance)
-
-
-
     db.commit()
-
-
-
     db.refresh(attendance)
 
-
-
-    log_audit_trail_sync(db, "OVERTIME_CONTINUE", employee.id, f"Employee requested to continue working into overtime")
-
-
-
+    log_audit_trail_sync(db, "OVERTIME_CONTINUE", employee.id, "Employee requested to continue working into overtime")
     return attendance_service.get_today_state(db, employee.id)
-
 
 
 @router.post("/extend-overtime", response_model=TodayAttendanceState)
-
-
-
 def extend_overtime(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Extend overtime at 20:00 to avoid auto-checkout.
-
-
-
     This sets overtime_extended = True and shifts the auto-checkout threshold.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can use this endpoint"
-
-
-
         )
-
-
-
-    # Get today's attendance record
-
-
-
-    from datetime import datetime
-
-
-
-    from zoneinfo import ZoneInfo
-
-
 
     APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
-
-
-
     current = datetime.now(APP_TIMEZONE)
-
-
-
     today = current.date()
 
-
-
     attendance = (
-
-
-
         db.query(Attendance)
-
-
-
         .filter(Attendance.employee_id == employee.id, Attendance.date == today)
-
-
-
         .first()
-
-
-
     )
 
-
-
     if not attendance:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="No active attendance record found for today"
-
-
-
         )
 
-
-
     attendance.overtime_extended = True
-
-
-
-    attendance.overtime_reminder_sent = 3 # Acknowledged/dismissed
-
-
-
-    from app.services.attendance_service import log_audit_trail_sync
-
-
+    attendance.overtime_reminder_sent = 3  # Acknowledged/dismissed
 
     db.commit()
-
-
-
     db.refresh(attendance)
 
-
-
-    log_audit_trail_sync(db, "OVERTIME_EXTEND", employee.id, f"Employee extended overtime at 20:00")
-
-
-
+    log_audit_trail_sync(db, "OVERTIME_EXTEND", employee.id, "Employee extended overtime at 20:00")
     return attendance_service.get_today_state(db, employee.id)
-
 
 
 @router.post("/schedule", response_model=AttendanceResponse)
-
-
-
 def add_schedule(
-
-
-
     request: ScheduleRequest,
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Schedule a future shift for the current employee.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can schedule shifts"
-
-
-
         )
 
-
-
     return attendance_service.add_schedule(
-
-
-
         db=db,
-
-
-
         employee_id=employee.id,
-
-
-
         schedule_date=request.date,
-
-
-
         start_time=request.start_time,
-
-
-
         end_time=request.end_time,
-
-
-
         work_mode=request.work_mode,
-
-
-
         task_description=request.task_description
-
-
-
     )
-
 
 
 @router.get("/today", response_model=TodayAttendanceState)
-
-
-
 @router.get("/today-state", response_model=TodayAttendanceState)
-
-
-
 @router.get("/me/today", response_model=TodayAttendanceState)
-
-
-
 def get_today_attendance_state(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         if current_user.role and current_user.role.name.lower() == "admin":
-
-
-
-            from datetime import time
-
-
-
             return {
-
-
-
                 "employeeId": None,
-
-
-
                 "isWorking": False,
-
-
-
                 "status": "Not Marked",
-
-
-
                 "totalWorkedSeconds": 0,
-
-
-
                 "approvedSeconds": 0,
-
-
-
                 "remainingSeconds": 9 * 3600,
-
-
-
                 "shiftTotalSeconds": 9 * 3600,
-
-
-
                 "shiftElapsedSeconds": 0,
-
-
-
                 "shiftStart": "09:00 AM",
-
-
-
                 "shiftEnd": "06:00 PM",
-
-
-
                 "workMode": "Office",
-
-
-
                 "punchIn": None,
-
-
-
                 "punchOut": None,
-
-
-
                 "punchInLatitude": None,
-
-
-
                 "punchInLongitude": None,
-
-
-
                 "punchInAddress": None,
-
-
-
                 "punchOutLatitude": None,
-
-
-
                 "punchOutLongitude": None,
-
-
-
                 "punchOutAddress": None,
-
-
-
                 "punchInImage": None,
-
-
-
                 "punchOutImage": None
-
-
-
             }
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees can view attendance state"
-
-
-
         )
-
-
-
     return attendance_service.get_today_state(db, employee.id)
 
 
-
 @router.get("/my-history", response_model=List[AttendanceResponse])
-
-
-
 @router.get("/timesheet", response_model=List[AttendanceResponse])
-
-
-
 @router.get("/me/timesheets", response_model=List[AttendanceResponse])
-
-
-
 def get_my_history(
-
-
-
     from_date: date | None = Query(None),
-
-
-
     to_date: date | None = Query(None),
-
-
-
     status_filter: str = Query("", alias="status"),
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Get the attendance history for the logged-in employee.
-
-
-
     """
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         if current_user.role and current_user.role.name.lower() == "admin":
-
-
-
             return []
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_400_BAD_REQUEST,
-
-
-
             detail="Only employees have attendance history"
-
-
-
         )
 
-
-
     records = attendance_service.get_my_history(
-
-
-
         db,
-
-
-
         employee.id,
-
-
-
         from_date=from_date,
-
-
-
         to_date=to_date,
-
-
-
         status_filter=status_filter,
-
-
-
     )
-
-
-
     return [attendance_service.to_attendance_response(r, db) for r in records]
 
 
-
 @router.get("", response_model=AttendanceListResponse)
-
-
-
 @router.get("/all", response_model=AttendanceListResponse)
-
-
-
 def get_all_attendance_records(
-
-
-
     page: int = Query(1, ge=1),
-
-
-
     limit: int = Query(10, ge=1, le=100),
-
-
-
     from_date: str | None = Query(None, alias="fromDate"),
     to_date: str | None = Query(None, alias="toDate"),
     search: str = "",
@@ -1200,228 +456,99 @@ def get_all_attendance_records(
     )
 
 
+_ip_location_cache: dict[str, dict] = {}
+
+
+def _is_public_ip(ip_str: str | None) -> bool:
+    if not ip_str:
+        return False
+    try:
+        ip = ipaddress.ip_address(ip_str.strip())
+        return not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified)
+    except ValueError:
+        return False
+
 
 @router.get("/ip-location")
-
-
-
 def get_ip_location(request: Request, current_user: User = Depends(get_current_user)):
-
-
-
     """
-
-
-
-    Proxy endpoint to fetch IP-based location, bypassing browser CORS issues.
-
-
-
+    Proxy endpoint to fetch IP-based location, bypassing browser CORS issues with SSRF protection.
     """
+    client_host = request.headers.get("x-real-ip") or (request.client.host if request.client else "")
 
-
-
-    client_host = request.client.host
-
-
-
-    url = "https://freeipapi.com/api/json"
-
-
-
-    if client_host and client_host not in ["127.0.0.1", "::1", "localhost"] and not client_host.startswith("192.168.") and not client_host.startswith("10."):
-
-
-
-        url = f"https://freeipapi.com/api/json/{client_host}"
-
-
-
-    try:
-
-
-
-        req = urllib.request.Request(
-
-
-
-            url,
-
-
-
-            headers={"User-Agent": "Mozilla/5.0"}
-
-
-
-        )
-
-
-
-        with urllib.request.urlopen(req, timeout=5) as response:
-
-
-
-            return json.loads(response.read().decode())
-
-
-
-    except Exception as e:
-
-
-
+    if not _is_public_ip(client_host):
         return {
-
-
-
             "latitude": None,
-
-
-
             "longitude": None,
-
-
-
             "cityName": "",
-
-
-
             "regionName": "",
-
-
-
             "countryName": ""
+        }
 
+    if client_host in _ip_location_cache:
+        return _ip_location_cache[client_host]
 
-
+    url = f"https://freeipapi.com/api/json/{client_host}"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=4) as response:
+            data = json.loads(response.read().decode())
+            if len(_ip_location_cache) > 1000:
+                _ip_location_cache.clear()
+            _ip_location_cache[client_host] = data
+            return data
+    except Exception:
+        return {
+            "latitude": None,
+            "longitude": None,
+            "cityName": "",
+            "regionName": "",
+            "countryName": ""
         }
 
 
-
 @router.get("/employee-analytics", response_model=List[EmployeeAnalytics])
-
-
-
 def get_employee_analytics_dashboard(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Get dynamic today's and monthly attendance analytics for each employee (HR and Admin only).
-
-
-
     """
-
-
-
     if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_403_FORBIDDEN,
-
-
-
             detail="Not authorized to view analytics"
-
-
-
         )
-
-
-
     return attendance_service.get_employee_analytics(db)
 
 
-
 @router.get("/today-locations", response_model=List[EmployeeLocationResponse])
-
-
-
 def get_today_locations(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     """
-
-
-
     Get locations of employees who punched in today (HR and Admin only).
-
-
-
     """
-
-
-
     if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN.value, UserRole.HR.value]:
-
-
-
         raise HTTPException(
-
-
-
             status_code=status.HTTP_403_FORBIDDEN,
-
-
-
             detail="Not authorized to view locations"
-
-
-
         )
 
-
-
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    import random
-
-    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
-    today = datetime.now(APP_TIMEZONE).date()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     response_data: list[EmployeeLocationResponse] = []
 
-    # Query today's attendance records where the user has punched in
-    # 1. Fetch today's punches
     today_records = db.query(Attendance).join(Employee).filter(
         Attendance.date == today,
         Attendance.punch_in != None
     ).all()
     punched_emp_ids = {r.employee_id for r in today_records}
 
-    # City coordinates database
     city_coords = {
         "delhi": (28.6139, 77.2090),
         "new delhi": (28.6139, 77.2090),
@@ -1513,15 +640,12 @@ def get_today_locations(
             return parts[0], "India"
         return fallback_city, "India"
 
-    # 1. Fetch today's approved/active leaves
-    from app.models.timeoff import TimeOffRequest
     today_leaves = db.query(TimeOffRequest).filter(
         TimeOffRequest.date == today,
         TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
     ).all()
     leave_emp_ids = {l.employee_id for l in today_leaves}
 
-    # Process today's punches
     for r in today_records:
         emp = r.employee
         if not emp:
@@ -1530,14 +654,12 @@ def get_today_locations(
         lat = r.punch_out_latitude or r.punch_in_latitude
         lon = r.punch_out_longitude or r.punch_in_longitude
         address = r.punch_out_address or r.punch_in_address or emp.work_location or ""
-
         city, state = extract_city_state(address, "Sasaram")
 
         if lat is None or lon is None:
             coords = city_coords.get(city.lower(), (24.9538, 84.0152))
             lat, lon = coords
 
-        from app.services.time_calculator import calculate_late_minutes
         if r.punch_out is not None:
             status_val = "PUNCHED_OUT"
         elif r.punch_in is not None and (calculate_late_minutes(r.punch_in) > 0 or "LATE_ARRIVAL" in (r.flags or [])):
@@ -1573,7 +695,6 @@ def get_today_locations(
             )
         )
 
-    # Process other active employees so every employee is mapped to their location with their actual status
     all_employees = db.query(Employee).filter(Employee.status == "Active").all()
     for emp in all_employees:
         if emp.id in punched_emp_ids:
@@ -1619,110 +740,32 @@ def get_today_locations(
     return response_data
 
 
-
 @router.get("/me/summary")
-
-
-
 def get_me_summary(
-
-
-
     db: Session = Depends(get_db),
-
-
-
     current_user: User = Depends(get_current_user)
-
-
-
 ):
-
-
-
     employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-
-
-
     if not employee:
-
-
-
         raise HTTPException(status_code=400, detail="Only employees have attendance summaries")
 
-
-
     records = attendance_service.get_my_history(db, employee.id)
-
-
-
     total_days = len(records)
-
-
-
     computed_statuses = [
-
-
-
         attendance_service.get_attendance_status_with_timeoff(db, r.employee_id, r.punch_in, r.punch_out, r.date)
-
-
-
         for r in records
-
-
-
     ]
-
-
-
     worked_days = len([s for s in computed_statuses if s not in ["Not Marked", "Absent", "Time Off"]])
-
-
-
     present_days = len([s for s in computed_statuses if s in ["Present", "Half Day"]])
-
-
-
     working_days = len([s for s in computed_statuses if s == "Working"])
-
-
-
     absent_days = len([s for s in computed_statuses if s == "Absent"])
-
-
-
     not_marked_days = len([s for s in computed_statuses if s == "Not Marked"])
 
-
-
     return [
-
-
-
-        { "label": "Total Days", "value": total_days, "icon": "fas fa-calendar total blue-icon" },
-
-
-
-        { "label": "Worked Days", "value": worked_days, "icon": "fas fa-calendar-check worked blue-icon" },
-
-
-
-        { "label": "Present", "value": present_days, "icon": "fas fa-check-circle blue-icon" },
-
-
-
-        { "label": "Working", "value": working_days, "icon": "fas fa-user-check blue-icon" },
-
-
-
-        { "label": "Absent", "value": absent_days, "icon": "fas fa-times-circle red-icon" },
-
-
-
-        { "label": "Not Marked", "value": not_marked_days, "icon": "fas fa-user-times unapproved gold-icon" }
-
-
-
+        {"label": "Total Days", "value": total_days, "icon": "fas fa-calendar total blue-icon"},
+        {"label": "Worked Days", "value": worked_days, "icon": "fas fa-calendar-check worked blue-icon"},
+        {"label": "Present", "value": present_days, "icon": "fas fa-check-circle blue-icon"},
+        {"label": "Working", "value": working_days, "icon": "fas fa-user-check blue-icon"},
+        {"label": "Absent", "value": absent_days, "icon": "fas fa-times-circle red-icon"},
+        {"label": "Not Marked", "value": not_marked_days, "icon": "fas fa-user-times unapproved gold-icon"}
     ]
-

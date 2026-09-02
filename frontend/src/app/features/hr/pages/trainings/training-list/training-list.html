@@ -195,11 +195,11 @@
               </td>
 
               <td>
-                <span class="trainer-name"><i class="far fa-user text-muted me-1"></i>{{ item.trainer_name || 'HR Team' }}</span>
+                <span class="trainer-name"><i class="far fa-user text-muted"></i>{{ item.trainer_name || 'HR Team' }}</span>
               </td>
 
               <td>
-                <span class="duration-text"><i class="far fa-clock text-muted me-1"></i>{{ item.estimated_duration_minutes }} mins</span>
+                <span class="duration-text"><i class="far fa-clock text-muted"></i>{{ item.estimated_duration_minutes }} mins</span>
               </td>
 
               <td>
@@ -255,23 +255,45 @@
                   <ul class="dropdown-menu dropdown-menu-end" [class.show]="activeDropdownId === item.id">
                     <li>
                       <a class="dropdown-item" [routerLink]="getManageRoute(item.id)">
-                        <i class="fas fa-tasks text-primary me-2"></i>Manage Content & Assign
+                        <i class="fas fa-tasks text-primary"></i>
+                        <span>Manage Content & Assign</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item" [routerLink]="getLearnerRoute(item.id)">
+                        <i class="fas fa-play text-success"></i>
+                        <span>Preview Training</span>
                       </a>
                     </li>
                     <li>
                       <button type="button" class="dropdown-item" (click)="openAssessmentModal(item)">
-                        <i class="fas fa-file-signature text-info me-2"></i>Assessment Builder
+                        <i class="fas fa-file-signature text-info"></i>
+                        <span>Assessment Builder</span>
                       </button>
                     </li>
                     <li>
                       <a class="dropdown-item" [routerLink]="getEditRoute(item.id)">
-                        <i class="fas fa-edit text-warning me-2"></i>Edit Training
+                        <i class="fas fa-edit text-warning"></i>
+                        <span>Edit Training</span>
                       </a>
                     </li>
                     <li><hr class="dropdown-divider" /></li>
-                    <li>
+                    <li *ngIf="item.status === 'Archived'">
+                      <button type="button" class="dropdown-item text-success" (click)="restoreTraining(item.id)">
+                        <i class="fas fa-trash-restore text-success"></i>
+                        <span>Restore / Unarchive</span>
+                      </button>
+                    </li>
+                    <li *ngIf="item.status === 'Draft'">
+                      <button type="button" class="dropdown-item text-success" (click)="publishTraining(item.id)">
+                        <i class="fas fa-globe text-success"></i>
+                        <span>Publish Training</span>
+                      </button>
+                    </li>
+                    <li *ngIf="item.status !== 'Archived'">
                       <button type="button" class="dropdown-item text-danger" (click)="archiveTraining(item.id)">
-                        <i class="fas fa-archive me-2"></i>Archive
+                        <i class="fas fa-archive text-danger"></i>
+                        <span>Archive Training</span>
                       </button>
                     </li>
                   </ul>
@@ -521,7 +543,7 @@
               <h3 class="m-0 fs-6 fw-bold text-dark">Configured Questions ({{ assessmentData?.questions?.length || 0 }})</h3>
             </div>
             <div class="p-0">
-              <div *ngIf="!assessmentData?.questions || assessmentData?.questions?.length === 0" class="text-center py-4 text-muted">
+              <div *ngIf="!assessmentData?.questions?.length" class="text-center py-4 text-muted">
                 No questions added yet. Use form above to add test questions.
               </div>
 
@@ -557,6 +579,51 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- IN-APP CONFIRMATION POPUP MODAL                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="custom-modal-backdrop" *ngIf="confirmModal.isOpen" (click)="closeConfirm()"></div>
+<div class="custom-modal-wrapper" *ngIf="confirmModal.isOpen">
+  <div class="custom-confirm-card" (click)="$event.stopPropagation()">
+    <div class="confirm-icon-ring" [ngClass]="confirmModal.confirmBtnClass">
+      <i [ngClass]="confirmModal.iconClass"></i>
+    </div>
+    <div class="confirm-body-wrap">
+      <h3 class="confirm-modal-title">{{ confirmModal.title }}</h3>
+      <p class="confirm-modal-text">{{ confirmModal.message }}</p>
+    </div>
+    <div class="confirm-actions-row">
+      <button type="button" class="btn-confirm-cancel" (click)="closeConfirm()">
+        {{ confirmModal.cancelBtnText }}
+      </button>
+      <button
+        type="button"
+        class="btn-confirm-submit"
+        [ngClass]="confirmModal.confirmBtnClass"
+        (click)="executeConfirm()"
+      >
+        {{ confirmModal.confirmBtnText }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- IN-APP TOAST NOTIFICATION POPUP                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="app-toast-container" *ngIf="toast.show" [ngClass]="toast.type">
+  <div class="toast-icon-circle">
+    <i class="fas" [ngClass]="toast.type === 'success' ? 'fa-check' : toast.type === 'error' ? 'fa-exclamation' : 'fa-info'"></i>
+  </div>
+  <div class="toast-message-content">
+    <span class="toast-title-text">{{ toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Notice' }}</span>
+    <span class="toast-body-text">{{ toast.message }}</span>
+  </div>
+  <button type="button" class="toast-close-btn" (click)="closeToast()">
+    <i class="fas fa-times"></i>
+  </button>
 </div>
 
 

@@ -54,6 +54,11 @@ export interface TrainingAssignment {
   completed_at?: string;
   assessment_status?: string;
   assessment_score?: string;
+  test_permission_code?: string;
+  test_permission_label?: string;
+  is_test_eligible?: boolean;
+  attempts_used?: number;
+  max_attempts?: number;
 }
 
 export interface AssessmentOption {

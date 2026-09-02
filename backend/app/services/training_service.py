@@ -166,6 +166,24 @@ def list_trainings(
         completion_pct = round((completed_count / assigned_count * 100), 1) if assigned_count > 0 else 0.0
         has_assessment = db.query(Assessment).filter(Assessment.training_id == t.id).first() is not None
 
+        materials_serialized = [
+            {
+                "id": m.id,
+                "training_id": m.training_id,
+                "file_name": m.file_name,
+                "storage_path": m.storage_path,
+                "file_type": m.file_type,
+                "mime_type": m.mime_type,
+                "file_size": m.file_size,
+                "description": m.description,
+                "display_order": m.display_order,
+                "is_required": m.is_required,
+                "uploaded_by_user_id": m.uploaded_by_user_id,
+                "created_at": m.created_at
+            }
+            for m in sorted(t.materials, key=lambda x: (x.display_order, x.id))
+        ]
+
         result.append({
             "id": t.id,
             "title": t.title,
@@ -181,7 +199,7 @@ def list_trainings(
             "created_by_user_id": t.created_by_user_id,
             "created_at": t.created_at,
             "updated_at": t.updated_at,
-            "materials": t.materials,
+            "materials": materials_serialized,
             "has_assessment": has_assessment,
             "assigned_count": assigned_count,
             "completed_count": completed_count,
@@ -201,6 +219,26 @@ def archive_training(db: Session, training_id: int) -> Training:
     return training
 
 
+def restore_training(db: Session, training_id: int) -> Training:
+    training = db.query(Training).filter(Training.id == training_id).first()
+    if not training:
+        raise HTTPException(status_code=404, detail="Training not found.")
+    training.status = "Published"
+    db.commit()
+    db.refresh(training)
+    return training
+
+
+def publish_training(db: Session, training_id: int) -> Training:
+    training = db.query(Training).filter(Training.id == training_id).first()
+    if not training:
+        raise HTTPException(status_code=404, detail="Training not found.")
+    training.status = "Published"
+    db.commit()
+    db.refresh(training)
+    return training
+
+
 # ─── 2. Training Material Management ───────────────────────────────────────
 
 async def upload_training_material(
@@ -215,7 +253,8 @@ async def upload_training_material(
     if not training:
         raise HTTPException(status_code=404, detail="Training not found.")
 
-    file_name = file.filename or "file"
+    raw_name = file.filename or "file"
+    file_name = Path(raw_name).name.replace("..", "").replace("/", "").replace("\\", "").strip() or "file"
     ext = file_name.split(".")[-1].lower() if "." in file_name else ""
 
     if ext in FORBIDDEN_EXTENSIONS or ext not in ALLOWED_EXTENSIONS:
@@ -250,8 +289,11 @@ async def upload_training_material(
         file_type = "document"
 
     target_dir = _ensure_storage_dir(training_id)
-    unique_filename = f"{uuid.uuid4().hex[:12]}_{file_name.replace(' ', '_')}"
-    saved_path = target_dir / unique_filename
+    safe_base = file_name.replace(" ", "_").replace("..", "")
+    unique_filename = f"{uuid.uuid4().hex[:12]}_{safe_base}"
+    saved_path = (target_dir / unique_filename).resolve()
+    if not str(saved_path).startswith(str(target_dir.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid filename or path traversal detected.")
 
     with open(saved_path, "wb") as f:
         f.write(contents)
@@ -277,6 +319,28 @@ async def upload_training_material(
     db.commit()
     db.refresh(material)
     return material
+
+
+async def upload_training_materials_bulk(
+    db: Session,
+    training_id: int,
+    files: List[UploadFile],
+    current_user: User,
+    description: Optional[str] = None,
+    is_required: bool = True
+) -> List[TrainingMaterial]:
+    results = []
+    for file in files:
+        mat = await upload_training_material(
+            db=db,
+            training_id=training_id,
+            file=file,
+            current_user=current_user,
+            description=description,
+            is_required=is_required
+        )
+        results.append(mat)
+    return results
 
 
 def delete_training_material(db: Session, training_id: int, material_id: int) -> bool:
@@ -322,21 +386,25 @@ def assign_training(db: Session, training_id: int, req: AssignTrainingRequest, c
     target_employees: List[Employee] = []
 
     if req.assignment_type == "All":
-        target_employees = db.query(Employee).filter(Employee.status == "Active").all()
+        target_employees = db.query(Employee).filter(
+            or_(Employee.status == None, Employee.status != "Deleted")
+        ).all()
     elif req.assignment_type == "Selected" and req.employee_ids:
         target_employees = db.query(Employee).filter(
             Employee.id.in_(req.employee_ids),
-            Employee.status == "Active"
+            or_(Employee.status == None, Employee.status != "Deleted")
         ).all()
     elif req.assignment_type == "Department" and req.departments:
+        clean_depts = [d.strip().lower() for d in req.departments if d and d.strip()]
         target_employees = db.query(Employee).filter(
-            Employee.department.in_(req.departments),
-            Employee.status == "Active"
+            func.lower(Employee.department).in_(clean_depts),
+            or_(Employee.status == None, Employee.status != "Deleted")
         ).all()
     elif req.assignment_type == "Designation" and req.designations:
+        clean_desigs = [d.strip().lower() for d in req.designations if d and d.strip()]
         target_employees = db.query(Employee).filter(
-            Employee.designation.in_(req.designations),
-            Employee.status == "Active"
+            func.lower(Employee.designation).in_(clean_desigs),
+            or_(Employee.status == None, Employee.status != "Deleted")
         ).all()
     else:
         raise HTTPException(status_code=400, detail="Invalid assignment parameters or empty employee list.")
@@ -374,6 +442,10 @@ def assign_training(db: Session, training_id: int, req: AssignTrainingRequest, c
                     employee_id=emp.id,
                     reference_id=training_id
                 ))
+        else:
+            if req.due_date:
+                existing.due_date = req.due_date
+            created_assignments.append(existing)
 
     db.commit()
     return created_assignments
@@ -388,26 +460,66 @@ def get_training_assignments(db: Session, training_id: int) -> List[Dict[str, An
     )
 
     assessment = db.query(Assessment).filter(Assessment.training_id == training_id).first()
+    materials = db.query(TrainingMaterial).filter(TrainingMaterial.training_id == training_id).all()
+    required_count = sum(1 for m in materials if m.is_required)
 
     res = []
     for a in assignments:
         emp = a.employee
         assessment_status = "Not Attempted"
         assessment_score = "N/A"
+        attempts_count = 0
+        passed = False
 
         if assessment:
-            last_attempt = (
+            attempts = (
                 db.query(AssessmentAttempt)
                 .filter(
                     AssessmentAttempt.assessment_id == assessment.id,
                     AssessmentAttempt.employee_id == a.employee_id
                 )
                 .order_by(AssessmentAttempt.attempt_number.desc())
-                .first()
+                .all()
             )
-            if last_attempt:
+            attempts_count = len(attempts)
+            if attempts:
+                last_attempt = attempts[0]
+                passed = last_attempt.passed
                 assessment_status = "Passed" if last_attempt.passed else "Failed" if last_attempt.status == "SUBMITTED" else "In Progress"
                 assessment_score = f"{last_attempt.score}/{last_attempt.total_marks} ({last_attempt.percentage:.0f}%)"
+
+        completed_required = 0
+        if required_count > 0:
+            completed_required = (
+                db.query(TrainingMaterialProgress)
+                .join(TrainingMaterial, TrainingMaterial.id == TrainingMaterialProgress.material_id)
+                .filter(
+                    TrainingMaterial.training_id == training_id,
+                    TrainingMaterial.is_required == True,
+                    TrainingMaterialProgress.employee_id == a.employee_id,
+                    TrainingMaterialProgress.status == "COMPLETED"
+                )
+                .count()
+            )
+
+        is_test_eligible = (required_count == 0) or (completed_required >= required_count) or (a.progress_percentage >= 100.0)
+
+        # Test Permission Label
+        if not assessment:
+            test_permission_label = "No Assessment"
+            test_permission_code = "NO_ASSESSMENT"
+        elif passed:
+            test_permission_label = "Test Passed"
+            test_permission_code = "PASSED"
+        elif not is_test_eligible:
+            test_permission_label = f"Locked ({completed_required}/{required_count} Materials)"
+            test_permission_code = "LOCKED"
+        elif attempts_count >= assessment.max_attempts:
+            test_permission_label = f"Attempts Exhausted ({attempts_count}/{assessment.max_attempts})"
+            test_permission_code = "EXHAUSTED"
+        else:
+            test_permission_label = "Allowed / Ready to Test"
+            test_permission_code = "ALLOWED"
 
         res.append({
             "id": a.id,
@@ -424,7 +536,12 @@ def get_training_assignments(db: Session, training_id: int) -> List[Dict[str, An
             "started_at": a.started_at,
             "completed_at": a.completed_at,
             "assessment_status": assessment_status,
-            "assessment_score": assessment_score
+            "assessment_score": assessment_score,
+            "is_test_eligible": is_test_eligible,
+            "test_permission_label": test_permission_label,
+            "test_permission_code": test_permission_code,
+            "attempts_used": attempts_count,
+            "max_attempts": assessment.max_attempts if assessment else 0
         })
     return res
 
@@ -562,28 +679,41 @@ def get_employee_trainings(db: Session, employee_id: int) -> List[Dict[str, Any]
     return res
 
 
-def get_employee_training_details(db: Session, employee_id: int, training_id: int) -> Dict[str, Any]:
-    assignment = db.query(TrainingAssignment).filter(
-        TrainingAssignment.training_id == training_id,
-        TrainingAssignment.employee_id == employee_id
-    ).first()
-    if not assignment:
+def get_employee_training_details(
+    db: Session,
+    employee_id: Optional[int],
+    training_id: int,
+    current_user: Optional[User] = None
+) -> Dict[str, Any]:
+    training = get_training(db, training_id)
+    role_name = current_user.role.name.lower() if current_user and current_user.role else ""
+
+    assignment = None
+    if employee_id:
+        assignment = db.query(TrainingAssignment).filter(
+            TrainingAssignment.training_id == training_id,
+            TrainingAssignment.employee_id == employee_id
+        ).first()
+
+    if not assignment and role_name not in ["admin", "hr"]:
         raise HTTPException(status_code=403, detail="You are not assigned to this training.")
 
-    training = get_training(db, training_id)
+    # Bulk fetch material progress in a single fast query
+    progress_map = {}
+    if assignment:
+        progress_records = db.query(TrainingMaterialProgress).filter(
+            TrainingMaterialProgress.assignment_id == assignment.id
+        ).all()
+        progress_map = {p.material_id: p for p in progress_records}
 
-    # Get material progress
     materials_list = []
     required_count = 0
     completed_required_count = 0
 
     for mat in training.materials:
-        progress = db.query(TrainingMaterialProgress).filter(
-            TrainingMaterialProgress.assignment_id == assignment.id,
-            TrainingMaterialProgress.material_id == mat.id
-        ).first()
-
+        progress = progress_map.get(mat.id)
         is_completed = progress.status == "COMPLETED" if progress else False
+
         if mat.is_required:
             required_count += 1
             if is_completed:
@@ -609,34 +739,34 @@ def get_employee_training_details(db: Session, employee_id: int, training_id: in
     last_attempt_result = None
 
     if assessment:
-        attempts_count = db.query(AssessmentAttempt).filter(
-            AssessmentAttempt.assessment_id == assessment.id,
-            AssessmentAttempt.employee_id == employee_id
-        ).count()
-
-        last_attempt = (
-            db.query(AssessmentAttempt)
-            .filter(
+        if employee_id:
+            attempts_count = db.query(AssessmentAttempt).filter(
                 AssessmentAttempt.assessment_id == assessment.id,
                 AssessmentAttempt.employee_id == employee_id
+            ).count()
+
+            last_attempt = (
+                db.query(AssessmentAttempt)
+                .filter(
+                    AssessmentAttempt.assessment_id == assessment.id,
+                    AssessmentAttempt.employee_id == employee_id
+                )
+                .order_by(AssessmentAttempt.attempt_number.desc())
+                .first()
             )
-            .order_by(AssessmentAttempt.attempt_number.desc())
-            .first()
-        )
 
-        if last_attempt:
-            last_attempt_result = {
-                "attempt_id": last_attempt.id,
-                "score": last_attempt.score,
-                "total_marks": last_attempt.total_marks,
-                "percentage": last_attempt.percentage,
-                "passed": last_attempt.passed,
-                "submitted_at": last_attempt.submitted_at
-            }
+            if last_attempt:
+                last_attempt_result = {
+                    "attempt_id": last_attempt.id,
+                    "score": last_attempt.score,
+                    "total_marks": last_attempt.total_marks,
+                    "percentage": last_attempt.percentage,
+                    "passed": last_attempt.passed,
+                    "submitted_at": last_attempt.submitted_at
+                }
 
-        # Employee can take assessment if required materials complete & attempts remaining
-        materials_done = (required_count == 0) or (completed_required_count >= required_count)
-        can_take_assessment = materials_done and (attempts_count < assessment.max_attempts)
+        materials_done = (required_count == 0) or (completed_required_count >= required_count) or (role_name in ["admin", "hr"])
+        can_take_assessment = (materials_done and (attempts_count < assessment.max_attempts)) or (role_name in ["admin", "hr"])
 
         assessment_data = {
             "id": assessment.id,
@@ -650,7 +780,7 @@ def get_employee_training_details(db: Session, employee_id: int, training_id: in
         }
 
     return {
-        "assignment_id": assignment.id,
+        "assignment_id": assignment.id if assignment else 0,
         "training_id": training.id,
         "title": training.title,
         "code": training.code,
@@ -660,9 +790,9 @@ def get_employee_training_details(db: Session, employee_id: int, training_id: in
         "trainer_name": training.trainer_name,
         "estimated_duration_minutes": training.estimated_duration_minutes,
         "start_date": training.start_date,
-        "due_date": assignment.due_date,
-        "assignment_status": assignment.status,
-        "progress_percentage": assignment.progress_percentage,
+        "due_date": assignment.due_date if assignment else None,
+        "assignment_status": assignment.status if assignment else "PREVIEW",
+        "progress_percentage": assignment.progress_percentage if assignment else 0.0,
         "materials": materials_list,
         "has_assessment": assessment is not None,
         "assessment": assessment_data,

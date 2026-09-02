@@ -88,21 +88,38 @@
   top: calc(100% + 6px);
   left: 0;
   z-index: 1050;
-  width: 300px;
+  width: 290px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   box-shadow: 0 16px 40px -6px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.08);
-  padding: 14px;
+  padding: 12px 14px;
   box-sizing: border-box;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   animation: dpSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.datepicker-popup-card.open-upward {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation: dpSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes dpSlideDown {
   from {
     opacity: 0;
     transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dpSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
   }
   to {
     opacity: 1;

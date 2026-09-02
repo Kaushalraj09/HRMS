@@ -1,69 +1,68 @@
-<div class="card border-0 shadow-sm rounded-3 h-100">
-  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-    <div class="fw-bold text-dark fs-6 mb-0">
-      <i class="fas fa-graduation-cap text-primary me-2"></i>My Training & Learning
+<div class="dashboard-widget-card h-100">
+  <div class="widget-head">
+    <div class="widget-title-wrap">
+      <i class="fas fa-graduation-cap text-primary"></i>
+      <h3 class="widget-title">My Learning & Trainings</h3>
     </div>
-    <a routerLink="/emp-dashboard/my-trainings" class="btn btn-sm btn-outline-primary fw-semibold">
-      View All
+    <a routerLink="/emp-dashboard/my-trainings" class="widget-view-all-link">
+      <span>View All</span>
+      <i class="fas fa-arrow-right"></i>
     </a>
   </div>
-  <div class="card-body p-4">
-    <div *ngIf="isLoading" class="text-center py-4 text-muted small">
-      <i class="fas fa-spinner fa-spin me-2"></i>Loading training summary...
+
+  <div class="widget-body">
+    <div *ngIf="isLoading" class="widget-loading-state">
+      <i class="fas fa-circle-notch fa-spin text-primary"></i>
+      <span>Loading learning progress...</span>
     </div>
 
     <div *ngIf="!isLoading">
-      <!-- Summary Badges -->
-      <div class="row text-center g-2 mb-3">
-        <div class="col-4">
-          <div class="p-2 bg-light rounded border">
-            <div class="small text-muted text-uppercase" style="font-size: 0.7rem;">Assigned</div>
-            <div class="fw-bold fs-5 text-dark">{{ assignedCount }}</div>
-          </div>
+      <!-- Summary Metrics Grid -->
+      <div class="widget-metrics-row">
+        <div class="widget-metric-cell">
+          <div class="metric-mini-label">Assigned</div>
+          <div class="metric-mini-val text-dark">{{ assignedCount }}</div>
         </div>
-        <div class="col-4">
-          <div class="p-2 bg-warning-subtle rounded border border-warning">
-            <div class="small text-warning-emphasis text-uppercase" style="font-size: 0.7rem;">In Progress</div>
-            <div class="fw-bold fs-5 text-warning-emphasis">{{ inProgressCount }}</div>
-          </div>
+        <div class="widget-metric-cell in-progress">
+          <div class="metric-mini-label">In Progress</div>
+          <div class="metric-mini-val text-amber">{{ inProgressCount }}</div>
         </div>
-        <div class="col-4">
-          <div class="p-2 bg-success-subtle rounded border border-success">
-            <div class="small text-success text-uppercase" style="font-size: 0.7rem;">Completed</div>
-            <div class="fw-bold fs-5 text-success">{{ completedCount }}</div>
-          </div>
+        <div class="widget-metric-cell completed">
+          <div class="metric-mini-label">Completed</div>
+          <div class="metric-mini-val text-success">{{ completedCount }}</div>
         </div>
       </div>
 
-      <!-- Urgent Upcoming Training -->
-      <div *ngIf="nextUrgentTraining" class="p-3 bg-light rounded-3 border">
-        <div class="d-flex justify-content-between align-items-start mb-1">
-          <span class="badge bg-primary-subtle text-primary border font-monospace small">
-            {{ nextUrgentTraining.category }}
-          </span>
-          <span *ngIf="nextUrgentTraining.due_date" class="small text-danger fw-semibold">
+      <!-- Urgent Upcoming Training Focus Card -->
+      <div *ngIf="nextUrgentTraining" class="urgent-training-card">
+        <div class="d-flex justify-content-between align-items-center mb-1.5">
+          <span class="category-tag py-0.5 px-1.5 small">{{ nextUrgentTraining.category }}</span>
+          <span *ngIf="nextUrgentTraining.due_date" class="due-date-pill">
             <i class="far fa-clock me-1"></i>Due {{ nextUrgentTraining.due_date | date:'mediumDate' }}
           </span>
         </div>
-        <h6 class="fw-bold text-dark mb-1 text-truncate">{{ nextUrgentTraining.title }}</h6>
 
-        <div class="mb-2">
+        <h4 class="urgent-training-title">{{ nextUrgentTraining.title }}</h4>
+
+        <div class="widget-progress-block">
           <div class="d-flex justify-content-between small text-muted mb-1">
-            <span>Progress</span>
-            <span>{{ nextUrgentTraining.progress_percentage || 0 }}%</span>
+            <span style="font-size: 0.725rem;">Progress</span>
+            <span class="fw-bold text-dark" style="font-size: 0.725rem;">{{ nextUrgentTraining.progress_percentage || 0 }}%</span>
           </div>
-          <div class="progress" style="height: 5px;">
-            <div class="progress-bar bg-success" [style.width.%]="nextUrgentTraining.progress_percentage || 0"></div>
+          <div class="widget-progress-track">
+            <div class="widget-progress-fill" [style.width.%]="nextUrgentTraining.progress_percentage || 0"></div>
           </div>
         </div>
 
-        <a [routerLink]="['/emp-dashboard/my-trainings', nextUrgentTraining.training_id]" class="btn btn-sm btn-primary w-100">
-          Continue Training
+        <a [routerLink]="['/emp-dashboard/my-trainings', nextUrgentTraining.training_id]" class="btn-widget-continue">
+          <span>Continue Program</span>
+          <i class="fas fa-arrow-right"></i>
         </a>
       </div>
 
-      <div *ngIf="!nextUrgentTraining && assignedCount === 0" class="text-center py-3 text-muted small">
-        No active trainings assigned at the moment.
+      <div *ngIf="!nextUrgentTraining && assignedCount === 0" class="widget-empty-state">
+        <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.5rem;"></i>
+        <p class="m-0 small text-muted">All assigned learning programs are up to date.</p>
       </div>
     </div>
   </div>

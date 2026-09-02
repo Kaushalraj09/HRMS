@@ -68,6 +68,14 @@ export class TrainingService {
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 
+  restoreTraining(id: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${id}/restore`, {});
+  }
+
+  publishTraining(id: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${id}/publish`, {});
+  }
+
   // ─── Material Management ──────────────────────────────────────────────────
 
   uploadMaterial(
@@ -82,6 +90,20 @@ export class TrainingService {
     formData.append('is_required', isRequired ? 'true' : 'false');
 
     return this.http.post<TrainingMaterial>(`${this.apiUrl}/${trainingId}/materials`, formData);
+  }
+
+  uploadMaterialsBulk(
+    trainingId: number,
+    files: File[],
+    description?: string,
+    isRequired: boolean = true
+  ): Observable<TrainingMaterial[]> {
+    const formData = new FormData();
+    files.forEach((f) => formData.append('files', f));
+    if (description) formData.append('description', description);
+    formData.append('is_required', isRequired ? 'true' : 'false');
+
+    return this.http.post<TrainingMaterial[]>(`${this.apiUrl}/${trainingId}/materials/bulk`, formData);
   }
 
   deleteMaterial(trainingId: number, materialId: number): Observable<any> {

@@ -21,6 +21,8 @@ dist/
 # Storage
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
+backend/storage/trainings/*
+!backend/storage/trainings/.gitkeep
 
 # TLS certificate material is mounted at runtime and must never be committed.
 deploy/certs/*.pem

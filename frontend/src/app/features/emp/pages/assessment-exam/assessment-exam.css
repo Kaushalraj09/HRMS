@@ -1,58 +1,566 @@
-.cursor-pointer {
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ASSESSMENT EXAM COMPONENT STYLES                                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+:host {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.exam-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0.25rem 2.5rem 0.25rem;
+  max-width: 100%;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── 1. Sticky Exam Header ──────────────────────────────────────────────── */
+
+.exam-header-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1rem 1.35rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.exam-title-box h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.exam-q-counter {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.exam-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timer-pill-box {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 1rem;
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 10px;
+}
+
+.timer-pill-box i {
+  color: #f59e0b;
+  font-size: 1.1rem;
+}
+
+.timer-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.timer-clock {
+  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f59e0b;
+  line-height: 1.2;
+}
+
+.btn-exam-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.35rem;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
   cursor: pointer;
-}
-
-.option-item {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
   transition: all 0.2s ease;
-  background-color: #ffffff;
 }
 
-.option-item:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1 !important;
+.btn-exam-submit:hover {
+  background: #059669;
+  transform: translateY(-1px);
 }
 
-.option-selected {
-  background-color: #eff6ff !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 1px #3b82f6;
+/* ─── 2. Question Panel Card ─────────────────────────────────────────────── */
+
+.exam-panel-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  padding: 1.75rem;
+}
+
+.q-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.q-number-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid #dbeafe;
+}
+
+.q-marks-tag {
+  font-size: 0.785rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.q-text-body {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+/* ─── 3. Option Selection Cards ──────────────────────────────────────────── */
+
+.options-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.option-card-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.15rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.option-card-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.option-card-item.is-selected {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.option-radio-input {
+  width: 17px;
+  height: 17px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.option-text-label {
+  font-size: 0.9rem;
+  color: #1e293b;
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+.option-key-tag {
+  font-weight: 700;
+  color: #2563eb;
+  margin-right: 0.35rem;
+}
+
+/* ─── 4. Navigation Controls ─────────────────────────────────────────────── */
+
+.q-nav-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-nav-prev {
+  padding: 0.55rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-nav-prev:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.btn-nav-prev:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-nav-next {
+  padding: 0.55rem 1.35rem;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-nav-next:hover {
+  background: #1d4ed8;
+}
+
+/* ─── 5. Question Navigator Grid ─────────────────────────────────────────── */
+
+.navigator-panel-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+}
+
+.navigator-head {
+  padding: 0.85rem 1.15rem;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.navigator-head h3 {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.navigator-body {
+  padding: 1.25rem;
 }
 
 .question-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 1.25rem;
 }
 
 .q-grid-btn {
-  height: 42px;
-  font-weight: 600;
+  height: 38px;
+  font-size: 0.825rem;
+  font-weight: 700;
   border-radius: 8px;
+  border: 1px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .answered-q {
-  background-color: #10b981 !important;
-  color: white !important;
+  background-color: #10b981;
+  color: #ffffff;
 }
 
 .unanswered-q {
   background-color: #f1f5f9;
   color: #64748b;
-  border: 1px solid #cbd5e1;
+  border-color: #e2e8f0;
 }
 
 .active-q {
-  background-color: #4f46e5 !important;
-  color: white !important;
-  box-shadow: 0 0 0 2px #c7d2fe;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.navigator-legend {
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.775rem;
+  color: #64748b;
 }
 
 .legend-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
+}
+.legend-dot.bg-success { background-color: #10b981; }
+.legend-dot.bg-secondary { background-color: #cbd5e1; }
+.legend-dot.bg-primary { background-color: #2563eb; }
+
+/* ─── 6. Confirmation Modal ─────────────────────────────────────────────── */
+
+.custom-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+}
+
+.custom-modal-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1055;
+  padding: 1rem;
+}
+
+.custom-modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px -8px rgba(15, 23, 42, 0.2);
+  width: 100%;
+  max-width: 460px;
+  overflow: hidden;
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.custom-modal-head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.custom-modal-head h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.custom-modal-body {
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+}
+
+.modal-warn-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin: 0 auto 1rem;
+}
+
+.custom-modal-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  background: #f8fafc;
+}
+
+.btn-modal-cancel {
+  padding: 0.55rem 1.15rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-modal-confirm {
+  padding: 0.55rem 1.25rem;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ─── 8. In-App Modern Floating Toast Popup (Top-Center) ─────────────────── */
+
+.app-toast-container {
+  position: fixed;
+  top: 1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background: #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 20px 30px -6px rgba(15, 23, 42, 0.16), 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e2e8f0;
+  animation: toastDropIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+
+@keyframes toastDropIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.toast-icon-circle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.app-toast-container.success .toast-icon-circle {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #16a34a;
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
+}
+
+.app-toast-container.error .toast-icon-circle {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.25);
+}
+
+.app-toast-container.info .toast-icon-circle {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.25);
+}
+
+.toast-message-content {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-grow: 1;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.toast-title-text {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.toast-body-text {
+  color: #475569;
+  font-weight: 500;
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toast-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -30,6 +30,85 @@ export class TrainingListComponent implements OnInit {
 
   // Dropdown toggle state
   activeDropdownId: number | null = null;
+
+  // Custom Confirmation Popup State
+  confirmModal = {
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmBtnText: 'Confirm',
+    cancelBtnText: 'Cancel',
+    confirmBtnClass: 'btn-primary',
+    iconClass: 'fas fa-exclamation-triangle',
+    onConfirm: () => {}
+  };
+
+  // In-App Toast Popup State
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info',
+    timeout: null as any
+  };
+
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast = {
+        show: true,
+        message,
+        type,
+        timeout: setTimeout(() => {
+          this.ngZone.run(() => {
+            this.toast.show = false;
+            this.cdr.detectChanges();
+          });
+        }, duration)
+      };
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeToast(): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    });
+  }
+
+  openConfirm(options: {
+    title: string;
+    message: string;
+    confirmBtnText?: string;
+    cancelBtnText?: string;
+    confirmBtnClass?: string;
+    iconClass?: string;
+    onConfirm: () => void;
+  }): void {
+    this.confirmModal = {
+      isOpen: true,
+      title: options.title,
+      message: options.message,
+      confirmBtnText: options.confirmBtnText || 'Confirm',
+      cancelBtnText: options.cancelBtnText || 'Cancel',
+      confirmBtnClass: options.confirmBtnClass || 'btn-primary',
+      iconClass: options.iconClass || 'fas fa-exclamation-triangle',
+      onConfirm: options.onConfirm
+    };
+    this.cdr.detectChanges();
+  }
+
+  closeConfirm(): void {
+    this.confirmModal.isOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  executeConfirm(): void {
+    const action = this.confirmModal.onConfirm;
+    this.closeConfirm();
+    if (action) action();
+  }
 
   @HostListener('document:click')
   onDocumentClick(): void {
@@ -111,7 +190,8 @@ export class TrainingListComponent implements OnInit {
     private fb: FormBuilder,
     private trainingService: TrainingService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -183,12 +263,13 @@ export class TrainingListComponent implements OnInit {
       next: (res) => {
         this.isSubmittingTraining = false;
         this.closeCreateModal();
+        this.showToast('Training program created successfully.', 'success');
         this.loadKPIs();
         this.loadTrainings();
       },
       error: (err) => {
         this.isSubmittingTraining = false;
-        alert('Error creating training program:\n' + this.formatError(err));
+        this.showToast('Error creating training program: ' + this.formatError(err), 'error');
         this.cdr.detectChanges();
       }
     });
@@ -283,11 +364,12 @@ export class TrainingListComponent implements OnInit {
     this.trainingService.saveAssessment(this.activeAssessmentTraining.id, this.assessmentSettingsForm.value).subscribe({
       next: () => {
         this.isSavingAssessmentSettings = false;
+        this.showToast('Assessment settings saved successfully.', 'success');
         this.loadAssessmentForTraining(this.activeAssessmentTraining!.id);
       },
       error: (err) => {
         this.isSavingAssessmentSettings = false;
-        alert('Error saving assessment: ' + (err.error?.detail || err.message));
+        this.showToast('Error saving assessment: ' + (err.error?.detail || err.message), 'error');
         this.cdr.detectChanges();
       }
     });
@@ -303,13 +385,13 @@ export class TrainingListComponent implements OnInit {
 
   addQuestion(): void {
     if (!this.assessmentData || !this.assessmentData.id) {
-      alert('Please save assessment settings first before adding questions.');
+      this.showToast('Please save assessment settings first before adding questions.', 'error');
       return;
     }
 
     if (this.questionForm.invalid) {
       this.questionForm.markAllAsTouched();
-      alert('Please fill in all question fields and options.');
+      this.showToast('Please fill in all question fields and options.', 'error');
       return;
     }
 
@@ -321,24 +403,37 @@ export class TrainingListComponent implements OnInit {
       next: () => {
         this.isAddingQuestion = false;
         this.resetQuestionForm();
+        this.showToast('Question added to assessment successfully.', 'success');
         this.loadAssessmentForTraining(this.activeAssessmentTraining!.id);
       },
       error: (err) => {
         this.isAddingQuestion = false;
-        alert('Error adding question: ' + (err.error?.detail || err.message));
+        this.showToast('Error adding question: ' + (err.error?.detail || err.message), 'error');
         this.cdr.detectChanges();
       }
     });
   }
 
   deleteQuestion(qId: number): void {
-    if (!this.assessmentData?.id) return;
-    if (confirm('Delete this question from assessment?')) {
-      this.trainingService.deleteQuestion(this.assessmentData.id, qId).subscribe({
-        next: () => this.loadAssessmentForTraining(this.activeAssessmentTraining!.id),
-        error: (err) => alert('Delete failed: ' + (err.error?.detail || err.message))
-      });
-    }
+    const assessmentId = this.assessmentData?.id;
+    const activeTrnId = this.activeAssessmentTraining?.id;
+    if (!assessmentId || !activeTrnId) return;
+    this.openConfirm({
+      title: 'Delete Question',
+      message: 'Are you sure you want to delete this question from the assessment?',
+      confirmBtnText: 'Delete Question',
+      confirmBtnClass: 'btn-danger',
+      iconClass: 'fas fa-trash',
+      onConfirm: () => {
+        this.trainingService.deleteQuestion(assessmentId, qId).subscribe({
+          next: () => {
+            this.showToast('Question deleted successfully.', 'success');
+            this.loadAssessmentForTraining(activeTrnId);
+          },
+          error: (err) => this.showToast('Delete failed: ' + (err.error?.detail || err.message), 'error')
+        });
+      }
+    });
   }
 
   resetQuestionForm(): void {
@@ -349,15 +444,19 @@ export class TrainingListComponent implements OnInit {
       explanation: ''
     });
     const opts = this.optionsArray;
-    const keys: Array<'A'|'B'|'C'|'D'> = ['A', 'B', 'C', 'D'];
-    for (let i = 0; i < 4; i++) {
-      opts.at(i).patchValue({
-        option_key: keys[i],
-        option_text: '',
-        is_correct: i === 1
-      });
-    }
+    opts.clear();
+    const defaults = ['A', 'B', 'C', 'D'];
+    defaults.forEach((key, idx) => {
+      opts.push(
+        this.fb.group({
+          option_key: [key],
+          option_text: ['', Validators.required],
+          is_correct: [idx === 1]
+        })
+      );
+    });
     this.selectedCorrectOptionIndex = 1;
+    this.cdr.detectChanges();
   }
 
   getBasePrefix(): string {
@@ -370,6 +469,10 @@ export class TrainingListComponent implements OnInit {
 
   getReportsRoute(): string {
     return `${this.getBasePrefix()}/training-reports`;
+  }
+
+  getLearnerRoute(id: number): string[] {
+    return [this.getBasePrefix(), 'trainings', id.toString(), 'view'];
   }
 
   getManageRoute(id: number): string[] {
@@ -439,15 +542,63 @@ export class TrainingListComponent implements OnInit {
   }
 
   archiveTraining(id: number): void {
-    if (confirm('Are you sure you want to archive this training program?')) {
-      this.trainingService.archiveTraining(id).subscribe({
-        next: () => {
-          this.loadKPIs();
-          this.loadTrainings();
-        },
-        error: (err) => alert('Failed to archive training: ' + (err.error?.detail || err.message))
-      });
-    }
+    this.openConfirm({
+      title: 'Archive Training Program',
+      message: 'Are you sure you want to archive this training program? It will be deactivated and moved to archive.',
+      confirmBtnText: 'Archive Program',
+      confirmBtnClass: 'btn-danger',
+      iconClass: 'fas fa-archive',
+      onConfirm: () => {
+        this.trainingService.archiveTraining(id).subscribe({
+          next: () => {
+            this.showToast('Training program archived successfully.', 'success');
+            this.loadKPIs();
+            this.loadTrainings();
+          },
+          error: (err) => this.showToast('Failed to archive training: ' + (err.error?.detail || err.message), 'error')
+        });
+      }
+    });
+  }
+
+  restoreTraining(id: number): void {
+    this.openConfirm({
+      title: 'Restore Training Program',
+      message: 'Restore this training program to Published status and make it active again?',
+      confirmBtnText: 'Restore Program',
+      confirmBtnClass: 'btn-success',
+      iconClass: 'fas fa-trash-restore',
+      onConfirm: () => {
+        this.trainingService.restoreTraining(id).subscribe({
+          next: () => {
+            this.showToast('Training program restored to Published.', 'success');
+            this.loadKPIs();
+            this.loadTrainings();
+          },
+          error: (err) => this.showToast('Failed to restore training: ' + (err.error?.detail || err.message), 'error')
+        });
+      }
+    });
+  }
+
+  publishTraining(id: number): void {
+    this.openConfirm({
+      title: 'Publish Training Program',
+      message: 'Publish this training program to make it active and accessible to assigned employees?',
+      confirmBtnText: 'Publish Program',
+      confirmBtnClass: 'btn-success',
+      iconClass: 'fas fa-globe',
+      onConfirm: () => {
+        this.trainingService.publishTraining(id).subscribe({
+          next: () => {
+            this.showToast('Training program published successfully.', 'success');
+            this.loadKPIs();
+            this.loadTrainings();
+          },
+          error: (err) => this.showToast('Failed to publish training: ' + (err.error?.detail || err.message), 'error')
+        });
+      }
+    });
   }
 
   navigateTo(path: string): void {

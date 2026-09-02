@@ -158,6 +158,35 @@ def test_file_upload_validation_and_reorder(client, db_session):
         material_path.unlink(missing_ok=True)
 
 
+def test_hr_bulk_material_upload(client, db_session):
+    user_hr = db_session.query(User).filter(User.email == "hr@example.com").first()
+    app.dependency_overrides[get_current_user] = lambda: user_hr
+
+    t = Training(title="Bulk Material Training", code="TRN-BULK", created_by_user_id=user_hr.id, status="Published")
+    db_session.add(t)
+    db_session.commit()
+
+    file1 = ("Doc1.pdf", io.BytesIO(b"%PDF-1.4 file 1"), "application/pdf")
+    file2 = ("Doc2.pdf", io.BytesIO(b"%PDF-1.4 file 2"), "application/pdf")
+
+    res = client.post(
+        f"/api/v1/trainings/{t.id}/materials/bulk",
+        files=[("files", file1), ("files", file2)],
+        data={"description": "Batch course materials", "is_required": "true"}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 2
+    assert data[0]["file_name"] == "Doc1.pdf"
+    assert data[1]["file_name"] == "Doc2.pdf"
+
+    # Clean up physical files
+    for item in data:
+        mat = db_session.query(TrainingMaterial).filter(TrainingMaterial.id == item["id"]).first()
+        if mat and mat.storage_path:
+            Path(mat.storage_path).unlink(missing_ok=True)
+
+
 # ─── 2. Assignment Tests ────────────────────────────────────────────────────
 
 def test_assign_training_to_department(client, db_session):

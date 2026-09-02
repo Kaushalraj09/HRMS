@@ -1,15 +1,25 @@
 <div class="trainings-page-wrapper">
   <!-- Page Header Card -->
-  <div class="trainings-header-card">
+  <div class="trainings-header-card" *ngIf="training">
     <div class="header-main-info">
       <div class="header-titles">
-        <div class="title-with-badge" *ngIf="training">
+        <div class="mb-2">
+          <a [routerLink]="getTrainingsListRoute()" class="btn-back-modern">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Training Programs</span>
+          </a>
+        </div>
+        <div class="title-with-badge">
           <h1 class="page-title">{{ training.title }}</h1>
           <span class="code-badge-pill">{{ training.code }}</span>
           <span class="category-tag">{{ training.category }}</span>
           <span
             class="status-pill-badge"
-            [ngClass]="training.status === 'Published' ? 'status-completed' : 'status-in-progress'"
+            [ngClass]="{
+              'status-completed': training.status === 'Published',
+              'status-in-progress': training.status === 'Draft',
+              'status-archived': training.status === 'Archived'
+            }"
           >
             <span class="status-dot"></span>
             {{ training.status }}
@@ -18,14 +28,11 @@
         <p class="page-subtitle">Upload course materials, configure requirements, and assign employees.</p>
       </div>
 
-      <div class="header-action-btns" *ngIf="training">
+      <!-- Action Button Group -->
+      <div class="header-action-btns">
         <a [routerLink]="getAssessmentRoute()" class="btn-header-primary">
           <i class="fas fa-file-signature"></i>
           <span>Assessment Builder</span>
-        </a>
-        <a [routerLink]="getTrainingsListRoute()" class="btn-header-secondary">
-          <i class="fas fa-arrow-left"></i>
-          <span>Back to Trainings</span>
         </a>
       </div>
     </div>
@@ -37,26 +44,28 @@
   </div>
 
   <div *ngIf="!isLoading && training" class="content-manage-container">
-    <!-- Navigation Filter Tab Bar -->
-    <div class="filter-toolbar-card mb-4">
-      <div class="category-pills-row">
-        <button
-          type="button"
-          class="cat-pill"
-          [class.active]="activeTab === 'content'"
-          (click)="activeTab = 'content'"
-        >
-          <i class="fas fa-folder-open me-2"></i>Learning Materials ({{ training.materials?.length || 0 }})
-        </button>
-        <button
-          type="button"
-          class="cat-pill"
-          [class.active]="activeTab === 'assignments'"
-          (click)="activeTab = 'assignments'"
-        >
-          <i class="fas fa-user-check me-2"></i>Employee Assignments ({{ assignments.length || 0 }})
-        </button>
-      </div>
+    <!-- Modern Segmented Navigation Tabs -->
+    <div class="segmented-tabs-wrapper mb-4">
+      <button
+        type="button"
+        class="segmented-tab-btn"
+        [class.active]="activeTab === 'content'"
+        (click)="activeTab = 'content'"
+      >
+        <i class="fas fa-folder-open"></i>
+        <span>Learning Materials</span>
+        <span class="tab-count-pill" [class.active]="activeTab === 'content'">{{ training.materials?.length || 0 }}</span>
+      </button>
+      <button
+        type="button"
+        class="segmented-tab-btn"
+        [class.active]="activeTab === 'assignments'"
+        (click)="activeTab = 'assignments'"
+      >
+        <i class="fas fa-user-check"></i>
+        <span>Employee Assignments</span>
+        <span class="tab-count-pill" [class.active]="activeTab === 'assignments'">{{ assignments.length || 0 }}</span>
+      </button>
     </div>
 
     <!-- TAB 1: LEARNING MATERIALS -->
@@ -64,52 +73,106 @@
       <div class="row g-4">
         <!-- Upload Card -->
         <div class="col-lg-5">
-          <div class="card-box-panel">
-            <div class="panel-head">
-              <i class="fas fa-cloud-upload-alt text-primary"></i>
-              <h3>Upload Learning Material</h3>
+          <div class="card-box-panel upload-box-panel shadow-sm">
+            <div class="card-panel-header">
+              <div class="panel-header-icon-box">
+                <i class="fas fa-cloud-arrow-up"></i>
+              </div>
+              <div>
+                <h3 class="panel-header-title">Upload Learning Materials</h3>
+                <p class="panel-header-subtitle">Add files for employee self-paced study</p>
+              </div>
             </div>
-            <div class="panel-body">
-              <div class="form-group-item mb-3">
-                <label class="form-label-custom">Select File <span class="required-star">*</span></label>
+            <div class="panel-body p-3">
+              <!-- Compact Sleek Dropzone -->
+              <div
+                class="upload-dropzone compact-dropzone"
+                [class.is-dragging]="isDragging"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onFileDrop($event)"
+                (click)="fileInput.click()"
+              >
                 <input
+                  #fileInput
                   type="file"
-                  class="custom-form-input"
-                  (change)="onFileSelected($event)"
+                  multiple
+                  style="display: none !important;"
+                  (change)="onFilesSelected($event)"
                 />
-                <div class="field-hint">
-                  Supports PDF, DOCX, MP4, MP3, Images. Max 50MB.
+                <div class="dropzone-content-inline">
+                  <div class="dropzone-icon-circle-sm">
+                    <i class="fas fa-cloud-arrow-up"></i>
+                  </div>
+                  <div class="dropzone-text-block">
+                    <div class="dropzone-title-sm">Click to browse or drop files</div>
+                    <div class="dropzone-subtitle-sm">PDF, MP4, MP3, DOCX, Images (Max 50MB)</div>
+                  </div>
                 </div>
               </div>
 
-              <div class="form-group-item mb-3">
-                <label class="form-label-custom">Description / Notes</label>
+              <!-- Selected Files Queue (Compact & Clean) -->
+              <div *ngIf="selectedFiles.length > 0" class="selected-files-panel compact-queue mt-2">
+                <div class="queue-header py-1">
+                  <div class="queue-title">
+                    <span class="queue-count-badge">{{ selectedFiles.length }}</span>
+                    <span class="small">Selected ({{ getTotalSelectedSize() }})</span>
+                  </div>
+                  <button type="button" class="btn-clear-all" (click)="clearSelectedFiles()">
+                    <i class="far fa-trash-alt me-1"></i>Clear
+                  </button>
+                </div>
+
+                <div class="queue-items-scroll">
+                  <div *ngFor="let file of selectedFiles; let i = index" class="queue-file-card compact-file-card">
+                    <div class="file-icon-box-sm" [ngClass]="getFileIconInfo(file.name).bgClass">
+                      <i [class]="getFileIconInfo(file.name).icon" [ngClass]="getFileIconInfo(file.name).textClass"></i>
+                    </div>
+                    <div class="file-details">
+                      <span class="file-name text-truncate" [title]="file.name">{{ file.name }}</span>
+                      <span class="file-meta">{{ formatFileSize(file.size) }}</span>
+                    </div>
+                    <button type="button" class="btn-remove-item" (click)="removeSelectedFile(i)" title="Remove file">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group-item mt-2">
+                <label class="form-label-custom small mb-1">Description / Notes (Optional)</label>
                 <input
                   type="text"
-                  class="custom-form-input"
-                  placeholder="e.g. Chapter 1 Safety Video Guide"
+                  class="custom-form-input custom-form-input-sm"
+                  placeholder="e.g. Chapter 1 Guides & Videos"
                   [(ngModel)]="materialDescription"
                 />
               </div>
 
-              <div class="form-check-custom mb-4">
+              <div class="form-check-custom my-2">
                 <input
                   type="checkbox"
                   id="reqCheck"
                   [(ngModel)]="isRequiredMaterial"
                 />
-                <label for="reqCheck">
-                  Required Material for Completion
+                <label for="reqCheck" class="mb-0 cursor-pointer small">
+                  Required for Course Completion
                 </label>
               </div>
 
+              <!-- Primary Upload Button (Sleek, Compact, High-Contrast) -->
               <button
-                class="btn-submit-custom w-100 justify-content-center"
-                [disabled]="!selectedFile || isUploading"
-                (click)="uploadMaterial()"
+                type="button"
+                class="btn-primary-upload btn-primary-upload-sm"
+                [disabled]="selectedFiles.length === 0 || isUploading"
+                (click)="uploadMaterials()"
               >
-                <i class="fas fa-spinner fa-spin me-2" *ngIf="isUploading"></i>
-                <i class="fas fa-upload me-2" *ngIf="!isUploading"></i>Upload Material
+                <i class="fas fa-circle-notch fa-spin" *ngIf="isUploading"></i>
+                <i class="fas fa-cloud-upload-alt" *ngIf="!isUploading"></i>
+                <span *ngIf="isUploading">Uploading {{ selectedFiles.length }} file{{ selectedFiles.length > 1 ? 's' : '' }}...</span>
+                <span *ngIf="!isUploading && selectedFiles.length === 0">Select Files to Upload</span>
+                <span *ngIf="!isUploading && selectedFiles.length === 1">Upload 1 Material ({{ getTotalSelectedSize() }})</span>
+                <span *ngIf="!isUploading && selectedFiles.length > 1">Upload All {{ selectedFiles.length }} Materials ({{ getTotalSelectedSize() }})</span>
               </button>
             </div>
           </div>
@@ -118,11 +181,23 @@
         <!-- Materials List Card -->
         <div class="col-lg-7">
           <div class="documents-container-card">
-            <div class="panel-head p-3 border-bottom">
-              <i class="fas fa-list text-primary"></i>
-              <h3 class="m-0 fs-6 fw-bold text-dark">Uploaded Learning Materials</h3>
+            <div class="table-panel-header">
+              <div class="panel-header-title-wrap">
+                <div class="panel-header-icon-box">
+                  <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                  <h3 class="panel-header-title">Uploaded Learning Materials</h3>
+                  <p class="panel-header-subtitle">Manage curriculum documents, videos, and study resources</p>
+                </div>
+              </div>
+              <div class="count-pill-badge">
+                <span class="pill-dot"></span>
+                <span>{{ training.materials?.length || 0 }} Materials</span>
+              </div>
             </div>
-            <div class="table-responsive">
+
+            <div class="table-responsive" *ngIf="training.materials && training.materials.length > 0">
               <table class="documents-modern-table">
                 <thead>
                   <tr>
@@ -134,29 +209,16 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngIf="!training.materials || training.materials.length === 0">
-                    <td colspan="5" class="text-center py-4 text-muted">
-                      No learning materials uploaded yet. Use the upload panel on the left.
-                    </td>
-                  </tr>
                   <tr *ngFor="let mat of training.materials; let i = index" class="doc-row">
                     <td class="fw-bold text-muted">{{ i + 1 }}</td>
                     <td>
                       <div class="doc-name-cell">
-                        <div class="doc-icon-circle blue">
-                          <i
-                            [ngClass]="{
-                              'fas fa-file-pdf text-danger': mat.file_type === 'document' && mat.file_name.endsWith('.pdf'),
-                              'fas fa-file-video text-primary': mat.file_type === 'video',
-                              'fas fa-file-audio text-warning': mat.file_type === 'audio',
-                              'fas fa-file-image text-info': mat.file_type === 'image',
-                              'fas fa-file-alt text-secondary': mat.file_type === 'document'
-                            }"
-                          ></i>
+                        <div class="doc-icon-circle" [ngClass]="getFileMeta(mat.file_name).bgClass">
+                          <i [class]="getFileMeta(mat.file_name).icon" [ngClass]="getFileMeta(mat.file_name).textClass"></i>
                         </div>
                         <div class="doc-meta-wrap">
                           <span class="doc-main-name">{{ mat.file_name }}</span>
-                          <span class="doc-sub-desc">{{ mat.description || mat.file_type | titlecase }}</span>
+                          <span class="doc-sub-desc">{{ mat.description || (mat.file_type | titlecase) }}</span>
                         </div>
                       </div>
                     </td>
@@ -183,6 +245,17 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Empty State for Materials -->
+            <div *ngIf="!training.materials || training.materials.length === 0" class="empty-docs-box py-5">
+              <div class="empty-icon-circle">
+                <i class="fas fa-folder-plus"></i>
+              </div>
+              <h4 class="empty-docs-title">No Learning Materials Uploaded</h4>
+              <p class="empty-docs-sub">
+                Use the upload panel on the left to add video lectures, PDFs, audio guides, or image slides to this training.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -194,9 +267,14 @@
         <!-- Assign Controls Card -->
         <div class="col-lg-5">
           <div class="card-box-panel">
-            <div class="panel-head">
-              <i class="fas fa-user-plus text-primary"></i>
-              <h3>Assign Training Program</h3>
+            <div class="card-panel-header">
+              <div class="panel-header-icon-box">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <div>
+                <h3 class="panel-header-title">Assign Training Program</h3>
+                <p class="panel-header-subtitle">Enroll employees or departments with deadlines</p>
+              </div>
             </div>
             <div class="panel-body">
               <div class="form-group-item mb-3">
@@ -211,23 +289,50 @@
 
               <!-- Selected Employees Box -->
               <div *ngIf="assignmentType === 'Selected'" class="form-group-item mb-3">
-                <label class="form-label-custom">Select Employees ({{ selectedEmployeeIds.length }} selected)</label>
-                <input
-                  type="text"
-                  class="custom-form-input mb-2"
-                  placeholder="Search employee name/code..."
-                  [(ngModel)]="employeeSearchTerm"
-                />
-                <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
-                  <div *ngFor="let emp of filteredEmployees" class="form-check-custom py-1 border-bottom">
+                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                  <label class="form-label-custom m-0">Select Employees</label>
+                  <span class="selection-count-pill">
+                    {{ selectedEmployeeIds.length }} / {{ allEmployees.length }} selected
+                  </span>
+                </div>
+                <div class="selection-actions-row mb-2">
+                  <button type="button" class="btn-select-action" (click)="selectAllEmployees()">
+                    <i class="fas fa-check-double me-1"></i>Select All
+                  </button>
+                  <button type="button" class="btn-select-action clear" (click)="deselectAllEmployees()" [disabled]="selectedEmployeeIds.length === 0">
+                    <i class="fas fa-times me-1"></i>Clear
+                  </button>
+                </div>
+                <div class="search-input-wrap mb-2">
+                  <i class="fas fa-search search-icon"></i>
+                  <input
+                    type="text"
+                    class="custom-form-input search-input-pad"
+                    placeholder="Search by name, code, or department..."
+                    [(ngModel)]="employeeSearchTerm"
+                  />
+                </div>
+                <div class="selection-scroll-container">
+                  <div
+                    *ngFor="let emp of filteredEmployees"
+                    class="selection-check-card"
+                    [class.is-selected]="isEmployeeSelected(emp.id)"
+                    (click)="toggleEmployeeSelection(emp.id)"
+                  >
                     <input
                       type="checkbox"
+                      class="form-check-input m-0 cursor-pointer"
                       [id]="'emp_' + emp.id"
                       [checked]="isEmployeeSelected(emp.id)"
+                      (click)="$event.stopPropagation()"
                       (change)="toggleEmployeeSelection(emp.id)"
                     />
-                    <label [for]="'emp_' + emp.id">
-                      {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }}) - {{ emp.department }}
+                    <label [for]="'emp_' + emp.id" class="cursor-pointer m-0 flex-grow-1 d-flex align-items-center justify-content-between">
+                      <div>
+                        <strong class="text-dark small">{{ emp.first_name }} {{ emp.last_name }}</strong>
+                        <span class="text-muted ms-1 font-mono small">({{ emp.employee_code || 'EMP' }})</span>
+                      </div>
+                      <span class="category-tag py-0.5 px-1.5 small">{{ emp.department || 'General' }}</span>
                     </label>
                   </div>
                 </div>
@@ -235,16 +340,36 @@
 
               <!-- Department Box -->
               <div *ngIf="assignmentType === 'Department'" class="form-group-item mb-3">
-                <label class="form-label-custom">Select Departments</label>
-                <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
-                  <div *ngFor="let d of departments" class="form-check-custom py-1">
+                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                  <label class="form-label-custom m-0">Select Departments</label>
+                  <span class="selection-count-pill">
+                    {{ selectedDepartmentNames.length }} / {{ departments.length }} selected
+                  </span>
+                </div>
+                <div class="selection-actions-row mb-2">
+                  <button type="button" class="btn-select-action" (click)="selectAllDepartments()">
+                    <i class="fas fa-check-double me-1"></i>Select All
+                  </button>
+                  <button type="button" class="btn-select-action clear" (click)="deselectAllDepartments()" [disabled]="selectedDepartmentNames.length === 0">
+                    <i class="fas fa-times me-1"></i>Clear
+                  </button>
+                </div>
+                <div class="selection-scroll-container">
+                  <div
+                    *ngFor="let d of departments"
+                    class="selection-check-card"
+                    [class.is-selected]="isDeptSelected(d.name)"
+                    (click)="toggleDeptSelection(d.name)"
+                  >
                     <input
                       type="checkbox"
+                      class="form-check-input m-0 cursor-pointer"
                       [id]="'dept_' + d.id"
                       [checked]="isDeptSelected(d.name)"
+                      (click)="$event.stopPropagation()"
                       (change)="toggleDeptSelection(d.name)"
                     />
-                    <label [for]="'dept_' + d.id">
+                    <label [for]="'dept_' + d.id" class="cursor-pointer m-0 flex-grow-1 small fw-semibold text-dark">
                       {{ d.name }}
                     </label>
                   </div>
@@ -252,7 +377,7 @@
               </div>
 
               <button
-                class="btn-submit-custom w-100 justify-content-center mt-2"
+                class="btn-assign-action mt-3"
                 [disabled]="isAssigning"
                 (click)="submitAssignment()"
               >
@@ -266,28 +391,35 @@
         <!-- Assignments Table Card -->
         <div class="col-lg-7">
           <div class="documents-container-card">
-            <div class="panel-head p-3 border-bottom">
-              <i class="fas fa-users-cog text-primary"></i>
-              <h3 class="m-0 fs-6 fw-bold text-dark">Assigned Employees List</h3>
+            <div class="table-panel-header">
+              <div class="panel-header-title-wrap">
+                <div class="panel-header-icon-box blue">
+                  <i class="fas fa-users-cog"></i>
+                </div>
+                <div>
+                  <h3 class="panel-header-title">Assigned Employees List</h3>
+                  <p class="panel-header-subtitle">Track learning progress, test permissions, and completion status</p>
+                </div>
+              </div>
+              <div class="count-pill-badge">
+                <span class="pill-dot"></span>
+                <span>{{ assignments.length }} Employees</span>
+              </div>
             </div>
-            <div class="table-responsive">
+
+            <div class="table-responsive" *ngIf="assignments.length > 0">
               <table class="documents-modern-table">
                 <thead>
                   <tr>
                     <th>Employee</th>
                     <th>Department</th>
-                    <th>Assigned Date</th>
                     <th>Progress</th>
+                    <th>Allowed to Test?</th>
                     <th>Test Score</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngIf="assignments.length === 0">
-                    <td colspan="6" class="text-center py-4 text-muted">
-                      No employees currently assigned to this training.
-                    </td>
-                  </tr>
                   <tr *ngFor="let a of assignments" class="doc-row">
                     <td>
                       <div class="doc-name-cell">
@@ -301,14 +433,30 @@
                       </div>
                     </td>
                     <td><span class="category-tag">{{ a.department }}</span></td>
-                    <td class="small">{{ a.assigned_at | date:'mediumDate' }}</td>
-                    <td style="min-width: 120px;">
+                    <td style="min-width: 100px;">
                       <div class="table-progress-wrap">
                         <div class="progress-track-bar">
                           <div class="progress-fill-bar" [style.width.%]="a.progress_percentage"></div>
                         </div>
                         <span class="progress-pct-text">{{ a.progress_percentage }}%</span>
                       </div>
+                    </td>
+                    <td>
+                      <span *ngIf="a.test_permission_code === 'ALLOWED'" class="status-badge status-verified">
+                        <i class="fas fa-check-circle"></i> Allowed
+                      </span>
+                      <span *ngIf="a.test_permission_code === 'PASSED'" class="status-badge status-verified">
+                        <i class="fas fa-trophy"></i> Passed
+                      </span>
+                      <span *ngIf="a.test_permission_code === 'LOCKED'" class="status-badge status-pending" [title]="a.test_permission_label">
+                        <i class="fas fa-lock"></i> Locked (Incomplete)
+                      </span>
+                      <span *ngIf="a.test_permission_code === 'EXHAUSTED'" class="status-badge status-missing" [title]="a.test_permission_label">
+                        <i class="fas fa-ban"></i> Max Attempts
+                      </span>
+                      <span *ngIf="a.test_permission_code === 'NO_ASSESSMENT'" class="status-badge status-missing">
+                        <i class="fas fa-minus-circle"></i> No Test
+                      </span>
                     </td>
                     <td class="small fw-semibold">{{ a.assessment_score }}</td>
                     <td>
@@ -328,10 +476,65 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Centered Modern Empty State -->
+            <div *ngIf="assignments.length === 0" class="empty-docs-box py-5">
+              <div class="empty-icon-circle">
+                <i class="fas fa-user-friends"></i>
+              </div>
+              <h4 class="empty-docs-title">No Employees Assigned Yet</h4>
+              <p class="empty-docs-sub">
+                Use the selection form on the left to assign this training program to departments or individual employees.
+              </p>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- IN-APP CONFIRMATION POPUP MODAL                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="custom-modal-backdrop" *ngIf="confirmModal.isOpen" (click)="closeConfirm()"></div>
+<div class="custom-modal-wrapper" *ngIf="confirmModal.isOpen">
+  <div class="custom-confirm-card" (click)="$event.stopPropagation()">
+    <div class="confirm-icon-ring" [ngClass]="confirmModal.confirmBtnClass">
+      <i [ngClass]="confirmModal.iconClass"></i>
+    </div>
+    <div class="confirm-body-wrap">
+      <h3 class="confirm-modal-title">{{ confirmModal.title }}</h3>
+      <p class="confirm-modal-text">{{ confirmModal.message }}</p>
+    </div>
+    <div class="confirm-actions-row">
+      <button type="button" class="btn-confirm-cancel" (click)="closeConfirm()">
+        {{ confirmModal.cancelBtnText }}
+      </button>
+      <button
+        type="button"
+        class="btn-confirm-submit"
+        [ngClass]="confirmModal.confirmBtnClass"
+        (click)="executeConfirm()"
+      >
+        {{ confirmModal.confirmBtnText }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- IN-APP TOAST NOTIFICATION POPUP                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="app-toast-container" *ngIf="toast.show" [ngClass]="toast.type">
+  <div class="toast-icon-circle">
+    <i class="fas" [ngClass]="toast.type === 'success' ? 'fa-check' : toast.type === 'error' ? 'fa-exclamation' : 'fa-info'"></i>
+  </div>
+  <div class="toast-message-content">
+    <span class="toast-title-text">{{ toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Notice' }}</span>
+    <span class="toast-body-text">{{ toast.message }}</span>
+  </div>
+  <button type="button" class="toast-close-btn" (click)="closeToast()">
+    <i class="fas fa-times"></i>
+  </button>
 </div>
 

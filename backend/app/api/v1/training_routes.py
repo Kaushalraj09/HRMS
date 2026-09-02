@@ -99,7 +99,7 @@ def list_trainings(
     return {"items": items, "total": total, "page": page, "limit": limit}
 
 
-@router.get("/{training_id}", response_model=dict)
+@router.get("/{training_id}", response_model=TrainingResponse)
 def get_training_detail(
     training_id: int,
     db: Session = Depends(get_db),
@@ -108,6 +108,10 @@ def get_training_detail(
     training = service.get_training(db, training_id)
     assigned_count = len(training.assignments)
     completed_count = sum(1 for a in training.assignments if a.status == "COMPLETED")
+    materials_resp = [
+        TrainingMaterialResponse.model_validate(m)
+        for m in sorted(training.materials, key=lambda x: (x.display_order, x.id))
+    ]
     return {
         "id": training.id,
         "title": training.title,
@@ -116,6 +120,7 @@ def get_training_detail(
         "description": training.description,
         "learning_objective": training.learning_objective,
         "trainer_name": training.trainer_name,
+        "trainer_user_id": training.trainer_user_id,
         "estimated_duration_minutes": training.estimated_duration_minutes,
         "start_date": training.start_date,
         "end_date": training.end_date,
@@ -123,10 +128,11 @@ def get_training_detail(
         "created_by_user_id": training.created_by_user_id,
         "created_at": training.created_at,
         "updated_at": training.updated_at,
-        "materials": training.materials,
+        "materials": materials_resp,
         "has_assessment": training.assessment is not None,
         "assigned_count": assigned_count,
-        "completed_count": completed_count
+        "completed_count": completed_count,
+        "completion_percentage": round((completed_count / assigned_count * 100), 1) if assigned_count > 0 else 0.0
     }
 
 
@@ -153,6 +159,28 @@ def archive_training(
     return {"message": f"Training {training_id} archived successfully."}
 
 
+@router.post("/{training_id}/restore")
+def restore_training(
+    training_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    _require_hr_admin(current_user)
+    t = service.restore_training(db, training_id)
+    return {"message": f"Training '{t.title}' restored to Published status successfully."}
+
+
+@router.post("/{training_id}/publish")
+def publish_training(
+    training_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    _require_hr_admin(current_user)
+    t = service.publish_training(db, training_id)
+    return {"message": f"Training '{t.title}' published successfully."}
+
+
 # ─── Training Material Endpoints ──────────────────────────────────────────
 
 @router.post("/{training_id}/materials", response_model=TrainingMaterialResponse)
@@ -166,6 +194,19 @@ async def upload_material(
 ):
     _require_hr_admin(current_user)
     return await service.upload_training_material(db, training_id, file, current_user, description, is_required)
+
+
+@router.post("/{training_id}/materials/bulk", response_model=List[TrainingMaterialResponse])
+async def upload_materials_bulk(
+    training_id: int,
+    files: List[UploadFile] = File(...),
+    description: Optional[str] = Form(None),
+    is_required: bool = Form(True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    _require_hr_admin(current_user)
+    return await service.upload_training_materials_bulk(db, training_id, files, current_user, description, is_required)
 
 
 @router.delete("/{training_id}/materials/{material_id}")
@@ -317,8 +358,14 @@ def get_my_training_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    emp_id = _get_employee_id(current_user)
-    return service.get_employee_training_details(db, emp_id, training_id)
+    emp_id = current_user.linked_employee_id
+    role_name = current_user.role.name.lower() if current_user.role else ""
+    if not emp_id and role_name not in ["admin", "hr"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active employee record linked to user profile."
+        )
+    return service.get_employee_training_details(db, emp_id, training_id, current_user=current_user)
 
 
 @router.post("/my/{training_id}/materials/{material_id}/progress")
@@ -329,7 +376,15 @@ def record_material_progress(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    emp_id = _get_employee_id(current_user)
+    emp_id = current_user.linked_employee_id
+    role_name = current_user.role.name.lower() if current_user.role else ""
+    if not emp_id and role_name in ["admin", "hr"]:
+        return {"status": "success", "message": "Preview progress acknowledged.", "assignment_progress": 100.0}
+    if not emp_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active employee record linked to user profile."
+        )
     return service.record_material_progress(db, emp_id, training_id, material_id, req)
 
 

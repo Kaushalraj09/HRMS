@@ -108,11 +108,14 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
     return this.currentViewDate.toLocaleDateString('en-US', { month: 'short' });
   }
 
+  openUpward = false;
+
   togglePicker(): void {
     if (this.disabled) return;
     this.isOpen = !this.isOpen;
     if (this.isOpen) {
       this.viewMode = 'days';
+      this.calculatePlacement();
       if (this.value) {
         const parts = this.value.split('-');
         if (parts.length === 3) {
@@ -122,6 +125,21 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
       this.selectedPickerYear = this.currentViewDate.getFullYear();
       this.generateCalendar();
       this.generateYearsGrid(this.selectedPickerYear);
+    }
+  }
+
+  private calculatePlacement(): void {
+    try {
+      const trigger = this.eRef.nativeElement.querySelector('.datepicker-trigger');
+      if (trigger) {
+        const rect = trigger.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        // The calendar popup is ~330px high. If space below is less than 340px and space above is larger, flip upwards
+        this.openUpward = spaceBelow < 340 && spaceAbove > spaceBelow;
+      }
+    } catch {
+      this.openUpward = false;
     }
   }
 

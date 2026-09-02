@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
@@ -31,12 +31,92 @@ export class AssessmentBuilderComponent implements OnInit {
   questionForm!: FormGroup;
   selectedCorrectOptionIndex = 1; // 0=A, 1=B, 2=C, 3=D
 
+  // Custom Confirmation Popup State
+  confirmModal = {
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmBtnText: 'Confirm',
+    cancelBtnText: 'Cancel',
+    confirmBtnClass: 'btn-primary',
+    iconClass: 'fas fa-exclamation-triangle',
+    onConfirm: () => {}
+  };
+
+  // In-App Toast Popup State
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info',
+    timeout: null as any
+  };
+
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast = {
+        show: true,
+        message,
+        type,
+        timeout: setTimeout(() => {
+          this.ngZone.run(() => {
+            this.toast.show = false;
+            this.cdr.detectChanges();
+          });
+        }, duration)
+      };
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeToast(): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    });
+  }
+
+  openConfirm(options: {
+    title: string;
+    message: string;
+    confirmBtnText?: string;
+    cancelBtnText?: string;
+    confirmBtnClass?: string;
+    iconClass?: string;
+    onConfirm: () => void;
+  }): void {
+    this.confirmModal = {
+      isOpen: true,
+      title: options.title,
+      message: options.message,
+      confirmBtnText: options.confirmBtnText || 'Confirm',
+      cancelBtnText: options.cancelBtnText || 'Cancel',
+      confirmBtnClass: options.confirmBtnClass || 'btn-primary',
+      iconClass: options.iconClass || 'fas fa-exclamation-triangle',
+      onConfirm: options.onConfirm
+    };
+    this.cdr.detectChanges();
+  }
+
+  closeConfirm(): void {
+    this.confirmModal.isOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  executeConfirm(): void {
+    const action = this.confirmModal.onConfirm;
+    this.closeConfirm();
+    if (action) action();
+  }
+
   constructor(
+    private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private fb: FormBuilder,
     private trainingService: TrainingService,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private location: Location
   ) {}
 
@@ -137,12 +217,12 @@ export class AssessmentBuilderComponent implements OnInit {
     this.trainingService.saveAssessment(this.trainingId, this.settingsForm.value).subscribe({
       next: (res) => {
         this.isSavingAssessment = false;
-        alert('Assessment settings saved successfully.');
+        this.showToast('Assessment settings saved successfully.', 'success');
         this.loadAssessment();
       },
       error: (err) => {
         this.isSavingAssessment = false;
-        alert('Error saving assessment: ' + (err.error?.detail || err.message));
+        this.showToast('Error saving assessment: ' + (err.error?.detail || err.message), 'error');
       }
     });
   }
@@ -157,13 +237,13 @@ export class AssessmentBuilderComponent implements OnInit {
 
   addQuestion(): void {
     if (!this.assessment || !this.assessment.id) {
-      alert('Please save the assessment settings first before adding questions.');
+      this.showToast('Please save the assessment settings first before adding questions.', 'error');
       return;
     }
 
     if (this.questionForm.invalid) {
       this.questionForm.markAllAsTouched();
-      alert('Please fill out all question fields and options.');
+      this.showToast('Please fill out all question fields and options.', 'error');
       return;
     }
 
@@ -174,23 +254,35 @@ export class AssessmentBuilderComponent implements OnInit {
       next: () => {
         this.isAddingQuestion = false;
         this.resetQuestionForm();
+        this.showToast('Question added successfully.', 'success');
         this.loadAssessment();
       },
       error: (err) => {
         this.isAddingQuestion = false;
-        alert('Error adding question: ' + (err.error?.detail || err.message));
+        this.showToast('Error adding question: ' + (err.error?.detail || err.message), 'error');
       }
     });
   }
 
   deleteQuestion(qId: number): void {
-    if (!this.assessment?.id) return;
-    if (confirm('Delete this question?')) {
-      this.trainingService.deleteQuestion(this.assessment.id, qId).subscribe({
-        next: () => this.loadAssessment(),
-        error: (err) => alert('Delete failed: ' + (err.error?.detail || err.message))
-      });
-    }
+    const assessmentId = this.assessment?.id;
+    if (!assessmentId) return;
+    this.openConfirm({
+      title: 'Delete Question',
+      message: 'Are you sure you want to delete this MCQ question from the assessment?',
+      confirmBtnText: 'Delete Question',
+      confirmBtnClass: 'btn-danger',
+      iconClass: 'fas fa-trash',
+      onConfirm: () => {
+        this.trainingService.deleteQuestion(assessmentId, qId).subscribe({
+          next: () => {
+            this.showToast('Question deleted successfully.', 'success');
+            this.loadAssessment();
+          },
+          error: (err) => this.showToast('Delete failed: ' + (err.error?.detail || err.message), 'error')
+        });
+      }
+    });
   }
 
   resetQuestionForm(): void {
@@ -201,14 +293,17 @@ export class AssessmentBuilderComponent implements OnInit {
       explanation: ''
     });
     const opts = this.optionsArray;
-    const keys: Array<'A'|'B'|'C'|'D'> = ['A', 'B', 'C', 'D'];
-    for (let i = 0; i < 4; i++) {
-      opts.at(i).patchValue({
-        option_key: keys[i],
-        option_text: '',
-        is_correct: i === 1
-      });
-    }
+    opts.clear();
+    const defaults = ['A', 'B', 'C', 'D'];
+    defaults.forEach((key, idx) => {
+      opts.push(
+        this.fb.group({
+          option_key: [key],
+          option_text: ['', Validators.required],
+          is_correct: [idx === 1]
+        })
+      );
+    });
     this.selectedCorrectOptionIndex = 1;
   }
 }

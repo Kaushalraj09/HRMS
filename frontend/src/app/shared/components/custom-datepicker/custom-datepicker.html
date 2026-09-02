@@ -18,7 +18,7 @@
   </button>
 
   <!-- Modern Floating Calendar Card -->
-  <div class="datepicker-popup-card" *ngIf="isOpen">
+  <div class="datepicker-popup-card" [class.open-upward]="openUpward" *ngIf="isOpen">
     <!-- Header Navigation Controls -->
     <div class="dp-header">
       <button type="button" class="dp-nav-btn" (click)="prevMonth($event)" title="Previous">

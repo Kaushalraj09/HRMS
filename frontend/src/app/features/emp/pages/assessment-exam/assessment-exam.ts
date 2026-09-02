@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -25,10 +25,46 @@ export class AssessmentExamComponent implements OnInit, OnDestroy {
 
   showConfirmModal = false;
 
+  // In-App Toast Popup State
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info',
+    timeout: null as any
+  };
+
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast = {
+        show: true,
+        message,
+        type,
+        timeout: setTimeout(() => {
+          this.ngZone.run(() => {
+            this.toast.show = false;
+            this.cdr.detectChanges();
+          });
+        }, duration)
+      };
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeToast(): void {
+    if (this.toast.timeout) clearTimeout(this.toast.timeout);
+    this.ngZone.run(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    });
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private trainingService: TrainingService
+    private trainingService: TrainingService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -54,8 +90,8 @@ export class AssessmentExamComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: (err) => {
-        alert('Could not start assessment: ' + (err.error?.detail || err.message));
-        this.router.navigate(['/emp-dashboard/my-trainings']);
+        this.showToast('Could not start assessment: ' + (err.error?.detail || err.message), 'error');
+        setTimeout(() => this.router.navigate(['/emp-dashboard/my-trainings']), 1500);
       }
     });
   }
@@ -67,7 +103,7 @@ export class AssessmentExamComponent implements OnInit, OnDestroy {
         this.timerSeconds--;
       } else {
         this.stopTimer();
-        alert('Time expired! Your assessment is automatically submitting.');
+        this.showToast('Time expired! Your assessment is automatically submitting.', 'info');
         this.confirmSubmit();
       }
     }, 1000);
@@ -159,7 +195,7 @@ export class AssessmentExamComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSubmitting = false;
-        alert('Submission failed: ' + (err.error?.detail || err.message));
+        this.showToast('Submission failed: ' + (err.error?.detail || err.message), 'error');
       }
     });
   }

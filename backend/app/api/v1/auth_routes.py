@@ -7,7 +7,15 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, StandardResponse, ForgotPasswordRequest, ResetPasswordRequest, WebSocketTicketResponse
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    ChangePasswordRequest,
+    StandardResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    WebSocketTicketResponse,
+)
 from app.core.security import create_websocket_ticket
 from app.services import auth_service
 from app.services.login_activity_service import log_login_activity
@@ -60,6 +68,7 @@ def _clear_rate_limit(key: str) -> None:
     _attempts.pop(key, None)
     _lockouts.pop(key, None)
 
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
@@ -67,6 +76,10 @@ async def login(
     payload: LoginRequest,
     db: Session = Depends(get_db)
 ):
+    client_ip = _client_ip(request)
+    # Global IP rate limit (prevents distributed email attacks from same source IP)
+    _enforce_rate_limit(f"login_ip:{client_ip}", max_attempts=30, window_seconds=300, lockout_seconds=900)
+    # Specific account rate limit
     login_key = _rate_limit_key("login", request, payload.email)
     _enforce_rate_limit(login_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
     result = auth_service.authenticate_user(db, payload)
@@ -126,6 +139,7 @@ def logout(response: Response):
     )
     return {"success": True, "message": "Signed out successfully."}
 
+
 @router.post("/change-password", response_model=StandardResponse)
 def change_password(
     request: ChangePasswordRequest, 
@@ -141,12 +155,16 @@ def change_password(
     _clear_rate_limit(change_key)
     return result
 
+
 @router.post("/forgot-password", response_model=StandardResponse)
 def forgot_password(payload: ForgotPasswordRequest, http_request: Request, db: Session = Depends(get_db)):
+    client_ip = _client_ip(http_request)
+    _enforce_rate_limit(f"forgot_ip:{client_ip}", max_attempts=20, window_seconds=300, lockout_seconds=900)
     reset_key = _rate_limit_key("forgot-password", http_request, payload.email)
     _enforce_rate_limit(reset_key, max_attempts=5, window_seconds=300, lockout_seconds=900)
     auth_service.forgot_password(db, payload)
     return {"success": True, "message": "If the account exists, password reset instructions have been sent to the registered email."}
+
 
 @router.post("/reset-password", response_model=StandardResponse)
 def reset_password(request: ResetPasswordRequest, http_request: Request, db: Session = Depends(get_db)):
