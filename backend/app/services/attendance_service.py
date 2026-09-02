@@ -19,6 +19,7 @@ from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
 from app.utils.employee_code import normalize_employee_code
 from app.services.time_calculator import get_attendance_status
+from app.core.shift_rules import get_shift_rule_value
 
 # Shift Configuration
 APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
@@ -222,8 +223,8 @@ def punch_in(
             time_diff = shift_start_dt - current_dt
             minutes_early = int(time_diff.total_seconds() / 60)
             
-            allow_early = getattr(shift, 'allow_early_punch_in', False)
-            early_window = getattr(shift, 'early_coming_minutes', 0)
+            allow_early = get_shift_rule_value(shift, "allow_early_punch_in")
+            early_window = get_shift_rule_value(shift, "early_coming_minutes")
             
             if not allow_early and minutes_early > 0:
                 raise HTTPException(
@@ -296,9 +297,9 @@ def punch_in(
             attendance.scheduled_start = shift.start_time
             attendance.scheduled_end = shift.end_time
             # Snapshot shift config
-            attendance.punch_in_grace_minutes = getattr(shift, 'punch_in_grace_minutes', 0)
-            attendance.early_punch_window_minutes = getattr(shift, 'early_coming_minutes', 0)
-            attendance.shift_grace_minutes = getattr(shift, 'shift_grace_minutes', 0)
+            attendance.punch_in_grace_minutes = get_shift_rule_value(shift, "punch_in_grace_minutes")
+            attendance.early_punch_window_minutes = get_shift_rule_value(shift, "early_coming_minutes")
+            attendance.shift_grace_minutes = get_shift_rule_value(shift, "shift_grace_minutes")
             
         db.add(attendance)
         db.flush()
@@ -312,9 +313,9 @@ def punch_in(
             attendance.scheduled_start = shift.start_time
             attendance.scheduled_end = shift.end_time
             # Snapshot shift config
-            attendance.punch_in_grace_minutes = getattr(shift, 'punch_in_grace_minutes', 0)
-            attendance.early_punch_window_minutes = getattr(shift, 'early_coming_minutes', 0)
-            attendance.shift_grace_minutes = getattr(shift, 'shift_grace_minutes', 0)
+            attendance.punch_in_grace_minutes = get_shift_rule_value(shift, "punch_in_grace_minutes")
+            attendance.early_punch_window_minutes = get_shift_rule_value(shift, "early_coming_minutes")
+            attendance.shift_grace_minutes = get_shift_rule_value(shift, "shift_grace_minutes")
     
     # Set punch-in with location and image (first check-in of the day)
     attendance.punch_in = current.time()
@@ -327,7 +328,7 @@ def punch_in(
     if shift and shift.start_time:
         shift_start_dt = datetime.combine(today, shift.start_time)
         current_dt = datetime.combine(today, current.time())
-        grace_mins = attendance.punch_in_grace_minutes
+        grace_mins = get_shift_rule_value(attendance, "punch_in_grace_minutes")
         
         # Calculate credited start
         if current_dt < shift_start_dt:
@@ -1370,4 +1371,3 @@ def get_employee_analytics(db: Session) -> list[dict]:
         })
         
     return analytics_data
-

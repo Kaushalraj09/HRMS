@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday
+from app.core.shift_rules import normalize_shift_rule_values
 from typing import List, Dict, Any
 
 def _invalidate_cache(db: Session):
@@ -103,7 +104,7 @@ def list_shifts(db: Session, active_only: bool = False) -> List[Shift]:
     return query.order_by(Shift.name).all()
 
 def create_shift(db: Session, payload) -> Shift:
-    shift_data = payload.model_dump()
+    shift_data = normalize_shift_rule_values(payload.model_dump())
     db_shift = Shift(**shift_data)
     db.add(db_shift)
     db.commit()
@@ -115,7 +116,8 @@ def update_shift(db: Session, shift_id: int, payload) -> Shift:
     db_shift = db.query(Shift).filter(Shift.id == shift_id).first()
     if not db_shift:
         return None
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = normalize_shift_rule_values(payload.model_dump(exclude_unset=True))
+    for field, value in updates.items():
         setattr(db_shift, field, value)
     db.commit()
     db.refresh(db_shift)
