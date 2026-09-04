@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { DocumentService } from '../../../../core/services/document.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   HrDocumentOverviewKPI,
   HrPendingReviewItem,
@@ -101,7 +102,8 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
   constructor(
     private readonly documentService: DocumentService,
     private readonly sanitizer: DomSanitizer,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -244,7 +246,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isVerifying = false;
-        alert(err?.error?.detail || 'Failed to verify document.');
+        this.toastService.showError(err?.error?.detail || 'Failed to verify document.');
       }
     });
   }
@@ -260,7 +262,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
   }
 
   openUploadModal(doc: HrPendingReviewItem): void {
-    alert('To upload a document on behalf of an employee, please navigate to their Employee Profile.');
+    this.toastService.showInfo('To upload a document on behalf of an employee, please navigate to their Employee Profile.');
   }
 
   closeRejectModal(): void {
@@ -346,7 +348,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to download document:', err);
-        alert('Failed to download document.');
+        this.toastService.showError('Failed to download document.');
       }
     });
   }
@@ -396,7 +398,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to download version:', err);
-        alert('Failed to download version.');
+        this.toastService.showError('Failed to download version.');
       }
     });
   }
@@ -411,11 +413,7 @@ export class HrDocumentsComponent implements OnInit, OnDestroy {
   }
 
   showToast(msg: string): void {
-    this.successMessage = msg;
-    setTimeout(() => {
-      this.successMessage = '';
-      this.cdr.markForCheck();
-    }, 4000);
+    this.toastService.showSuccess(msg);
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────

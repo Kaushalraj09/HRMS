@@ -10,6 +10,7 @@ import { HrUser } from '../../../../core/models/hr.model';
 import { HrService } from '../../../../core/services/hr.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { EmployeeService } from '../../../../core/services/employee.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { HrAddModalComponent } from './modals/hr-add-modal/hr-add-modal';
 
@@ -58,7 +59,8 @@ export class HrUsersComponent implements OnInit, OnDestroy {
     private readonly hrService: HrService,
     private readonly authService: AuthService,
     private readonly employeeService: EmployeeService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -84,31 +86,15 @@ export class HrUsersComponent implements OnInit, OnDestroy {
   }
 
   showToast(message: string, isError: boolean = false, subMessage: string = ''): void {
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
+    const fullMessage = subMessage ? `${message} - ${subMessage}` : message;
+    if (isError) {
+      this.toastService.showError(fullMessage, message);
+    } else {
+      this.toastService.showSuccess(fullMessage, message);
     }
-    this.toastMessage = message;
-    this.isErrorToast = isError;
-    this.toastSubMessage = subMessage;
-    this.cdr.markForCheck();
-    this.cdr.detectChanges();
-    this.toastTimeout = setTimeout(() => {
-      this.toastMessage = null;
-      this.toastSubMessage = '';
-      this.cdr.markForCheck();
-      this.cdr.detectChanges();
-    }, 2800);
   }
 
-  closeToast(): void {
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-    }
-    this.toastMessage = null;
-    this.toastSubMessage = '';
-    this.cdr.markForCheck();
-    this.cdr.detectChanges();
-  }
+  closeToast(): void {}
 
   onSearch(): void {
     this.pageSubject.next(1);

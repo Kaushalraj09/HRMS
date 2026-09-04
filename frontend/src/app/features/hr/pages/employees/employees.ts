@@ -8,6 +8,7 @@ import { Employee, PaginatedResult } from '../../../../core/models/employee.mode
 import { EmployeeService } from '../../../../core/services/employee.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 import { EmployeeViewModalComponent } from './modals/employee-view-modal/employee-view-modal';
 import { EmployeeEditModalComponent } from './modals/employee-edit-modal/employee-edit-modal';
@@ -155,7 +156,8 @@ export class Employees implements OnInit {
     private readonly documentService: DocumentService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -516,13 +518,15 @@ export class Employees implements OnInit {
     this.cdr.detectChanges();
     this.employeeService.deleteEmployee(employee.id).subscribe({
       next: () => {
+        const empName = employee.name || `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+        this.toastService.showSuccess(`Employee ${empName || ''} deleted successfully.`);
         this.onSearch();
       },
       error: (err) => {
         this.isLoading$.next(false);
         this.cdr.detectChanges();
         console.error('Failed to delete employee:', err);
-        alert(err?.error?.detail || 'An error occurred while deleting the employee.');
+        this.toastService.showError(err?.error?.detail || 'An error occurred while deleting the employee.');
       }
     });
   }

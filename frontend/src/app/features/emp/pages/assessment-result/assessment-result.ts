@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../core/services/training.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { AssessmentResult } from '../../../../core/models/training.model';
 
 @Component({
@@ -18,7 +19,8 @@ export class AssessmentResultComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private trainingService: TrainingService
+    private trainingService: TrainingService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -37,7 +39,7 @@ export class AssessmentResultComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        alert('Failed to load attempt result: ' + (err.error?.detail || err.message));
+        this.toastService.showError('Failed to load attempt result: ' + (err.error?.detail || err.message));
         this.isLoading = false;
       }
     });

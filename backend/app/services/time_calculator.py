@@ -28,6 +28,11 @@ def calculate_overlap_minutes(punch_in: time, punch_out: time, window_start: tim
     win_start_mins = _time_to_minutes(window_start)
     win_end_mins = _time_to_minutes(window_end)
     
+    if out_mins < in_mins:
+        out_mins += 1440
+    if win_end_mins < win_start_mins:
+        win_end_mins += 1440
+        
     if out_mins <= in_mins:
         return 0
         
@@ -94,9 +99,19 @@ def calculate_attendance_flags(attendance_record: Attendance, shift: Optional[Sh
             flags.append("LATE_ARRIVAL")
             
     if attendance_record.punch_out:
-        early_mins = calculate_early_exit_minutes(attendance_record.punch_out, shift)
-        if early_mins > 0:
-            flags.append("EARLY_EXIT")
+        if shift:
+            req_mins = shift.required_work_minutes or int(float(shift.working_hours or 8.0) * 60)
+            shift_grace = getattr(shift, "shift_grace_minutes", None)
+            if shift_grace is None:
+                shift_grace = getattr(shift, "grace_minutes", 15) or 15
+            effective_req = max(0, req_mins - shift_grace)
+            credited = attendance_record.total_working_minutes or 0
+            if credited < effective_req:
+                flags.append("EARLY_EXIT")
+        else:
+            early_mins = calculate_early_exit_minutes(attendance_record.punch_out, shift)
+            if early_mins > 0:
+                flags.append("EARLY_EXIT")
             
         if attendance_record.overtime_minutes > 0:
             flags.append("OVERTIME")
@@ -157,7 +172,8 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     start_mins = _time_to_minutes(effective_shift.start_time or time(9, 0))
     end_mins = _time_to_minutes(effective_shift.end_time or time(18, 0))
 
-    if (effective_shift.is_night_shift or end_mins < start_mins) and out_minutes < in_minutes:
+    # Any punch-out time that is numerically less than punch-in time crossed midnight into the next day
+    if out_minutes < in_minutes:
         out_minutes += 1440
 
     if out_minutes <= in_minutes:
@@ -209,7 +225,8 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     
     attendance_record.total_working_minutes = net_working_minutes
     attendance_record.overtime_minutes = overtime_minutes
-    attendance_record.grand_total_minutes = net_working_minutes + overtime_minutes
+    # Include lunch in grand total: working minutes + lunch + overtime
+    attendance_record.grand_total_minutes = net_working_minutes + lunch_minutes + overtime_minutes
     
     timeoff_minutes = int(timeoff_duration_hours * 60)
     attendance_record.break_minutes = lunch_minutes + timeoff_minutes

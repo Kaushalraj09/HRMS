@@ -672,7 +672,7 @@
                                         <h4 class="item-name">{{ item.name }}</h4>
                                         <p class="item-sub">{{ item.designation }}</p>
                                     </div>
-                                    <span class="item-meta">{{ item.doj }}</span>
+                                    <span class="item-meta" [title]="item.doj">{{ formatJoinDate(item.doj) }}</span>
                                 </div>
                                 <div class="empty-widget-state" *ngIf="recentJoiners.length === 0" style="padding: 24px 16px; text-align: center; color: #64748b; font-size: 13px;">
                                     <i class="fas fa-user-plus" style="font-size: 20px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
@@ -693,8 +693,8 @@
                                         {{ item.initials }}
                                     </div>
                                     <div class="item-details">
-                                        <h4 class="item-name">{{ item.name }}</h4>
-                                        <p class="item-sub">{{ item.designation }}</p>
+                                        <h4 class="item-name" [title]="item.name">{{ item.name }}</h4>
+                                        <p class="item-sub" [title]="item.designation">{{ item.designation }}</p>
                                     </div>
                                     <div class="gift-box-icon" title="Birthday Today / Upcoming">
                                         <i class="fas fa-gift"></i>
@@ -719,7 +719,7 @@
                                         <div class="approval-icon icon-light-blue">
                                             <i class="fas fa-user-friends"></i>
                                         </div>
-                                        <span class="approval-label">Leave Requests</span>
+                                        <span class="approval-label" title="Leave Requests">Leave Requests</span>
                                     </div>
                                     <span class="approval-badge badge-blue">{{ pendingApprovalsSummary.leaveRequests }}</span>
                                 </div>
@@ -729,7 +729,7 @@
                                         <div class="approval-icon icon-light-purple">
                                             <i class="far fa-clock"></i>
                                         </div>
-                                        <span class="approval-label">Time Off Requests</span>
+                                        <span class="approval-label" title="Time Off Requests">Time Off Requests</span>
                                     </div>
                                     <span class="approval-badge badge-purple">{{ pendingApprovalsSummary.timeOffRequests }}</span>
                                 </div>
@@ -739,7 +739,7 @@
                                         <div class="approval-icon icon-light-lavender">
                                             <i class="fas fa-id-card"></i>
                                         </div>
-                                        <span class="approval-label">Regularization Requests</span>
+                                        <span class="approval-label" title="Regularization Requests">Regularization Requests</span>
                                     </div>
                                     <span class="approval-badge badge-lavender">{{ pendingApprovalsSummary.regularizationRequests }}</span>
                                 </div>
@@ -749,7 +749,7 @@
                                         <div class="approval-icon icon-light-green">
                                             <i class="fas fa-file-invoice-dollar"></i>
                                         </div>
-                                        <span class="approval-label">Expense Claims</span>
+                                        <span class="approval-label" title="Expense Claims">Expense Claims</span>
                                     </div>
                                     <span class="approval-badge badge-green">{{ pendingApprovalsSummary.expenseClaims }}</span>
                                 </div>
@@ -762,46 +762,46 @@
                                 <h3 class="panel-title">Quick Actions</h3>
                             </div>
                             <div class="panel-body quick-actions-grid">
-                                <button class="action-card" (click)="onQuickAction('add_employee')">
+                                <button type="button" class="action-card" (click)="onQuickAction('add_employee')">
                                     <div class="action-icon-wrap action-green">
                                         <i class="fas fa-user-plus"></i>
                                     </div>
-                                    <span class="action-title">Add Employee</span>
+                                    <span class="action-title">Add<br>Employee</span>
                                 </button>
 
-                                <button class="action-card" (click)="onQuickAction('approve_leave')">
+                                <button type="button" class="action-card" (click)="onQuickAction('approve_leave')">
                                     <div class="action-icon-wrap action-blue">
                                         <i class="fas fa-envelope-open-text"></i>
                                     </div>
-                                    <span class="action-title">Approve Leave</span>
+                                    <span class="action-title">Approve<br>Leave</span>
                                 </button>
 
-                                <button class="action-card" (click)="onQuickAction('mark_attendance')">
+                                <button type="button" class="action-card" (click)="onQuickAction('mark_attendance')">
                                     <div class="action-icon-wrap action-teal">
                                         <i class="far fa-clock"></i>
                                     </div>
-                                    <span class="action-title">Mark Attendance</span>
+                                    <span class="action-title">Mark<br>Attendance</span>
                                 </button>
 
-                                <button class="action-card" (click)="onQuickAction('run_payroll')">
+                                <button type="button" class="action-card" (click)="onQuickAction('run_payroll')">
                                     <div class="action-icon-wrap action-orange">
                                         <i class="fas fa-calculator"></i>
                                     </div>
-                                    <span class="action-title">Run Payroll</span>
+                                    <span class="action-title">Run<br>Payroll</span>
                                 </button>
 
-                                <button class="action-card" (click)="onQuickAction('recruit_candidate')">
+                                <button type="button" class="action-card" (click)="onQuickAction('recruit_candidate')">
                                     <div class="action-icon-wrap action-purple">
                                         <i class="fas fa-users"></i>
                                     </div>
-                                    <span class="action-title">Recruit Candidate</span>
+                                    <span class="action-title">Recruit<br>Candidate</span>
                                 </button>
 
-                                <button class="action-card" (click)="onQuickAction('generate_report')">
+                                <button type="button" class="action-card" (click)="onQuickAction('generate_report')">
                                     <div class="action-icon-wrap action-pink">
                                         <i class="far fa-file-alt"></i>
                                     </div>
-                                    <span class="action-title">Generate Report</span>
+                                    <span class="action-title">Generate<br>Report</span>
                                 </button>
                             </div>
                         </div>

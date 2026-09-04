@@ -82,7 +82,7 @@
   </div>
 
   <div *ngIf="!isLoading && data" class="course-player-body">
-    <div class="row g-4">
+    <div class="row g-3">
       <!-- Left Column: Syllabus / Playlist -->
       <div class="col-lg-4">
         <div class="syllabus-panel-card">
@@ -202,20 +202,4 @@
       </div>
     </div>
   </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!-- IN-APP TOAST NOTIFICATION POPUP                                             -->
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="app-toast-container" *ngIf="toast.show" [ngClass]="toast.type">
-  <div class="toast-icon-circle">
-    <i class="fas" [ngClass]="toast.type === 'success' ? 'fa-check' : toast.type === 'error' ? 'fa-exclamation' : 'fa-info'"></i>
-  </div>
-  <div class="toast-message-content">
-    <span class="toast-title-text">{{ toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Notice' }}</span>
-    <span class="toast-body-text">{{ toast.message }}</span>
-  </div>
-  <button type="button" class="toast-close-btn" (click)="closeToast()">
-    <i class="fas fa-times"></i>
-  </button>
 </div>

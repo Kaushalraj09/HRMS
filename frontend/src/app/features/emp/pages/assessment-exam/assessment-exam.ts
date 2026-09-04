@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TrainingService } from '../../../../core/services/training.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { AssessmentAttemptStartResponse, AssessmentQuestion } from '../../../../core/models/training.model';
 
 @Component({
@@ -34,37 +35,18 @@ export class AssessmentExamComponent implements OnInit, OnDestroy {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private trainingService: TrainingService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {

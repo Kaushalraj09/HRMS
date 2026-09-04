@@ -86,6 +86,8 @@ export interface TodayAttendanceState {
   graceMinutes?: number;
   lunchDurationMinutes?: number;
   workMode: WorkMode;
+  workLocationName?: string | null;
+  workLocationId?: number | null;
   punchIn?: string | null;
   punchOut?: string | null;
   punchInLatitude?: number | null;

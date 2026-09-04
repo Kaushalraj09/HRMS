@@ -2,7 +2,7 @@ from datetime import date, time, datetime
 from zoneinfo import ZoneInfo
 import ipaddress
 import json
-import urllib.request
+import httpx
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
@@ -490,12 +490,9 @@ def get_ip_location(request: Request, current_user: User = Depends(get_current_u
 
     url = f"https://freeipapi.com/api/json/{client_host}"
     try:
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        with urllib.request.urlopen(req, timeout=4) as response:
-            data = json.loads(response.read().decode())
+        response = httpx.get(url, timeout=4.0, headers={"User-Agent": "HRMS-Backend/1.0"})
+        if response.status_code == 200:
+            data = response.json()
             if len(_ip_location_cache) > 1000:
                 _ip_location_cache.clear()
             _ip_location_cache[client_host] = data

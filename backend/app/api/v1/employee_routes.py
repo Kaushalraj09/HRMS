@@ -23,6 +23,11 @@ def add_employee(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators and HR personnel are authorized to add employees"
         )
+    if not request.work_location or not request.work_location.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Work location is required."
+        )
     try:
         return employee_service.create_employee(db, request)
     except InvitationDeliveryError as exc:
@@ -181,6 +186,12 @@ def update_employee(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators and HR personnel are authorized to update employees"
+        )
+
+    if request.work_location is not None and not request.work_location.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Work location cannot be empty."
         )
 
     employee = employee_service.update_employee(db, employee_id, request)

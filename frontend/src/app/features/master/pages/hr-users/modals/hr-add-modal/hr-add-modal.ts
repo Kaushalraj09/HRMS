@@ -74,7 +74,7 @@ export class HrAddModalComponent implements OnInit {
         employeeType: ['Full-Time'],
         department: ['Human Resources'],
         designation: ['HR Manager'],
-        workLocation: ['Main Office'],
+        workLocation: ['Main Office', Validators.required],
         shiftType: ['General Shift'],
         doj: ['']
       }),

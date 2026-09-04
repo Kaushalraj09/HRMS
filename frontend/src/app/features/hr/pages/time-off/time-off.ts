@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
 import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
@@ -23,8 +24,11 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   
   // Search & Filter state
   searchTerm = '';
+  selectedDepartment = '';
   selectedLeaveType = '';
-  selectedStatus = ''; // For history
+  selectedStatus = '';
+  dateRangeStart = '';
+  dateRangeEnd = '';
   
   // Current tab: 'all' | 'pending' | 'approved' | 'rejected'
   activeTab: 'all' | 'pending' | 'approved' | 'rejected' = 'pending';
@@ -61,7 +65,8 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
     private readonly attendanceService: AttendanceService,
     private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -208,6 +213,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
         next: () => {
           processedCount++;
           if (processedCount === reqIds.length) {
+            this.toastService.showSuccess(`Request ${action.toLowerCase()}d successfully`);
             this.loadPendingRequests();
             this.loadProcessedRequests();
             this.loadCounts();
@@ -215,7 +221,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           if (processedCount === 0) { // Only alert on first error
-            alert(err?.error?.detail || `Error performing ${action.toLowerCase()} action.`);
+            this.toastService.showError(err?.error?.detail || `Error performing ${action.toLowerCase()} action.`);
           }
         }
       });
@@ -264,7 +270,7 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   }
 
   downloadAttachment(fileName: string): void {
-    alert(`Downloading attachment: ${fileName}`);
+    this.toastService.showInfo(`Downloading attachment: ${fileName}`);
   }
 
   private matchesSearchText(req: any): boolean {

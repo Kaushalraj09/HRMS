@@ -6,6 +6,7 @@ import { TrainingService } from '../../../../../core/services/training.service';
 import { Training, TrainingMaterial, TrainingAssignment } from '../../../../../core/models/training.model';
 import { MasterDataService } from '../../../../../core/services/master-data.service';
 import { EmployeeService } from '../../../../../core/services/employee.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 
 import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
 import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
@@ -65,7 +66,7 @@ export class TrainingManageComponent implements OnInit {
     onConfirm: () => {}
   };
 
-  // In-App Toast Popup State
+  // Deprecated local toast state kept for backwards compatibility
   toast = {
     show: false,
     message: '',
@@ -74,30 +75,10 @@ export class TrainingManageComponent implements OnInit {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   openConfirm(options: {
     title: string;
@@ -140,7 +121,8 @@ export class TrainingManageComponent implements OnInit {
     private employeeService: EmployeeService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
-    private location: Location
+    private location: Location,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {

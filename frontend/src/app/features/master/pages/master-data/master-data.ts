@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { MasterDataService } from '../../../../core/services/master-data.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { 
   Department, 
   Designation, 
@@ -58,7 +59,8 @@ export class MasterDataComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly masterDataService: MasterDataService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {
   }
 
@@ -147,28 +149,15 @@ export class MasterDataComponent implements OnInit, OnDestroy {
 
   // Add/Edit Actions
   showToast(message: string, isError: boolean = false, subMessage: string = ''): void {
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
+    const fullMessage = subMessage ? `${message} - ${subMessage}` : message;
+    if (isError) {
+      this.toastService.showError(fullMessage, message);
+    } else {
+      this.toastService.showSuccess(fullMessage, message);
     }
-    this.toastMessage = message;
-    this.isErrorToast = isError;
-    this.toastSubMessage = subMessage;
-    this.cdr.detectChanges();
-    this.toastTimeout = setTimeout(() => {
-      this.toastMessage = null;
-      this.toastSubMessage = '';
-      this.cdr.detectChanges();
-    }, 2800);
   }
 
-  closeToast(): void {
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-    }
-    this.toastMessage = null;
-    this.toastSubMessage = '';
-    this.cdr.detectChanges();
-  }
+  closeToast(): void {}
 
   openAddModal(): void {
     this.modalMode = 'add';
@@ -312,34 +301,47 @@ export class MasterDataComponent implements OnInit, OnDestroy {
     this.isDataLoading = true;
     let request$: any;
 
+    const payload = { ...this.formModel };
+    if (this.activeTab === 'shifts') {
+      if (payload.lunch_start_time === '') payload.lunch_start_time = null;
+      if (payload.lunch_end_time === '') payload.lunch_end_time = null;
+      if (payload.overtime_start_time === '') payload.overtime_start_time = null;
+      if (payload.lunch_duration_minutes === null || payload.lunch_duration_minutes === undefined || payload.lunch_duration_minutes === '') {
+        payload.lunch_duration_minutes = 40;
+      }
+      if (payload.max_overtime_minutes === null || payload.max_overtime_minutes === undefined || payload.max_overtime_minutes === '') {
+        payload.max_overtime_minutes = 120;
+      }
+    }
+
     if (this.modalMode === 'add') {
       if (this.activeTab === 'departments') {
-        request$ = this.masterDataService.createDepartment(this.formModel);
+        request$ = this.masterDataService.createDepartment(payload);
       } else if (this.activeTab === 'designations') {
-        request$ = this.masterDataService.createDesignation(this.formModel);
+        request$ = this.masterDataService.createDesignation(payload);
       } else if (this.activeTab === 'shifts') {
-        request$ = this.masterDataService.createShift(this.formModel);
+        request$ = this.masterDataService.createShift(payload);
       } else if (this.activeTab === 'locations') {
-        request$ = this.masterDataService.createWorkLocation(this.formModel);
+        request$ = this.masterDataService.createWorkLocation(payload);
       } else if (this.activeTab === 'leaves') {
-        request$ = this.masterDataService.createLeaveType(this.formModel);
+        request$ = this.masterDataService.createLeaveType(payload);
       } else {
-        request$ = this.masterDataService.createHoliday(this.formModel);
+        request$ = this.masterDataService.createHoliday(payload);
       }
     } else {
       const id = this.selectedItemId!;
       if (this.activeTab === 'departments') {
-        request$ = this.masterDataService.updateDepartment(id, this.formModel);
+        request$ = this.masterDataService.updateDepartment(id, payload);
       } else if (this.activeTab === 'designations') {
-        request$ = this.masterDataService.updateDesignation(id, this.formModel);
+        request$ = this.masterDataService.updateDesignation(id, payload);
       } else if (this.activeTab === 'shifts') {
-        request$ = this.masterDataService.updateShift(id, this.formModel);
+        request$ = this.masterDataService.updateShift(id, payload);
       } else if (this.activeTab === 'locations') {
-        request$ = this.masterDataService.updateWorkLocation(id, this.formModel);
+        request$ = this.masterDataService.updateWorkLocation(id, payload);
       } else if (this.activeTab === 'leaves') {
-        request$ = this.masterDataService.updateLeaveType(id, this.formModel);
+        request$ = this.masterDataService.updateLeaveType(id, payload);
       } else {
-        request$ = this.masterDataService.updateHoliday(id, this.formModel);
+        request$ = this.masterDataService.updateHoliday(id, payload);
       }
     }
 

@@ -17,7 +17,7 @@ greenlet>=3.0.0
 
 # Data Validation & Settings
 pydantic>=2.10.0
-pydantic-settings>=2.7.0
+pydantic-settings>=2.14.2
 pydantic-core>=2.27.0
 annotated-types>=0.7.0
 email-validator>=2.1.0
@@ -29,11 +29,12 @@ passlib[bcrypt]>=1.7.4
 # passlib 1.7.4 is not compatible with bcrypt 5.x. Keep the existing bcrypt
 # hash format while avoiding the runtime self-test failure in clean installs.
 bcrypt==4.0.1
-PyJWT>=2.8.0
+PyJWT>=2.13.0
 
 # System, Configuration & Scheduling
 python-dotenv>=1.0.0
-python-multipart>=0.0.9
+python-multipart>=0.0.26
+sqlparse>=0.6.0
 APScheduler>=3.10.0
 tzdata>=2024.1
 click>=8.1.0

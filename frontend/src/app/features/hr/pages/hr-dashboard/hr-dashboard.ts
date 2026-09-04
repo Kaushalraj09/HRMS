@@ -18,6 +18,7 @@ import { EmployeeLocationMap } from '../../components/employee-location-map/empl
 import { RegularizationService } from '../../../../core/services/regularization.service';
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 export interface SparklinePoint {
   x: number;
@@ -548,7 +549,8 @@ export class HrDashboard implements OnInit {
     private readonly regularizationService: RegularizationService,
     private readonly masterDataService: MasterDataService,
     private readonly documentService: DocumentService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {
     this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
     this.isDashboardHome = this.router.url.split('?')[0] === '/hr-dashboard';
@@ -1152,10 +1154,11 @@ export class HrDashboard implements OnInit {
     if (this.activeRequestTab === 'regularization') {
       this.regularizationService.submitDecision(id as number, { status: 'approved', reviewComment: 'Approved via HR Dashboard' }).subscribe({
         next: () => {
+          this.toastService.showSuccess('Regularization request approved successfully');
           this.loadPendingRegularizations();
           this.loadDashboardData();
         },
-        error: (err) => alert(err?.error?.detail || 'Error approving regularization request')
+        error: (err) => this.toastService.showError(err?.error?.detail || 'Error approving regularization request')
       });
     } else {
       const groupedReq = this.pendingRequests.find(r => r.id === id);
@@ -1169,6 +1172,7 @@ export class HrDashboard implements OnInit {
           next: () => {
             completedCount++;
             if (completedCount === reqIds.length) {
+              this.toastService.showSuccess('Time-off request approved successfully');
               this.loadPendingRequests();
               this.loadDashboardData();
             }
@@ -1176,7 +1180,7 @@ export class HrDashboard implements OnInit {
           error: (err) => {
             if (!hasError) {
               hasError = true;
-              alert(err?.error?.detail || 'Error approving time-off request');
+              this.toastService.showError(err?.error?.detail || 'Error approving time-off request');
             }
           }
         });
@@ -1188,10 +1192,11 @@ export class HrDashboard implements OnInit {
     if (this.activeRequestTab === 'regularization') {
       this.regularizationService.submitDecision(id as number, { status: 'rejected', reviewComment: 'Rejected via HR Dashboard' }).subscribe({
         next: () => {
+          this.toastService.showSuccess('Regularization request rejected successfully');
           this.loadPendingRegularizations();
           this.loadDashboardData();
         },
-        error: (err) => alert(err?.error?.detail || 'Error rejecting regularization request')
+        error: (err) => this.toastService.showError(err?.error?.detail || 'Error rejecting regularization request')
       });
     } else {
       const groupedReq = this.pendingRequests.find(r => r.id === id);
@@ -1205,6 +1210,7 @@ export class HrDashboard implements OnInit {
           next: () => {
             completedCount++;
             if (completedCount === reqIds.length) {
+              this.toastService.showSuccess('Time-off request rejected successfully');
               this.loadPendingRequests();
               this.loadDashboardData();
             }
@@ -1212,7 +1218,7 @@ export class HrDashboard implements OnInit {
           error: (err) => {
             if (!hasError) {
               hasError = true;
-              alert(err?.error?.detail || 'Error rejecting time-off request');
+              this.toastService.showError(err?.error?.detail || 'Error rejecting time-off request');
             }
           }
         });

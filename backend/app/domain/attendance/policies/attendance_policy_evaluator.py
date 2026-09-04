@@ -38,19 +38,34 @@ class AttendancePolicyEvaluator:
 
         policy = AttendancePolicyEvaluator.get_active_policy(db)
         
-        # Determine threshold bounds using policy if active, otherwise using shift configuration
-        required_mins = policy.required_minutes if policy.id != 0 else (shift.required_work_minutes or 480)
-        half_day_mins = policy.minimum_half_day_minutes if policy.id != 0 else (shift.minimum_half_day_minutes or 120)
+        # Dynamically determine thresholds from the employee's assigned Shift configuration
+        if shift and shift.required_work_minutes:
+            required_mins = shift.required_work_minutes
+        elif shift and shift.working_hours:
+            required_mins = int(float(shift.working_hours) * 60)
+        elif policy and policy.id != 0 and policy.required_minutes:
+            required_mins = policy.required_minutes
+        else:
+            required_mins = 480
+
+        if shift and shift.minimum_half_day_minutes:
+            half_day_mins = shift.minimum_half_day_minutes
+        elif shift and shift.half_day_hours:
+            half_day_mins = int(float(shift.half_day_hours) * 60)
+        elif policy and policy.id != 0 and policy.minimum_half_day_minutes:
+            half_day_mins = policy.minimum_half_day_minutes
+        else:
+            half_day_mins = required_mins // 2
+
+        shift_grace = getattr(shift, "shift_grace_minutes", None)
+        if shift_grace is None:
+            shift_grace = getattr(shift, "grace_minutes", 15) or 15
+        effective_required_mins = max(0, required_mins - shift_grace)
         
-        if credited_minutes >= required_mins:
-            if late_minutes > 0 and early_exit_minutes > 0:
-                return "Late + Early Exit"
-            elif late_minutes > 0:
+        if credited_minutes >= effective_required_mins:
+            if late_minutes > 0:
                 return "Late Present"
-            elif early_exit_minutes > 0:
-                return "Present With Early Exit"
-            else:
-                return "Present"
+            return "Present"
         elif credited_minutes >= half_day_mins:
             return "Half Day"
         else:

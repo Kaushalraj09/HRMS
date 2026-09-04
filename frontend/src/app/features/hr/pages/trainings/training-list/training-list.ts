@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Va
 import { RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { Training, TrainingKPI, Assessment, AssessmentQuestion } from '../../../../../core/models/training.model';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-select/custom-select';
 import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
 
@@ -52,30 +53,10 @@ export class TrainingListComponent implements OnInit {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   openConfirm(options: {
     title: string;
@@ -191,7 +172,8 @@ export class TrainingListComponent implements OnInit {
     private trainingService: TrainingService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {

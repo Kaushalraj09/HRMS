@@ -4,6 +4,7 @@ import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
 import { EmployeeService } from '../../../../../../core/services/employee.service';
+import { ToastService } from '../../../../../../core/services/toast.service';
 import { EmployeeCredentials } from '../../../../../../core/models/employee.model';
 
 @Component({
@@ -25,7 +26,8 @@ export class EmployeeCredentialModalComponent implements OnInit, OnDestroy {
 
   constructor(
     private employeeService: EmployeeService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -78,7 +80,7 @@ export class EmployeeCredentialModalComponent implements OnInit, OnDestroy {
 
   copy(text: string): void {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard');
+    this.toastService.showSuccess('Copied to clipboard');
   }
 
   close(): void {

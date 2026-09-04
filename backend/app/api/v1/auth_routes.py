@@ -32,7 +32,7 @@ def _client_ip(request: Request) -> str:
     real_ip = request.headers.get("x-real-ip")
     if real_ip and real_ip.strip():
         return real_ip.strip()
-    return request.client.host if request.client else "0.0.0.0"
+    return request.client.host if request.client else "127.0.0.1"
 
 
 def _rate_limit_key(prefix: str, request: Request, email: str) -> str:

@@ -43,11 +43,7 @@
 
     <!-- Actual Data -->
     <ng-container *ngIf="profile$ | async as profile">
-      
-      <!-- Success Toast -->
-      <div class="save-toast" *ngIf="saveMessage$ | async as message">
-        <i class="fas fa-check-circle"></i> {{ message }}
-      </div>
+
 
       <!-- 1. Profile Header Card -->
       <div class="profile-header-card">

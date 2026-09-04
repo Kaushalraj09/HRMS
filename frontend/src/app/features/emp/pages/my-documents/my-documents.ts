@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { DocumentService } from '../../../../core/services/document.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   EmployeeDocumentItem,
   DocumentSummaryStats,
@@ -79,7 +80,8 @@ export class MyDocumentsComponent implements OnInit, OnDestroy {
   constructor(
     private readonly documentService: DocumentService,
     private readonly sanitizer: DomSanitizer,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -277,11 +279,7 @@ export class MyDocumentsComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isUploading = false;
         this.closeUploadModal();
-        this.successMessage = 'Document uploaded successfully! Status is now Pending Review.';
-        setTimeout(() => {
-          this.successMessage = '';
-          this.cdr.markForCheck();
-        }, 5000);
+        this.toastService.showSuccess('Document uploaded successfully! Status is now Pending Review.');
         this.loadDocuments(false);
       },
       error: (err) => {
@@ -341,7 +339,7 @@ export class MyDocumentsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to download document:', err);
-        alert('Failed to download document. Please try again.');
+        this.toastService.showError('Failed to download document. Please try again.');
       }
     });
   }
@@ -364,7 +362,7 @@ export class MyDocumentsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to download version:', err);
-        alert('Failed to download version.');
+        this.toastService.showError('Failed to download version.');
       }
     });
   }

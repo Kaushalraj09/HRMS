@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import date, time
 from typing import Optional, List
 
@@ -39,7 +39,7 @@ class ShiftBase(BaseModel):
     working_hours: float = 8.0
     required_work_minutes: int = 480
     grace_minutes: int = 30
-    lunch_duration_minutes: int = 40
+    lunch_duration_minutes: Optional[int] = 40
     lunch_start_time: Optional[time] = None
     lunch_end_time: Optional[time] = None
     half_day_hours: float = 4.0
@@ -48,7 +48,7 @@ class ShiftBase(BaseModel):
     minimum_present_minutes: int = 480
     overtime_start_time: Optional[time] = None
     overtime_allowed: bool = True
-    max_overtime_minutes: int = 120
+    max_overtime_minutes: Optional[int] = 120
     late_mark_after_minutes: int = 30
     early_exit_before_minutes: int = 0
     is_night_shift: bool = False
@@ -60,6 +60,21 @@ class ShiftBase(BaseModel):
     early_coming_minutes: Optional[int] = 60
     punch_in_grace_minutes: Optional[int] = 10
     shift_grace_minutes: Optional[int] = 15
+
+    @field_validator(
+        "lunch_start_time",
+        "lunch_end_time",
+        "overtime_start_time",
+        "start_time",
+        "end_time",
+        "description",
+        mode="before",
+    )
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 class ShiftCreate(ShiftBase):
     pass

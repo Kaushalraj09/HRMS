@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { TrainingService } from '../../../../core/services/training.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { EmployeeTrainingView, TrainingMaterial } from '../../../../core/models/training.model';
 
 @Component({
@@ -26,30 +27,10 @@ export class TrainingViewComponent implements OnInit {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   constructor(
     private route: ActivatedRoute,
@@ -57,7 +38,8 @@ export class TrainingViewComponent implements OnInit {
     private location: Location,
     private trainingService: TrainingService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private toastService: ToastService
   ) {}
 
   goBack(): void {

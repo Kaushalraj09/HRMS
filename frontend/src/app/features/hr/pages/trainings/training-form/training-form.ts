@@ -3,6 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 
 import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
 import { CustomSelectComponent } from '../../../../../shared/components/custom-select/custom-select';
@@ -47,30 +48,10 @@ export class TrainingFormComponent implements OnInit {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   constructor(
     private fb: FormBuilder,
@@ -79,7 +60,8 @@ export class TrainingFormComponent implements OnInit {
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
-    private location: Location
+    private location: Location,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {

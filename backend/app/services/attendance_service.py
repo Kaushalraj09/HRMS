@@ -19,8 +19,10 @@ from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
 from app.utils.employee_code import normalize_employee_code
 from app.services.time_calculator import get_attendance_status
+import logging
 from app.core.shift_rules import get_shift_rule_value
 
+logger = logging.getLogger(__name__)
 # Shift Configuration
 APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
@@ -336,10 +338,10 @@ def punch_in(
             time_diff = shift_start_dt - current_dt
             minutes_early = int(time_diff.total_seconds() / 60)
             attendance.early_arrival_minutes = minutes_early
-            attendance.early_approval_status = "Pending"
+            attendance.early_approval_status = "Approved"
             attendance.late_minutes = 0
             attendance.credited_work_start = shift.start_time
-            attendance.status = "EARLY_PENDING_APPROVAL"
+            attendance.status = "WORKING"
         else:
             # On time or late
             attendance.early_arrival_minutes = 0
@@ -349,7 +351,7 @@ def punch_in(
             
             if minutes_late <= grace_mins:
                 attendance.late_minutes = 0
-                attendance.status = "WITHIN_GRACE"
+                attendance.status = "WORKING"
             else:
                 attendance.late_minutes = minutes_late
                 attendance.status = "LATE"
@@ -361,8 +363,8 @@ def punch_in(
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
         invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to invalidate dashboard cache during punch in: %s", exc)
     
     log_audit_trail_sync(db, "PUNCH_IN", employee_id, f"Punched in via {work_mode} at {current.time()}")
     
@@ -546,8 +548,8 @@ def punch_out(
     try:
         from app.services.dashboard_service import invalidate_dashboard_cache
         invalidate_dashboard_cache(db, keys=["dashboard:admin", "dashboard:hr"])
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to invalidate dashboard cache during punch out: %s", exc)
     
     log_audit_trail_sync(db, "PUNCH_OUT", employee_id, f"Punched out via {work_mode} at {current.time()}")
     
@@ -640,6 +642,9 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
     lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(shift)
 
+    emp_rec = db.query(Employee).filter(Employee.id == employee_id).first()
+    assigned_loc_name = (emp_rec.work_location if emp_rec and emp_rec.work_location else None) or (attendance.work_location_name if attendance else None)
+
     return {
         "employeeId": employee_id,
         "isWorking": bool(attendance and attendance.is_working),
@@ -658,6 +663,8 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "graceMinutes": shift.grace_minutes or 30,
         "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
         "workMode": attendance.work_mode if attendance else "Office",
+        "workLocationName": assigned_loc_name,
+        "workLocationId": attendance.work_location_id if attendance else None,
         "punchIn": attendance.punch_in if attendance else None,
         "punchOut": attendance.punch_out if attendance else None,
         "punchInLatitude": attendance.punch_in_latitude if attendance else None,

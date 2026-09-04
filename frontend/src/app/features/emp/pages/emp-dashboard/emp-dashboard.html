@@ -760,13 +760,6 @@
 
                     </div>
 
-                    <!-- ROW 5: TRAINING & LEARNING MODULE -->
-                    <div class="dashboard-grid-row row-5" style="margin-top: 24px; margin-bottom: 24px;">
-                        <div class="col-12" style="width: 100%;">
-                            <app-training-widget></app-training-widget>
-                        </div>
-                    </div>
-
                 </ng-container>
             </div>
             <app-footer></app-footer>
@@ -857,7 +850,7 @@
 
     <div class="camera-modal-footer">
       <button class="btn btn-secondary" (click)="closeCameraModal()">Cancel</button>
-      <button class="btn btn-primary-gradient" (click)="confirmPhoto()" [disabled]="isPunchSaving">
+      <button class="btn btn-primary-gradient" (click)="confirmPhoto()" [disabled]="isPunchSaving || isLocationLoading || (pendingPunchWorkMode === 'Office' && !!punchMessage)">
         <i class="fas fa-check-circle"></i> {{ isPunchSaving ? 'Recording...' : (isPunchedIn ? 'Confirm Punch Out' : 'Confirm Punch In') }}
       </button>
     </div>

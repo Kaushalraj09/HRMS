@@ -241,7 +241,7 @@ class ShiftCalculationService:
             start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
             end_mins = cls.time_to_minutes(shift.end_time or time(18, 0))
 
-            if (shift.is_night_shift or end_mins < start_mins) and out_mins < in_mins:
+            if out_mins < in_mins:
                 out_mins += 1440
 
             gross_mins = max(0, out_mins - in_mins)

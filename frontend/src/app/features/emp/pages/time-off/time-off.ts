@@ -7,6 +7,7 @@ import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimeOffModalComponent } from '../emp-dashboard/modals/time-off-modal/time-off-modal';
 import { TimeEngineService } from '../../../../core/services/time-engine.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
 import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
 
@@ -86,7 +87,8 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
     private readonly timeoffService: TimeoffService,
     private readonly authService: AuthService,
     private readonly cdr: ChangeDetectorRef,
-    private readonly timeEngine: TimeEngineService
+    private readonly timeEngine: TimeEngineService,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -125,6 +127,7 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error loading time off requests', err);
+        this.toastService.showError('Failed to load time-off requests.');
       }
     });
   }
@@ -198,16 +201,15 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
       const reqIds = this.selectedRequest?.requests.map((r: any) => r.id) || [];
       if (reqIds.length === 0) return;
 
-      // Ideally we should have a batch cancel API, but for now we can cancel one by one or just cancel the first one if the backend cancels all in the batch.
-      // Wait, we can loop them since they are not that many.
-      // Actually let's just loop them for now as instructed, or if we have one id, cancel it.
       let canceledCount = 0;
+      let hasError = false;
       for (const rId of reqIds) {
         this.timeoffService.cancelTimeOffRequest(rId).subscribe({
           next: () => {
             canceledCount++;
-            if (canceledCount === reqIds.length) {
+            if (canceledCount === reqIds.length && !hasError) {
               this.isCancelling = false;
+              this.toastService.showSuccess('Time-off request cancelled successfully.');
               this.closeDetailsModal();
               this.loadRequests();
               this.loadBalances();
@@ -216,6 +218,10 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
           error: (err) => {
             console.error('Error cancelling request', err);
             this.isCancelling = false;
+            if (!hasError) {
+              hasError = true;
+              this.toastService.showError(err?.error?.detail || 'Failed to cancel time-off request.');
+            }
           }
         });
       }
@@ -223,6 +229,6 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   }
 
   downloadAttachment(fileName: string): void {
-    alert(`Downloading attachment: ${fileName}`);
+    this.toastService.showInfo(`Downloading attachment: ${fileName}`);
   }
 }

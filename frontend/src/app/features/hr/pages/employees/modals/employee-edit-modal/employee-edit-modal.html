@@ -90,8 +90,9 @@
                 <app-custom-select name="designation" inputId="designation" formControlName="designation" [options]="designationOptions" placeholder="Select Designation"></app-custom-select>
               </div>
               <div class="form-group">
-                <label for="workLocation">Work Location</label>
+                <label for="workLocation">Work Location <span class="required">*</span></label>
                 <app-custom-select name="workLocation" inputId="workLocation" formControlName="workLocation" [options]="locationOptions" placeholder="Select Location"></app-custom-select>
+                <span class="error-text" *ngIf="isInvalid('employmentInfo', 'workLocation')">Work location is required</span>
               </div>
               <div class="form-group">
                 <label for="shiftId">Assigned Shift</label>

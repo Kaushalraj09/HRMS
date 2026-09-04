@@ -6,6 +6,7 @@ import { EmployeeProfile } from '../../../../core/models/profile.model';
 import { MyProfileService } from '../../../../core/services/profile.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
@@ -53,7 +54,8 @@ export class MyProfile implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private attendanceService: AttendanceService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private toastService: ToastService
   ) {
     this.initForm();
   }
@@ -157,12 +159,16 @@ export class MyProfile implements OnInit {
       }
     };
 
-    this.profileService.updateProfile(updatedProfile).subscribe(res => {
-      if (res.success) {
-        this.saveMessage$.next(res.message);
-        this.profile$.next(updatedProfile);
-        this.closeEditModal();
-        setTimeout(() => this.saveMessage$.next(''), 3000);
+    this.profileService.updateProfile(updatedProfile).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toastService.showSuccess(res.message || 'Profile updated successfully!');
+          this.profile$.next(updatedProfile);
+          this.closeEditModal();
+        }
+      },
+      error: (err) => {
+        this.toastService.showError(err.error?.detail || 'Failed to update profile.');
       }
     });
   }
@@ -189,7 +195,7 @@ export class MyProfile implements OnInit {
     if (input.files && input.files[0]) {
       const file = input.files[0];
       if (file.size > 2 * 1024 * 1024) {
-        alert('File size exceeds 2MB limit!');
+        this.toastService.showError('File size exceeds 2MB limit!');
         return;
       }
       
@@ -208,17 +214,21 @@ export class MyProfile implements OnInit {
       profileImage: this.tempAvatarImage || undefined
     };
 
-    this.profileService.updateProfile(updatedProfile).subscribe(res => {
-      if (res.success) {
-        this.saveMessage$.next('Avatar customized successfully!');
-        this.profile$.next(updatedProfile);
-        
-        if (this.tempAvatarImage) {
-          this.authService.updateProfileImage(this.tempAvatarImage);
+    this.profileService.updateProfile(updatedProfile).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toastService.showSuccess('Avatar customized successfully!');
+          this.profile$.next(updatedProfile);
+          
+          if (this.tempAvatarImage) {
+            this.authService.updateProfileImage(this.tempAvatarImage);
+          }
+          
+          this.closeAvatarModal();
         }
-        
-        this.closeAvatarModal();
-        setTimeout(() => this.saveMessage$.next(''), 3000);
+      },
+      error: (err) => {
+        this.toastService.showError(err.error?.detail || 'Failed to update avatar.');
       }
     });
   }

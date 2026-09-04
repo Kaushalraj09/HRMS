@@ -5,6 +5,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Observable } from 'rxjs';
 import { EmployeeService } from '../../../../../../core/services/employee.service';
 import { DocumentService } from '../../../../../../core/services/document.service';
+import { ToastService } from '../../../../../../core/services/toast.service';
 import { EmployeeDetailView } from '../../../../../../core/models/employee.model';
 import {
   EmployeeDocumentsPageResponse,
@@ -73,7 +74,8 @@ export class EmployeeViewModalComponent implements OnInit {
     private readonly employeeService: EmployeeService,
     private readonly documentService: DocumentService,
     private readonly sanitizer: DomSanitizer,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -130,7 +132,7 @@ export class EmployeeViewModalComponent implements OnInit {
       },
       error: (err) => {
         item.is_required = !newRequired; // rollback
-        alert('Failed to update requirement: ' + (err?.error?.detail || 'Error'));
+        this.toastService.showError('Failed to update requirement: ' + (err?.error?.detail || 'Error'));
       }
     });
   }
@@ -214,7 +216,7 @@ export class EmployeeViewModalComponent implements OnInit {
       },
       error: (err) => {
         this.isVerifying = false;
-        alert(err?.error?.detail || 'Failed to verify');
+        this.toastService.showError(err?.error?.detail || 'Failed to verify');
       }
     });
   }
@@ -360,11 +362,7 @@ export class EmployeeViewModalComponent implements OnInit {
   }
 
   showDocsToast(msg: string): void {
-    this.docsSuccess = msg;
-    setTimeout(() => {
-      this.docsSuccess = '';
-      this.cdr.markForCheck();
-    }, 4000);
+    this.toastService.showSuccess(msg);
   }
 
   formatSize(b?: number | null): string {

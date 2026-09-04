@@ -1,0 +1,28 @@
+<aside class="global-toast-stack" aria-label="Notifications" aria-live="polite" aria-atomic="false">
+  <div
+    *ngFor="let toast of (toasts$ | async); trackBy: trackById"
+    class="app-toast-item"
+    [ngClass]="[toast.type, toast.isClosing ? 'toast-exit' : 'toast-enter']"
+    [attr.role]="getRole(toast.type)"
+    [attr.aria-live]="getAriaLive(toast.type)"
+  >
+    <div class="toast-icon-circle" aria-hidden="true">
+      <i [class]="getIconClass(toast.type)"></i>
+    </div>
+
+    <div class="toast-message-content">
+      <strong class="toast-title-text">{{ toast.title }}</strong>
+      <span class="toast-body-text">{{ toast.message }}</span>
+    </div>
+
+    <button
+      type="button"
+      class="toast-close-btn"
+      (click)="dismiss(toast.id, $event)"
+      aria-label="Close notification"
+      title="Close notification"
+    >
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+  </div>
+</aside>

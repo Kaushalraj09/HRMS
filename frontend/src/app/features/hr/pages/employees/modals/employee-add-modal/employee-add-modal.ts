@@ -71,7 +71,7 @@ export class EmployeeAddModalComponent implements OnInit {
         employeeType: [''],
         department: [''],
         designation: [''],
-        workLocation: [''],
+        workLocation: ['', Validators.required],
         shiftType: [''],
         shiftId: [null],
         doj: [''],

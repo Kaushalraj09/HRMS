@@ -17,6 +17,7 @@ import {
 
 import { CustomDatepickerComponent } from '../../../../../../shared/components/custom-datepicker/custom-datepicker';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
+import { ToastService } from '../../../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-time-off-modal',
@@ -58,7 +59,8 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     private readonly fb: FormBuilder,
     private readonly attendanceService: AttendanceService,
     private readonly timeoffService: TimeoffService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -271,6 +273,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
 
     if (this.leaveForm.invalid) {
       this.leaveForm.markAllAsTouched();
+      this.toastService.showWarning('Please fill in all required fields marked with *');
       return;
     }
 
@@ -280,7 +283,9 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     const endDt = new Date(multipleDays ? endDate : startDate);
 
     if (multipleDays && endDt < startDt) {
-      this.errorMessage = 'End date cannot be prior to start date.';
+      const msg = 'End date cannot be prior to start date.';
+      this.errorMessage = msg;
+      this.toastService.showError(msg);
       return;
     }
 
@@ -292,7 +297,9 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     }
 
     if (datesToSubmit.length === 0) {
-      this.errorMessage = 'Selected date range only contains weekends. No request was submitted.';
+      const msg = 'Selected date range only contains weekends. No request was submitted.';
+      this.errorMessage = msg;
+      this.toastService.showError(msg);
       return;
     }
 
@@ -342,16 +349,20 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
         )
         .subscribe({
           next: () => {
-            this.successMessage = `Successfully requested ${datesToSubmit.length} day(s) of time off.`;
+            const count = datesToSubmit.length;
+            const successMsg = count === 1
+              ? 'Time-off request submitted successfully.'
+              : `Time-off request for ${count} days submitted successfully.`;
+            this.toastService.showSuccess(successMsg);
             this.leaveForm.reset();
             this.removeUploadedFile();
-            setTimeout(() => {
-              this.closed.emit(true);
-            }, 1800);
+            this.closed.emit(true);
           },
           error: (err) => {
             console.error('Submit Time Off Error:', err);
-            this.errorMessage = err.error?.detail || 'Failed to submit request. Please try again.';
+            const errorMsg = err.error?.detail || 'Failed to submit time-off request. Please try again.';
+            this.errorMessage = errorMsg;
+            this.toastService.showError(errorMsg);
           }
         })
     );

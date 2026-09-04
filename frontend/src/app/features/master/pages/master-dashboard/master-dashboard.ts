@@ -18,6 +18,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../core/services/timeoff.service';
 import { RegularizationService } from '../../../../core/services/regularization.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { groupTimeOffRequests } from '../../../../core/utils/timeoff-grouping.util';
 import { GroupedTimeOffRequest } from '../../../../core/models/timeoff.model';
 
@@ -132,7 +133,8 @@ export class MasterDashboard implements OnInit, OnDestroy {
     private readonly attendanceService: AttendanceService,
     private readonly timeoffService: TimeoffService,
     private readonly regularizationService: RegularizationService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly toastService: ToastService
   ) {
     this.isSidebarOpen$ = this.sidebarService.isSidebarOpen$;
     this.userName = this.authService.getDisplayName() || 'System Admin';
@@ -353,7 +355,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
-        alert(`Failed to export ${cardType} report.`);
+        this.toastService.showError(`Failed to export ${cardType} report.`);
       }
     });
   }
@@ -548,6 +550,15 @@ export class MasterDashboard implements OnInit, OnDestroy {
     return this.dashboardData?.recentJoiners || [];
   }
 
+  formatJoinDate(doj: string): string {
+    if (!doj) return '';
+    const parts = doj.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0]} ${parts[1]}`;
+    }
+    return doj;
+  }
+
   get todayBirthdays(): BirthdayItem[] {
     return this.dashboardData?.todayBirthdays || [];
   }
@@ -658,7 +669,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   executePayroll() {
-    alert('Payroll processing initiated successfully for the current cycle.');
+    this.toastService.showSuccess('Payroll processing initiated successfully for the current cycle.');
     this.showPayrollModal = false;
   }
 
@@ -757,7 +768,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
         next: () => {
           processedCount++;
           if (processedCount === reqIds.length) {
-            alert(`Request ${action.toLowerCase()}d successfully`);
+            this.toastService.showSuccess(`Request ${action.toLowerCase()}d successfully`);
             this.loadPendingRequests();
             this.loadProcessedRequests();
             this.fetchAdminDashboard();
@@ -765,7 +776,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
         },
         error: (err) => {
           if (processedCount === 0) {
-            alert(err?.error?.detail || "Error processing request");
+            this.toastService.showError(err?.error?.detail || "Error processing request");
           }
         }
       });
@@ -786,7 +797,7 @@ export class MasterDashboard implements OnInit, OnDestroy {
   }
 
   downloadAttachment(fileName: string): void {
-    alert(`Downloading attachment: ${fileName}`);
+    this.toastService.showInfo(`Downloading attachment: ${fileName}`);
   }
 
   setOversightTab(tab: string) {
@@ -811,12 +822,12 @@ export class MasterDashboard implements OnInit, OnDestroy {
   processRegularization(requestId: number, status: 'approved' | 'rejected') {
     this.regularizationService.submitDecision(requestId, { status, reviewComment: 'Admin Oversight Decision' }).subscribe({
       next: () => {
-        alert(`Regularization request ${status} successfully`);
+        this.toastService.showSuccess(`Regularization request ${status} successfully`);
         this.loadPendingRegularizations();
         this.loadProcessedRegularizations();
         this.fetchAdminDashboard();
       },
-      error: (err) => alert(err?.error?.detail || "Error processing regularization request")
+      error: (err) => this.toastService.showError(err?.error?.detail || "Error processing regularization request")
     });
   }
 

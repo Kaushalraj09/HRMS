@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 0.5rem 0.25rem 2.5rem 0.25rem;
+  padding: 0 0.25rem 2.5rem 0.25rem;
   max-width: 100%;
   animation: fadeIn 0.25s ease-in-out;
 }
@@ -1453,106 +1453,3 @@
   background: #1d4ed8;
 }
 
-/* ─── 9. In-App Modern Floating Toast Popup (Top-Center) ─────────────────── */
-
-.app-toast-container {
-  position: fixed;
-  top: 1.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10000;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 1.25rem;
-  background: #ffffff;
-  border-radius: 9999px;
-  box-shadow: 0 20px 30px -6px rgba(15, 23, 42, 0.16), 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
-  border: 1px solid #e2e8f0;
-  animation: toastDropIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  max-width: 90vw;
-  box-sizing: border-box;
-}
-
-@keyframes toastDropIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-
-.toast-icon-circle {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.app-toast-container.success .toast-icon-circle {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
-  box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
-}
-
-.app-toast-container.error .toast-icon-circle {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
-  box-shadow: 0 0 10px rgba(220, 38, 38, 0.25);
-}
-
-.app-toast-container.info .toast-icon-circle {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  color: #2563eb;
-  box-shadow: 0 0 10px rgba(37, 99, 235, 0.25);
-}
-
-.toast-message-content {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-grow: 1;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.toast-title-text {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.toast-body-text {
-  color: #475569;
-  font-weight: 500;
-}
-
-.toast-close-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  margin-left: 0.25rem;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.toast-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-}

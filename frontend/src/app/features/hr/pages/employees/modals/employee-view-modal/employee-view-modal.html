@@ -42,7 +42,7 @@
           <div class="info-grid">
             <div class="info-item"><span class="label-text">Name</span><span>{{ detail.employee.name }}</span></div>
             <div class="info-item"><span class="label-text">Status</span><span class="status-badge" [ngClass]="detail.employee.status.toLowerCase()">{{ detail.employee.status }}</span></div>
-            <div class="info-item"><span class="label-text">Work Mode</span><span>{{ detail.employee.workLocation }}</span></div>
+            <div class="info-item"><span class="label-text">Work Location</span><span>{{ detail.employee.workLocation || 'N/A' }}</span></div>
             <div class="info-item"><span class="label-text">Shift</span><span>{{ detail.employee.shift?.name || detail.employee.shiftType || 'N/A' }}</span></div>
             <div class="info-item"><span class="label-text">Joined Date</span><span>{{ detail.employee.doj || 'N/A' }}</span></div>
           </div>

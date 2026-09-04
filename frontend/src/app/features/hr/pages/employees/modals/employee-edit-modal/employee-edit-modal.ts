@@ -75,7 +75,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
         employeeType: [''],
         department: [''],
         designation: [''],
-        workLocation: [''],
+        workLocation: ['', Validators.required],
         shiftType: [''],
         shiftId: [null],
         doj: [{ value: '', disabled: true }],

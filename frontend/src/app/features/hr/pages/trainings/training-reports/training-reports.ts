@@ -5,7 +5,9 @@ import { Router, RouterModule } from '@angular/router';
 import { TrainingService } from '../../../../../core/services/training.service';
 import { TrainingReportRow, Training } from '../../../../../core/models/training.model';
 import { MasterDataService } from '../../../../../core/services/master-data.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-select/custom-select';
+import { exportTableToPdf } from '../../../../../core/utils/pdf-export.util';
 
 @Component({
   selector: 'app-training-reports',
@@ -57,30 +59,10 @@ export class TrainingReportsComponent implements OnInit {
   };
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'success', duration = 5000): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast = {
-        show: true,
-        message,
-        type,
-        timeout: setTimeout(() => {
-          this.ngZone.run(() => {
-            this.toast.show = false;
-            this.cdr.detectChanges();
-          });
-        }, duration)
-      };
-      this.cdr.detectChanges();
-    });
+    this.toastService.show(type, message, { duration });
   }
 
-  closeToast(): void {
-    if (this.toast.timeout) clearTimeout(this.toast.timeout);
-    this.ngZone.run(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    });
-  }
+  closeToast(): void {}
 
   constructor(
     private trainingService: TrainingService,
@@ -88,7 +70,8 @@ export class TrainingReportsComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private router: Router,
-    private location: Location
+    private location: Location,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -153,51 +136,67 @@ export class TrainingReportsComponent implements OnInit {
     this.loadReports();
   }
 
-  exportToCSV(): void {
+  exportToPDF(): void {
     if (!this.reports || this.reports.length === 0) {
       this.showToast('No report data available to export.', 'info');
       return;
     }
 
     const headers = [
-      'Employee Code',
+      'Emp Code',
       'Employee Name',
       'Department',
       'Training Program',
-      'Category',
       'Assigned Date',
       'Completed Date',
-      'Progress %',
-      'Assignment Status',
-      'Assessment Title',
+      'Progress',
+      'Status',
+      'Assessment',
       'Score',
-      'Percentage',
-      'Pass/Fail Result'
+      'Result'
     ];
 
     const rows = this.reports.map((r) => [
-      `"${r.employee_code || ''}"`,
-      `"${r.employee_name || ''}"`,
-      `"${r.department || ''}"`,
-      `"${r.training_title || ''}"`,
-      `"${r.category || ''}"`,
-      `"${r.assigned_date ? new Date(r.assigned_date).toLocaleDateString() : ''}"`,
-      `"${r.completed_date ? new Date(r.completed_date).toLocaleDateString() : ''}"`,
-      `"${r.progress_percentage || 0}%"`,
-      `"${r.assignment_status || ''}"`,
-      `"${r.assessment_title || ''}"`,
-      `"${r.score || ''}"`,
-      `"${r.percentage || ''}"`,
-      `"${r.result || ''}"`
+      r.employee_code || '-',
+      r.employee_name || '-',
+      r.department || '-',
+      r.category ? `${r.training_title} (${r.category})` : (r.training_title || '-'),
+      r.assigned_date ? new Date(r.assigned_date).toLocaleDateString() : '-',
+      r.completed_date ? new Date(r.completed_date).toLocaleDateString() : '-',
+      `${r.progress_percentage ?? 0}%`,
+      r.assignment_status || '-',
+      r.assessment_title || 'N/A',
+      r.score !== null && r.score !== undefined ? `${r.score} (${r.percentage || '0%'})` : (r.percentage ? `${r.percentage}%` : '-'),
+      r.result || '-'
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Training_Report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const totalEnrolled = this.reports.length;
+    const completedCount = this.reports.filter(
+      (r) => (r.assignment_status || '').toUpperCase() === 'COMPLETED' || (r.progress_percentage || 0) >= 100
+    ).length;
+    const inProgressCount = this.reports.filter(
+      (r) => (r.assignment_status || '').toUpperCase() === 'IN_PROGRESS'
+    ).length;
+    const passedCount = this.reports.filter(
+      (r) => (r.result || '').toUpperCase() === 'PASS'
+    ).length;
+
+    exportTableToPdf({
+      title: 'Training & Assessment Executive Report',
+      subtitle: 'Official workforce learning progress, completion records, and assessment performance',
+      filename: `training_report_${new Date().toISOString().slice(0, 10)}.pdf`,
+      headers,
+      rows,
+      metadata: [
+        { label: 'Total Enrolled', value: totalEnrolled },
+        { label: 'Completed', value: completedCount },
+        { label: 'In Progress', value: inProgressCount },
+        { label: 'Passed Assessments', value: passedCount }
+      ]
+    });
+  }
+
+  exportToCSV(): void {
+    this.exportToPDF();
   }
 }

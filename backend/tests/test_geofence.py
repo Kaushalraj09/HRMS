@@ -158,3 +158,52 @@ def test_security_backend_enforcement(db_session):
     detail = exc_info.value.detail
     assert detail["office"] == "Belagavi ICCC Office"
     assert detail["distance_meters"] > 80000
+
+
+def test_punch_out_office_geofence(db_session):
+    from app.domain.attendance.services.punch_service import PunchService
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+    emp = get_or_create_belagavi_employee(db_session)
+    emp.work_location = "Belagavi ICCC Office"
+    db_session.commit()
+
+    now_kolkata = datetime.now(APP_TIMEZONE)
+    in_time = now_kolkata.replace(hour=9, minute=30, second=0, microsecond=0)
+    out_time = now_kolkata.replace(hour=18, minute=0, second=0, microsecond=0)
+
+    # Clean existing attendance for today
+    from app.models.attendance import Attendance
+    db_session.query(Attendance).filter(
+        Attendance.employee_id == emp.id,
+        Attendance.date == now_kolkata.date()
+    ).delete()
+    db_session.commit()
+
+    # 1. Punch in within Belagavi office geofence (~10m)
+    att = PunchService.punch_in(
+        db_session, emp.id, "Office",
+        latitude=15.87167, longitude=74.50859,
+        address="Near Belagavi office", custom_time=in_time
+    )
+    assert att.punch_in is not None
+
+    # 2. Punch out with coordinates in Hubli (~87 km away) should fail
+    with pytest.raises(HTTPException) as exc_info:
+        PunchService.punch_out(
+            db_session, emp.id, "Office",
+            latitude=15.3547222, longitude=75.1341667,
+            address="Hubli office", custom_time=out_time
+        )
+    assert exc_info.value.status_code == 400
+    assert "You are outside the assigned office location (Belagavi ICCC Office)" in exc_info.value.detail["message"]
+
+    # 3. Punch out within Belagavi office geofence should succeed
+    att_out = PunchService.punch_out(
+        db_session, emp.id, "Office",
+        latitude=15.87167, longitude=74.50859,
+        address="Near Belagavi office", custom_time=out_time
+    )
+    assert att_out.punch_out is not None

@@ -57,21 +57,26 @@ class ShiftCalculator:
 
     @staticmethod
     def get_shift_breaks(db: Session, shift: Shift) -> list[BreakPolicy]:
-        """Retrieve breaks associated with a shift, falling back to a default lunch break if none exist."""
+        """Retrieve breaks associated with a shift, falling back to shift lunch window if none exist."""
+        if not shift:
+            return []
         breaks = db.query(BreakPolicy).filter(BreakPolicy.shift_id == shift.id).all()
-        if not breaks and shift.id == 0:
-            # Fallback for General Shift default configuration: unpaid lunch break 13:00 - 14:00
-            return [
-                BreakPolicy(
-                    id=0,
-                    shift_id=0,
-                    name="Lunch Break",
-                    start_time=time(13, 0),
-                    end_time=time(14, 0),
-                    paid_break=False,
-                    mandatory=True
-                )
-            ]
+        if not breaks:
+            from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
+            lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(shift)
+            duration = shift.lunch_duration_minutes if shift.lunch_duration_minutes is not None else 60
+            if duration > 0 and lunch_start and lunch_end:
+                return [
+                    BreakPolicy(
+                        id=0,
+                        shift_id=shift.id or 0,
+                        name="Lunch Break",
+                        start_time=lunch_start,
+                        end_time=lunch_end,
+                        paid_break=False,
+                        mandatory=True
+                    )
+                ]
         return breaks
 
     @staticmethod

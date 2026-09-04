@@ -44,7 +44,6 @@ import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { EmpSidebar } from '../../components/emp-sidebar/emp-sidebar';
 import { EmpSidebarService } from '../../components/emp-sidebar/emp-sidebar.service';
 import { FooterComponent } from '../../../../shared/components/footer/footer';
-import { TrainingWidgetComponent } from '../../components/training-widget/training-widget';
 
 export interface DashboardCalendarDay {
   date: Date;
@@ -130,8 +129,7 @@ export class CustomDateFormatter extends CalendarNativeDateFormatter {
     Navbar,
     RouterModule,
     EmpSidebar,
-    FooterComponent,
-    TrainingWidgetComponent
+    FooterComponent
   ],
   templateUrl: './emp-dashboard.html',
   styleUrls: ['./emp-dashboard.css'],
@@ -442,8 +440,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   get displayOfficeLocation(): string {
     return (
-      this.punchInAddress ||
       this.assignedWorkLocationName ||
+      this.punchInAddress ||
       (this.masterWorkLocations && this.masterWorkLocations.length > 0 ? this.masterWorkLocations[0].name : '') ||
       'Office Location'
     );
@@ -1222,6 +1220,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   confirmPhoto(image: string | null = this.capturedImage): void {
+    if (this.pendingPunchWorkMode === 'Office' && this.punchMessage) {
+      return;
+    }
+    if (this.isLocationLoading) {
+      return;
+    }
     if (!this.isPunchedIn && !image) {
       const video = document.getElementById('cameraFeed') as HTMLVideoElement | null;
       image = video ? this.capturePhotoProgrammatically(video) : null;
@@ -1676,7 +1680,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
         this.subscriptions.add(
           this.myProfileService.getProfile().subscribe({
             next: (prof: any) => {
-              this.assignedWorkLocationName = prof?.employmentDetails?.workLocation || prof?.employee?.workLocation || '';
+              this.assignedWorkLocationName = prof?.workLocation || prof?.employmentDetails?.workLocation || prof?.contactDetails?.location || prof?.employee?.workLocation || this.assignedWorkLocationName || '';
               this.cdr.detectChanges();
             },
             error: () => {}
@@ -2176,6 +2180,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
       : 0;
     this.attendanceStatusLabel = todayState.status;
     this.status = todayState.workMode;
+    if (todayState.workLocationName) {
+      this.assignedWorkLocationName = todayState.workLocationName;
+    }
     this.punchInTime = this.formatTimeWithoutMicroseconds(todayState.punchIn);
     this.punchOutTime = this.formatTimeWithoutMicroseconds(todayState.punchOut);
     this.overtimeApproved = todayState.overtimeApproved || false;

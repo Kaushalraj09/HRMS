@@ -754,7 +754,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
     for emp_id, first_name, last_name, designation, dob in birthday_data:
         if not dob:
             import hashlib
-            seed_num = int(hashlib.md5(f"{emp_id}-{first_name}".encode('utf-8')).hexdigest(), 16)
+            seed_num = int(hashlib.md5(f"{emp_id}-{first_name}".encode('utf-8'), usedforsecurity=False).hexdigest(), 16)
             month = (seed_num % 12) + 1
             day = (seed_num % 28) + 1
             year = 1985 + (seed_num % 20)

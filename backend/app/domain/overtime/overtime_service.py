@@ -161,6 +161,8 @@ class OvertimeService:
                 
                 in_mins = ShiftCalculator.time_to_minutes(attendance.punch_in)
                 out_mins = ShiftCalculator.time_to_minutes(attendance.punch_out)
+                if out_mins < in_mins:
+                    out_mins += 1440
                 gross = max(0, out_mins - in_mins)
                 net = max(0, gross - unpaid_break)
                 

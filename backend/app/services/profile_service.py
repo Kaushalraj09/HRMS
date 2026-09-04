@@ -65,6 +65,15 @@ def get_employee_profile(db: Session, user_id: int) -> Optional[EmployeeProfile]
         "shift": employee.shift_type or "General Shift",
         "status": employee.status,
         "profileImage": profile_image,
+        "workLocation": employee.work_location,
+        "work_location": employee.work_location,
+        "employmentDetails": {
+            "department": employee.department or "General",
+            "designation": employee.designation or "Employee",
+            "workLocation": employee.work_location,
+            "shift": employee.shift_type or "General Shift",
+            "doj": employee.doj.isoformat() if employee.doj else None,
+        },
         "personalDetails": {
             "firstName": employee.first_name,
             "lastName": employee.last_name,

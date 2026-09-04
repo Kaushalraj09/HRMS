@@ -42,7 +42,7 @@ app-navbar {
 .main-content {
   flex: 1;
   background-color: #F8FAFC;
-  padding: 10px;
+  padding: 0 14px 14px 14px;
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
@@ -61,16 +61,18 @@ app-navbar {
   gap: 14px;
   box-sizing: border-box;
   flex: 1;
+  padding-top: 0;
 }
 
 .admin-dashboard-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  padding-top: 0;
 }
 
 /* Error Banner */
@@ -662,15 +664,20 @@ app-navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .panel-title {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .custom-select-sm {
@@ -696,6 +703,8 @@ app-navbar {
   text-decoration: none;
   cursor: pointer;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .view-all-link:hover {
@@ -1139,39 +1148,85 @@ app-navbar {
   font-weight: 800;
 }
 
-/* 4. BOTTOM ROW: WIDGETS GRID */
+/* 4. BOTTOM ROW: WIDGETS GRID (ALL IN SAME ROW) */
 .widgets-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .widget-panel {
-  min-height: 260px;
+  min-height: 275px;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 12px;
+  box-sizing: border-box;
+}
+
+.widget-panel .panel-body {
+  flex: 1;
+}
+
+.widget-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.widget-panel .panel-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widget-panel .view-all-link {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .widget-list-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 6px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.list-item:hover {
+  background: #f8fafc;
 }
 
 .item-avatar {
-  width: 38px;
-  height: 38px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -1194,34 +1249,37 @@ app-navbar {
 }
 
 .item-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .item-sub {
-  font-size: 11.5px;
+  font-size: 10.5px;
   color: #64748b;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .item-meta {
-  font-size: 11.5px;
+  font-size: 10px;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .gift-box-icon {
   color: #ef4444;
-  font-size: 16px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -1236,9 +1294,10 @@ app-navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
   transition: background 0.2s ease;
+  gap: 6px;
 }
 
 .approval-row:hover {
@@ -1248,17 +1307,20 @@ app-navbar {
 .approval-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .approval-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11.5px;
+  flex-shrink: 0;
 }
 
 .icon-light-blue { background: #eff6ff; color: #2563eb; }
@@ -1267,16 +1329,20 @@ app-navbar {
 .icon-light-green { background: #f0fdf4; color: #16a34a; }
 
 .approval-label {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .approval-badge {
-  padding: 3px 10px;
+  padding: 2px 7px;
   border-radius: 9999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .badge-blue { background: #eff6ff; color: #2563eb; }
@@ -1287,38 +1353,47 @@ app-navbar {
 /* Quick Actions 2x3 Grid */
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .action-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 14px 8px;
+  border-radius: 8px;
+  padding: 8px 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 5px;
   cursor: pointer;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal !important;
+  text-decoration: none;
+  outline: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   border-color: #cbd5e1;
 }
 
 .action-icon-wrap {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .action-green { background: #dcfce7; color: #16a34a; }
@@ -1329,15 +1404,22 @@ app-navbar {
 .action-pink { background: #fce7f3; color: #db2777; }
 
 .action-title {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 600;
   color: #334155;
   text-align: center;
+  line-height: 1.25;
+  white-space: normal !important;
+  word-break: normal;
+  display: block;
+  width: 100%;
+  padding: 0 1px;
+  box-sizing: border-box;
 }
 
 /* 5. ADMIN APPROVAL OVERSIGHT & DECISION LOGS */
 .oversight-section {
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
 .oversight-header {
@@ -1758,14 +1840,11 @@ app-navbar {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .widgets-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 768px) {
   .main-content {
-    padding: 10px;
+    padding: 14px;
   }
   .admin-hero-card {
     flex-direction: column;
@@ -1783,6 +1862,6 @@ app-navbar {
     grid-template-columns: 1fr;
   }
   .quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
