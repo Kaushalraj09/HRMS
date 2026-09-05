@@ -253,6 +253,8 @@
   padding: 30px;
   border-radius: 12px;
   width: 350px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
@@ -351,6 +353,21 @@
   margin-top: 1px;
 }
 
+.sidebar.collapsed .sidebar-brand-header {
+  padding: 0 8px !important;
+  justify-content: center !important;
+}
+
+.sidebar.collapsed .sidebar-brand-logo {
+  height: 32px !important;
+  width: 32px !important;
+  object-fit: contain !important;
+}
+
+.sidebar.collapsed .brand-title-wrap {
+  display: none !important;
+}
+
 .sidebar-bottom-card {
   padding: 12px 16px;
   margin: 12px;
@@ -371,6 +388,161 @@
   font-size: 10px;
   color: rgba(255, 255, 255, 0.7);
   margin: 2px 0 0 0;
+}
+
+/* RESPONSIVE MOBILE: DOCKED 70PX ICON-RAIL SIDEBAR */
+@media (max-width: 768px) {
+  :host {
+    display: block !important;
+    width: 70px !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 100 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+
+  :host.collapsed {
+    width: 70px !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+
+  .sidebar {
+    width: 70px !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+
+  .sidebar-brand-header {
+    height: 54px !important;
+    padding: 0 8px !important;
+    justify-content: center !important;
+  }
+
+  .sidebar-brand-logo {
+    height: 30px !important;
+    width: 30px !important;
+    object-fit: contain !important;
+  }
+
+  .brand-title-wrap {
+    display: none !important;
+  }
+
+  .title-text {
+    display: none !important;
+  }
+
+  .collapsed-title-icon {
+    display: block !important;
+  }
+
+  .menu-text {
+    display: none !important;
+  }
+
+  .menu-arrow {
+    display: none !important;
+  }
+
+  .sub-menu {
+    display: none !important;
+  }
+
+  .sidebar-bottom-card {
+    display: none !important;
+  }
+
+  .menu-link {
+    margin: 4px 8px !important;
+    padding: 10px 0 !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+  }
+
+  .menu-icon {
+    margin-right: 0 !important;
+    width: 100% !important;
+    font-size: 18px !important;
+    text-align: center !important;
+  }
+
+  /* When the user toggles hamburger open on mobile, slide drawer over content */
+  :host:not(.collapsed) .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 260px !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1050 !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  :host:not(.collapsed) .sidebar .sidebar-brand-header {
+    height: 54px !important;
+    padding: 0 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  :host:not(.collapsed) .sidebar .brand-title-wrap {
+    display: flex !important;
+  }
+
+  :host:not(.collapsed) .sidebar .title-text {
+    display: inline !important;
+  }
+
+  :host:not(.collapsed) .sidebar .collapsed-title-icon {
+    display: none !important;
+  }
+
+  :host:not(.collapsed) .sidebar .menu-text {
+    display: inline !important;
+    opacity: 1 !important;
+  }
+
+  :host:not(.collapsed) .sidebar .menu-arrow {
+    display: block !important;
+  }
+
+  :host:not(.collapsed) .sidebar .menu-link {
+    margin: 3px 12px !important;
+    padding: 10px 14px !important;
+    justify-content: flex-start !important;
+  }
+
+  :host:not(.collapsed) .sidebar .menu-icon {
+    margin-right: 10px !important;
+    width: 28px !important;
+    font-size: 16px !important;
+  }
+
+  /* Logout modal on mobile */
+  .logout-popup {
+    z-index: 9999 !important;
+    padding: 16px;
+  }
+  .popup-box {
+    padding: 22px 18px !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    border-radius: 14px !important;
+  }
+  .popup-box p {
+    font-size: 16px !important;
+    margin-bottom: 20px !important;
+  }
+  .yes-btn, .no-btn {
+    padding: 8px 22px !important;
+    font-size: 13.5px !important;
+  }
 }
 
 

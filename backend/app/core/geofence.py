@@ -34,16 +34,6 @@ def validate_employee_geofence(
     Validates employee's assigned work location and enforces geofence
     for office locations. Returns location metadata dictionary if validation passes.
     """
-    mode_str = (work_mode or "").strip().lower()
-    if mode_str in ["remote", "work from home", "wfh", "field"]:
-        return {
-            "is_remote": True,
-            "work_location_id": None,
-            "work_location_name": "Remote",
-            "distance_meters": None,
-            "allowed_radius_meters": None,
-        }
-
     assigned_location_name = (employee.work_location or "").strip()
     if not assigned_location_name or assigned_location_name.lower() in ["remote", "remote home office", "wfh", "hybrid"]:
         return {
@@ -90,6 +80,18 @@ def validate_employee_geofence(
             "distance_meters": None,
             "allowed_radius_meters": None,
         }
+
+    # Employee is assigned to an Office location - verify they are not attempting to bypass geofence via work_mode
+    mode_str = (work_mode or "").strip().lower()
+    if mode_str in ["remote", "work from home", "wfh", "field"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": f"Assigned work location '{work_location.name}' requires on-site attendance. Remote mode is not permitted.",
+                "office": work_location.name,
+            }
+        )
 
     if not work_location.is_active:
         raise HTTPException(

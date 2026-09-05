@@ -182,6 +182,9 @@ async def punch_dynamic(
             detail="Only employees can punch attendance"
         )
 
+    # Secure me/punch by ensuring request cannot target another employee
+    request.employee_id = employee.id
+
     today_state = attendance_service.get_today_state(db, employee.id)
     if not today_state.get("punchIn"):
         await punch_in(request, db, current_user)
@@ -234,6 +237,13 @@ def continue_working(
     current = datetime.now(APP_TIMEZONE)
     today = current.date()
 
+    shift = ShiftRepository.get_assigned_shift(db, employee.id, today)
+    if shift and shift.overtime_allowed is False:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Overtime is not allowed for your assigned shift."
+        )
+
     attendance = (
         db.query(Attendance)
         .filter(Attendance.employee_id == employee.id, Attendance.date == today)
@@ -247,7 +257,6 @@ def continue_working(
         )
 
     attendance.overtime_approved = True
-    shift = ShiftRepository.get_assigned_shift(db, employee.id, today)
     attendance.overtime_start = shift.overtime_start_time or shift.end_time or time(18, 0)
     attendance.shift_end_reminder_sent = 3  # Acknowledged/dismissed
 
@@ -279,6 +288,13 @@ def extend_overtime(
     APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
     current = datetime.now(APP_TIMEZONE)
     today = current.date()
+
+    shift = ShiftRepository.get_assigned_shift(db, employee.id, today)
+    if shift and shift.overtime_allowed is False:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Overtime is not allowed for your assigned shift."
+        )
 
     attendance = (
         db.query(Attendance)

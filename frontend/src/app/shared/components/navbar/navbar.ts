@@ -1,4 +1,4 @@
-import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, HostListener, EventEmitter, Input, Output, OnInit, OnDestroy, OnChanges, SimpleChanges, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Dropdown } from '../dropdown/dropdown';
@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
 import { TimeEngineService } from '../../../core/services/time-engine.service';
+import { EmpSidebarService } from '../../../features/emp/components/emp-sidebar/emp-sidebar.service';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, map } from 'rxjs';
 
 export interface SearchModule {
@@ -27,6 +28,7 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   @Input() userRole: string = '';
   @Input() showSearch: boolean = true;
   @Input() searchValue: string = '';
+  @Input() isSidebarOpen?: boolean;
 
   @Output() hamburgerClick = new EventEmitter<void>();
   @Output() searchChange = new EventEmitter<string>();
@@ -83,7 +85,8 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     private readonly notificationService: NotificationService,
     private readonly attendanceService: AttendanceService,
     private readonly timeEngine: TimeEngineService,
-    private readonly router: Router
+    private readonly router: Router,
+    @Optional() private readonly empSidebarService?: EmpSidebarService
   ) {}
 
   private formatUserRole(role?: string): string {
@@ -97,6 +100,16 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
 
   ngOnInit(): void {
     this.searchTerm = this.searchValue || '';
+
+    if (this.empSidebarService) {
+      this.sub.add(
+        this.empSidebarService.isEmpSidebarOpen$.subscribe(open => {
+          if (this.isSidebarOpen === undefined) {
+            this.isOpen = open;
+          }
+        })
+      );
+    }
 
     this.sub.add(
       this.searchInput$.pipe(
@@ -163,6 +176,9 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isSidebarOpen'] && changes['isSidebarOpen'].currentValue !== undefined) {
+      this.isOpen = Boolean(changes['isSidebarOpen'].currentValue);
+    }
     if (changes['searchValue'] && changes['searchValue'].currentValue !== this.searchTerm) {
       this.searchTerm = changes['searchValue'].currentValue || '';
     }
@@ -322,7 +338,9 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
 
   onHamburgerClick() {
     this.hamburgerClick.emit();
-    this.isOpen = !this.isOpen;
+    if (this.isSidebarOpen === undefined && !this.empSidebarService) {
+      this.isOpen = !this.isOpen;
+    }
   }
 
   onSearchInput(event: Event) {

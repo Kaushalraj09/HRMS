@@ -8,6 +8,7 @@
     <app-navbar 
       [userName]="userName" 
       [searchValue]="searchTerm"
+      [isSidebarOpen]="(isHrSidebarOpen$ | async) ?? false"
       (hamburgerClick)="toggleSidebar()"
       (searchChange)="onSearch($event)">
     </app-navbar>

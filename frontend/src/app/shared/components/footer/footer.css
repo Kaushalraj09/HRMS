@@ -1,12 +1,19 @@
+:host {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  flex-shrink: 0;
+}
+
 .app-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: 14px 20px;
   background-color: #f8fafc;
   border-top: 1px solid #e2e8f0;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12.5px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -34,4 +41,23 @@
 
 .divider {
   color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+  :host {
+    margin-top: 16px;
+  }
+
+  .app-footer {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 10px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .footer-left, .footer-right {
+    justify-content: center;
+    width: 100%;
+  }
 }

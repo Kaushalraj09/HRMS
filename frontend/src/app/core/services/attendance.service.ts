@@ -20,6 +20,7 @@ interface BackendAttendanceResponse {
   status: string;
   workMode: WorkMode;
   totalWorkingMinutes: number;
+  regularWorkMinutes?: number;
   overtimeMinutes: number;
   breakMinutes: number;
   grandTotalMinutes: number;
@@ -431,10 +432,14 @@ export class AttendanceService {
     const displayPunchOut = this.toDisplayTime(punchOut);
     const displayScheduledStart = this.toDisplayTime(row.scheduledStart);
     const displayScheduledEnd = this.toDisplayTime(row.scheduledEnd);
-    const workMinutes = Number(row.totalWorkingMinutes) || 0;
+    const totalWorkingMinutes = Number(row.totalWorkingMinutes) || 0;
     const overtimeMinutes = Number(row.overtimeMinutes) || 0;
     const breakMinutes = Number(row.breakMinutes) || 0;
     const grandTotalMinutes = Number(row.grandTotalMinutes) || 0;
+    const regularWorkMinutes = row.regularWorkMinutes !== undefined && row.regularWorkMinutes !== null && Number(row.regularWorkMinutes) > 0
+      ? Number(row.regularWorkMinutes)
+      : (overtimeMinutes > 0 && totalWorkingMinutes > overtimeMinutes ? totalWorkingMinutes - overtimeMinutes : totalWorkingMinutes);
+    const displayWorkMinutes = overtimeMinutes > 0 ? regularWorkMinutes : totalWorkingMinutes;
 
     return {
       date: row.date,
@@ -445,10 +450,10 @@ export class AttendanceService {
       entry: displayPunchIn || displayScheduledStart || '-',
       exit: displayPunchOut || displayScheduledEnd || '-',
       late: punchIn ? formatMinutesToHours(row.lateMinutes ?? 0) : '-',
-      total: (punchOut || workMinutes > 0) ? formatMinutesToHours(workMinutes) : '-',
+      total: (punchOut || displayWorkMinutes > 0) ? formatMinutesToHours(displayWorkMinutes) : '-',
       overtime: (punchOut || overtimeMinutes > 0) ? formatMinutesToHours(overtimeMinutes) : '-',
       break: (punchOut || breakMinutes > 0) ? formatMinutesToHours(breakMinutes) : '-',
-      grandTotal: (punchOut || grandTotalMinutes > 0) ? formatMinutesToHours(grandTotalMinutes || workMinutes) : '-',
+      grandTotal: (punchOut || grandTotalMinutes > 0) ? formatMinutesToHours(grandTotalMinutes || totalWorkingMinutes) : '-',
       status: this.normalizeStatus(row.status),
       workMode: row.workMode || 'Office'
     };

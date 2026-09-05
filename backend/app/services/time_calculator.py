@@ -172,19 +172,25 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
     start_mins = _time_to_minutes(effective_shift.start_time or time(9, 0))
     end_mins = _time_to_minutes(effective_shift.end_time or time(18, 0))
 
+    # Early punch time is for punch-in; actual working time is calculated when shift starts
+    effective_in_mins = in_minutes
+    if not effective_shift.is_night_shift and in_minutes < start_mins:
+        effective_in_mins = start_mins
+
     # Any punch-out time that is numerically less than punch-in time crossed midnight into the next day
     if out_minutes < in_minutes:
         out_minutes += 1440
 
-    if out_minutes <= in_minutes:
+    if out_minutes <= effective_in_mins:
         attendance_record.total_working_minutes = 0
+        attendance_record.regular_work_minutes = 0
         attendance_record.overtime_minutes = 0
         attendance_record.grand_total_minutes = 0
         attendance_record.status = "ABSENT"
         attendance_record.flags = []
         return
         
-    gross_minutes = out_minutes - in_minutes
+    gross_minutes = out_minutes - effective_in_mins
     lunch_minutes = ShiftCalculationService.calculate_lunch_overlap(attendance_record.punch_in, attendance_record.punch_out, effective_shift)
     
     timeoff_overlap_minutes = 0
@@ -220,13 +226,16 @@ def calculate_times(attendance_record: Attendance, timeoff_duration_hours: float
             attendance_record.punch_in,
             attendance_record.punch_out,
             effective_shift,
-            net_working_minutes=net_working_minutes
+            net_working_minutes=net_working_minutes,
+            is_extended=bool(attendance_record.overtime_extended)
         )
     
+    regular_working_minutes = max(0, net_working_minutes - overtime_minutes) if overtime_minutes > 0 else net_working_minutes
+    attendance_record.regular_work_minutes = regular_working_minutes
     attendance_record.total_working_minutes = net_working_minutes
     attendance_record.overtime_minutes = overtime_minutes
-    # Include lunch in grand total: working minutes + lunch + overtime
-    attendance_record.grand_total_minutes = net_working_minutes + lunch_minutes + overtime_minutes
+    # Grand total duration worked including lunch/breaks
+    attendance_record.grand_total_minutes = net_working_minutes + lunch_minutes
     
     timeoff_minutes = int(timeoff_duration_hours * 60)
     attendance_record.break_minutes = lunch_minutes + timeoff_minutes

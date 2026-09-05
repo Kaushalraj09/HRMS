@@ -172,6 +172,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   lateMinutes = 0;
   earlyLeaveMinutes = 0;
   overtimeMinutes = 0;
+  overtimeSecondsToday = 0;
 
   shiftTotalHours = 9;
   shiftTotalSeconds = 9 * 3600;
@@ -275,6 +276,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
   public isLocationLoading = false;
   public masterWorkLocations: WorkLocation[] = [];
   public assignedWorkLocationName = '';
+
+  get isAssignedRemoteWorker(): boolean {
+    const loc = (this.assignedWorkLocationName || '').trim().toLowerCase();
+    if (loc === 'remote' || loc.includes('remote') || loc === 'wfh') {
+      return true;
+    }
+    const matched = this.masterWorkLocations.find(
+      (l) => (l.name || '').trim().toLowerCase() === loc || (l.code || '').trim().toLowerCase() === loc
+    );
+    return (matched?.location_type || '').toLowerCase() === 'remote';
+  }
 
   latestNews_content = [
     {
@@ -405,11 +417,17 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.attendanceStatusLabel === 'LATE') {
       return 'Working (Late)';
     }
+    if (this.overtimeApproved && this.isPunchedIn) {
+      return 'Working (OT)';
+    }
     return this.attendanceStatusLabel || (this.isPunchedIn ? 'Working' : 'Not Marked');
   }
 
   get todayAttendancePillLabel(): string {
     if (this.isPunchedIn) {
+      if (this.overtimeApproved) {
+        return 'Overtime';
+      }
       return 'Working';
     }
     if (this.punchOutTime || this.attendanceStatusLabel === 'Present' || this.punchInTime) {
@@ -423,12 +441,48 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
   get todayAttendancePillClass(): string {
     if (this.isPunchedIn) {
+      if (this.overtimeApproved) {
+        return 'orange-pill';
+      }
       return 'green-pill';
     }
     if (this.punchOutTime || this.attendanceStatusLabel === 'Present' || this.punchInTime) {
       return 'green-pill';
     }
     return 'gray-pill';
+  }
+
+  get todayPunchInDisplay(): string {
+    if (!this.punchInTime) {
+      return 'Not Marked';
+    }
+    return this.formatTime12h(this.punchInTime);
+  }
+
+  get maxOvertimeDisplay(): string {
+    const mins = this.maxOvertimeMinutes || 120;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs} hours`;
+  }
+
+  get overtimeDurationDisplay(): string {
+    const otSecs = this.overtimeSecondsToday > 0 
+      ? this.overtimeSecondsToday 
+      : Math.max(0, this.totalWorkedSecondsToday - this.shiftTotalSeconds);
+    if (otSecs <= 0 && !this.overtimeApproved) {
+      return '';
+    }
+    const hrs = Math.floor(otSecs / 3600);
+    const mins = Math.floor((otSecs % 3600) / 60);
+    return `+${this.formatTwoDigits(hrs)}h ${this.formatTwoDigits(mins)}m`;
+  }
+
+  get shiftElapsedOrTargetDisplay(): string {
+    if (this.overtimeApproved) {
+      return this.targetWorkHoursDisplay;
+    }
+    return this.shiftElapsedDisplay;
   }
 
   get targetWorkHoursDisplay(): string {
@@ -946,6 +1000,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   requestSwitchWorkMode(newMode: WorkMode): void {
+    if (this.isAssignedRemoteWorker) {
+      return;
+    }
     if (this.punchInTime !== null) {
       this.punchMessage = 'Working mode is locked after you have punched in for the day.';
       this.cdr.detectChanges();
@@ -959,6 +1016,10 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   confirmSwitchWorkMode(): void {
+    if (this.isAssignedRemoteWorker) {
+      this.showSwitchConfirmModal = false;
+      return;
+    }
     const targetMode = this.pendingWorkModeToSwitch;
     this.showSwitchConfirmModal = false;
     this.punchMessage = '';
@@ -988,7 +1049,12 @@ export class EmpDashboard implements OnInit, OnDestroy {
       return;
     }
     this.punchMessage = '';
-    this.pendingPunchWorkMode = this.status;
+    if (this.isAssignedRemoteWorker) {
+      this.status = 'Remote';
+      this.pendingPunchWorkMode = 'Remote';
+    } else {
+      this.pendingPunchWorkMode = this.status;
+    }
     this.pendingPunchLatitude = undefined;
     this.pendingPunchLongitude = undefined;
     this.pendingPunchAddress = '';
@@ -998,6 +1064,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   setModalPunchWorkMode(mode: WorkMode): void {
+    if (this.isAssignedRemoteWorker) {
+      this.pendingPunchWorkMode = 'Remote';
+      this.status = 'Remote';
+      return;
+    }
     this.pendingPunchWorkMode = mode;
     this.status = mode;
     if (this.pendingPunchLatitude != null && this.pendingPunchLongitude != null) {
@@ -1015,7 +1086,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
       this.pendingPunchLatitude = lat;
       this.pendingPunchLongitude = lon;
 
-      const isRemoteWorkMode = this.pendingPunchWorkMode === 'Remote';
+      const isRemoteWorkMode = this.isAssignedRemoteWorker || this.pendingPunchWorkMode === 'Remote';
       const assignedName = (this.assignedWorkLocationName || '').trim().toLowerCase();
       const matchedLoc = this.masterWorkLocations.find(
         (l) => (l.name || '').trim().toLowerCase() === assignedName ||
@@ -1208,6 +1279,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
       canvas.height = video.videoHeight || 240;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         this.capturedImage = canvas.toDataURL('image/jpeg', 0.75);
         this.isFaceDetected = true;
@@ -1681,6 +1754,11 @@ export class EmpDashboard implements OnInit, OnDestroy {
           this.myProfileService.getProfile().subscribe({
             next: (prof: any) => {
               this.assignedWorkLocationName = prof?.workLocation || prof?.employmentDetails?.workLocation || prof?.contactDetails?.location || prof?.employee?.workLocation || this.assignedWorkLocationName || '';
+              if (this.isAssignedRemoteWorker) {
+                this.status = 'Remote';
+                this.pendingPunchWorkMode = 'Remote';
+                this.pendingWorkModeToSwitch = 'Remote';
+              }
               this.cdr.detectChanges();
             },
             error: () => {}
@@ -2179,14 +2257,23 @@ export class EmpDashboard implements OnInit, OnDestroy {
       ? 1 - (todayState.remainingSeconds / todayState.shiftTotalSeconds)
       : 0;
     this.attendanceStatusLabel = todayState.status;
-    this.status = todayState.workMode;
     if (todayState.workLocationName) {
       this.assignedWorkLocationName = todayState.workLocationName;
+    }
+    if (this.isAssignedRemoteWorker || todayState.isRemoteWorker) {
+      this.status = 'Remote';
+      this.pendingPunchWorkMode = 'Remote';
+      this.pendingWorkModeToSwitch = 'Remote';
+    } else {
+      this.status = todayState.workMode || 'Office';
     }
     this.punchInTime = this.formatTimeWithoutMicroseconds(todayState.punchIn);
     this.punchOutTime = this.formatTimeWithoutMicroseconds(todayState.punchOut);
     this.overtimeApproved = todayState.overtimeApproved || false;
     this.overtimeExtended = todayState.overtimeExtended || false;
+    if (todayState.overtimeSeconds !== undefined) {
+      this.overtimeSecondsToday = todayState.overtimeSeconds;
+    }
     if (todayState.shiftName) { this.shiftName = todayState.shiftName; }
     if (todayState.shiftCode) { this.shiftCode = todayState.shiftCode; }
     if (todayState.shiftStart) { this.shiftStart = todayState.shiftStart; }

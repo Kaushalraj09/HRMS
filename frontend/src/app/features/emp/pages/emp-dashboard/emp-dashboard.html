@@ -1,10 +1,13 @@
 <div class="Emp_dashboard">
+    <!-- Mobile Backdrop Overlay when sidebar is open -->
+    <div class="sidebar-backdrop" *ngIf="(isEmpSidebarOpen$ | async)" (click)="toggleSidebar()"></div>
+
     <!-- Left Sidebar: Full Height (0 to 100vh) starting from top left screen -->
-    <app-emp-sidebar></app-emp-sidebar>
+    <app-emp-sidebar [class.collapsed]="!(isEmpSidebarOpen$ | async)"></app-emp-sidebar>
 
     <!-- Right Content Wrapper: Navbar + Dashboard Page Content -->
     <div class="dashboard-right-wrapper">
-        <app-navbar [userName]="userName" [searchValue]="searchTerm" (hamburgerClick)="toggleSidebar()"
+        <app-navbar [userName]="userName" [searchValue]="searchTerm" [isSidebarOpen]="(isEmpSidebarOpen$ | async) ?? false" (hamburgerClick)="toggleSidebar()"
             (searchChange)="onSearch($event)">
         </app-navbar>
 
@@ -21,31 +24,45 @@
 
                     <!-- Shift End Reminder Banner -->
                     <div class="reminder-banner-card shift-end" *ngIf="isShiftEndReminderActive">
-                        <div class="reminder-icon-container">
-                            <i class="fas fa-hourglass-end pulse-icon"></i>
-                        </div>
-                        <div class="reminder-content">
-                            <h4>Your shift has ended</h4>
-                            <p>Please punch out or request to continue working into overtime.</p>
+                        <div class="reminder-left">
+                            <div class="reminder-icon-container">
+                                <i class="fas fa-hourglass-end pulse-icon"></i>
+                            </div>
+                            <div class="reminder-content">
+                                <h4>
+                                    Your Shift Has Ended
+                                    <span class="reminder-sub-badge" *ngIf="shiftEnd">
+                                        <i class="far fa-clock"></i> Ended at {{ shiftEnd }}
+                                    </span>
+                                </h4>
+                                <p>Please punch out, or start overtime to continue working (up to {{ maxOvertimeDisplay }} permitted).</p>
+                            </div>
                         </div>
                         <div class="reminder-actions">
                             <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
                                 <i class="fas fa-sign-out-alt"></i> Punch Out
                             </button>
                             <button type="button" class="action-btn continue-working" [disabled]="isPunchSaving" (click)="handleContinueWorking()">
-                                <i class="fas fa-clock"></i> Continue Working
+                                <i class="fas fa-business-time"></i> Start Overtime
                             </button>
                         </div>
                     </div>
 
                     <!-- Overtime Reminder Banner -->
                     <div class="reminder-banner-card overtime" *ngIf="isOvertimeReminderActive">
-                        <div class="reminder-icon-container">
-                            <i class="fas fa-exclamation-circle pulse-icon"></i>
-                        </div>
-                        <div class="reminder-content">
-                            <h4>Overtime limit reached</h4>
-                            <p>Your overtime session is ending. Please punch out or extend to avoid auto checkout.</p>
+                        <div class="reminder-left">
+                            <div class="reminder-icon-container">
+                                <i class="fas fa-exclamation-circle pulse-icon"></i>
+                            </div>
+                            <div class="reminder-content">
+                                <h4>
+                                    Overtime Limit Reached
+                                    <span class="reminder-sub-badge badge-red-sub" *ngIf="overtimeDurationDisplay">
+                                        <i class="fas fa-stopwatch"></i> {{ overtimeDurationDisplay }} Overtime
+                                    </span>
+                                </h4>
+                                <p>Your authorized overtime session is ending. Please punch out or request an extension to avoid auto checkout.</p>
+                            </div>
                         </div>
                         <div class="reminder-actions">
                             <button type="button" class="action-btn punch-out" [disabled]="isPunchSaving" (click)="togglePunch()">
@@ -85,7 +102,7 @@
                             <div class="kpi-info-wrap">
                                 <span class="kpi-label">Today's Attendance</span>
                                 <div class="kpi-value-row">
-                                    <span class="kpi-main-val">{{ punchInTime || 'Not Marked' }}</span>
+                                    <span class="kpi-main-val">{{ todayPunchInDisplay }}</span>
                                     <span class="kpi-pill-badge" [ngClass]="todayAttendancePillClass">{{ todayAttendancePillLabel }}</span>
                                 </div>
                             </div>
@@ -159,7 +176,13 @@
                         <div class="dashboard-card col-punch">
                             <div class="card-head-row">
                                 <span class="card-head-title">Today's Attendance</span>
-                                <div class="work-mode-pill-toggle">
+                                <!-- Remote Worker: Fixed badge, no office option and no switching mode -->
+                                <div class="work-mode-fixed-pill" *ngIf="isAssignedRemoteWorker">
+                                    <span class="mode-dot remote"></span> Remote
+                                </div>
+
+                                <!-- Office Worker: Retain existing toggle and switching capability -->
+                                <div class="work-mode-pill-toggle" *ngIf="!isAssignedRemoteWorker">
                                     <button type="button" class="mode-pill-btn office-btn" [class.active]="status === 'Office'" (click)="requestSwitchWorkMode('Office')">
                                         <span class="mode-dot"></span> Office
                                     </button>
@@ -169,7 +192,7 @@
                                 </div>
                             </div>
 
-                            <div class="alert alert-warning m-3 py-2 px-3 d-flex align-items-center" *ngIf="attendanceStatusLabel === 'EARLY_PENDING_APPROVAL'" style="font-size: 0.85rem; border-radius: 8px;">
+                            <div class="alert alert-warning my-2 mx-0 py-2 px-3 d-flex align-items-center" *ngIf="attendanceStatusLabel === 'EARLY_PENDING_APPROVAL'" style="font-size: 0.85rem; border-radius: 8px;">
                                 <i class="fas fa-exclamation-triangle me-2 text-warning" style="font-size: 1.2rem;"></i>
                                 <div class="mb-0">
                                     <strong class="d-block">Early Arrival Pending Approval</strong>
@@ -221,8 +244,8 @@
                                             </svg>
                                         </div>
                                         <span class="punch-label-action">{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</span>
-                                        <div class="punch-status-badge" [class.badge-active]="isPunchedIn" [class.badge-not-marked]="!isPunchedIn">
-                                            <span class="status-pulse-dot" *ngIf="isPunchedIn"></span>
+                                        <div class="punch-status-badge" [class.badge-overtime]="isPunchedIn && overtimeApproved" [class.badge-active]="isPunchedIn && !overtimeApproved" [class.badge-not-marked]="!isPunchedIn">
+                                            <span class="status-pulse-dot" [class.dot-overtime]="overtimeApproved" *ngIf="isPunchedIn"></span>
                                             {{ formattedAttendanceStatus }}
                                         </div>
                                     </button>
@@ -238,11 +261,15 @@
                             <div class="punch-footer-strip">
                                 <div class="shift-stats-divider">
                                     <div class="stat-col left-col">
-                                        <span class="sc-lbl">Shift Elapsed</span>
-                                        <span class="sc-val">{{ shiftElapsedDisplay }}</span>
+                                        <span class="sc-lbl">{{ overtimeApproved ? 'Shift Duration' : 'Shift Elapsed' }}</span>
+                                        <span class="sc-val">{{ shiftElapsedOrTargetDisplay }}</span>
+                                    </div>
+                                    <div class="stat-col mid-col" *ngIf="overtimeApproved || totalWorkedSecondsToday > shiftTotalSeconds">
+                                        <span class="sc-lbl">Overtime</span>
+                                        <span class="sc-val overtime-text">{{ overtimeDurationDisplay || '+00h 00m' }}</span>
                                     </div>
                                     <div class="stat-col right-col">
-                                        <span class="sc-lbl">Worked</span>
+                                        <span class="sc-lbl">Total Worked</span>
                                         <span class="sc-val">{{ totalWorkedTodayDisplay }}</span>
                                     </div>
                                 </div>
@@ -782,13 +809,17 @@
     <div class="camera-modal-body">
       <!-- Punch Details Row -->
       <div class="punch-modal-info-bar">
-        <div class="mode-toggle-group" *ngIf="!isPunchedIn">
+        <!-- Office Worker: Mode Selector -->
+        <div class="mode-toggle-group" *ngIf="!isPunchedIn && !isAssignedRemoteWorker">
           <span class="info-pill"><i class="fas fa-briefcase"></i> Mode:</span>
           <div class="btn-group-pill">
             <button type="button" class="mini-pill-btn" [class.active]="pendingPunchWorkMode === 'Office'" (click)="setModalPunchWorkMode('Office')">Office</button>
             <button type="button" class="mini-pill-btn" [class.active]="pendingPunchWorkMode === 'Remote'" (click)="setModalPunchWorkMode('Remote')">Remote</button>
           </div>
         </div>
+
+        <!-- Remote Worker: Fixed Mode Display -->
+        <span class="info-pill" *ngIf="!isPunchedIn && isAssignedRemoteWorker"><i class="fas fa-laptop-house"></i> Mode: <strong>Remote</strong></span>
         <span class="info-pill" *ngIf="isPunchedIn"><i class="fas fa-briefcase"></i> Mode: <strong>{{ pendingPunchWorkMode }}</strong></span>
         <span class="info-pill"><i class="fas fa-clock"></i> Action: <strong>{{ isPunchedIn ? 'Punch Out' : 'Punch In' }}</strong></span>
       </div>

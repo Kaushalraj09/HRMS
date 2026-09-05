@@ -207,3 +207,73 @@ def test_punch_out_office_geofence(db_session):
         address="Near Belagavi office", custom_time=out_time
     )
     assert att_out.punch_out is not None
+
+
+def test_office_worker_cannot_bypass_geofence_with_remote_work_mode(db_session):
+    from app.domain.attendance.services.punch_service import PunchService
+    from app.models.attendance import Attendance
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+    emp = get_or_create_belagavi_employee(db_session)
+    emp.work_location = "Belagavi ICCC Office"
+    db_session.commit()
+
+    now_kolkata = datetime.now(APP_TIMEZONE)
+    db_session.query(Attendance).filter(
+        Attendance.employee_id == emp.id,
+        Attendance.date == now_kolkata.date()
+    ).delete()
+    db_session.commit()
+
+    # Attempting to punch in as Remote when assigned to Belagavi office must be rejected with 403
+    with pytest.raises(HTTPException) as exc_info:
+        PunchService.punch_in(
+            db_session, emp.id, "Remote",
+            latitude=None, longitude=None,
+            address="Remote location"
+        )
+    assert exc_info.value.status_code == 403
+    assert "requires on-site attendance" in str(exc_info.value.detail)
+
+
+def test_office_worker_cannot_change_work_mode_to_remote(db_session):
+    from app.services import attendance_service
+    emp = get_or_create_belagavi_employee(db_session)
+    emp.work_location = "Belagavi ICCC Office"
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        attendance_service.update_today_work_mode(db_session, emp.id, "Remote")
+    assert exc_info.value.status_code == 403
+    assert "requires on-site attendance" in str(exc_info.value.detail)
+
+
+def test_cannot_change_work_mode_after_punch_in(db_session):
+    from app.domain.attendance.services.punch_service import PunchService
+    from app.services import attendance_service
+    from app.models.attendance import Attendance
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+    emp = get_or_create_belagavi_employee(db_session)
+    now_kolkata = datetime.now(APP_TIMEZONE)
+    db_session.query(Attendance).filter(
+        Attendance.employee_id == emp.id,
+        Attendance.date == now_kolkata.date()
+    ).delete()
+    db_session.commit()
+
+    PunchService.punch_in(
+        db_session, emp.id, "Office",
+        latitude=15.87167, longitude=74.50859,
+        address="Near Belagavi office"
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        attendance_service.update_today_work_mode(db_session, emp.id, "Office")
+    assert exc_info.value.status_code == 400
+    assert "cannot be changed after punching in" in str(exc_info.value.detail)
+

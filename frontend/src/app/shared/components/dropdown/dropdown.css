@@ -8,6 +8,7 @@
     right: 0; /* Align perfectly to the right side of the profile block */
     background: #ffffff;
     min-width: 190px;
+    max-width: calc(100vw - 20px);
     box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
     border: 1px solid #E2E8F0;
     border-radius: 12px;
@@ -84,8 +85,17 @@
   padding: 30px;
   border-radius: 12px;
   width: 350px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 767px) {
+  .dropdown-menu {
+    right: 2px;
+    min-width: 175px;
+  }
 }
 
 .popup-box p {

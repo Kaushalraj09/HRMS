@@ -64,8 +64,9 @@ def _shift_elapsed_seconds(now: datetime | None, start_t: time, end_t: time) -> 
         return current_seconds - shift_start_seconds
 
 
-def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, punch_in_time, punch_out_time, record_date: date, current_dt=None) -> str:
+def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, punch_in_time, punch_out_time, record_date: date, current_dt=None, shift=None) -> str:
     from app.services.time_calculator import get_attendance_status
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
     
     status_map = {
         "WORKING": "Working",
@@ -80,8 +81,11 @@ def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, pun
     }
     
     if not db:
-        status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+        status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt, shift=shift)
         return status_map.get(status_val, status_val)
+
+    if shift is None:
+        shift = ShiftRepository.get_assigned_shift(db, employee_id, record_date)
         
     # Check if there is an existing record
     existing_record = db.query(Attendance).filter(
@@ -90,10 +94,10 @@ def get_attendance_status_with_timeoff(db: Session | None, employee_id: int, pun
     ).first()
     if existing_record and existing_record.status in ("PRESENT", "Present") and existing_record.requires_regularization and "AUTO_CHECKOUT" in existing_record.flags:
         return "Present"
-    if existing_record and existing_record.status == "Auto Checked-out":
+    if existing_record and existing_record.status in ("Auto Checked-out", "AUTO_CHECKOUT", "PRESENT", "Present") and existing_record.punch_in and existing_record.punch_out:
         return "Present"
         
-    status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt)
+    status_val = get_attendance_status(punch_in_time, punch_out_time, record_date, current_dt, shift=shift)
     
     from app.models.timeoff import TimeOffRequest
     timeoff = db.query(TimeOffRequest).filter(
@@ -555,6 +559,20 @@ def punch_out(
     
     return to_attendance_response(attendance, db)
 
+def _is_remote_worker(db: Session, employee: Employee | None) -> bool:
+    if not employee or not employee.work_location:
+        return False
+    loc = employee.work_location.strip().lower()
+    if "remote" in loc or loc == "wfh":
+        return True
+    from app.models.master_data import WorkLocation
+    from sqlalchemy import func
+    wl = db.query(WorkLocation).filter(
+        (func.lower(WorkLocation.name) == loc) | (func.lower(WorkLocation.code) == loc)
+    ).first()
+    return bool(wl and wl.location_type and wl.location_type.lower() == "remote")
+
+
 def get_today_state(db: Session, employee_id: int) -> dict:
     """
     Get current attendance state for today using assigned Shift Master data.
@@ -564,6 +582,9 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     today = current.date()
     
     shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
+    emp_rec = db.query(Employee).filter(Employee.id == employee_id).first()
+    is_remote = _is_remote_worker(db, emp_rec)
+    default_work_mode = "Remote" if is_remote else "Office"
     
     attendance = (
         db.query(Attendance)
@@ -578,7 +599,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
             shift_id=shift.id,
             date=today,
             is_working=0,
-            work_mode="Office",
+            work_mode=default_work_mode,
             status=get_attendance_status(None, None, today, current, shift=shift),
         )
         db.add(attendance)
@@ -586,17 +607,31 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         db.refresh(attendance)
     elif not attendance.shift_id:
         attendance.shift_id = shift.id
+        if is_remote and not attendance.punch_in and attendance.work_mode != "Remote":
+            attendance.work_mode = "Remote"
+        db.commit()
+    elif is_remote and not attendance.punch_in and attendance.work_mode != "Remote":
+        attendance.work_mode = "Remote"
         db.commit()
         
-    # Calculate total worked seconds
+    # Calculate total worked seconds: early punch time is for punch-in,
+    # actual working time is calculated when shift starts
     worked_seconds = 0
-    if attendance and attendance.punch_in and attendance.punch_out:
-        check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
+    effective_in_time = attendance.punch_in if attendance else None
+    if attendance and attendance.punch_in and shift and shift.start_time and not shift.is_night_shift:
+        if attendance.punch_in < shift.start_time:
+            effective_in_time = shift.start_time
+            
+    if attendance and effective_in_time and attendance.punch_out:
+        check_in_dt = datetime.combine(today, effective_in_time, tzinfo=APP_TIMEZONE)
         check_out_dt = datetime.combine(today, attendance.punch_out, tzinfo=APP_TIMEZONE)
-        worked_seconds = int((check_out_dt - check_in_dt).total_seconds())
-    elif attendance and attendance.punch_in and attendance.is_working:
-        check_in_dt = datetime.combine(today, attendance.punch_in, tzinfo=APP_TIMEZONE)
-        worked_seconds = int((current - check_in_dt).total_seconds())
+        worked_seconds = max(0, int((check_out_dt - check_in_dt).total_seconds()))
+    elif attendance and effective_in_time and attendance.is_working:
+        check_in_dt = datetime.combine(today, effective_in_time, tzinfo=APP_TIMEZONE)
+        if current >= check_in_dt:
+            worked_seconds = max(0, int((current - check_in_dt).total_seconds()))
+        else:
+            worked_seconds = 0
     
     approved_hours = get_timeoff_duration_today(db, employee_id)
     approved_seconds = int(round(approved_hours * 3600))
@@ -614,6 +649,21 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         
     shift_elapsed_seconds = _shift_elapsed_seconds(current, shift_start_time, shift_end_time)
     
+    overtime_seconds = 0
+    if attendance and attendance.overtime_approved:
+        if attendance.punch_out and (attendance.overtime_minutes or 0) > 0:
+            overtime_seconds = (attendance.overtime_minutes or 0) * 60
+        else:
+            ot_start_t = shift.overtime_start_time or shift_end_time
+            if ot_start_t:
+                ot_start_dt = datetime.combine(today, ot_start_t, tzinfo=APP_TIMEZONE)
+                if current > ot_start_dt:
+                    overtime_seconds = max(0, int((current - ot_start_dt).total_seconds()))
+                    max_ot_sec = (shift.max_overtime_minutes or 120) * 60 * (2 if attendance.overtime_extended else 1)
+                    overtime_seconds = min(overtime_seconds, max_ot_sec)
+            if overtime_seconds == 0 and worked_seconds > shift_total_seconds:
+                overtime_seconds = worked_seconds - shift_total_seconds
+
     # Check if yesterday was auto checked out and has not yet been regularized
     from datetime import timedelta
     yesterday = today - timedelta(days=1)
@@ -662,7 +712,8 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "lunchEnd": lunch_end.strftime("%I:%M %p"),
         "graceMinutes": shift.grace_minutes or 30,
         "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
-        "workMode": attendance.work_mode if attendance else "Office",
+        "workMode": "Remote" if is_remote else (attendance.work_mode if attendance else "Office"),
+        "isRemoteWorker": is_remote,
         "workLocationName": assigned_loc_name,
         "workLocationId": attendance.work_location_id if attendance else None,
         "punchIn": attendance.punch_in if attendance else None,
@@ -683,6 +734,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "maxOvertimeMinutes": shift.max_overtime_minutes or 120,
         "overtimeAllowed": shift.overtime_allowed if shift.overtime_allowed is not None else True,
         "overtimeStartTime": (shift.overtime_start_time or shift_end_time).strftime("%I:%M %p"),
+        "overtimeSeconds": overtime_seconds,
     }
 
 def _normalize_attendance_status(status: str) -> str:
@@ -780,18 +832,20 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
     """
     Convert attendance record to response schema with dynamic shift information.
     """
-    calculate_attendance_metrics(record)
-    
     from app.domain.attendance.repositories.shift_repository import ShiftRepository
     from app.services.time_calculator import calculate_late_minutes, calculate_early_exit_minutes
 
     shift_obj = record.shift
     if not shift_obj and db:
         shift_obj = ShiftRepository.get_assigned_shift(db, record.employee_id, record.date)
+        record.shift = shift_obj
+        record.shift_id = shift_obj.id
+
+    calculate_attendance_metrics(record)
 
     late_minutes = calculate_late_minutes(record.punch_in, shift_obj)
     early_exit_minutes = calculate_early_exit_minutes(record.punch_out, shift_obj)
-    status_val = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date)
+    status_val = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date, shift=shift_obj)
     
     emp_name = None
     if record.employee:
@@ -832,6 +886,7 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
         status=status_val,
         work_mode=record.work_mode or "Office",
         total_working_minutes=record.total_working_minutes or 0,
+        regular_work_minutes=record.regular_work_minutes or 0,
         overtime_minutes=record.overtime_minutes or 0,
         break_minutes=record.break_minutes or 0,
         grand_total_minutes=record.grand_total_minutes or 0,
@@ -1209,11 +1264,32 @@ def update_today_work_mode(
     current = datetime.now(APP_TIMEZONE)
     today = current.date()
     
+    emp_rec = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not emp_rec:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
+
+    is_remote = _is_remote_worker(db, emp_rec)
+    req_mode = (work_mode or "").strip().lower()
+
+    if not is_remote and req_mode in ["remote", "work from home", "wfh", "field"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Assigned work location requires on-site attendance. Remote mode is not permitted."
+        )
+
     attendance = (
         db.query(Attendance)
         .filter(Attendance.employee_id == employee_id, Attendance.date == today)
         .first()
     )
+
+    if attendance and attendance.punch_in is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Work mode cannot be changed after punching in."
+        )
+
+    effective_mode = "Remote" if is_remote else "Office"
     
     if not attendance:
         # Create a pre-punch attendance record with the chosen work mode
@@ -1221,13 +1297,13 @@ def update_today_work_mode(
             employee_id=employee_id,
             date=today,
             is_working=0,
-            work_mode=work_mode,
+            work_mode=effective_mode,
             status=get_attendance_status_with_timeoff(db, employee_id, None, None, today, current),
         )
         db.add(attendance)
     else:
         # Update the existing record's work mode
-        attendance.work_mode = work_mode
+        attendance.work_mode = effective_mode
         
     db.commit()
     db.refresh(attendance)
@@ -1307,7 +1383,7 @@ def get_employee_analytics(db: Session) -> list[dict]:
         
         for d in calendar_days:
             rec = record_map.get(d)
-            is_weekend = d.weekday() in (5, 6) # Sat, Sun
+            is_weekend = d.weekday() == 6 # Sunday only (Mon-Sat are working days)
             
             if rec:
                 calculate_attendance_metrics(rec)

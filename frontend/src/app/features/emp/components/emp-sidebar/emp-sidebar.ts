@@ -59,7 +59,7 @@ export class EmpSidebar implements OnInit {
       }
 
       private checkMobileCollapse() {
-        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        if (typeof window !== 'undefined' && window.innerWidth <= 768) {
           this.empSidebarService.setSidebarState(false);
         }
       }

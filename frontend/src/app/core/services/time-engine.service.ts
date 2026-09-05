@@ -23,15 +23,20 @@ export class TimeEngineService implements OnDestroy {
       const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
       const newState = { ...currentState };
 
-      // 1. If Working, increment Worked Time
-      if (newState.isWorking) {
-        newState.totalWorkedSeconds++;
-      }
-
       // 2. Dynamic shift timing evaluation
       if (!newState.shiftStart || !newState.shiftEnd) return;
       const shiftStart = this.parseShiftTime(now, newState.shiftStart);
       const shiftEnd = this.parseShiftTime(now, newState.shiftEnd);
+
+      // 1. If Working, increment Worked Time (actual working time starts when shift starts)
+      if (newState.isWorking) {
+        if (now >= shiftStart) {
+          newState.totalWorkedSeconds++;
+        }
+      }
+
+      const regularShiftSec = Math.max(0, Math.floor((shiftEnd.getTime() - shiftStart.getTime()) / 1000));
+      const scheduledShiftSec = regularShiftSec > 0 ? regularShiftSec : (newState.shiftTotalSeconds || 28800);
 
       if (newState.overtimeApproved) {
         const maxOtMinutes = newState.maxOvertimeMinutes || 120;
@@ -40,21 +45,22 @@ export class TimeEngineService implements OnDestroy {
         const overtimeEnd = new Date(overtimeStart.getTime() + (maxOtMinutes * 60 * 1000 * multiplier));
         const totalOvertimeSeconds = Math.max(0, Math.floor((overtimeEnd.getTime() - overtimeStart.getTime()) / 1000));
 
-        newState.shiftTotalSeconds = totalOvertimeSeconds;
+        newState.shiftTotalSeconds = scheduledShiftSec;
+        newState.shiftElapsedSeconds = scheduledShiftSec; // Full regular shift elapsed
 
         if (now < overtimeStart) {
           newState.remainingSeconds = totalOvertimeSeconds;
-          newState.shiftElapsedSeconds = 0;
+          newState.overtimeSeconds = 0;
         } else if (now > overtimeEnd) {
           newState.remainingSeconds = 0;
-          newState.shiftElapsedSeconds = totalOvertimeSeconds;
+          newState.overtimeSeconds = totalOvertimeSeconds;
         } else {
           newState.remainingSeconds = Math.max(0, Math.floor((overtimeEnd.getTime() - now.getTime()) / 1000));
-          newState.shiftElapsedSeconds = Math.floor((now.getTime() - overtimeStart.getTime()) / 1000);
+          newState.overtimeSeconds = Math.floor((now.getTime() - overtimeStart.getTime()) / 1000);
         }
       } else {
-        const totalSec = Math.max(0, Math.floor((shiftEnd.getTime() - shiftStart.getTime()) / 1000));
-        newState.shiftTotalSeconds = newState.shiftTotalSeconds || (totalSec > 0 ? totalSec : 28800);
+        newState.shiftTotalSeconds = scheduledShiftSec;
+        newState.overtimeSeconds = 0;
 
         if (now < shiftStart) {
           newState.shiftElapsedSeconds = 0;

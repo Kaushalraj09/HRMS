@@ -5,7 +5,9 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root' 
 })
 export class EmpSidebarService {
-  private empSidebarOpenSubject = new BehaviorSubject<boolean>(true);
+  private empSidebarOpenSubject = new BehaviorSubject<boolean>(
+    typeof window !== 'undefined' ? window.innerWidth > 768 : true
+  );
   
   isEmpSidebarOpen$ = this.empSidebarOpenSubject.asObservable();
 

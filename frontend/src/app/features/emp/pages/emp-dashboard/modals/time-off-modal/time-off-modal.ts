@@ -289,15 +289,24 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!multipleDays && startDt.getDay() === 0) {
+      const msg = 'Time off cannot be requested on a weekly off day (Sunday).';
+      this.errorMessage = msg;
+      this.toastService.showError(msg);
+      return;
+    }
+
     const datesToSubmit: string[] = [];
     const temp = new Date(startDt.getTime());
     while (temp <= endDt) {
-      datesToSubmit.push(temp.toISOString().split('T')[0]);
+      if (temp.getDay() !== 0) {
+        datesToSubmit.push(toIsoDateLocal(temp));
+      }
       temp.setDate(temp.getDate() + 1);
     }
 
     if (datesToSubmit.length === 0) {
-      const msg = 'Selected date range only contains weekends. No request was submitted.';
+      const msg = 'Selected date range only contains Sunday (Weekly Off). No request was submitted.';
       this.errorMessage = msg;
       this.toastService.showError(msg);
       return;

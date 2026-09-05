@@ -197,6 +197,7 @@ class TodayAttendanceState(BaseModel):
     grace_minutes: Optional[int] = Field(default=None, alias="graceMinutes")
     lunch_duration_minutes: Optional[int] = Field(default=None, alias="lunchDurationMinutes")
     work_mode: WorkMode = Field(default=WorkMode.office, alias="workMode")
+    is_remote_worker: bool = Field(default=False, alias="isRemoteWorker")
     
     # Optional punch times and location
     work_location_id: Optional[int] = Field(default=None, alias="workLocationId")
@@ -224,6 +225,7 @@ class TodayAttendanceState(BaseModel):
     max_overtime_minutes: Optional[int] = Field(default=120, alias="maxOvertimeMinutes")
     overtime_allowed: bool = Field(default=True, alias="overtimeAllowed")
     overtime_start_time: Optional[str] = Field(default=None, alias="overtimeStartTime")
+    overtime_seconds: Optional[int] = Field(default=0, alias="overtimeSeconds")
 
     @field_validator("requires_regularization", mode="before")
     @classmethod

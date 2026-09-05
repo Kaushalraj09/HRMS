@@ -86,6 +86,7 @@ export interface TodayAttendanceState {
   graceMinutes?: number;
   lunchDurationMinutes?: number;
   workMode: WorkMode;
+  isRemoteWorker?: boolean;
   workLocationName?: string | null;
   workLocationId?: number | null;
   punchIn?: string | null;
@@ -107,6 +108,7 @@ export interface TodayAttendanceState {
   maxOvertimeMinutes?: number;
   overtimeAllowed?: boolean;
   overtimeStartTime?: string;
+  overtimeSeconds?: number;
 }
 
 export interface PaginatedResponse<T> {

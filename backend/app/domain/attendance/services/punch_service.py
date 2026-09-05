@@ -87,7 +87,30 @@ class PunchService:
             if not employee:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
                 
-            geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=work_mode)
+            emp_loc = (employee.work_location or "").strip().lower()
+            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"]
+            if not is_remote_employee:
+                from app.models.master_data import WorkLocation
+                from sqlalchemy import func
+                wl = db.query(WorkLocation).filter(
+                    (func.lower(WorkLocation.name) == emp_loc) | (func.lower(WorkLocation.code) == emp_loc)
+                ).first()
+                if wl and wl.location_type and wl.location_type.lower() != "office":
+                    is_remote_employee = True
+
+            req_mode = (work_mode or "").strip().lower()
+            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "success": False,
+                        "message": f"Assigned work location '{employee.work_location}' requires on-site attendance. Remote mode is not permitted.",
+                        "office": employee.work_location,
+                    }
+                )
+
+            effective_work_mode = "Remote" if is_remote_employee else "Office"
+            geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
             
             # Create or update record
             shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
@@ -278,7 +301,29 @@ class PunchService:
             if not employee:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
 
-            effective_work_mode = work_mode or attendance.work_mode or "Office"
+            emp_loc = (employee.work_location or "").strip().lower()
+            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"]
+            if not is_remote_employee:
+                from app.models.master_data import WorkLocation
+                from sqlalchemy import func
+                wl = db.query(WorkLocation).filter(
+                    (func.lower(WorkLocation.name) == emp_loc) | (func.lower(WorkLocation.code) == emp_loc)
+                ).first()
+                if wl and wl.location_type and wl.location_type.lower() != "office":
+                    is_remote_employee = True
+
+            req_mode = (work_mode or attendance.work_mode or "").strip().lower()
+            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "success": False,
+                        "message": f"Assigned work location '{employee.work_location}' requires on-site attendance. Remote mode is not permitted.",
+                        "office": employee.work_location,
+                    }
+                )
+
+            effective_work_mode = "Remote" if is_remote_employee else "Office"
             geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
 
             attendance.punch_out = current.time()
@@ -300,10 +345,15 @@ class PunchService:
             
             in_mins = ShiftCalculator.time_to_minutes(attendance.punch_in)
             out_mins = ShiftCalculator.time_to_minutes(attendance.punch_out)
+            start_mins = ShiftCalculator.time_to_minutes(shift.start_time or time(9, 0)) if shift else 540
+            effective_in_mins = in_mins
+            if shift and not shift.is_night_shift and in_mins < start_mins:
+                effective_in_mins = start_mins
+
             if out_mins < in_mins:
                 out_mins += 1440
             
-            gross = max(0, out_mins - in_mins)
+            gross = max(0, out_mins - effective_in_mins)
             
             # Get approved time-off duration (if any)
             timeoff_hours = get_timeoff_duration_for_date(db, employee_id, today)
@@ -338,14 +388,15 @@ class PunchService:
                     attendance.punch_in,
                     attendance.punch_out,
                     shift,
-                    net_working_minutes=net_working_minutes
+                    net_working_minutes=net_working_minutes,
+                    is_extended=bool(attendance.overtime_extended)
                 )
             
             attendance.total_working_minutes = net_working_minutes
+            attendance.regular_work_minutes = max(0, net_working_minutes - approved_ot_minutes) if approved_ot_minutes > 0 else net_working_minutes
             attendance.overtime_minutes = approved_ot_minutes
             attendance.break_minutes = total_break + timeoff_mins
-            # Include lunch in grand total: working minutes + lunch/break + overtime
-            attendance.grand_total_minutes = net_working_minutes + total_break + approved_ot_minutes
+            attendance.grand_total_minutes = net_working_minutes + total_break
             
             # Evaluate dynamic policy status using overall shift duration grace
             late_mins = ShiftCalculator.calculate_late_minutes(attendance.punch_in, shift)

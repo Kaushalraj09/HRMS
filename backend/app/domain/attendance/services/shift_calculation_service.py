@@ -139,7 +139,8 @@ class ShiftCalculationService:
         punch_in: Optional[time],
         punch_out: Optional[time],
         shift: Optional[Shift],
-        net_working_minutes: int = 0
+        net_working_minutes: int = 0,
+        is_extended: bool = False,
     ) -> int:
         """
         Calculates dynamic overtime minutes based entirely on assigned Shift configuration:
@@ -151,7 +152,9 @@ class ShiftCalculationService:
         if shift.overtime_allowed is False:
             return 0
 
-        max_ot = shift.max_overtime_minutes if shift.max_overtime_minutes is not None else 120
+        max_ot = shift.max_overtime_minutes or 120
+        if is_extended:
+            max_ot *= 2
         if max_ot <= 0:
             return 0
 
@@ -241,10 +244,14 @@ class ShiftCalculationService:
             start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
             end_mins = cls.time_to_minutes(shift.end_time or time(18, 0))
 
+            effective_in_mins = in_mins
+            if not shift.is_night_shift and in_mins < start_mins:
+                effective_in_mins = start_mins
+
             if out_mins < in_mins:
                 out_mins += 1440
 
-            gross_mins = max(0, out_mins - in_mins)
+            gross_mins = max(0, out_mins - effective_in_mins)
             lunch_mins = cls.calculate_lunch_overlap(punch_in, punch_out, shift)
             net_mins = max(0, gross_mins - lunch_mins)
 
