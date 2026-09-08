@@ -52,3 +52,10 @@ def test_status_grand_total_half_day_and_absent():
     # 09:00 to 11:00 = 120 minutes (2h 0m) -> ABSENT (< 240m)
     assert get_attendance_status(time(9, 0), time(11, 0), date(2026, 6, 2)) == "ABSENT"
 
+
+def test_attendance_service_keeps_list_metrics_calculators_available():
+    """The attendance list endpoint must resolve its module-level metric helpers."""
+    import app.services.attendance_service as attendance_service
+
+    assert attendance_service.calculate_late_minutes(time(9, 0)) == 0
+    assert attendance_service.calculate_early_exit_minutes(time(18, 0)) == 0

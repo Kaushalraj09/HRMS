@@ -18,7 +18,11 @@ from app.models.timeoff import TimeOffRequest
 from app.models.employee import Employee
 from app.schemas.attendance import AttendanceResponse
 from app.utils.employee_code import normalize_employee_code
-from app.services.time_calculator import get_attendance_status
+from app.services.time_calculator import (
+    get_attendance_status,
+    calculate_late_minutes,
+    calculate_early_exit_minutes,
+)
 import logging
 from app.core.shift_rules import get_shift_rule_value
 
