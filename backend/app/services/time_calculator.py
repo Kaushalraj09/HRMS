@@ -105,7 +105,7 @@ def calculate_attendance_flags(attendance_record: Attendance, shift: Optional[Sh
             if shift_grace is None:
                 shift_grace = getattr(shift, "grace_minutes", 15) or 15
             effective_req = max(0, req_mins - shift_grace)
-            credited = attendance_record.total_working_minutes or 0
+            credited = attendance_record.grand_total_minutes if attendance_record.grand_total_minutes is not None else (attendance_record.total_working_minutes or 0)
             if credited < effective_req:
                 flags.append("EARLY_EXIT")
         else:

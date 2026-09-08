@@ -63,9 +63,8 @@ def test_enterprise_late_arrival_half_day():
 
 def test_enterprise_early_exit_half_day():
     # Punch In at 09:10, Punch Out at 17:30
-    # Gross = 8 hours 20 minutes (500 mins)
-    # Lunch overlap = 60 mins
-    # Net = 7 hours 20 minutes (440 mins) -> Half Day
+    # Gross = 8 hours 20 minutes (500 mins) >= 480 mins -> PRESENT under Grand Total rules
+    # Lunch overlap = 60 mins -> Net = 7 hours 20 minutes (440 mins)
     att = Attendance(
         date=date(2026, 6, 4),
         punch_in=time(9, 10),
@@ -74,12 +73,21 @@ def test_enterprise_early_exit_half_day():
     calculate_times(att)
     assert att.total_working_minutes == 440
     assert att.break_minutes == 60
-    assert att.status == "HALF_DAY"
+    assert att.status == "PRESENT"
     
     # Late: 09:10 <= 09:15 -> 0 mins
     assert calculate_late_minutes(att.punch_in) == 0
     # Early Exit: 18:00 - 17:30 = 30 mins
     assert calculate_early_exit_minutes(att.punch_out) == 30
+
+    # True Half-Day by leaving earlier: Punch Out at 16:30 -> Gross = 440 mins (< 480 mins, >= 240 mins)
+    att_half = Attendance(
+        date=date(2026, 6, 4),
+        punch_in=time(9, 10),
+        punch_out=time(16, 30)
+    )
+    calculate_times(att_half)
+    assert att_half.status == "HALF_DAY"
 
 def test_enterprise_overtime():
     # Punch In at 09:00, Punch Out at 19:30

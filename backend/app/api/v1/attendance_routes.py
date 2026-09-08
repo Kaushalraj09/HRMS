@@ -364,8 +364,8 @@ def get_today_attendance_state(
                 "remainingSeconds": 9 * 3600,
                 "shiftTotalSeconds": 9 * 3600,
                 "shiftElapsedSeconds": 0,
-                "shiftStart": "09:00 AM",
-                "shiftEnd": "06:00 PM",
+                "shiftStart": "09:30 AM",
+                "shiftEnd": "06:30 PM",
                 "workMode": "Office",
                 "punchIn": None,
                 "punchOut": None,
@@ -673,9 +673,10 @@ def get_today_locations(
             coords = city_coords.get(city.lower(), (24.9538, 84.0152))
             lat, lon = coords
 
+        assigned_shift = r.shift or ShiftRepository.get_assigned_shift(db, emp.id, today)
         if r.punch_out is not None:
             status_val = "PUNCHED_OUT"
-        elif r.punch_in is not None and (calculate_late_minutes(r.punch_in) > 0 or "LATE_ARRIVAL" in (r.flags or [])):
+        elif r.punch_in is not None and (calculate_late_minutes(r.punch_in, assigned_shift) > 0 or "LATE_ARRIVAL" in (r.flags or [])):
             status_val = "LATE"
         else:
             status_val = "WORKING"

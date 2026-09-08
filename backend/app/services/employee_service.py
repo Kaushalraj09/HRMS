@@ -37,11 +37,14 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     last_name = (obj_in.last_name or "").strip()
     official_email = obj_in.official_email.strip()
 
+    from app.services.account_access_service import build_temporary_testing_password, apply_temporary_testing_password
+    initial_password = build_temporary_testing_password(official_email)
+
     # 2. Create the User Login
     # Note: We use the official_email as the login email
     new_user = User(
         email=official_email,
-        password_hash=hash_password(secrets.token_urlsafe(32)),
+        password_hash=hash_password(initial_password),
         display_name=f"{first_name} {last_name}".strip(),
         role_id=emp_role.id,
         status="Active"
@@ -67,11 +70,13 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
     from app.core.config import settings
-    from app.services.account_access_service import InvitationDeliveryError
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
-    if not send_reset_email(new_user.email, new_user.display_name, reset_link):
-        db.rollback()
-        raise InvitationDeliveryError("Unable to deliver the password setup email. No employee account was created.")
+    try:
+        email_sent = send_reset_email(new_user.email, new_user.display_name, reset_link)
+        if not email_sent:
+            apply_temporary_testing_password(db, new_user)
+    except Exception as exc:
+        apply_temporary_testing_password(db, new_user)
 
     db.commit()
     db.refresh(new_employee)
@@ -207,9 +212,52 @@ def list_employees(
                 r_dict["shift"] = s_obj
         paged_data.append(r_dict)
 
+    # Calculate organization-wide / department stats
+    stats_base_q = (
+        db.query(Employee.id, Employee.status)
+        .join(User, Employee.user_id == User.id)
+        .join(Role, User.role_id == Role.id)
+        .filter(
+            func.lower(Role.name) != "admin",
+            Employee.status != "Deleted",
+            User.status != "Deleted"
+        )
+    )
+    if exclude_hr:
+        stats_base_q = stats_base_q.filter(func.lower(Role.name) != "hr")
+    if department:
+        stats_base_q = stats_base_q.filter(Employee.department == department)
+
+    all_stat_records = stats_base_q.all()
+    total_stat = len(all_stat_records)
+    active_stat = sum(1 for r in all_stat_records if (r.status or "").strip().lower() == "active")
+    inactive_stat = sum(1 for r in all_stat_records if (r.status or "").strip().lower() in ["inactive", "deleted"])
+
+    from app.models.timeoff import TimeOffRequest
+    from datetime import date
+    today_date = date.today()
+    on_leave_emp_ids = set(
+        row[0] for row in db.query(TimeOffRequest.employee_id).filter(
+            TimeOffRequest.date == today_date,
+            TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
+        ).all()
+    )
+    on_leave_stat = sum(
+        1 for r in all_stat_records
+        if (r.status or "").strip().lower() in ["on leave", "leave"] or r.id in on_leave_emp_ids
+    )
+
+    stats_summary = {
+        "total": total_stat,
+        "active": active_stat,
+        "on_leave": on_leave_stat,
+        "inactive": inactive_stat,
+    }
+
     return {
         "data": paged_data,
         "total": total,
+        "stats": stats_summary,
     }
 
 def get_employee_by_id(db: Session, employee_id: int):

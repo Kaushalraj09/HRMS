@@ -60,6 +60,8 @@ def seed_master_data(db: Session):
             "present_hours": 8.0,
             "minimum_present_minutes": 480,
             "late_mark_after_minutes": 15,
+            "punch_in_grace_minutes": 15,
+            "shift_grace_minutes": 15,
             "is_night_shift": False,
             "overtime_allowed": True,
             "max_overtime_minutes": 120,

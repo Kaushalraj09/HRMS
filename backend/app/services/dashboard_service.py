@@ -666,6 +666,25 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
     ).count()
 
+    # Calculate today's real late arrivals from database
+    from app.services.time_calculator import calculate_late_minutes
+    from app.domain.attendance.repositories.shift_repository import ShiftRepository
+    today_attendances = db.query(Attendance).filter(
+        Attendance.date == today,
+        Attendance.punch_in.isnot(None)
+    ).all()
+    late_count = 0
+    for att in today_attendances:
+        if att.flags and "LATE_ARRIVAL" in att.flags:
+            late_count += 1
+        elif att.status and "late" in att.status.lower():
+            late_count += 1
+        else:
+            eff_shift = att.shift or (ShiftRepository.get_assigned_shift(db, att.employee_id, today) if att.employee_id else None)
+            if eff_shift and att.punch_in:
+                if calculate_late_minutes(att.punch_in, eff_shift) > 0:
+                    late_count += 1
+
     # Calculate workforce states
     present = punched_in + punched_out + leave_count
     absent = max(0, total_emps - present)
@@ -845,6 +864,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         "checkedOutEmployees": punched_out,
         "notMarkedEmployees": not_marked,
         "absentEmployees": absent,
+        "lateArrivals": late_count,
         "workModeBreakdown": [remote_count, office_count],
         "genderBreakdown": [female_count, male_count],
         "quickStats": [

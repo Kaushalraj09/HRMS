@@ -36,3 +36,19 @@ def test_get_attendance_status_with_timeoff_no_db():
     assert get_attendance_status_with_timeoff(None, 1, time(9, 0), None, date(2026, 6, 2)) == "Working"
     assert get_attendance_status_with_timeoff(None, 1, None, None, date(2026, 6, 2), datetime(2026, 6, 2, 11, 0, tzinfo=APP_TIMEZONE)) == "Not Marked"
     assert get_attendance_status_with_timeoff(None, 1, None, None, date(2026, 6, 2), datetime(2026, 6, 2, 15, 0, tzinfo=APP_TIMEZONE)) == "Absent"
+
+
+def test_status_grand_total_evaluation_includes_break():
+    # 09:33 to 18:06: Grand total is 513 minutes (8h 33m)
+    # Even though 60-min lunch leaves 453m net work, shift timing includes break,
+    # so presence of 8h 33m >= 8h 0m evaluates to PRESENT.
+    assert get_attendance_status(time(9, 33), time(18, 6), date(2026, 9, 7)) == "PRESENT"
+
+
+def test_status_grand_total_half_day_and_absent():
+    # 09:00 to 13:30 = 270 minutes (4h 30m) -> HALF_DAY (>= 240m, < 480m)
+    assert get_attendance_status(time(9, 0), time(13, 30), date(2026, 6, 2)) == "HALF_DAY"
+
+    # 09:00 to 11:00 = 120 minutes (2h 0m) -> ABSENT (< 240m)
+    assert get_attendance_status(time(9, 0), time(11, 0), date(2026, 6, 2)) == "ABSENT"
+

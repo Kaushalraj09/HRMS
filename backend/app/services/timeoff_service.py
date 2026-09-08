@@ -22,7 +22,7 @@ def get_timeoff_by_date(db: Session, employee_id: int, target_date: date):
         TimeOffRequest.status.in_(["Approved", "Active", "Completed"])
     ).first()
 
-def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate):
+def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate, dispatch_event: bool = True):
     # Removed same-day working requirement to allow sick leaves and full-day same-day requests.
 
     shift = ShiftRepository.get_assigned_shift(db, employee_id, request.date)
@@ -41,11 +41,31 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         if et is None:
             et = shift_end
     elif request.leave_type == "Half-Day":
-        duration_hours = total_shift_working_hours / 2
-        # Use provided times if any, otherwise fallback for half-day logic
+        half_day_hours = float(eff_shift.half_day_hours or (total_shift_working_hours / 2.0) or 4.0)
+        duration_hours = half_day_hours
+        lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(eff_shift)
+        # Use provided times if any, otherwise fallback to first half
         if st is None or et is None:
             st = shift_start
-            et = eff_shift.lunch_start_time or time_type(13, 0)
+            et = lunch_start
+        else:
+            day_val = request.date
+            start_dt = datetime.combine(day_val, st)
+            end_dt = datetime.combine(day_val, et)
+            session_dur = (end_dt - start_dt).total_seconds() / 3600.0
+
+            is_first_half = (st == shift_start and (et == lunch_start or abs(session_dur - half_day_hours) <= 0.5))
+            is_second_half = (et == shift_end and (st == lunch_end or abs(session_dur - half_day_hours) <= 0.5))
+            is_legacy = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0) or \
+                        (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
+
+            if not (is_first_half or is_second_half or is_legacy):
+                first_half_str = f"{shift_start.strftime('%I:%M %p')} - {lunch_start.strftime('%I:%M %p')}"
+                second_half_str = f"{lunch_end.strftime('%I:%M %p')} - {shift_end.strftime('%I:%M %p')}"
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Half-day time-off must match your shift session: First Half ({first_half_str}) or Second Half ({second_half_str})."
+                )
     else:
         # Hourly request
         if st is None or et is None:
@@ -133,17 +153,18 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         pass
         
     # Dispatch LeaveRequested domain event
-    try:
-        from app.domain.events.dispatcher import EventDispatcher
-        from app.domain.events.types import LeaveRequested
-        EventDispatcher.dispatch(LeaveRequested(
-            employee_id=employee_id,
-            leave_request_id=new_request.id,
-            date=new_request.date,
-            leave_type=new_request.leave_type
-        ))
-    except Exception as e:
-        print(f"Failed to dispatch LeaveRequested event: {e}")
+    if dispatch_event:
+        try:
+            from app.domain.events.dispatcher import EventDispatcher
+            from app.domain.events.types import LeaveRequested
+            EventDispatcher.dispatch(LeaveRequested(
+                employee_id=employee_id,
+                leave_request_id=new_request.id,
+                date=new_request.date,
+                leave_type=new_request.leave_type
+            ))
+        except Exception as e:
+            print(f"Failed to dispatch LeaveRequested event: {e}")
         
     # Add employee_name and employee_code to the response object
     resp = new_request
@@ -262,13 +283,15 @@ def approve_request(
                 employee_id=req.employee_id,
                 leave_request_id=req.id,
                 date=req.date,
-                leave_type=req.leave_type
+                leave_type=req.leave_type,
+                action_by_user_id=admin_user_id
             ))
         else:
             EventDispatcher.dispatch(LeaveRejected(
                 employee_id=req.employee_id,
                 leave_request_id=req.id,
-                date=req.date
+                date=req.date,
+                action_by_user_id=admin_user_id
             ))
     except Exception as e:
         print(f"Failed to dispatch approve/reject leave event: {e}")
@@ -309,26 +332,41 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     total_shift_working_hours = float(eff_shift.working_hours or 9.0)
 
     lt = (payload.leave_type or "").strip().lower().replace(" ", "")
+    shift_start = eff_shift.start_time or time_type(9, 0)
+    shift_end = eff_shift.end_time or time_type(18, 0)
+
     if lt in ("fullday", "full-day"):
         leave_store = "Full-Day"
-        st = eff_shift.start_time
-        et = eff_shift.end_time
+        st = shift_start
+        et = shift_end
         requested = total_shift_working_hours
     elif lt in ("halfday", "half-day"):
         leave_store = "Half-Day"
+        half_day_hours = float(eff_shift.half_day_hours or (total_shift_working_hours / 2.0) or 4.0)
+        lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(eff_shift)
+
         st = payload.start_time
         et = payload.end_time
         if st is None or et is None:
-            st = time_type(9, 0)
-            et = time_type(13, 0)
-        is_first_half = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0)
-        is_second_half = (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
-        if not (is_first_half or is_second_half):
+            st = shift_start
+            et = lunch_start
+
+        # First half: starts at shift start, ends at lunch start (or ~half_day_hours duration)
+        is_first_half = (st == shift_start and (et == lunch_start or abs(_duration_hours_between(st, et, payload.date) - half_day_hours) <= 0.5))
+        # Second half: starts at lunch end, ends at shift end (or ~half_day_hours duration)
+        is_second_half = (et == shift_end and (st == lunch_end or abs(_duration_hours_between(st, et, payload.date) - half_day_hours) <= 0.5))
+        # Legacy fallback for standard 9-1 and 2-6
+        is_legacy = (st.hour == 9 and st.minute == 0 and et.hour == 13 and et.minute == 0) or \
+                    (st.hour == 14 and st.minute == 0 and et.hour == 18 and et.minute == 0)
+
+        if not (is_first_half or is_second_half or is_legacy):
+            first_half_str = f"{shift_start.strftime('%I:%M %p')} - {lunch_start.strftime('%I:%M %p')}"
+            second_half_str = f"{lunch_end.strftime('%I:%M %p')} - {shift_end.strftime('%I:%M %p')}"
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Half-day session must be either 09:00 AM - 01:00 PM or 02:00 PM - 06:00 PM.",
+                detail=f"Half-day session must be either First Half ({first_half_str}) or Second Half ({second_half_str}).",
             )
-        requested = 4.0
+        requested = half_day_hours
     elif lt == "hourly":
         leave_store = "Hourly"
         if payload.start_time is None or payload.end_time is None:
@@ -343,10 +381,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="start_time and end_time must use 30-minute intervals.",
             )
-        if st < eff_shift.start_time or et > eff_shift.end_time:
+        if st < shift_start or et > shift_end:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Time off must fall within working hours {eff_shift.start_time}–{eff_shift.end_time}.",
+                detail=f"Time off must fall within working hours {shift_start.strftime('%H:%M')}–{shift_end.strftime('%H:%M')}.",
             )
         if et <= st:
             raise HTTPException(

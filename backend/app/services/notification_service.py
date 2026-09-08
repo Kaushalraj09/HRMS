@@ -2,7 +2,7 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import or_
 from app.models.notification import Notification
 from app.core.websocket_manager import manager
@@ -23,6 +23,30 @@ async def create_notification(
     receiver_role: Optional[str] = None,
     notification_metadata: Optional[dict] = None
 ) -> Notification:
+    # Deduplication guard: prevent identical notifications for the same user within 15 seconds
+    recent_duplicate = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.type == type,
+        Notification.message == message,
+        Notification.reference_id == reference_id
+    ).order_by(Notification.id.desc()).first()
+    
+    if recent_duplicate:
+        if not recent_duplicate.created_at:
+            logger.info(f"Suppressed duplicate notification for user {user_id}: {title}")
+            return recent_duplicate
+        c_at = recent_duplicate.created_at
+        if c_at.tzinfo is not None:
+            diff = abs((datetime.now(c_at.tzinfo) - c_at).total_seconds())
+        else:
+            # Handle naive datetime (could be UTC from func.now() or local system time)
+            utc_diff = abs((datetime.now(timezone.utc).replace(tzinfo=None) - c_at).total_seconds())
+            local_diff = abs((datetime.now() - c_at).total_seconds())
+            diff = min(utc_diff, local_diff)
+        if diff < 15:
+            logger.info(f"Suppressed duplicate notification for user {user_id}: {title}")
+            return recent_duplicate
+
     notification = Notification(
         user_id=user_id,
         type=type,
@@ -94,14 +118,26 @@ async def create_notification_for_roles(
     employee_id: Optional[int] = None,
     created_by: Optional[int] = None,
     reference_id: Optional[int] = None,
-    notification_metadata: Optional[dict] = None
+    notification_metadata: Optional[dict] = None,
+    exclude_user_ids: Optional[List[int]] = None
 ) -> List[Notification]:
     from app.models.user import User, Role
     lower_roles = [r.lower() for r in roles]
     users = db.query(User).join(Role).filter(func.lower(Role.name).in_(lower_roles)).distinct().all()
     
+    exclude_set = set(exclude_user_ids or [])
+    if created_by:
+        exclude_set.add(created_by)
+
+    seen_user_ids = set()
+    unique_users = []
+    for u in users:
+        if u.id not in seen_user_ids and u.id not in exclude_set:
+            seen_user_ids.add(u.id)
+            unique_users.append(u)
+            
     created_notifications = []
-    for user in users:
+    for user in unique_users:
         notification = await create_notification(
             db=db,
             user_id=user.id,

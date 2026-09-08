@@ -18,6 +18,14 @@ class ShiftRepository:
             if shift:
                 return shift
 
+        if emp and emp.shift_type:
+            shift_by_type = db.query(Shift).filter(
+                or_(Shift.name.ilike(emp.shift_type), Shift.code.ilike(emp.shift_type)),
+                Shift.is_active == True
+            ).first()
+            if shift_by_type:
+                return shift_by_type
+
         mapping = (
             db.query(EmployeeShift)
             .filter(
@@ -51,6 +59,9 @@ class ShiftRepository:
             working_hours=8.0,
             required_work_minutes=480,
             grace_minutes=15,
+            late_mark_after_minutes=15,
+            punch_in_grace_minutes=15,
+            shift_grace_minutes=15,
             lunch_duration_minutes=60,
             half_day_hours=4.0,
             minimum_half_day_minutes=240,

@@ -40,6 +40,8 @@ class ShiftCalculationService:
             minimum_present_minutes=480,
             overtime_start_time=None,
             late_mark_after_minutes=15,
+            punch_in_grace_minutes=15,
+            shift_grace_minutes=15,
             early_exit_before_minutes=0,
             is_night_shift=False,
             is_active=True
@@ -80,7 +82,15 @@ class ShiftCalculationService:
 
         shift = cls.get_effective_shift(shift)
         start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
-        late_mark_mins = shift.late_mark_after_minutes if getattr(shift, 'late_mark_after_minutes', None) is not None else 30
+        late_mark_mins = (
+            getattr(shift, 'punch_in_grace_minutes', None)
+            if getattr(shift, 'punch_in_grace_minutes', None) is not None
+            else (
+                getattr(shift, 'late_mark_after_minutes', None)
+                if getattr(shift, 'late_mark_after_minutes', None) is not None
+                else (getattr(shift, 'grace_minutes', None) or 15)
+            )
+        )
         in_mins = cls.time_to_minutes(punch_in)
 
         # Handle night shift cross midnight if punch in happens very early/late
@@ -101,7 +111,15 @@ class ShiftCalculationService:
             return 0
         shift = cls.get_effective_shift(shift)
         start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
-        late_mark_mins = shift.late_mark_after_minutes if getattr(shift, 'late_mark_after_minutes', None) is not None else 30
+        late_mark_mins = (
+            getattr(shift, 'punch_in_grace_minutes', None)
+            if getattr(shift, 'punch_in_grace_minutes', None) is not None
+            else (
+                getattr(shift, 'late_mark_after_minutes', None)
+                if getattr(shift, 'late_mark_after_minutes', None) is not None
+                else (getattr(shift, 'grace_minutes', None) or 15)
+            )
+        )
         in_mins = cls.time_to_minutes(punch_in)
 
         if shift.is_night_shift and in_mins < start_mins - 720:
@@ -256,7 +274,9 @@ class ShiftCalculationService:
             net_mins = max(0, gross_mins - lunch_mins)
 
             timeoff_mins = int(timeoff_duration_hours * 60)
-            credited_mins = net_mins + timeoff_mins
+            # Attendance status is evaluated on Grand Total presence (gross span + timeoff)
+            # because shift schedules in master data encompass the break window.
+            credited_mins = gross_mins + timeoff_mins
 
             present_mins = shift.minimum_present_minutes or int((float(shift.present_hours or 8.0)) * 60)
             half_day_mins = shift.minimum_half_day_minutes or int((float(shift.half_day_hours or 4.0)) * 60)
@@ -288,9 +308,9 @@ class ShiftCalculationService:
         if record_date < today:
             return "ABSENT"
 
-        # Today cutoff: 2 hours after shift start or mid day
-        start_mins = cls.time_to_minutes(shift.start_time or time(9, 0))
-        cutoff_mins = start_mins + (shift.minimum_half_day_minutes or 240) + 90
+        # Today cutoff: 2 hours after shift start or mid day (around 2:30 PM)
+        start_mins = cls.time_to_minutes(shift.start_time or time(9, 30))
+        cutoff_mins = start_mins + (shift.minimum_half_day_minutes or 240) + 60
         cutoff_time = cls.minutes_to_time(cutoff_mins)
 
         if current_dt.time() > cutoff_time and not shift.is_night_shift:

@@ -132,6 +132,8 @@ class HrDashboardData(BaseModel):
     checkedInEmployees: int
     checkedOutEmployees: int
     notMarkedEmployees: int
+    lateArrivals: Optional[int] = 0
+    absentEmployees: Optional[int] = 0
     workModeBreakdown: List[int]
     genderBreakdown: List[int]  
     quickStats: List[QuickStat]

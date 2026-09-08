@@ -18,8 +18,9 @@ class EventDispatcher:
         """Register a subscriber/listener for a specific domain event type."""
         if event_type not in cls._listeners:
             cls._listeners[event_type] = []
-        cls._listeners[event_type].append(listener)
-        logger.info(f"Registered listener {listener.__name__ if hasattr(listener, '__name__') else listener} for event {event_type.__name__}")
+        if listener not in cls._listeners[event_type]:
+            cls._listeners[event_type].append(listener)
+            logger.info(f"Registered listener {listener.__name__ if hasattr(listener, '__name__') else listener} for event {event_type.__name__}")
 
     @classmethod
     def clear(cls) -> None:

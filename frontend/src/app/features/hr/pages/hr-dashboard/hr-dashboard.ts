@@ -824,9 +824,12 @@ export class HrDashboard implements OnInit {
           this.rawRecentTimeSheets = data.recentTimeSheets;
           this.mapRecentAttendance(data.recentTimeSheets);
           
-          // Late count calculation from real timesheets
-          const lateCount = data.recentTimeSheets.filter((s: any) => s.status === 'Late' || (s.punchIn && s.punchIn > '09:30')).length;
-          this.kpis[4].value = lateCount > 0 ? lateCount.toLocaleString() : (checkedInEmp > 0 ? Math.round(checkedInEmp * 0.1) : 0);
+          // Late count calculation: use backend's real today late count or filter today's punches only
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const lateCount = data.lateArrivals !== undefined
+            ? data.lateArrivals
+            : data.recentTimeSheets.filter((s: any) => s.date === todayStr && (s.status === 'Late' || (s.punchIn && s.punchIn !== '-' && s.punchIn > '09:30'))).length;
+          this.kpis[4].value = lateCount.toLocaleString();
         }
 
         this.isDataLoading = false;

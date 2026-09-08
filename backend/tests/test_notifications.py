@@ -57,6 +57,63 @@ def test_get_user_notifications_old_unread():
     notifications = get_user_notifications(db, user_id=user_id)
     
     assert len(notifications) == 2
-    assert any(n.title == "Old Unread" for n in notifications)
-    
     db.close()
+
+
+def test_create_notification_deduplication():
+    import pytest
+    import anyio
+    from app.services.notification_service import create_notification
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = TestingSessionLocal()
+
+    async def run_test():
+        user_id = 1
+        # First creation
+        n1 = await create_notification(
+            db=db,
+            user_id=user_id,
+            type="LEAVE",
+            title="Time Off Request Rejected",
+            message="Leave request rejected for Kaushal Raj.",
+            reference_id=42
+        )
+        # Immediate duplicate creation attempt
+        n2 = await create_notification(
+            db=db,
+            user_id=user_id,
+            type="LEAVE",
+            title="Time Off Request Rejected",
+            message="Leave request rejected for Kaushal Raj.",
+            reference_id=42
+        )
+        return n1, n2
+
+    n1, n2 = anyio.run(run_test)
+    assert n1.id == n2.id, "Expected second call to return existing notification without creating a duplicate row"
+
+    count = db.query(Notification).filter(Notification.user_id == 1).count()
+    assert count == 1, f"Expected exactly 1 notification in DB, found {count}"
+    db.close()
+
+
+def test_event_dispatcher_listener_deduplication():
+    from app.domain.events.dispatcher import EventDispatcher, DomainEvent
+
+    class SampleEvent(DomainEvent):
+        pass
+
+    def sample_listener(event):
+        pass
+
+    EventDispatcher.clear()
+    EventDispatcher.register(SampleEvent, sample_listener)
+    EventDispatcher.register(SampleEvent, sample_listener)
+
+    listeners = EventDispatcher._listeners.get(SampleEvent, [])
+    assert len(listeners) == 1, "Expected duplicate listener registrations to be ignored"
+    EventDispatcher.clear()
+

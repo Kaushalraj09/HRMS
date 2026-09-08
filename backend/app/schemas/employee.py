@@ -71,9 +71,17 @@ class EmployeeResponse(EmployeeBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EmployeeStatsSummary(BaseModel):
+    total: int
+    active: int
+    on_leave: int
+    inactive: int
+
+
 class EmployeeListResponse(BaseModel):
     data: List[EmployeeResponse]
     total: int
+    stats: Optional[EmployeeStatsSummary] = None
 
 
 class EmployeeCredentialsResponse(BaseModel):

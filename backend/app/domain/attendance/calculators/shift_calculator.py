@@ -32,12 +32,19 @@ class ShiftCalculator:
 
     @staticmethod
     def calculate_late_minutes(punch_in: time, shift: Shift) -> int:
-        """Calculate late minutes based on shift start time and grace period."""
-        if not punch_in or not shift.start_time:
+        if not punch_in or not shift or not shift.start_time:
             return 0
         in_mins = ShiftCalculator.time_to_minutes(punch_in)
         start_mins = ShiftCalculator.time_to_minutes(shift.start_time)
-        grace_mins = shift.grace_minutes or 0
+        grace_mins = (
+            getattr(shift, 'punch_in_grace_minutes', None)
+            if getattr(shift, 'punch_in_grace_minutes', None) is not None
+            else (
+                getattr(shift, 'late_mark_after_minutes', None)
+                if getattr(shift, 'late_mark_after_minutes', None) is not None
+                else (shift.grace_minutes or 0)
+            )
+        )
         
         if in_mins <= start_mins + grace_mins:
             return 0

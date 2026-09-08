@@ -644,8 +644,8 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     shift_end_time = shift.end_time
     if not shift_start_time or not shift_end_time:
         # Fallback only for data integrity issues, but logic demands shift times
-        shift_start_time = shift_start_time or time(9, 0)
-        shift_end_time = shift_end_time or time(18, 0)
+        shift_start_time = shift_start_time or time(9, 30)
+        shift_end_time = shift_end_time or time(18, 30)
         
     shift_elapsed_seconds = _shift_elapsed_seconds(current, shift_start_time, shift_end_time)
     
@@ -706,10 +706,15 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "shiftElapsedSeconds": shift_elapsed_seconds,
         "shiftStart": shift_start_time.strftime("%I:%M %p"),
         "shiftEnd": shift_end_time.strftime("%I:%M %p"),
+        "shiftStart24": shift_start_time.strftime("%H:%M"),
+        "shiftEnd24": shift_end_time.strftime("%H:%M"),
         "shiftName": shift.name,
         "shiftCode": shift.code,
         "lunchStart": lunch_start.strftime("%I:%M %p"),
         "lunchEnd": lunch_end.strftime("%I:%M %p"),
+        "lunchStart24": lunch_start.strftime("%H:%M"),
+        "lunchEnd24": lunch_end.strftime("%H:%M"),
+        "halfDayHours": float(shift.half_day_hours or ((shift.required_work_minutes or 480) / 120.0) or 4.0),
         "graceMinutes": shift.grace_minutes or 30,
         "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
         "workMode": "Remote" if is_remote else (attendance.work_mode if attendance else "Office"),
@@ -861,8 +866,8 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
             "id": shift_obj.id,
             "name": shift_obj.name,
             "code": shift_obj.code,
-            "start_time": shift_obj.start_time.strftime("%H:%M") if shift_obj.start_time else "09:00",
-            "end_time": shift_obj.end_time.strftime("%H:%M") if shift_obj.end_time else "18:00",
+            "start_time": shift_obj.start_time.strftime("%H:%M") if shift_obj.start_time else "09:30",
+            "end_time": shift_obj.end_time.strftime("%H:%M") if shift_obj.end_time else "18:30",
             "working_hours": float(shift_obj.working_hours or 8.0),
             "grace_minutes": shift_obj.grace_minutes or 30,
             "lunch_duration": shift_obj.lunch_duration_minutes or 40,
@@ -1215,10 +1220,9 @@ def list_all_attendance(
         calculate_attendance_metrics(record)
         employee_name = f"{record.employee.first_name} {record.employee.last_name}".strip() if record.employee else "Unknown Employee"
         
-        # Calculate late minutes and early exit minutes
-        from app.services.time_calculator import calculate_late_minutes, calculate_early_exit_minutes
-        late_minutes = calculate_late_minutes(record.punch_in)
-        early_exit_minutes = calculate_early_exit_minutes(record.punch_out)
+        eff_shift = record.shift or (record.employee.shift if record.employee else None)
+        late_minutes = calculate_late_minutes(record.punch_in, eff_shift)
+        early_exit_minutes = calculate_early_exit_minutes(record.punch_out, eff_shift)
         
         formatted_data.append({
             "id": record.id,
@@ -1401,7 +1405,8 @@ def get_employee_analytics(db: Session) -> list[dict]:
                     pass
                 
                 # Late arrival
-                late_mins = calculate_late_minutes(rec.punch_in)
+                eff_shift = rec.shift or (rec.employee.shift if rec.employee else None)
+                late_mins = calculate_late_minutes(rec.punch_in, eff_shift)
                 if late_mins > 0:
                     late_count += 1
                     

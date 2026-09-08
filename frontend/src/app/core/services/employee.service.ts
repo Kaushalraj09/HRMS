@@ -34,9 +34,17 @@ interface BackendEmployee {
   status: 'Active' | 'Inactive';
 }
 
+interface BackendEmployeeStats {
+  total: number;
+  active: number;
+  on_leave: number;
+  inactive: number;
+}
+
 interface BackendPaginatedEmployees {
   data: BackendEmployee[];
   total: number;
+  stats?: BackendEmployeeStats;
 }
 
 interface BackendEmployeePayload {
@@ -102,7 +110,13 @@ export class EmployeeService {
     return this.http.get<BackendPaginatedEmployees>(this.apiUrl, { params }).pipe(
       map(result => ({
         data: result.data.map(row => this.mapEmployee(row)),
-        total: result.total
+        total: result.total,
+        stats: result.stats ? {
+          total: result.stats.total,
+          active: result.stats.active,
+          onLeave: result.stats.on_leave,
+          inactive: result.stats.inactive
+        } : undefined
       }))
     );
   }

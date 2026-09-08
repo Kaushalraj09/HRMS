@@ -61,10 +61,15 @@ interface BackendTodayAttendanceState {
   shiftElapsedSeconds: number;
   shiftStart: string;
   shiftEnd: string;
+  shiftStart24?: string;
+  shiftEnd24?: string;
   shiftName?: string;
   shiftCode?: string;
   lunchStart?: string;
   lunchEnd?: string;
+  lunchStart24?: string;
+  lunchEnd24?: string;
+  halfDayHours?: number;
   graceMinutes?: number;
   lunchDurationMinutes?: number;
   workMode: WorkMode;
@@ -304,10 +309,15 @@ export class AttendanceService {
         shiftElapsedSeconds: Number(state.shiftElapsedSeconds) || 0,
         shiftStart: state.shiftStart,
         shiftEnd: state.shiftEnd,
+        shiftStart24: state.shiftStart24,
+        shiftEnd24: state.shiftEnd24,
         shiftName: state.shiftName,
         shiftCode: state.shiftCode,
         lunchStart: state.lunchStart,
         lunchEnd: state.lunchEnd,
+        lunchStart24: state.lunchStart24,
+        lunchEnd24: state.lunchEnd24,
+        halfDayHours: state.halfDayHours,
         graceMinutes: state.graceMinutes,
         lunchDurationMinutes: state.lunchDurationMinutes,
         workMode: state.workMode || 'Office',

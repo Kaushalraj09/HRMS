@@ -125,7 +125,7 @@ def get_user_credentials(
         "username": user.email,
         "email": user.email,
         "activation_required": True,
-        "temporary_password_hint": "Use Reset Access to send a secure password setup email. Passwords are never displayed.",
+        "temporary_password_hint": "Temporary testing password: first 5 email letters + @1234. Replace with setup email after SMTP is configured.",
         "status": user.status
     }
 

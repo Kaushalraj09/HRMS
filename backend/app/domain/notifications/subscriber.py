@@ -238,17 +238,18 @@ def handle_leave_approved(event: ev_types.LeaveApproved):
                 user_id=emp.user_id,
                 type="TIMEOFF_UPDATE",
                 title="Time Off Request Approved",
-                message=f"Your time off request for {req.date} has been approved.",
+                message=f"Your {req.leave_type or 'time off'} request for {req.date} has been approved.",
                 reference_id=req.id,
                 employee_id=emp.id
             ))
-            # 2. Notify HR & Admin
+            # 2. Notify HR & Admin (exclude the approver so they aren't notified of their own action)
+            approver_user_id = getattr(event, "action_by_user_id", None)
             _run_async(create_notification_for_roles(
                 db=db,
                 roles=["HR", "Admin"],
                 type="LEAVE",
                 title="Time Off Request Approved",
-                message=f"Leave request approved for {emp.first_name} {emp.last_name}.",
+                message=f"{req.leave_type or 'Leave'} request approved for {emp.first_name} {emp.last_name} on {req.date}.",
                 category="LEAVE_APPROVED",
                 severity="SUCCESS",
                 employee_id=emp.id,
@@ -257,7 +258,8 @@ def handle_leave_approved(event: ev_types.LeaveApproved):
                     "leave_type": req.leave_type,
                     "date": str(req.date),
                     "action": "APPROVE"
-                }
+                },
+                exclude_user_ids=[approver_user_id] if approver_user_id else None
             ))
             
             # WebSocket live update
@@ -289,17 +291,18 @@ def handle_leave_rejected(event: ev_types.LeaveRejected):
                 user_id=emp.user_id,
                 type="TIMEOFF_UPDATE",
                 title="Time Off Request Rejected",
-                message=f"Your time off request for {req.date} has been rejected.",
+                message=f"Your {req.leave_type or 'time off'} request for {req.date} has been rejected.",
                 reference_id=req.id,
                 employee_id=emp.id
             ))
-            # 2. Notify HR & Admin
+            # 2. Notify HR & Admin (exclude the rejector so they aren't notified of their own action)
+            approver_user_id = getattr(event, "action_by_user_id", None)
             _run_async(create_notification_for_roles(
                 db=db,
                 roles=["HR", "Admin"],
                 type="LEAVE",
                 title="Time Off Request Rejected",
-                message=f"Leave request rejected for {emp.first_name} {emp.last_name}.",
+                message=f"{req.leave_type or 'Leave'} request rejected for {emp.first_name} {emp.last_name} on {req.date}.",
                 category="LEAVE_REJECTED",
                 severity="ERROR",
                 employee_id=emp.id,
@@ -308,7 +311,8 @@ def handle_leave_rejected(event: ev_types.LeaveRejected):
                     "leave_type": req.leave_type,
                     "date": str(req.date),
                     "action": "REJECT"
-                }
+                },
+                exclude_user_ids=[approver_user_id] if approver_user_id else None
             ))
             
             # WebSocket live update

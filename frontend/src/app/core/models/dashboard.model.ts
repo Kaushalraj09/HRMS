@@ -165,6 +165,7 @@ export interface HrDashboardData {
   checkedOutEmployees: number;
   notMarkedEmployees: number;
   absentEmployees?: number;
+  lateArrivals?: number;
   workModeBreakdown: number[];
   genderBreakdown: number[];
   quickStats: Array<{ total: number; name: string }>;

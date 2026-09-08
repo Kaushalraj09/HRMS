@@ -84,43 +84,6 @@ async def request_timeoff(
             },
         }
     )
-
-    # Dispatch notifications
-    try:
-        # 1. Notify the employee
-        await notification_service.create_notification(
-            db=db,
-            user_id=current_user.id,
-            type="TIMEOFF_APPLY",
-            title="Time Off Request Submitted",
-            message=f"You have successfully applied for time off ({created.leave_type}) on {created.date}.",
-            reference_id=created.id
-        )
-
-        # 2. Notify all HR and Admin users
-        try:
-            await notification_service.create_notification_for_roles(
-                db=db,
-                roles=["HR", "Admin"],
-                type="LEAVE",
-                category="LEAVE_REQUEST",
-                severity="WARNING",
-                title="New Time Off Request",
-                message=f"{employee.first_name} {employee.last_name} requested {created.leave_type} for {created.date}.",
-                employee_id=employee.id,
-                created_by=current_user.id,
-                reference_id=created.id,
-                notification_metadata={
-                    "leave_type": created.leave_type,
-                    "date": str(created.date),
-                    "duration_hours": created.duration_hours
-                }
-            )
-        except Exception as e:
-            print(f"Failed to create admin timeoff apply notification: {e}")
-    except Exception as e:
-        print(f"Error dispatching apply notifications: {e}")
-
     return created
 
 @router.post("/request/batch", response_model=TimeOffBatchResponse)
@@ -155,7 +118,7 @@ async def request_timeoff_batch(
             attachment_name=request.attachment_name,
             batch_id=batch_id
         )
-        created = timeoff_service.request_timeoff(db, employee.id, single_req)
+        created = timeoff_service.request_timeoff(db, employee.id, single_req, dispatch_event=False)
         created_requests.append(created)
         
         # Dispatch individual websocket messages to keep dashboard in sync
@@ -518,61 +481,6 @@ async def approve_request(
         approved_duration_hours=approved_duration_hours,
         enforce_approval_stage=False
     )
-    
-    # Broadcast to the employee who made the request
-    employee = db.query(Employee).filter(Employee.id == result.employee_id).first()
-    if employee:
-        await manager.send_personal_message(
-            {
-                "type": "TIMEOFF_UPDATE", 
-                "status": result.status, 
-                "duration": result.duration_hours,
-                "message": f"Your time-off request for {result.date} has been {result.status.lower()}."
-            },
-            employee.user_id
-        )
-
-        # Dispatch notification to database/notifications system (notify employee)
-        try:
-            from app.services.notification_service import create_notification
-            status_label = "Approved" if action.upper() == "APPROVE" else "Rejected"
-            await create_notification(
-                db=db,
-                user_id=employee.user_id,
-                type="TIMEOFF_UPDATE",
-                title=f"Time Off Request {status_label}",
-                message=f"Your time off request for {result.date} has been {status_label.lower()}.",
-                reference_id=result.id
-            )
-        except Exception as e:
-            print(f"Error dispatching employee approve notifications: {e}")
-
-        # Trigger admin notifications for HR and Admin
-        try:
-            from app.services.notification_service import create_notification_for_roles
-            category = "LEAVE_APPROVED" if action.upper() == "APPROVE" else "LEAVE_REJECTED"
-            severity = "SUCCESS" if action.upper() == "APPROVE" else "ERROR"
-            status_label = "Approved" if action.upper() == "APPROVE" else "Rejected"
-            await create_notification_for_roles(
-                db=db,
-                roles=["HR", "Admin"],
-                type="LEAVE",
-                category=category,
-                severity=severity,
-                title=f"Time Off Request {status_label}",
-                message=f"Leave request {status_label.lower()} for {employee.first_name} {employee.last_name}.",
-                employee_id=employee.id,
-                created_by=current_user.id,
-                reference_id=result.id,
-                notification_metadata={
-                    "leave_type": result.leave_type,
-                    "date": str(result.date),
-                    "action": action
-                }
-            )
-        except Exception as e:
-            print(f"Failed to create admin timeoff approve/reject notification: {e}")
-    
     return result
 
 
@@ -708,43 +616,6 @@ async def cancel_request(
         ))
     except Exception as e:
         print(f"Failed to dispatch LeaveCancelled event: {e}")
-        
-    # Notify employee (if admin cancelled it)
-    try:
-        from app.services.notification_service import create_notification
-        await create_notification(
-            db=db,
-            user_id=req.employee.user_id,
-            type="TIMEOFF_UPDATE",
-            title="Time Off Request Cancelled",
-            message=f"Your time off request for {req.date} has been cancelled.",
-            reference_id=req.id
-        )
-    except Exception as e:
-        print(f"Failed to create cancellation notification for employee: {e}")
-        
-    # Trigger admin notifications for HR and Admin
-    try:
-        from app.services.notification_service import create_notification_for_roles
-        req_emp = req.employee
-        await create_notification_for_roles(
-            db=db,
-            roles=["HR", "Admin"],
-            type="LEAVE",
-            category="LEAVE_CANCELLED",
-            severity="INFO",
-            title="Time Off Request Cancelled",
-            message=f"{req_emp.first_name} {req_emp.last_name} cancelled their leave request.",
-            employee_id=req_emp.id,
-            created_by=current_user.id,
-            reference_id=req.id,
-            notification_metadata={
-                "leave_type": req.leave_type,
-                "date": str(req.date)
-            }
-        )
-    except Exception as e:
-        print(f"Failed to create admin leave cancelled notification: {e}")
         
     return {
         "success": True,

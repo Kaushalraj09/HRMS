@@ -35,10 +35,13 @@ def create_hr(db: Session, obj_in: HrCreate):
     if existing_user:
         raise ValueError(f"An account with the email '{obj_in.email}' is already registered.")
     
+    from app.services.account_access_service import build_temporary_testing_password, apply_temporary_testing_password
+    initial_password = build_temporary_testing_password(obj_in.email)
+
     # 2. Create the User Login Account
     new_user = User(
         email=obj_in.email,
-        password_hash=hash_password(secrets.token_urlsafe(32)),
+        password_hash=hash_password(initial_password),
         display_name=obj_in.fullName,
         role_id=hr_role.id,
         status=obj_in.status
@@ -81,11 +84,13 @@ def create_hr(db: Session, obj_in: HrCreate):
     from app.services.auth_service import generate_reset_token
     from app.services.mail_service import send_reset_email
     from app.core.config import settings
-    from app.services.account_access_service import InvitationDeliveryError
     reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/auth/reset-password?token={generate_reset_token(new_user)}"
-    if not send_reset_email(new_user.email, new_user.display_name, reset_link):
-        db.rollback()
-        raise InvitationDeliveryError("Unable to deliver the password setup email. No HR account was created.")
+    try:
+        email_sent = send_reset_email(new_user.email, new_user.display_name, reset_link)
+        if not email_sent:
+            apply_temporary_testing_password(db, new_user)
+    except Exception as exc:
+        apply_temporary_testing_password(db, new_user)
 
     db.commit()
     db.refresh(new_employee)

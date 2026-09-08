@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy, EventEmitter, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { forkJoin, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { AttendanceService } from '../../../../../../core/services/attendance.service';
 import { TimeoffService } from '../../../../../../core/services/timeoff.service';
+import { TodayAttendanceState } from '../../../../../../core/models/attendance.model';
 import {
   TimeSlotOption,
   buildHalfHourSlots,
@@ -40,6 +41,15 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   uploadProgress = 0;
   isDragOver = false;
 
+  shiftStart24 = '09:00';
+  shiftEnd24 = '18:00';
+  firstHalfStart24 = '09:00';
+  firstHalfEnd24 = '13:00';
+  secondHalfStart24 = '14:00';
+  secondHalfEnd24 = '18:00';
+  halfDayDurationHours = 4.0;
+  fullDayDurationHours = 9.0;
+
   readonly allTimeSlots: TimeSlotOption[] = buildHalfHourSlots();
 
   readonly leaveTypeSelectOptions = [
@@ -48,7 +58,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     { label: 'Half Day Leave', value: 'Half Day' }
   ];
 
-  readonly halfDaySessionSelectOptions = [
+  halfDaySessionSelectOptions: { label: string; value: string }[] = [
     { label: 'First Half (09:00 AM - 01:00 PM)', value: 'First Half' },
     { label: 'Second Half (02:00 PM - 06:00 PM)', value: 'Second Half' }
   ];
@@ -76,6 +86,20 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       endTime: ['10:00'],
       reason: ['', [Validators.required, Validators.maxLength(500)]]
     });
+
+    // Load employee shift bounds to customize half-day sessions and hours
+    this.subscriptions.add(
+      this.attendanceService.getTodayAttendanceState().subscribe({
+        next: (state) => {
+          if (state) {
+            this.updateShiftInfo(state);
+          }
+        },
+        error: (err) => {
+          console.warn('Failed to load shift info for time off modal:', err);
+        }
+      })
+    );
 
     // Form value changes handling
     this.subscriptions.add(
@@ -148,10 +172,10 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   get requestedHours(): number {
     const leaveType = this.leaveForm.value.leaveType;
     if (leaveType === 'Full Day') {
-      return 9.0;
+      return this.fullDayDurationHours;
     }
     if (leaveType === 'Half Day') {
-      return 4.0;
+      return this.halfDayDurationHours;
     }
     return hoursBetweenSameDay(this.leaveForm.value.startTime, this.leaveForm.value.endTime);
   }
@@ -160,21 +184,68 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     this.leaveForm.patchValue({ endDate: this.leaveForm.value.startDate });
   }
 
+  private updateShiftInfo(state: TodayAttendanceState): void {
+    if (state.shiftStart24) {
+      this.shiftStart24 = state.shiftStart24;
+    }
+    if (state.shiftEnd24) {
+      this.shiftEnd24 = state.shiftEnd24;
+    }
+    if (state.lunchStart24) {
+      this.firstHalfEnd24 = state.lunchStart24;
+    }
+    if (state.lunchEnd24) {
+      this.secondHalfStart24 = state.lunchEnd24;
+    }
+    this.firstHalfStart24 = this.shiftStart24;
+    this.secondHalfEnd24 = this.shiftEnd24;
+
+    if (state.halfDayHours && state.halfDayHours > 0) {
+      this.halfDayDurationHours = state.halfDayHours;
+    }
+
+    const calculatedFullHours = hoursBetweenSameDay(this.shiftStart24, this.shiftEnd24);
+    if (calculatedFullHours > 0) {
+      this.fullDayDurationHours = calculatedFullHours;
+    }
+
+    const firstHalfLabel = `First Half (${state.shiftStart || '09:00 AM'} - ${state.lunchStart || '01:00 PM'})`;
+    const secondHalfLabel = `Second Half (${state.lunchEnd || '02:00 PM'} - ${state.shiftEnd || '06:00 PM'})`;
+
+    this.halfDaySessionSelectOptions = [
+      { label: firstHalfLabel, value: 'First Half' },
+      { label: secondHalfLabel, value: 'Second Half' }
+    ];
+
+    // Synchronize form controls if already in Half Day or Full Day mode
+    const currentLeaveType = this.leaveForm.value.leaveType;
+    if (currentLeaveType === 'Half Day') {
+      this.onHalfDaySessionChange();
+    } else if (currentLeaveType === 'Full Day') {
+      this.leaveForm.patchValue({
+        startTime: this.shiftStart24,
+        endTime: this.shiftEnd24
+      }, { emitEvent: false });
+    }
+    this.cdr.detectChanges();
+  }
+
   private onLeaveTypeChange(leaveType: string): void {
     if (leaveType === 'Full Day') {
       this.leaveForm.patchValue({
-        startTime: '09:00',
-        endTime: '18:00'
+        startTime: this.shiftStart24,
+        endTime: this.shiftEnd24
       }, { emitEvent: false });
     } else if (leaveType === 'Half Day') {
+      const session = this.leaveForm.value.halfDaySession || 'First Half';
       this.leaveForm.patchValue({
-        halfDaySession: 'First Half',
-        startTime: '09:00',
-        endTime: '13:00'
+        halfDaySession: session,
+        startTime: session === 'Second Half' ? this.secondHalfStart24 : this.firstHalfStart24,
+        endTime: session === 'Second Half' ? this.secondHalfEnd24 : this.firstHalfEnd24
       }, { emitEvent: false });
     } else {
       this.leaveForm.patchValue({
-        startTime: '09:00',
+        startTime: this.shiftStart24 || '09:00',
         endTime: '10:00'
       }, { emitEvent: false });
     }
@@ -183,15 +254,15 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
 
   private onHalfDaySessionChange(): void {
     const session = this.leaveForm.value.halfDaySession;
-    if (session === 'First Half') {
+    if (session === 'Second Half') {
       this.leaveForm.patchValue({
-        startTime: '09:00',
-        endTime: '13:00'
+        startTime: this.secondHalfStart24,
+        endTime: this.secondHalfEnd24
       }, { emitEvent: false });
     } else {
       this.leaveForm.patchValue({
-        startTime: '14:00',
-        endTime: '18:00'
+        startTime: this.firstHalfStart24,
+        endTime: this.firstHalfEnd24
       }, { emitEvent: false });
     }
     this.cdr.detectChanges();

@@ -78,3 +78,34 @@ def test_deleted_employee_excluded_from_total_count(db_session, monkeypatch):
     # Verify deleted employee ID is not present in employee list
     returned_ids = [e["id"] for e in post_list["data"]]
     assert emp2.id not in returned_ids
+
+
+def test_list_employees_returns_accurate_global_stats(db_session, monkeypatch):
+    """Verify that stats.active reflects the entire employee database count, not just the page limit slice."""
+    monkeypatch.setattr("app.services.mail_service.send_reset_email", lambda *a, **kw: True)
+
+    # Seed 12 active employees
+    for i in range(12):
+        emp_in = EmployeeCreate(
+            first_name=f"Bulk{i}",
+            last_name="Worker",
+            official_email=f"bulk{i}.worker@hrms.com",
+            mobile=f"98765432{i:02d}",
+            department="Engineering",
+            designation="Developer",
+            employee_type="Full-Time"
+        )
+        create_employee(db_session, emp_in)
+
+    # Request with limit=5 (simulating page size 5 or 10)
+    page_res = list_employees(db_session, page=1, limit=5)
+
+    # Data length is clamped to limit (5)
+    assert len(page_res["data"]) == 5
+
+    # Stats active must reflect the true global count of active employees (>= 12), not 5!
+    assert "stats" in page_res
+    assert page_res["stats"]["active"] >= 12
+    assert page_res["stats"]["total"] >= 12
+    assert page_res["stats"]["inactive"] >= 0
+    assert page_res["stats"]["on_leave"] >= 0

@@ -79,10 +79,15 @@ export interface TodayAttendanceState {
   shiftElapsedSeconds: number;
   shiftStart: string;
   shiftEnd: string;
+  shiftStart24?: string;
+  shiftEnd24?: string;
   shiftName?: string;
   shiftCode?: string;
   lunchStart?: string;
   lunchEnd?: string;
+  lunchStart24?: string;
+  lunchEnd24?: string;
+  halfDayHours?: number;
   graceMinutes?: number;
   lunchDurationMinutes?: number;
   workMode: WorkMode;

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, time
+from typing import Optional
 from app.domain.events.dispatcher import DomainEvent
 
 @dataclass
@@ -53,12 +54,14 @@ class LeaveApproved(DomainEvent):
     leave_request_id: int
     date: date
     leave_type: str
+    action_by_user_id: Optional[int] = None
 
 @dataclass
 class LeaveRejected(DomainEvent):
     employee_id: int
     leave_request_id: int
     date: date
+    action_by_user_id: Optional[int] = None
 
 @dataclass
 class LeaveCancelled(DomainEvent):

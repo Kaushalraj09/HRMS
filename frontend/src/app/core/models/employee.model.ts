@@ -32,9 +32,17 @@ export interface Employee {
   doj: string;
 }
 
+export interface EmployeeStatsSummary {
+  total: number;
+  active: number;
+  onLeave: number;
+  inactive: number;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
   total: number;
+  stats?: EmployeeStatsSummary;
 }
 
 export interface EmployeePayload {

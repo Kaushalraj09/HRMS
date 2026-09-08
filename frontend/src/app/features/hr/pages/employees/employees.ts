@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Observable, BehaviorSubject, combineLatest, of, forkJoin } from 'rxjs';
 import { switchMap, tap, map, shareReplay, catchError } from 'rxjs/operators';
-import { Employee, PaginatedResult } from '../../../../core/models/employee.model';
+import { Employee, PaginatedResult, EmployeeStatsSummary } from '../../../../core/models/employee.model';
 import { EmployeeService } from '../../../../core/services/employee.service';
 import { CustomSelectComponent } from '../../../../shared/components/custom-select/custom-select';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -86,7 +86,7 @@ export class Employees implements OnInit {
   pageSize = 10;
   totalItems = 0;
   isLoading$ = new BehaviorSubject<boolean>(true);
-  employeesData$!: Observable<{ data: Employee[], total: number }>;
+  employeesData$!: Observable<PaginatedResult<Employee>>;
   paginationArray$!: Observable<number[]>;
   searchTrigger$ = new BehaviorSubject<boolean>(true);
   userRoleLabel = 'Admin';
@@ -197,7 +197,7 @@ export class Employees implements OnInit {
       }),
       tap((result) => {
         this.isLoading$.next(false);
-        this.updateStats(result.total, result.data);
+        this.updateStats(result.total, result.data, result.stats);
         if (result.data) {
           this.loadDocumentCompletions(result.data);
         }
@@ -220,7 +220,16 @@ export class Employees implements OnInit {
     );
   }
 
-  updateStats(total: number, employees?: Employee[]) {
+  updateStats(total: number, employees?: Employee[], backendStats?: EmployeeStatsSummary) {
+    if (backendStats) {
+      this.stats.total = backendStats.total;
+      this.stats.active = backendStats.active;
+      this.stats.onLeave = backendStats.onLeave;
+      this.stats.inactive = backendStats.inactive;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (total <= 0) {
       this.stats.total = 0;
       this.stats.active = 0;
@@ -231,14 +240,21 @@ export class Employees implements OnInit {
     }
 
     this.stats.total = total;
-    if (employees && employees.length > 0) {
-      this.stats.active = employees.filter(e => (e.status || 'Active').toLowerCase() === 'active').length;
-      this.stats.inactive = employees.filter(e => ['inactive', 'deleted'].includes((e.status || '').toLowerCase())).length;
-      this.stats.onLeave = employees.filter(e => (e.status || '').toLowerCase() === 'on leave').length;
-    } else {
+    const currentStatus = (this.statusControl.value || '').toLowerCase();
+    if (currentStatus === '' || currentStatus === 'active') {
       this.stats.active = total;
       this.stats.inactive = 0;
       this.stats.onLeave = 0;
+    } else if (currentStatus === 'inactive') {
+      this.stats.active = 0;
+      this.stats.inactive = total;
+      this.stats.onLeave = 0;
+    } else if (currentStatus === 'on leave') {
+      this.stats.active = 0;
+      this.stats.inactive = 0;
+      this.stats.onLeave = total;
+    } else {
+      this.stats.active = total;
     }
     this.cdr.detectChanges();
   }

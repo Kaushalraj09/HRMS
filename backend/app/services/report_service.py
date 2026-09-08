@@ -240,7 +240,8 @@ def get_late_arrival_report(
     
     late_records = []
     for r in records:
-        late_mins = calculate_late_minutes(r.punch_in)
+        eff_shift = r.shift or (r.employee.shift if r.employee else None)
+        late_mins = calculate_late_minutes(r.punch_in, eff_shift)
         if late_mins > 0:
             late_records.append({
                 "employeeId": r.employee.id,
