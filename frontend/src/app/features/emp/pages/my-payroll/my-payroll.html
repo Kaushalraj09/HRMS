@@ -1,0 +1,242 @@
+<div class="my-payroll-wrapper">
+  <div class="my-payroll-container">
+
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-text">
+        <h1>My Payroll & Compensation</h1>
+        <p>Access your compensation structure, monthly payslips, and historical revisions.</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="status-tabs-pill-container">
+      <button class="tab-pill-item" [class.active]="activeTab === 'breakdown'" (click)="switchTab('breakdown')">
+        <i class="fas fa-wallet"></i> Salary Breakdown
+      </button>
+      <button class="tab-pill-item" [class.active]="activeTab === 'payslips'" (click)="switchTab('payslips')">
+        <i class="fas fa-file-invoice-dollar"></i> My Payslips
+      </button>
+      <button class="tab-pill-item" [class.active]="activeTab === 'history'" (click)="switchTab('history')">
+        <i class="fas fa-history"></i> Compensation History
+      </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Loading payroll information...</span>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 1: SALARY BREAKDOWN -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'breakdown' && !isLoading" class="tab-content">
+      <div *ngIf="salaryAssignment; else noSalaryConfigured">
+        <!-- High Level Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card card-blue">
+            <div class="metric-icon"><i class="fas fa-trophy"></i></div>
+            <div class="metric-details">
+              <span class="metric-label">Annual Cost to Company (CTC)</span>
+              <span class="metric-value">{{ formatCurrency(salaryAssignment.annual_ctc) }}</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-indigo">
+            <div class="metric-icon"><i class="fas fa-coins"></i></div>
+            <div class="metric-details">
+              <span class="metric-label">Monthly Gross Salary</span>
+              <span class="metric-value">{{ formatCurrency(salaryAssignment.gross_monthly) }}</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-green">
+            <div class="metric-icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="metric-details">
+              <span class="metric-label">Estimated Monthly Take-Home (Net)</span>
+              <span class="metric-value text-green">{{ formatCurrency(salaryAssignment.net_monthly) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Breakdown Grid: Earnings vs Deductions -->
+        <div class="breakdown-grid mt-4">
+          <!-- Earnings Table Card -->
+          <div class="glass-card">
+            <div class="glass-card-header">
+              <h3><i class="fas fa-arrow-circle-up text-green"></i> Earnings & Allowances</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Monthly</th>
+                  <th>Annual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of earningsComponents">
+                  <td><strong>{{ item.name || item.code }}</strong></td>
+                  <td>{{ formatCurrency(item.monthly_amount) }}</td>
+                  <td>{{ formatCurrency(item.annual_amount) }}</td>
+                </tr>
+                <tr class="table-summary-row">
+                  <td><strong>Total Gross Earnings</strong></td>
+                  <td><strong>{{ formatCurrency(salaryAssignment.gross_monthly) }}</strong></td>
+                  <td><strong>{{ formatCurrency(salaryAssignment.gross_monthly * 12) }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Deductions Table Card -->
+          <div class="glass-card">
+            <div class="glass-card-header">
+              <h3><i class="fas fa-arrow-circle-down text-red"></i> Deductions & Statutory</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Monthly</th>
+                  <th>Annual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of deductionsComponents">
+                  <td><strong>{{ item.name || item.code }}</strong></td>
+                  <td class="text-red">{{ formatCurrency(item.monthly_amount) }}</td>
+                  <td class="text-red">{{ formatCurrency(item.annual_amount) }}</td>
+                </tr>
+                <tr class="table-summary-row">
+                  <td><strong>Total Deductions</strong></td>
+                  <td class="text-red"><strong>{{ formatCurrency(salaryAssignment.gross_monthly - salaryAssignment.net_monthly) }}</strong></td>
+                  <td class="text-red"><strong>{{ formatCurrency((salaryAssignment.gross_monthly - salaryAssignment.net_monthly) * 12) }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Employer Contributions (if any) -->
+        <div class="glass-card mt-4" *ngIf="employerContributions.length > 0">
+          <div class="glass-card-header">
+            <h3><i class="fas fa-landmark text-indigo"></i> Employer Statutory Contributions (CTC Component)</h3>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Contribution Type</th>
+                <th>Monthly Amount</th>
+                <th>Annual Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of employerContributions">
+                <td><strong>{{ item.name || item.code }}</strong></td>
+                <td>{{ formatCurrency(item.monthly_amount) }}</td>
+                <td>{{ formatCurrency(item.annual_amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ng-template #noSalaryConfigured>
+        <div class="empty-state-box">
+          <i class="fas fa-wallet"></i>
+          <h3>No Salary Structure Assigned</h3>
+          <p>Your compensation structure has not been finalized yet. Please contact Human Resources for assistance.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 2: MY PAYSLIPS -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'payslips' && !isLoading" class="tab-content">
+      <div class="table-container" *ngIf="payslips.length > 0; else noPayslips">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Payslip #</th>
+              <th>Pay Period</th>
+              <th>Days Present</th>
+              <th>Gross Earnings</th>
+              <th>Total Deductions</th>
+              <th>Net Take-Home</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of payslips">
+              <td><strong>{{ p.payslip_number }}</strong></td>
+              <td>{{ p.payroll_month }}</td>
+              <td>{{ (p.paid_days || p.payable_days) | number:'1.1-1' }} / {{ p.total_payroll_days }}</td>
+              <td>{{ formatCurrency(p.gross_earnings) }}</td>
+              <td class="text-red">{{ formatCurrency(p.total_deductions) }}</td>
+              <td><strong class="text-green">{{ formatCurrency(p.net_salary) }}</strong></td>
+              <td>
+                <button class="btn-download" (click)="downloadPayslipPdf(p)" [disabled]="isDownloadingPdf">
+                  <i class="fas fa-download"></i> Download PDF
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noPayslips>
+        <div class="empty-state-box">
+          <i class="fas fa-file-invoice"></i>
+          <h3>No Payslips Available</h3>
+          <p>Payslips are published automatically when monthly payroll runs are finalized and locked by HR.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 3: COMPENSATION HISTORY -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'history' && !isLoading" class="tab-content">
+      <div class="table-container" *ngIf="salaryHistory.length > 0; else noHistory">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Effective Date</th>
+              <th>Structure Mode</th>
+              <th>Annual CTC</th>
+              <th>Monthly Gross</th>
+              <th>Monthly Net</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of salaryHistory">
+              <td><strong>{{ item.effective_from }}</strong></td>
+              <td>{{ item.salary_basis === 'CTC' ? 'Annual CTC' : 'Monthly Gross' }}</td>
+              <td><strong>{{ formatCurrency(item.annual_ctc) }}</strong></td>
+              <td>{{ formatCurrency(item.gross_monthly) }}</td>
+              <td>{{ formatCurrency(item.net_monthly) }}</td>
+              <td>
+                <span class="badge" [ngClass]="item.is_active ? 'badge-success' : 'badge-secondary'">
+                  {{ item.is_active ? 'Current Active' : 'Superseded' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noHistory>
+        <div class="empty-state-box">
+          <i class="fas fa-history"></i>
+          <h3>No Revision History</h3>
+          <p>Historical records of annual increments and salary revisions will appear here.</p>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+</div>

@@ -21,8 +21,9 @@ class User(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     profile_image = Column(String, nullable=True)
     
-    # Relationships
     role = relationship("Role")
+    token_version = Column(Integer, default=1, server_default="1", nullable=False)
+    last_login_ip = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     @property

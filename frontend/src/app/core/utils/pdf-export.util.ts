@@ -5,6 +5,7 @@ export interface PdfExportOptions {
   metadata?: { label: string; value: string | number }[];
   headers: string[];
   rows: (string | number)[][];
+  orientation?: 'portrait' | 'landscape';
 }
 
 function escapeHtml(value: string | number): string {
@@ -21,6 +22,7 @@ function escapeHtml(value: string | number): string {
  */
 export function exportTableToPdf(options: PdfExportOptions): void {
   const { title, subtitle, headers, rows, metadata } = options;
+  const orientation = options.orientation || 'portrait';
   const nowStr = new Date().toLocaleString();
 
   const metadataHtml = metadata && metadata.length > 0
@@ -51,8 +53,8 @@ export function exportTableToPdf(options: PdfExportOptions): void {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
     @page {
-      size: A4 landscape;
-      margin: 12mm 15mm;
+      size: A4 portrait;
+      margin: 10mm 12mm;
     }
 
     * {
@@ -65,7 +67,7 @@ export function exportTableToPdf(options: PdfExportOptions): void {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #0F172A;
       background: #FFFFFF;
-      padding: 24px;
+      padding: 10px 14px;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
@@ -75,54 +77,54 @@ export function exportTableToPdf(options: PdfExportOptions): void {
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #2563EB;
-      padding-bottom: 16px;
-      margin-bottom: 20px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .brand-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 800;
       color: #2563EB;
       letter-spacing: -0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     .doc-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 750;
       color: #0F172A;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .doc-subtitle {
-      font-size: 12px;
+      font-size: 11px;
       color: #64748B;
       font-weight: 500;
     }
 
     .report-meta-right {
       text-align: right;
-      font-size: 11px;
+      font-size: 10.5px;
       color: #64748B;
       line-height: 1.5;
     }
 
     .meta-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 10px;
-      margin-bottom: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
     }
 
     .meta-card {
       background: #F8FAFC;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      padding: 8px 12px;
+      border-radius: 6px;
+      padding: 6px 10px;
     }
 
     .meta-label {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 600;
       color: #64748B;
       text-transform: uppercase;
@@ -131,7 +133,7 @@ export function exportTableToPdf(options: PdfExportOptions): void {
     }
 
     .meta-value {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 750;
       color: #0F172A;
     }
@@ -139,8 +141,9 @@ export function exportTableToPdf(options: PdfExportOptions): void {
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
-      margin-top: 8px;
+      font-size: 9.5px;
+      margin-top: 6px;
+      table-layout: auto;
     }
 
     th {
@@ -148,18 +151,26 @@ export function exportTableToPdf(options: PdfExportOptions): void {
       color: #FFFFFF !important;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 8px 10px;
+      letter-spacing: 0.3px;
+      padding: 6px 5px;
+      text-align: center;
+      border: 1px solid #CBD5E1;
+      font-size: 8.5px;
+      white-space: nowrap;
+    }
+
+    th:first-child, td:first-child {
       text-align: left;
-      border: 1px solid #1E3A8A;
-      font-size: 10px;
     }
 
     td {
-      padding: 7px 10px;
+      padding: 6px 5px;
       border: 1px solid #E2E8F0;
       color: #1E293B;
+      text-align: center;
       vertical-align: middle;
+      font-size: 9.5px;
+      white-space: nowrap;
     }
 
     tr.even td {
@@ -171,12 +182,12 @@ export function exportTableToPdf(options: PdfExportOptions): void {
     }
 
     .footer {
-      margin-top: 24px;
-      padding-top: 12px;
+      margin-top: 20px;
+      padding-top: 10px;
       border-top: 1px solid #E2E8F0;
       display: flex;
       justify-content: space-between;
-      font-size: 10px;
+      font-size: 9px;
       color: #94A3B8;
     }
 

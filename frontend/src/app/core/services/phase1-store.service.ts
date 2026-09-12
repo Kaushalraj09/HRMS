@@ -92,19 +92,31 @@ export class Phase1StoreService {
   }
 
   saveBackendSession(response: LoginResponse): void {
-    if (typeof localStorage !== 'undefined') {
+    if (typeof sessionStorage !== 'undefined') {
       if (response.accessToken) {
-        localStorage.setItem(this.tokenKey, response.accessToken);
+        sessionStorage.setItem(this.tokenKey, response.accessToken);
       }
+      if (response.me) {
+        sessionStorage.setItem(this.userKey, JSON.stringify(response.me));
+        sessionStorage.setItem(this.sessionKey, String(response.me.id));
+      }
+    }
+    if (typeof localStorage !== 'undefined') {
       if (response.me) {
         localStorage.setItem(this.userKey, JSON.stringify(response.me));
         localStorage.setItem(this.sessionKey, String(response.me.id));
       }
+      localStorage.removeItem(this.tokenKey);
     }
   }
 
   logout(): void {
     this.removeSession();
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(this.tokenKey);
+      sessionStorage.removeItem(this.userKey);
+      sessionStorage.removeItem(this.sessionKey);
+    }
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(this.tokenKey);
       localStorage.removeItem(this.userKey);
@@ -112,8 +124,8 @@ export class Phase1StoreService {
   }
 
   getToken(): string | null {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(this.tokenKey);
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem(this.tokenKey);
     }
     return null;
   }
@@ -125,14 +137,13 @@ export class Phase1StoreService {
       return null;
     }
 
-    if (typeof localStorage !== 'undefined') {
-      const userJson = localStorage.getItem(this.userKey);
-      if (userJson) {
-        try {
-          return JSON.parse(userJson) as SessionUser;
-        } catch {
-          return null;
-        }
+    const userJson = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(this.userKey) : null)
+      || (typeof localStorage !== 'undefined' ? localStorage.getItem(this.userKey) : null);
+    if (userJson) {
+      try {
+        return JSON.parse(userJson) as SessionUser;
+      } catch {
+        return null;
       }
     }
 

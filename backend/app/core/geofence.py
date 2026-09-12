@@ -28,12 +28,34 @@ def validate_employee_geofence(
     employee: Employee,
     current_lat: Optional[float],
     current_lon: Optional[float],
-    work_mode: Optional[str] = None
+    work_mode: Optional[str] = None,
+    has_approved_wfh: bool = False
 ) -> Dict[str, Any]:
     """
     Validates employee's assigned work location and enforces geofence
     for office locations. Returns location metadata dictionary if validation passes.
     """
+    # Coordinate validation and anti-spoofing checks
+    if current_lat is not None or current_lon is not None:
+        try:
+            lat = float(current_lat)
+            lon = float(current_lon)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"success": False, "message": "Invalid GPS coordinates provided."}
+            )
+        if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"success": False, "message": "GPS coordinates out of valid range (-90 to 90 lat, -180 to 180 lon)."}
+            )
+        if abs(lat) < 0.0001 and abs(lon) < 0.0001:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"success": False, "message": "Invalid GPS coordinates (Null Island / mock location detected)."}
+            )
+
     assigned_location_name = (employee.work_location or "").strip()
     if not assigned_location_name or assigned_location_name.lower() in ["remote", "remote home office", "wfh", "hybrid"]:
         return {
@@ -84,6 +106,14 @@ def validate_employee_geofence(
     # Employee is assigned to an Office location - verify they are not attempting to bypass geofence via work_mode
     mode_str = (work_mode or "").strip().lower()
     if mode_str in ["remote", "work from home", "wfh", "field"]:
+        if has_approved_wfh:
+            return {
+                "is_remote": True,
+                "work_location_id": work_location.id if work_location else None,
+                "work_location_name": work_location.name if work_location else assigned_location_name,
+                "distance_meters": None,
+                "allowed_radius_meters": None,
+            }
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={

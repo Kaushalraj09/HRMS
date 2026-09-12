@@ -196,3 +196,65 @@ def test_attendance_service_today_state_returns_shift_and_half_day_bounds(db_ses
     assert state["lunchStart24"] == "13:30"
     assert state["lunchEnd24"] == "14:30"
     assert state["halfDayHours"] == 4.5
+
+    # Verify TodayAttendanceState schema serializes these fields properly
+    from app.schemas.attendance import TodayAttendanceState
+    schema_obj = TodayAttendanceState(**state)
+    dumped = schema_obj.model_dump(by_alias=True)
+    assert dumped["shiftStart24"] == "10:00"
+    assert dumped["shiftEnd24"] == "19:00"
+    assert dumped["lunchStart24"] == "13:30"
+    assert dumped["lunchEnd24"] == "14:30"
+    assert dumped["halfDayHours"] == 4.5
+
+
+def test_custom_930_shift_half_day_leave_request(db_session):
+    """An employee with shift 09:30 - 18:00 requesting First Half (09:30 - 13:30) must succeed."""
+    emp_user = User(
+        email="emp_930@example.com",
+        password_hash="pw",
+        display_name="930 Emp",
+        role_id=3,
+    )
+    db_session.add(emp_user)
+    db_session.commit()
+
+    shift_930 = Shift(
+        name="9:30 Shift",
+        code="SHIFT930",
+        start_time=time(9, 30),
+        end_time=time(18, 0),
+        lunch_start_time=time(13, 30),
+        lunch_end_time=time(14, 0),
+        half_day_hours=Decimal("4.0"),
+        working_hours=Decimal("8.5"),
+        is_active=True,
+    )
+    db_session.add(shift_930)
+    db_session.commit()
+
+    emp_930 = Employee(
+        first_name="Test",
+        last_name="930",
+        employee_code="EMP930",
+        official_email="emp_930@example.com",
+        mobile="9876543211",
+        user_id=emp_user.id,
+        shift_id=shift_930.id,
+    )
+    db_session.add(emp_930)
+    db_session.commit()
+
+    req = TimeOffRequestCreate(
+        date=date(2026, 9, 11),  # Friday
+        leave_type="Half-Day",
+        start_time=time(9, 30),
+        end_time=time(13, 30),
+        duration_hours=4.0,
+        reason="Doctor Appointment",
+    )
+    created = request_timeoff(db_session, emp_930.id, req, dispatch_event=False)
+    assert created.status == "Pending"
+    assert created.start_time == time(9, 30)
+    assert created.end_time == time(13, 30)
+

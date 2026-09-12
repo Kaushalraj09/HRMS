@@ -588,7 +588,22 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
     emp_rec = db.query(Employee).filter(Employee.id == employee_id).first()
     is_remote = _is_remote_worker(db, emp_rec)
-    default_work_mode = "Remote" if is_remote else "Office"
+
+    # Check for approved WFH request for today
+    from app.models.timeoff import TimeOffRequest
+    from sqlalchemy import func
+    approved_wfh = db.query(TimeOffRequest).filter(
+        TimeOffRequest.employee_id == employee_id,
+        TimeOffRequest.date == today,
+        TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+        (
+            (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
+            (func.lower(TimeOffRequest.leave_type).like("%home%"))
+        )
+    ).first()
+    has_approved_wfh = approved_wfh is not None
+    effective_remote = is_remote or has_approved_wfh
+    default_work_mode = "Remote" if effective_remote else "Office"
     
     attendance = (
         db.query(Attendance)
@@ -611,10 +626,10 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         db.refresh(attendance)
     elif not attendance.shift_id:
         attendance.shift_id = shift.id
-        if is_remote and not attendance.punch_in and attendance.work_mode != "Remote":
+        if effective_remote and not attendance.punch_in and attendance.work_mode != "Remote":
             attendance.work_mode = "Remote"
         db.commit()
-    elif is_remote and not attendance.punch_in and attendance.work_mode != "Remote":
+    elif effective_remote and not attendance.punch_in and attendance.work_mode != "Remote":
         attendance.work_mode = "Remote"
         db.commit()
         
@@ -721,8 +736,9 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "halfDayHours": float(shift.half_day_hours or ((shift.required_work_minutes or 480) / 120.0) or 4.0),
         "graceMinutes": shift.grace_minutes or 30,
         "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
-        "workMode": "Remote" if is_remote else (attendance.work_mode if attendance else "Office"),
+        "workMode": "Remote" if effective_remote else (attendance.work_mode if attendance else "Office"),
         "isRemoteWorker": is_remote,
+        "hasApprovedWfh": has_approved_wfh,
         "workLocationName": assigned_loc_name,
         "workLocationId": attendance.work_location_id if attendance else None,
         "punchIn": attendance.punch_in if attendance else None,
@@ -880,6 +896,11 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
             "is_night_shift": bool(shift_obj.is_night_shift),
         }
 
+    timeoff_hours = 0.0
+    if db:
+        timeoff_hours = get_timeoff_duration_for_date(db, record.employee_id, record.date)
+    timeoff_minutes = int(round(timeoff_hours * 60))
+
     return AttendanceResponse(
         id=record.id,
         employee_id=record.employee_id,
@@ -901,6 +922,8 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
         grand_total_minutes=record.grand_total_minutes or 0,
         late_minutes=late_minutes,
         early_exit_minutes=early_exit_minutes,
+        timeoff_minutes=timeoff_minutes,
+        timeoff_hours=timeoff_hours,
         punch_in_latitude=record.punch_in_latitude,
         punch_in_longitude=record.punch_in_longitude,
         punch_in_address=record.punch_in_address,

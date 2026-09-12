@@ -46,6 +46,7 @@ export interface EmployeeTimesheetRow {
   entry: string;
   exit: string;
   late?: string;
+  timeOff?: string;
   total: string;
   overtime: string;
   break: string;

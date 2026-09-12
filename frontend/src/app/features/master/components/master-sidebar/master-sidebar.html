@@ -15,7 +15,7 @@
       <div class="menu-group">
         <h5 class="group-title" *ngIf="group.groupName">
           <span class="title-text">{{ group.groupName }}</span>
-          <i class="fas fa-ellipsis-h collapsed-title-icon"></i>
+          <span class="collapsed-divider"></span>
         </h5>
         
         <ul class="menu-list">
@@ -56,12 +56,13 @@
               </a>
               
               <!-- Sub Menu -->
-              <ul class="sub-menu" [class.open]="item.expanded" [style.maxHeight]="item.expanded ? item.children.length * 45 + 'px' : '0'">
+              <ul class="sub-menu" [class.open]="item.expanded" [style.maxHeight]="item.expanded ? (item.children.length * 48 + 30) + 'px' : '0'">
                 <li *ngFor="let child of item.children" class="sub-menu-item">
                   <a [routerLink]="child.route" 
                      routerLinkActive="active" 
                      [routerLinkActiveOptions]="{exact: true}"
                      class="sub-menu-link">
+                    <i *ngIf="child.icon" [class]="child.icon" class="sub-menu-icon"></i>
                     <span class="sub-menu-text">{{ child.label }}</span>
                   </a>
                 </li>

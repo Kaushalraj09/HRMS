@@ -28,10 +28,10 @@ from app.api.v1 import (
     approval_routes,
     document_routes,
     training_routes,
+    payroll_routes,
 )
 
 logger = logging.getLogger(__name__)
-
 
 
 @asynccontextmanager
@@ -119,6 +119,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(self), geolocation=(self), microphone=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; font-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws: wss: http: https:;"
     return response
 
 
@@ -175,3 +177,4 @@ app.include_router(master_data_routes.router, prefix="/api/v1")
 app.include_router(approval_routes.router, prefix="/api/v1")
 app.include_router(document_routes.router, prefix="/api/v1")
 app.include_router(training_routes.router, prefix="/api/v1")
+app.include_router(payroll_routes.router, prefix="/api/v1")

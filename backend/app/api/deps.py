@@ -25,6 +25,7 @@ def get_current_user(
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         active_dashboard: str = payload.get("activeDashboard")
+        token_version = payload.get("tv")
         if email is None or payload.get("type") != "access":
             raise credentials_exception
     except jwt.InvalidTokenError:
@@ -33,6 +34,11 @@ def get_current_user(
     user = db.query(User).filter(User.email == email).first()
     if user is None or user.status in ["Inactive", "Deleted"]:
         raise credentials_exception
+
+    # Enforce token version matching for immediate revocation on logout / password reset
+    if token_version is not None and user.token_version is not None:
+        if token_version != user.token_version:
+            raise credentials_exception
     
     # Dynamically set the active dashboard on the user object
     user.active_dashboard = active_dashboard
@@ -54,4 +60,3 @@ def get_ws_user(db: Session, ticket: str | None) -> User | None:
         return user
     except jwt.InvalidTokenError:
         return None
-

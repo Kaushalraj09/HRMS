@@ -159,6 +159,7 @@
                         <th class="th-time">ENTRY</th>
                         <th class="th-time">EXIT</th>
                         <th class="th-late">LATE</th>
+                        <th class="th-timeoff">TIME-OFF</th>
                         <th class="th-hours">WORK HOURS</th>
                         <th class="th-hours">OVERTIME</th>
                         <th class="th-hours">BREAK</th>
@@ -169,7 +170,7 @@
                 <tbody>
                     <!-- Empty State -->
                     <tr *ngIf="timeSheets.length === 0" class="no-data-row">
-                        <td colspan="10">
+                        <td colspan="11">
                             <div class="empty-state-box">
                                 <div class="empty-icon-circle">
                                     <i class="far fa-calendar-times"></i>
@@ -219,6 +220,14 @@
                                 <i class="fas fa-exclamation-triangle"></i> {{ sheet.late }}
                             </span>
                             <span *ngIf="!isLate(sheet.late)" class="text-muted-dash">-</span>
+                        </td>
+
+                        <!-- Time-Off -->
+                        <td class="td-timeoff">
+                            <span *ngIf="sheet.timeOff && sheet.timeOff !== '-' && sheet.timeOff !== '0h 0m'" class="timeoff-pill">
+                                <i class="fas fa-calendar-minus"></i> {{ sheet.timeOff }}
+                            </span>
+                            <span *ngIf="!sheet.timeOff || sheet.timeOff === '-' || sheet.timeOff === '0h 0m'" class="text-muted-dash">-</span>
                         </td>
 
                         <!-- Work Hours (Total) -->
@@ -302,6 +311,111 @@
                 >
                     <span>Next</span>
                     <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTENDANCE REPORT PREVIEW MODAL -->
+    <div class="preview-modal-overlay" *ngIf="showPreviewModal" (click)="closeExportPreview()">
+        <div class="preview-modal-box" (click)="$event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="preview-modal-header">
+                <div class="preview-modal-title-group">
+                    <div class="preview-icon-circle">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div>
+                        <h3 class="preview-title">Attendance Report Preview</h3>
+                        <p class="preview-subtitle">Review attendance data before printing or downloading PDF</p>
+                    </div>
+                </div>
+                <button class="preview-close-btn" (click)="closeExportPreview()" aria-label="Close Preview">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Report Document Body -->
+            <div class="preview-document-body">
+                <!-- Report Header -->
+                <div class="report-doc-header">
+                    <div class="report-doc-branding">
+                        <h2>AIVAN 360 HR+</h2>
+                        <p>Enterprise Human Resource Management</p>
+                    </div>
+                    <div class="report-doc-info">
+                        <div class="info-row"><strong>Employee:</strong> {{ employeeName }} ({{ employeeCode }})</div>
+                        <div class="info-row"><strong>Department:</strong> {{ departmentName }}</div>
+                        <div class="info-row"><strong>Period:</strong> {{ previewDateRangeLabel }}</div>
+                    </div>
+                </div>
+
+                <!-- Report KPI Cards -->
+                <div class="report-kpi-summary">
+                    <div class="report-kpi-pill">
+                        <span class="lbl">Total Work Hours</span>
+                        <span class="val">{{ totalWorkHoursDisplay }}</span>
+                    </div>
+                    <div class="report-kpi-pill">
+                        <span class="lbl">Present Days</span>
+                        <span class="val">{{ presentDaysCount }}</span>
+                    </div>
+                    <div class="report-kpi-pill">
+                        <span class="lbl">Total Overtime</span>
+                        <span class="val">{{ overtimeHoursDisplay }}</span>
+                    </div>
+                    <div class="report-kpi-pill">
+                        <span class="lbl">Absent Days</span>
+                        <span class="val">{{ absentDaysCount }}</span>
+                    </div>
+                </div>
+
+                <!-- Report Table -->
+                <div class="report-table-scroll">
+                    <table class="report-preview-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Day</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Late</th>
+                                <th>Time-Off</th>
+                                <th>Work Hours</th>
+                                <th>Overtime</th>
+                                <th>Break</th>
+                                <th>Grand Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let row of timeSheets">
+                                <td>{{ row.date }}</td>
+                                <td>{{ row.day }}</td>
+                                <td>{{ row.entry }}</td>
+                                <td>{{ row.exit }}</td>
+                                <td>{{ row.late || '-' }}</td>
+                                <td>{{ row.timeOff || '-' }}</td>
+                                <td>{{ row.total || '-' }}</td>
+                                <td>{{ row.overtime || '-' }}</td>
+                                <td>{{ row.break || '-' }}</td>
+                                <td>{{ row.grandTotal || '-' }}</td>
+                                <td>
+                                    <span class="report-status-badge">{{ row.status }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="preview-modal-footer">
+                <button type="button" class="preview-btn-cancel" (click)="closeExportPreview()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="preview-btn-print" (click)="printReport()">
+                    <i class="fas fa-print"></i> Print / Download PDF
                 </button>
             </div>
         </div>

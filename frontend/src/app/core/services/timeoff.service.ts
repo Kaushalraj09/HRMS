@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 
 import { buildApiUrl } from '../config/api.config';
-import { TimeOffRequest, TimeOffApplyResponse } from '../models/timeoff.model';
+import { TimeOffRequest, TimeOffApplyResponse, YearlyLeaveBalance } from '../models/timeoff.model';
 import { PaginatedResponse } from '../models/attendance.model';
 
 @Injectable({
@@ -154,6 +154,28 @@ export class TimeoffService {
       decision,
       comment: comments || '',
       approvedHours: approvedHours ?? null
+    });
+  }
+
+  getMyLeaveBalances(year?: number): Observable<any> {
+    let params = new HttpParams().set('_ts', Date.now().toString());
+    if (year) {
+      params = params.set('year', year.toString());
+    }
+    return this.http.get<any>(`${this.apiUrl}/balances/my`, {
+      headers: this.noCacheHeaders,
+      params
+    });
+  }
+
+  getYearlyLeaveBalances(employeeId: number, year?: number): Observable<YearlyLeaveBalance[]> {
+    let params = new HttpParams().set('_ts', Date.now().toString());
+    if (year) {
+      params = params.set('year', year.toString());
+    }
+    return this.http.get<YearlyLeaveBalance[]>(`${this.apiUrl}/balances/yearly/${employeeId}`, {
+      headers: this.noCacheHeaders,
+      params
     });
   }
 

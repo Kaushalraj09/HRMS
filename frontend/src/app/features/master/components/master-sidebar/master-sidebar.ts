@@ -68,6 +68,25 @@ export class MasterSidebar implements OnInit {
       ]
     },
     {
+      groupName: 'Payroll Management',
+      items: [
+        {
+          label: 'Payroll',
+          icon: 'fas fa-money-check-alt',
+          route: '/master-dashboard/payroll/dashboard',
+          children: [
+            { label: 'Dashboard', icon: 'fas fa-chart-pie', route: '/master-dashboard/payroll/dashboard' },
+            { label: 'Employee Salaries', icon: 'fas fa-users-cog', route: '/master-dashboard/payroll/salaries' },
+            { label: 'Salary Structures', icon: 'fas fa-layer-group', route: '/master-dashboard/payroll/structures' },
+            { label: 'Payroll Runs', icon: 'fas fa-cogs', route: '/master-dashboard/payroll/runs' },
+            { label: 'Salary Revisions', icon: 'fas fa-chart-line', route: '/master-dashboard/payroll/revisions' },
+            { label: 'Payslips', icon: 'fas fa-file-invoice-dollar', route: '/master-dashboard/payroll/payslips' },
+            { label: 'Statutory Rules', icon: 'fas fa-balance-scale', route: '/master-dashboard/payroll/statutory' }
+          ]
+        }
+      ]
+    },
+    {
       groupName: 'Cross Role Views',
       items: [
         { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
@@ -142,13 +161,14 @@ export class MasterSidebar implements OnInit {
   }
 
   checkActiveRoutes(): void {
-    const currentUrl = this.router.url;
+    const currentUrl = this.router.url.split('?')[0];
     this.menuConfig.forEach(group => {
       group.items.forEach(item => {
         if (item.children) {
-          const isActive = item.children.some(child => child.route && currentUrl.includes(child.route));
+          const isActive = (item.route && (currentUrl === item.route || currentUrl.startsWith(item.route + '/') || (item.route.endsWith('/dashboard') && currentUrl === item.route.replace('/dashboard', '')))) ||
+            item.children.some(child => child.route && (currentUrl === child.route || currentUrl.startsWith(child.route + '/')));
           if (isActive) {
-             item.expanded = true;
+            item.expanded = true;
           }
         }
       });
@@ -157,7 +177,8 @@ export class MasterSidebar implements OnInit {
 
   isParentActive(item: MenuItem): boolean {
     if (!item.children) return false;
-    const currentUrl = this.router.url;
-    return item.children.some(child => child.route && currentUrl.includes(child.route));
+    const currentUrl = this.router.url.split('?')[0];
+    return Boolean((item.route && (currentUrl === item.route || currentUrl.startsWith(item.route + '/') || (item.route.endsWith('/dashboard') && currentUrl === item.route.replace('/dashboard', '')))) ||
+      item.children.some(child => child.route && (currentUrl === child.route || currentUrl.startsWith(child.route + '/'))));
   }
 }

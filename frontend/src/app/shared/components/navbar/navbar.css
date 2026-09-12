@@ -898,26 +898,26 @@
   .notification-dropdown {
     position: fixed !important;
     top: 56px !important;
-    left: 8px !important;
+    left: 76px !important;
     right: 8px !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 84px) !important;
     max-height: 80vh !important;
     box-shadow: 0 12px 36px rgba(15, 23, 42, 0.25) !important;
-    z-index: 1100 !important;
+    z-index: 1500 !important;
   }
 
   .omni-search-dropdown {
     position: fixed !important;
     top: 56px !important;
-    left: 8px !important;
+    left: 76px !important;
     right: 8px !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 84px) !important;
     max-height: 75vh !important;
     overflow-y: auto !important;
     box-shadow: 0 12px 36px rgba(15, 23, 42, 0.25) !important;
-    z-index: 1100 !important;
+    z-index: 1500 !important;
   }
 
   .lang-dropdown-menu {

@@ -108,6 +108,12 @@ class LeaveType(Base):
     default_balance_hours = Column(Numeric(10, 2), nullable=False, default=0.0)
     requires_approval = Column(Boolean, nullable=False, default=True)
     is_active = Column(Boolean, nullable=False, default=True)
+    applicable_employee_type = Column(String(50), nullable=False, default="all")
+    carry_forward = Column(Boolean, nullable=False, default=False)
+    max_consecutive_days = Column(Integer, nullable=True)
+    counts_as_leave = Column(Boolean, nullable=False, default=True)
+    attendance_required = Column(Boolean, nullable=False, default=False)
+    remote_punch_allowed = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

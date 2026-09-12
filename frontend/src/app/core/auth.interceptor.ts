@@ -13,8 +13,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   let processedReq = req;
   if (isLocalApi) {
+    const token = auth.getToken();
+    const setHeaders: Record<string, string> = {};
+    if (token) {
+      setHeaders['Authorization'] = `Bearer ${token}`;
+    }
     processedReq = req.clone({
-      withCredentials: true
+      withCredentials: true,
+      setHeaders
     });
   }
 

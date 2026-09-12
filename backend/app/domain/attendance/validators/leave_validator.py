@@ -38,12 +38,14 @@ class LeaveValidator:
             return
 
         # 1. Enforce shift bounds constraint
+        from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
         shift = ShiftRepository.get_assigned_shift(db, employee_id, target_date)
-        if shift.start_time and shift.end_time:
-            if start_time < shift.start_time or end_time > shift.end_time:
+        eff_shift = ShiftCalculationService.get_effective_shift(shift)
+        if eff_shift.start_time and eff_shift.end_time:
+            if start_time < eff_shift.start_time or end_time > eff_shift.end_time:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Requested time off falls outside of your assigned shift hours ({shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')})."
+                    detail=f"Requested time off falls outside of your assigned shift hours ({eff_shift.start_time.strftime('%H:%M')} - {eff_shift.end_time.strftime('%H:%M')})."
                 )
 
         # 2. Prevent leave on holidays
@@ -54,8 +56,8 @@ class LeaveValidator:
                 detail=f"Cannot apply for time off on a public holiday ({holiday.name})."
             )
 
-        # 3. Prevent leave on weekly off (weekends)
-        if target_date.weekday() in (5, 6): # Sat, Sun
+        # 3. Prevent leave on weekly off (Sunday only)
+        if target_date.weekday() == 6:  # Sunday
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Time off cannot be requested on a weekly off day."

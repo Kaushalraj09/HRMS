@@ -11,7 +11,7 @@ from app.domain.overtime.overtime_service import OvertimeService
 from app.domain.events.dispatcher import EventDispatcher
 from app.domain.events import types as ev_types
 from app.services.attendance_service import get_timeoff_duration_for_date, log_audit_trail_sync
-from app.core.geofence import validate_employee_geofence
+from app.core.geofence import validate_employee_geofence, calculate_haversine_distance
 from app.core.shift_rules import get_shift_rule_value
 import logging
 
@@ -98,8 +98,22 @@ class PunchService:
                 if wl and wl.location_type and wl.location_type.lower() != "office":
                     is_remote_employee = True
 
+            # Check if an approved Work From Home (WFH) request exists for today
+            from app.models.timeoff import TimeOffRequest
+            from sqlalchemy import func
+            approved_wfh = db.query(TimeOffRequest).filter(
+                TimeOffRequest.employee_id == employee.id,
+                TimeOffRequest.date == today,
+                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+                (
+                    (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
+                    (func.lower(TimeOffRequest.leave_type).like("%home%"))
+                )
+            ).first()
+            has_approved_wfh = approved_wfh is not None
+
             req_mode = (work_mode or "").strip().lower()
-            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
+            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee and not has_approved_wfh:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -109,8 +123,47 @@ class PunchService:
                     }
                 )
 
-            effective_work_mode = "Remote" if is_remote_employee else "Office"
-            geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
+            # Anti-spoofing: Check for impossible travel speed (> 250 km/h) if recent punch exists within 2 hours
+            if latitude is not None and longitude is not None:
+                last_record = db.query(Attendance).filter(
+                    Attendance.employee_id == employee_id,
+                    Attendance.date <= today
+                ).order_by(Attendance.date.desc(), Attendance.id.desc()).first()
+
+                if last_record:
+                    last_time = None
+                    last_lat = None
+                    last_lon = None
+                    if last_record.punch_out and last_record.punch_out_latitude is not None and last_record.punch_out_longitude is not None:
+                        last_time = datetime.combine(last_record.date, last_record.punch_out)
+                        last_lat = last_record.punch_out_latitude
+                        last_lon = last_record.punch_out_longitude
+                    elif last_record.punch_in and last_record.punch_in_latitude is not None and last_record.punch_in_longitude is not None:
+                        last_time = datetime.combine(last_record.date, last_record.punch_in)
+                        last_lat = last_record.punch_in_latitude
+                        last_lon = last_record.punch_in_longitude
+
+                    if last_time and last_lat is not None and last_lon is not None:
+                        now_dt = datetime.combine(today, current.time())
+                        if now_dt > last_time:
+                            elapsed_hours = (now_dt - last_time).total_seconds() / 3600.0
+                            if 0 < elapsed_hours < 2.0:
+                                dist_meters = calculate_haversine_distance(last_lat, last_lon, float(latitude), float(longitude))
+                                speed_kmh = (dist_meters / 1000.0) / elapsed_hours
+                                if speed_kmh > 250.0:
+                                    raise HTTPException(
+                                        status_code=status.HTTP_400_BAD_REQUEST,
+                                        detail={
+                                            "success": False,
+                                            "message": f"Impossible travel detected: calculated speed of {round(speed_kmh, 1)} km/h between punches exceeds allowed limit (250 km/h). Please verify your GPS location.",
+                                            "speed_kmh": round(speed_kmh, 1)
+                                        }
+                                    )
+
+            effective_work_mode = "Remote" if (is_remote_employee or has_approved_wfh) else "Office"
+            geofence_data = validate_employee_geofence(
+                db, employee, latitude, longitude, work_mode=effective_work_mode, has_approved_wfh=has_approved_wfh
+            )
             
             # Create or update record
             shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
@@ -151,7 +204,7 @@ class PunchService:
                     employee_id=employee_id,
                     date=today,
                     is_working=1,
-                    work_mode=work_mode,
+                    work_mode=effective_work_mode,
                     status="WORKING"
                 )
                 if shift:
@@ -165,7 +218,7 @@ class PunchService:
                 db.flush()
             else:
                 attendance.is_working = 1
-                attendance.work_mode = work_mode
+                attendance.work_mode = effective_work_mode
                 attendance.status = "WORKING"
                 if shift and not attendance.shift_id:
                     attendance.shift_id = shift.id
@@ -312,8 +365,22 @@ class PunchService:
                 if wl and wl.location_type and wl.location_type.lower() != "office":
                     is_remote_employee = True
 
+            # Check if an approved Work From Home (WFH) request exists for today
+            from app.models.timeoff import TimeOffRequest
+            from sqlalchemy import func
+            approved_wfh = db.query(TimeOffRequest).filter(
+                TimeOffRequest.employee_id == employee.id,
+                TimeOffRequest.date == today,
+                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+                (
+                    (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
+                    (func.lower(TimeOffRequest.leave_type).like("%home%"))
+                )
+            ).first()
+            has_approved_wfh = approved_wfh is not None
+
             req_mode = (work_mode or attendance.work_mode or "").strip().lower()
-            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
+            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee and not has_approved_wfh:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -323,8 +390,31 @@ class PunchService:
                     }
                 )
 
-            effective_work_mode = "Remote" if is_remote_employee else "Office"
+            # Anti-spoofing: Check for impossible travel speed (> 250 km/h) between punch-in and punch-out
+            if latitude is not None and longitude is not None and attendance.punch_in and attendance.punch_in_latitude is not None and attendance.punch_in_longitude is not None:
+                punch_in_dt = datetime.combine(today, attendance.punch_in)
+                now_dt = datetime.combine(today, current.time())
+                if now_dt > punch_in_dt:
+                    elapsed_hours = (now_dt - punch_in_dt).total_seconds() / 3600.0
+                    if 0 < elapsed_hours < 2.0:
+                        dist_meters = calculate_haversine_distance(
+                            attendance.punch_in_latitude, attendance.punch_in_longitude,
+                            float(latitude), float(longitude)
+                        )
+                        speed_kmh = (dist_meters / 1000.0) / elapsed_hours
+                        if speed_kmh > 250.0:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail={
+                                    "success": False,
+                                    "message": f"Impossible travel detected: calculated speed of {round(speed_kmh, 1)} km/h between punches exceeds allowed limit (250 km/h). Please verify your GPS location.",
+                                    "speed_kmh": round(speed_kmh, 1)
+                                }
+                            )
+
+            effective_work_mode = "Remote" if (is_remote_employee or has_approved_wfh) else "Office"
             geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
+            attendance.work_mode = effective_work_mode
 
             attendance.punch_out = current.time()
             attendance.punch_out_latitude = latitude

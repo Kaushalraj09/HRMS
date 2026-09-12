@@ -107,10 +107,13 @@ def authenticate_user(db: Session, request: LoginRequest):
         else:
             active_dashboard = "EMPLOYEE"
 
-        # 3. Create a token with the activeDashboard claim
+        # 3. Create a token with the activeDashboard claim and token_version
         token = create_access_token(
             subject=user.email,
-            additional_claims={"activeDashboard": active_dashboard}
+            additional_claims={
+                "activeDashboard": active_dashboard,
+                "tv": user.token_version if user.token_version is not None else 1,
+            }
         )
         
         return {
@@ -144,8 +147,9 @@ def change_user_password(db: Session, user_id: int, request: ChangePasswordReque
     if not verify_password(request.currentPassword, user.password_hash):
         return {"success": False, "message": "Current password is incorrect"}
 
-    # 4. Save new password
+    # 4. Save new password and revoke existing sessions by incrementing token_version
     user.password_hash = hash_password(request.newPassword)
+    user.token_version = (user.token_version or 1) + 1
     db.commit()
     
     return {"success": True, "message": "Password updated successfully"}
@@ -212,6 +216,7 @@ def reset_password(db: Session, request):
         return {"success": False, "message": "Invalid or expired token"}
     
     user.password_hash = hash_password(request.newPassword)
+    user.token_version = (user.token_version or 1) + 1
     db.commit()
     
     return {"success": True, "message": "Password reset successfully"}

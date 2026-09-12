@@ -109,6 +109,7 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
   }
 
   openUpward = false;
+  alignRight = false;
 
   togglePicker(): void {
     if (this.disabled) return;
@@ -135,11 +136,29 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
         const rect = trigger.getBoundingClientRect();
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
-        // The calendar popup is ~330px high. If space below is less than 340px and space above is larger, flip upwards
-        this.openUpward = spaceBelow < 340 && spaceAbove > spaceBelow;
+
+        // Check if datepicker is inside a modal or dialog container
+        const modal = trigger.closest('.modal-card, .modal-dialog, .modal-content, [class*="modal"]');
+        if (modal) {
+          const modalRect = modal.getBoundingClientRect();
+          const spaceAboveInModal = rect.top - modalRect.top;
+          // In a modal, never open upward unless there is ample room (>320px) inside the modal above the input
+          if (spaceAboveInModal < 320) {
+            this.openUpward = false;
+          } else {
+            this.openUpward = spaceBelow < 330 && spaceAboveInModal >= 320;
+          }
+        } else {
+          // Standard page flow: calendar popup is ~330px high
+          this.openUpward = spaceBelow < 330 && spaceAbove > 340;
+        }
+
+        // Align right if calendar card (~255px wide) would overflow viewport on the right
+        this.alignRight = (rect.left + 265) > window.innerWidth;
       }
     } catch {
       this.openUpward = false;
+      this.alignRight = false;
     }
   }
 
@@ -273,8 +292,9 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
       });
     }
 
-    // Next month padding days to complete 42 grid cells
-    const remainingCells = 42 - days.length;
+    // Next month padding days to complete 35 or 42 grid cells (avoiding extra redundant 6th row)
+    const targetCells = days.length > 35 ? 42 : (days.length > 28 ? 35 : 28);
+    const remainingCells = targetCells - days.length;
     for (let i = 1; i <= remainingCells; i++) {
       const nextDate = new Date(year, month + 1, i);
       const iso = this.toIsoString(nextDate);

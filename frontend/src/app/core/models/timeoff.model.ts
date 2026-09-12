@@ -11,6 +11,27 @@ export interface TimeOffRequest {
   attachment_name?: string | null;
   employee_name?: string | null;
   batch_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  total_days?: number | null;
+}
+
+export interface YearlyLeaveBalance {
+  leave_type_id: number;
+  code: string;
+  name: string;
+  unit_type: string;
+  year: number;
+  allocated_days: number;
+  used_days: number;
+  pending_days: number;
+  available_days: number;
+  carry_forward_days: number;
+  is_wfh: boolean;
+  counts_as_leave: boolean;
+  attendance_required: boolean;
+  remote_punch_allowed: boolean;
+  applicable_employee_type: string;
 }
 
 export interface GroupedTimeOffRequest {

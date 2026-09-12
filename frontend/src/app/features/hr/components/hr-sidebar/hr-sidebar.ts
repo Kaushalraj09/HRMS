@@ -34,7 +34,7 @@ export class HrSidebar implements OnInit {
      collapsed = false;
      @Input() menuConfig: MenuGroup[] = [
       { 
-        groupName: 'Hr Dashboard',
+        groupName: 'HR Management',
         items: [ 
           { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
           { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
@@ -50,7 +50,31 @@ export class HrSidebar implements OnInit {
               { label: 'Training Reports', route: '/hr-dashboard/training-reports' }
             ]
           },
-          { label: 'Reports', icon: 'fas fa-file-contract', route: '/hr-dashboard/reports' },
+          { label: 'Reports', icon: 'fas fa-file-contract', route: '/hr-dashboard/reports' }
+        ]
+      },
+      {
+        groupName: 'Payroll Management',
+        items: [
+          {
+            label: 'Payroll',
+            icon: 'fas fa-money-check-alt',
+            route: '/hr-dashboard/payroll/dashboard',
+            children: [
+              { label: 'Dashboard', icon: 'fas fa-chart-pie', route: '/hr-dashboard/payroll/dashboard' },
+              { label: 'Employee Salaries', icon: 'fas fa-users-cog', route: '/hr-dashboard/payroll/salaries' },
+              { label: 'Salary Structures', icon: 'fas fa-layer-group', route: '/hr-dashboard/payroll/structures' },
+              { label: 'Payroll Runs', icon: 'fas fa-cogs', route: '/hr-dashboard/payroll/runs' },
+              { label: 'Salary Revisions', icon: 'fas fa-chart-line', route: '/hr-dashboard/payroll/revisions' },
+              { label: 'Payslips', icon: 'fas fa-file-invoice-dollar', route: '/hr-dashboard/payroll/payslips' },
+              { label: 'Statutory Rules', icon: 'fas fa-balance-scale', route: '/hr-dashboard/payroll/statutory' }
+            ]
+          }
+        ]
+      },
+      {
+        groupName: 'Account',
+        items: [
           { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
           { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },
           { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }
@@ -93,15 +117,15 @@ export class HrSidebar implements OnInit {
       ngOnInit(): void {
         const user = this.authService.getCurrentUser();
         if (user?.role === 'admin') {
-          this.menuConfig = [
-            {
-              groupName: 'HR View (View Only)',
+          const hasCrossRole = this.menuConfig.some(g => g.groupName === 'Cross Role Views');
+          if (!hasCrossRole) {
+            this.menuConfig.push({
+              groupName: 'Cross Role Views',
               items: [
-                { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' },
-                { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' }
+                { label: 'Admin Dashboard', icon: 'fas fa-tachometer-alt', route: '/master-dashboard' }
               ]
-            }
-          ];
+            });
+          }
         }
 
         this.checkMobileCollapse();
@@ -131,11 +155,12 @@ export class HrSidebar implements OnInit {
       }
     
       checkActiveRoutes(): void {
-        const currentUrl = this.router.url;
+        const currentUrl = this.router.url.split('?')[0];
         this.menuConfig.forEach(group => {
           group.items.forEach(item => {
             if (item.children) {
-              const isActive = item.children.some(child => child.route && currentUrl.includes(child.route));
+              const isActive = (item.route && (currentUrl === item.route || currentUrl.startsWith(item.route + '/') || (item.route.endsWith('/dashboard') && currentUrl === item.route.replace('/dashboard', '')))) ||
+                item.children.some(child => child.route && (currentUrl === child.route || currentUrl.startsWith(child.route + '/')));
               if (isActive) {
                  item.expanded = true;
               }
@@ -146,7 +171,8 @@ export class HrSidebar implements OnInit {
     
       isParentActive(item: MenuItem): boolean {
         if (!item.children) return false;
-        const currentUrl = this.router.url;
-        return item.children.some(child => child.route && currentUrl.includes(child.route));
+        const currentUrl = this.router.url.split('?')[0];
+        return Boolean((item.route && (currentUrl === item.route || currentUrl.startsWith(item.route + '/') || (item.route.endsWith('/dashboard') && currentUrl === item.route.replace('/dashboard', '')))) ||
+          item.children.some(child => child.route && (currentUrl === child.route || currentUrl.startsWith(child.route + '/'))));
       }
 }

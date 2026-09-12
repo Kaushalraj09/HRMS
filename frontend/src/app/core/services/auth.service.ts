@@ -14,30 +14,32 @@ export class AuthService {
 
   private readonly apiUrl = buildApiUrl('/auth');
   
+  private readonly tokenKey = 'aivan_hrms_phase1_token_v1';
   private readonly userKey = 'aivan_hrms_phase1_user_v1';
   private readonly sessionKey = 'aivan_hrms_phase1_session_v1';
-
-  private get storage(): Storage | null {
-    if (typeof localStorage !== 'undefined') return localStorage;
-    if (typeof sessionStorage !== 'undefined') return sessionStorage;
-    return null;
-  }
 
   constructor(
     private readonly http: HttpClient
   ) {
     let initialUser: SessionUser | null = null;
-    const storages = [
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      typeof sessionStorage !== 'undefined' ? sessionStorage : null
-    ].filter(Boolean) as Storage[];
-
-    for (const s of storages) {
-      const stored = s.getItem(this.userKey);
+    // Prefer tab-isolated sessionStorage so each browser tab maintains its own independent session
+    if (typeof sessionStorage !== 'undefined') {
+      const stored = sessionStorage.getItem(this.userKey);
       if (stored) {
         try {
           initialUser = JSON.parse(stored);
-          if (initialUser) break;
+        } catch (e) {}
+      }
+    }
+    // Fallback to localStorage only if sessionStorage is empty (user profile cache only, not JWT token)
+    if (!initialUser && typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem(this.userKey);
+      if (stored) {
+        try {
+          initialUser = JSON.parse(stored);
+          if (initialUser && typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(this.userKey, stored);
+          }
         } catch (e) {}
       }
     }
@@ -63,32 +65,55 @@ export class AuthService {
   }
 
   saveSession(response: LoginResponse): void {
-    const storages = [
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      typeof sessionStorage !== 'undefined' ? sessionStorage : null
-    ].filter(Boolean) as Storage[];
-
-    for (const s of storages) {
+    // Store in tab-scoped sessionStorage so multiple tabs can be logged into different users
+    // and prevent XSS persistent token exfiltration from localStorage
+    if (typeof sessionStorage !== 'undefined') {
       try {
         if (response.me) {
-          s.setItem(this.userKey, JSON.stringify(response.me));
-          s.setItem(this.sessionKey, String(response.me.id));
+          sessionStorage.setItem(this.userKey, JSON.stringify(response.me));
+          sessionStorage.setItem(this.sessionKey, String(response.me.id));
         }
+        if (response.accessToken) {
+          sessionStorage.setItem(this.tokenKey, response.accessToken);
+        }
+      } catch (e) {}
+    }
+
+    // Keep only user profile metadata in localStorage for offline/tab-restoration; DO NOT store JWT
+    if (typeof localStorage !== 'undefined') {
+      try {
+        if (response.me) {
+          localStorage.setItem(this.userKey, JSON.stringify(response.me));
+          localStorage.setItem(this.sessionKey, String(response.me.id));
+        }
+        // Clean up any legacy token that may exist
+        localStorage.removeItem(this.tokenKey);
       } catch (e) {}
     }
   }
 
+  getToken(): string | null {
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem(this.tokenKey);
+    }
+    return null;
+  }
+
   logout(): void {
     this.http.post<StandardResponse>(`${this.apiUrl}/logout`, {}).subscribe({ error: () => undefined });
-    const storages = [
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      typeof sessionStorage !== 'undefined' ? sessionStorage : null
-    ].filter(Boolean) as Storage[];
-
-    for (const s of storages) {
+    // Clear only this tab's session
+    if (typeof sessionStorage !== 'undefined') {
       try {
-        s.removeItem(this.userKey);
-        s.removeItem(this.sessionKey);
+        sessionStorage.removeItem(this.userKey);
+        sessionStorage.removeItem(this.sessionKey);
+        sessionStorage.removeItem(this.tokenKey);
+      } catch (e) {}
+    }
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(this.userKey);
+        localStorage.removeItem(this.sessionKey);
+        localStorage.removeItem(this.tokenKey);
       } catch (e) {}
     }
     this.currentUserSubject.next(null);
@@ -99,14 +124,26 @@ export class AuthService {
   }
 
   getCurrentUser(): SessionUser | null {
-    const storages = [
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      typeof sessionStorage !== 'undefined' ? sessionStorage : null
-    ].filter(Boolean) as Storage[];
-
-    for (const s of storages) {
+    // Check sessionStorage first for tab isolation
+    if (typeof sessionStorage !== 'undefined') {
       try {
-        const stored = s.getItem(this.userKey);
+        const stored = sessionStorage.getItem(this.userKey);
+        if (stored) {
+          const user = JSON.parse(stored);
+          if (user) {
+            if (user?.id !== this.currentUserSubject.value?.id) {
+              this.currentUserSubject.next(user);
+            }
+            return user;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Fallback to localStorage
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(this.userKey);
         if (stored) {
           const user = JSON.parse(stored);
           if (user) {
@@ -144,7 +181,12 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (user) {
       user.profileImage = imageUrl;
-      this.storage?.setItem(this.userKey, JSON.stringify(user));
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(this.userKey, JSON.stringify(user));
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(this.userKey, JSON.stringify(user));
+      }
       this.currentUserSubject.next(user);
     }
   }

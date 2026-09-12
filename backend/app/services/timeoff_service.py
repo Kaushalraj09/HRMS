@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Tuple
 from datetime import date, datetime
 from datetime import time as time_type
@@ -14,6 +15,59 @@ from app.services.attendance_service import (
 from app.domain.attendance.repositories.shift_repository import ShiftRepository
 from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
 
+
+def get_employee_leave_balances(db: Session, employee_id: int, year: int = None):
+    """
+    Calculate leave balances dynamically from yearly EmployeeLeaveBalance master quotas and requests.
+    Returns standard categories and the full yearlyBalances breakdown.
+    """
+    from app.services.leave_balance_service import LeaveBalanceService
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        return {}
+
+    current_year = year or date.today().year
+    yearly_list = LeaveBalanceService.get_employee_balances_summary(db, employee_id, current_year)
+
+    # Extract quotas & balances from yearly_list for standard CL, SL, EL
+    cl_item = next((item for item in yearly_list if item["code"] == "CL" or "casual" in item["name"].lower()), None)
+    sl_item = next((item for item in yearly_list if item["code"] == "SL" or "sick" in item["name"].lower()), None)
+    el_item = next((item for item in yearly_list if item["code"] in ("EL", "PL") or "earned" in item["name"].lower()), None)
+
+    cl_quota = int(round(cl_item["allocated_days"])) if cl_item else 12
+    cl_used = int(round(cl_item["used_days"])) if cl_item else 0
+    cl_avail = int(round(cl_item["available_days"])) if cl_item else cl_quota
+
+    sl_quota = int(round(sl_item["allocated_days"])) if sl_item else 8
+    sl_used = int(round(sl_item["used_days"])) if sl_item else 0
+    sl_avail = int(round(sl_item["available_days"])) if sl_item else sl_quota
+
+    el_quota = int(round(el_item["allocated_days"])) if el_item else 18
+    el_used = int(round(el_item["used_days"])) if el_item else 0
+    el_avail = int(round(el_item["available_days"])) if el_item else el_quota
+
+    total_avail = int(round(cl_avail + sl_avail + el_avail))
+
+    return {
+        "casual": {
+            "quotaDays": cl_quota,
+            "usedDays": cl_used,
+            "availableDays": cl_avail,
+        },
+        "sick": {
+            "quotaDays": sl_quota,
+            "usedDays": sl_used,
+            "availableDays": sl_avail,
+        },
+        "earned": {
+            "quotaDays": el_quota,
+            "usedDays": el_used,
+            "availableDays": el_avail,
+        },
+        "totalAvailableDays": total_avail,
+        "timeoffBalanceHours": float(employee.timeoff_balance_hours) if employee.timeoff_balance_hours is not None else 80.0,
+        "yearlyBalances": yearly_list
+    }
 
 def get_timeoff_by_date(db: Session, employee_id: int, target_date: date):
     return db.query(TimeOffRequest).filter(
@@ -34,15 +88,42 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     st = request.start_time
     et = request.end_time
 
-    if request.leave_type == "Full-Day":
+    lt_clean = (request.leave_type or "").strip()
+    lt_lower = lt_clean.lower().replace("-", " ").replace("_", " ")
+
+    from app.services.leave_balance_service import LeaveBalanceService
+    matched_lt = LeaveBalanceService.resolve_leave_type(db, request.leave_type)
+
+    # Work From Home (WFH) eligibility check: Remote workers cannot apply for WFH
+    is_wfh = (matched_lt and (matched_lt.code == "WFH" or "home" in matched_lt.name.lower() or matched_lt.applicable_employee_type == "office_only")) or any(k in lt_lower for k in ("wfh", "home", "remote"))
+    if is_wfh:
+        from app.services.attendance_service import _is_remote_worker
+        emp_obj = db.query(Employee).filter(Employee.id == employee_id).first()
+        if _is_remote_worker(db, emp_obj):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Remote employees cannot apply for Work From Home (WFH)."
+            )
+
+    if matched_lt:
+        unit = (matched_lt.unit_type or "").lower()
+        is_half_day = unit == "half_day" or "half" in matched_lt.name.lower() or matched_lt.code.upper() == "HD"
+        is_full_day = not is_half_day and unit != "hourly"
+    else:
+        is_full_day = lt_clean in ("Full-Day", "Full Day") or any(k in lt_lower for k in ("casual", "sick", "earned", "privilege", "full", "comp", "wfh", "home", "remote"))
+        is_half_day = lt_clean in ("Half-Day", "Half Day") or "half" in lt_lower
+
+    if is_full_day:
         duration_hours = total_shift_working_hours
+        days_requested = 1.0
         if st is None:
             st = shift_start
         if et is None:
             et = shift_end
-    elif request.leave_type == "Half-Day":
+    elif is_half_day:
         half_day_hours = float(eff_shift.half_day_hours or (total_shift_working_hours / 2.0) or 4.0)
         duration_hours = half_day_hours
+        days_requested = 0.5
         lunch_start, lunch_end = ShiftCalculationService.calculate_lunch_window(eff_shift)
         # Use provided times if any, otherwise fallback to first half
         if st is None or et is None:
@@ -84,6 +165,7 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                 detail="end_time must be after start_time.",
             )
         duration_hours = (et.hour * 60 + et.minute - (st.hour * 60 + st.minute)) / 60.0
+        days_requested = round(duration_hours / (total_shift_working_hours or 8.0), 2)
 
     if duration_hours < 0.5 or duration_hours > total_shift_working_hours:
         raise HTTPException(
@@ -116,7 +198,20 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A time-off request already exists for this date."
         )
+
+    # Reserve pending leave balance in LeaveBalanceService
+    LeaveBalanceService.reserve_pending_balance(
+        db=db,
+        employee_id=employee_id,
+        leave_type_identifier=request.leave_type,
+        year=request.date.year,
+        days=days_requested
+    )
         
+    start_date_val = request.start_date or request.date
+    end_date_val = request.end_date or request.date
+    total_days_val = request.total_days or days_requested
+
     new_request = TimeOffRequest(
         employee_id=employee_id,
         date=request.date,
@@ -127,7 +222,10 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
         status="Pending",
         reason=request.reason,
         attachment_name=request.attachment_name,
-        batch_id=request.batch_id
+        batch_id=request.batch_id,
+        start_date=start_date_val,
+        end_date=end_date_val,
+        total_days=total_days_val
     )
     
     db.add(new_request)
@@ -237,8 +335,29 @@ def approve_request(
             
         employee.timeoff_balance_hours = current_balance - req.duration_hours
         req.status = "Approved"
+
+        # Update yearly balances: transfer pending to used
+        from app.services.leave_balance_service import LeaveBalanceService
+        req_days = (req.duration_hours / 8.0) if req.duration_hours and req.duration_hours > 0 else 1.0
+        LeaveBalanceService.consume_approved_balance(
+            db=db,
+            employee_id=req.employee_id,
+            leave_type_identifier=req.leave_type,
+            year=req.date.year,
+            days=req_days
+        )
     elif action.upper() == "REJECT":
         req.status = "Rejected"
+        # Release yearly pending balance
+        from app.services.leave_balance_service import LeaveBalanceService
+        req_days = (req.duration_hours / 8.0) if req.duration_hours and req.duration_hours > 0 else 1.0
+        LeaveBalanceService.release_rejected_balance(
+            db=db,
+            employee_id=req.employee_id,
+            leave_type_identifier=req.leave_type,
+            year=req.date.year,
+            days=req_days
+        )
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action. Use APPROVE or REJECT.")
 
@@ -331,11 +450,29 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
     eff_shift = ShiftCalculationService.get_effective_shift(shift)
     total_shift_working_hours = float(eff_shift.working_hours or 9.0)
 
-    lt = (payload.leave_type or "").strip().lower().replace(" ", "")
+    lt_raw = (payload.leave_type or "").strip()
+    lt = lt_raw.lower().replace(" ", "")
     shift_start = eff_shift.start_time or time_type(9, 0)
     shift_end = eff_shift.end_time or time_type(18, 0)
 
-    if lt in ("fullday", "full-day"):
+    from app.models.master_data import LeaveType
+    matched_lt = db.query(LeaveType).filter(
+        (func.lower(LeaveType.name) == lt_raw.lower()) |
+        (func.lower(LeaveType.code) == lt_raw.lower())
+    ).first()
+
+    if matched_lt:
+        unit = (matched_lt.unit_type or "").lower()
+        if unit == "half_day" or "half" in matched_lt.name.lower() or matched_lt.code.upper() == "HD":
+            lt = "halfday"
+            leave_store = matched_lt.name
+        elif unit == "hourly":
+            lt = "hourly"
+            leave_store = "Hourly"
+        else:
+            lt = "fullday"
+            leave_store = matched_lt.name
+    elif lt in ("fullday", "full-day"):
         leave_store = "Full-Day"
         st = shift_start
         et = shift_end

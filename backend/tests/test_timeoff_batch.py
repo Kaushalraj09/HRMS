@@ -160,6 +160,22 @@ def test_timeoff_request_weekly_off_rejected(client, db_session):
     assert "weekly off" in response.json()["detail"].lower()
 
 
+def test_timeoff_request_saturday_allowed(client, db_session):
+    user_emp = db_session.query(User).filter(User.email == "emp@example.com").first()
+    app.dependency_overrides[get_current_user] = lambda: user_emp
+
+    # 2026-09-05 is Saturday (working day, not weekly off)
+    payload = {
+        "date": "2026-09-05",
+        "leave_type": "Full-Day",
+        "duration_hours": 8.0,
+        "reason": "Saturday personal leave",
+    }
+    response = client.post("/api/v1/timeoff/request", json=payload)
+    # Status code should be 200 or 201 (successful creation, not 400 weekly off)
+    assert response.status_code in (200, 201)
+
+
 def test_batch_timeoff_request_empty_dates(client, db_session):
     user_emp = db_session.query(User).filter(User.email == "emp@example.com").first()
     app.dependency_overrides[get_current_user] = lambda: user_emp

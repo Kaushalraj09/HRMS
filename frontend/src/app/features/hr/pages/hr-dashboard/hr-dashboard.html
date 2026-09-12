@@ -20,58 +20,22 @@
         
         <ng-container *ngIf="isDashboardHome">
           
-          <!-- TOP HEADER & BREADCRUMBS -->
-          <div class="hr-page-header">
-            <div class="header-left">
-              <h1 class="page-title">HR Dashboard</h1>
+          <!-- TOP GREETING HEADER -->
+          <div class="hr-greeting-header-bar">
+            <div class="greeting-left">
+              <h2 class="greeting-title">Good {{ greetingTime }}, {{ userName || 'HR Admin' }} 👋</h2>
+              <div class="greeting-date-row">
+                <span class="current-date-text">{{ currentDate | date:'EEEE, d MMMM yyyy':'Asia/Kolkata' }}</span>
+                <span class="working-day-badge" [class.off-day-badge]="!isTodayWorkingDay">{{ isTodayWorkingDay ? 'Working Day' : 'Weekly Off / Holiday' }}</span>
+              </div>
+            </div>
+            <div class="greeting-right">
+              <span class="hr-portal-pill">
+                <i class="fas fa-shield-alt"></i> HR Dashboard
+              </span>
             </div>
           </div>
 
-          <!-- FILTER TOOLBAR CARD -->
-          <div class="hr-filter-toolbar">
-            <div class="filter-fields-group">
-              <div class="filter-field">
-                <label class="filter-label">Department</label>
-                <app-custom-select 
-                  [options]="deptSelectOptions" 
-                  [(ngModel)]="selectedDepartment"
-                  placeholder="All Departments">
-                </app-custom-select>
-              </div>
-
-              <div class="filter-field">
-                <label class="filter-label">Work Mode</label>
-                <app-custom-select 
-                  [options]="workModeSelectOptions" 
-                  [(ngModel)]="selectedWorkMode"
-                  placeholder="All Modes">
-                </app-custom-select>
-              </div>
-
-              <div class="filter-field">
-                <label class="filter-label">Location</label>
-                <app-custom-select 
-                  [options]="locationSelectOptions" 
-                  [(ngModel)]="selectedLocation"
-                  placeholder="All Locations">
-                </app-custom-select>
-              </div>
-
-              <div class="filter-field">
-                <label class="filter-label">Date Range</label>
-                <app-custom-select 
-                  [options]="dateRangeSelectOptions" 
-                  [(ngModel)]="selectedDateRange"
-                  placeholder="Today">
-                </app-custom-select>
-              </div>
-            </div>
-
-            <div class="filter-actions-group">
-              <button type="button" class="btn-filter-reset" (click)="resetFilters()">Reset</button>
-              <button type="button" class="btn-filter-apply" (click)="applyFilters()">Apply Filters</button>
-            </div>
-          </div>
 
 
           <!-- ROW 1: TOP 6 KPI METRIC CARDS WITH SPARKLINES -->
@@ -784,17 +748,20 @@
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Right: Attention note & Progress Bar -->
-                <div class="compliance-action-col">
-                  <div class="comp-action-header">
-                    <span class="comp-attention-msg">{{ docAttentionNote }}</span>
-                  </div>
-                  <div class="comp-progress-bar-row">
-                    <div class="comp-progress-track">
-                      <div class="comp-progress-fill" [style.width.%]="docComplianceRate"></div>
-                    </div>
-                    <span class="comp-progress-val">{{ docComplianceRate }}%</span>
+              <!-- Bottom: Attention note & Progress Bar -->
+              <div class="compliance-action-col" *ngIf="docAttentionNote">
+                <div class="comp-action-header">
+                  <span class="comp-attention-msg">
+                    <i class="fas fa-info-circle" style="color: #F59E0B; margin-right: 4px;"></i>
+                    {{ docAttentionNote }}
+                  </span>
+                  <span class="comp-progress-val">{{ docComplianceRate }}%</span>
+                </div>
+                <div class="comp-progress-bar-row">
+                  <div class="comp-progress-track">
+                    <div class="comp-progress-fill" [style.width.%]="docComplianceRate"></div>
                   </div>
                 </div>
               </div>

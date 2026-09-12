@@ -8,7 +8,6 @@ import { HrSidebarService } from '../../components/hr-sidebar/hr-sidebar.service
 import { FormsModule } from '@angular/forms';
 import { HrSidebar } from '../../components/hr-sidebar/hr-sidebar';
 import { FooterComponent } from '../../../../shared/components/footer/footer';
-import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { WeeklyAttendanceTrendItem } from '../../../../core/models/dashboard.model';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -19,6 +18,7 @@ import { RegularizationService } from '../../../../core/services/regularization.
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { Holiday } from '../../../../core/models/master-data.model';
 
 export interface SparklinePoint {
   x: number;
@@ -143,7 +143,6 @@ export interface WorkforceDataPoint {
     RouterModule,
     HrSidebar,
     EmployeeLocationMap,
-    CustomSelectComponent,
     FooterComponent
   ],
   templateUrl: './hr-dashboard.html',
@@ -153,16 +152,40 @@ export class HrDashboard implements OnInit {
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
   userName = 'System Admin';
+  currentDate = new Date();
+  masterHolidays: Holiday[] = [];
+
+  get greetingTime(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
+  }
+
+  get isTodayWorkingDay(): boolean {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayIso = `${year}-${month}-${day}`;
+    const isSunday = now.getDay() === 0;
+    const isHoliday = (this.masterHolidays || []).some(h => h.date === todayIso && h.is_active !== false);
+    return !isSunday && !isHoliday;
+  }
   isAdmin = false;
   dashboardError = '';
   searchTerm = '';
   isDataLoading = false;
 
-  // Filter toolbar state
   selectedDepartment = 'All Departments';
   selectedWorkMode = 'All Modes';
   selectedLocation = 'All Locations';
   selectedDateRange = 'Today';
+  departmentOptions: string[] = ['All Departments'];
+  workModeOptions: string[] = ['All Modes', 'Office', 'Remote', 'Field'];
+  locationOptions: string[] = ['All Locations'];
+  dateRangeOptions: string[] = ['Today', 'Yesterday', 'This Week', 'This Month'];
+
   selectedMapFilter: string = 'ALL';
 
   setMapFilter(filter: string): void {
@@ -171,27 +194,6 @@ export class HrDashboard implements OnInit {
     } else {
       this.selectedMapFilter = filter;
     }
-  }
-
-  departmentOptions: string[] = ['All Departments'];
-  workModeOptions: string[] = ['All Modes', 'Office', 'Remote', 'Field'];
-  locationOptions: string[] = ['All Locations'];
-  dateRangeOptions: string[] = ['Today', 'Yesterday', 'This Week', 'This Month'];
-
-  get deptSelectOptions(): SelectOption[] {
-    return this.departmentOptions.map(opt => ({ label: opt, value: opt }));
-  }
-
-  get workModeSelectOptions(): SelectOption[] {
-    return this.workModeOptions.map(opt => ({ label: opt, value: opt }));
-  }
-
-  get locationSelectOptions(): SelectOption[] {
-    return this.locationOptions.map(opt => ({ label: opt, value: opt }));
-  }
-
-  get dateRangeSelectOptions(): SelectOption[] {
-    return this.dateRangeOptions.map(opt => ({ label: opt, value: opt }));
   }
 
   // Top 6 KPI Metric Cards
@@ -649,6 +651,9 @@ export class HrDashboard implements OnInit {
         }
         if (data.workLocations && data.workLocations.length > 0) {
           this.locationOptions = ['All Locations', ...data.workLocations.map(w => w.name || (w as any).city)];
+        }
+        if (data.holidays && data.holidays.length > 0) {
+          this.masterHolidays = data.holidays;
         }
         this.cdr.detectChanges();
       },
@@ -1131,11 +1136,14 @@ export class HrDashboard implements OnInit {
         }
 
         let formattedDuration = `${req.totalDurationHours || 1} hrs`;
-        if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
-          const days = req.requests.length;
-          formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
-        } else if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+        const ltLower = (req.leave_type || '').toLowerCase();
+        if (ltLower.includes('hourly')) {
+          formattedDuration = `${req.totalDurationHours || 1} hrs`;
+        } else if (ltLower.includes('half')) {
           const days = req.requests.length * 0.5;
+          formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
+        } else {
+          const days = req.requests.length;
           formattedDuration = `${days} Day${days > 1 ? 's' : ''}`;
         }
 

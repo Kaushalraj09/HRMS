@@ -103,6 +103,12 @@ function leaveTypeToBackend(payload: Partial<LeaveType>, existingCode?: string):
     unit_type: rest.unit_type ?? 'full_day',
     default_balance_hours: daysValue != null ? daysValue * 8 : 0, // 8 hours per day
     requires_approval: rest.requires_approval ?? true,
+    applicable_employee_type: rest.applicable_employee_type ?? 'all',
+    carry_forward: rest.carry_forward ?? false,
+    max_consecutive_days: rest.max_consecutive_days != null ? Number(rest.max_consecutive_days) : null,
+    counts_as_leave: rest.counts_as_leave ?? true,
+    attendance_required: rest.attendance_required ?? false,
+    remote_punch_allowed: rest.remote_punch_allowed ?? false,
     is_active: rest.is_active ?? true,
   };
 }
@@ -112,7 +118,15 @@ function leaveTypeFromBackend(item: any): LeaveType {
     id: item.id,
     name: item.name,
     code: item.code,
+    unit_type: item.unit_type ?? 'full_day',
+    default_balance_hours: item.default_balance_hours != null ? Number(item.default_balance_hours) : undefined,
     max_days: item.default_balance_hours != null ? Math.round(Number(item.default_balance_hours) / 8) : undefined,
+    applicable_employee_type: item.applicable_employee_type ?? 'all',
+    carry_forward: item.carry_forward ?? false,
+    max_consecutive_days: item.max_consecutive_days,
+    counts_as_leave: item.counts_as_leave ?? true,
+    attendance_required: item.attendance_required ?? false,
+    remote_punch_allowed: item.remote_punch_allowed ?? false,
     is_active: item.is_active ?? true,
   };
 }
@@ -255,4 +269,29 @@ export class MasterDataService {
       map(holidayFromBackend)
     );
   }
+
+  deleteDepartment(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/departments/${id}`);
+  }
+
+  deleteDesignation(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/designations/${id}`);
+  }
+
+  deleteShift(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/shifts/${id}`);
+  }
+
+  deleteWorkLocation(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/work-locations/${id}`);
+  }
+
+  deleteLeaveType(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/leave-types/${id}`);
+  }
+
+  deleteHoliday(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/holidays/${id}`);
+  }
 }
+

@@ -105,6 +105,32 @@ async def request_timeoff_batch(
     if not request.dates:
         raise HTTPException(status_code=400, detail="No dates provided")
         
+    sorted_dates = sorted(request.dates)
+    min_date = sorted_dates[0]
+    max_date = sorted_dates[-1]
+    total_days_count = len(sorted_dates)
+
+    # Check WFH eligibility
+    from app.services.leave_balance_service import LeaveBalanceService
+    lt = LeaveBalanceService.resolve_leave_type(db, request.leave_type)
+    is_wfh = (lt and (lt.code == "WFH" or "home" in lt.name.lower() or lt.applicable_employee_type == "office_only")) or any(k in request.leave_type.lower() for k in ("wfh", "home", "remote"))
+    if is_wfh and attendance_service._is_remote_worker(db, employee):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Remote employees cannot apply for Work From Home (WFH)."
+        )
+
+    # Validate total days against yearly balance upfront
+    if lt:
+        year = min_date.year
+        balances = LeaveBalanceService.get_or_initialize_yearly_balances(db, employee.id, year)
+        bal = next((b for b in balances if b.leave_type_id == lt.id), None)
+        if bal and total_days_count > (bal.available_days + 1e-4):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient {lt.name} balance. Requested {total_days_count} days, but only {bal.available_days:.1f} days available for year {year}."
+            )
+
     batch_id = str(uuid.uuid4())
     created_requests = []
     for d in request.dates:
@@ -116,7 +142,10 @@ async def request_timeoff_batch(
             duration_hours=request.duration_hours,
             reason=request.reason,
             attachment_name=request.attachment_name,
-            batch_id=batch_id
+            batch_id=batch_id,
+            start_date=min_date,
+            end_date=max_date,
+            total_days=float(total_days_count)
         )
         created = timeoff_service.request_timeoff(db, employee.id, single_req, dispatch_event=False)
         created_requests.append(created)
@@ -510,6 +539,7 @@ def get_timeoff_bootstrap(
         
     # Balance details
     total_hours = float(employee.timeoff_balance_hours) if employee.timeoff_balance_hours is not None else 80.0
+    detailed_balances = timeoff_service.get_employee_leave_balances(db, employee.id)
     
     # Holidays
     hols = []
@@ -524,10 +554,45 @@ def get_timeoff_bootstrap(
         "balance": {
             "totalHours": total_hours,
             "usedHours": 80.0 - total_hours if total_hours < 80.0 else 0.0,
-            "remainingHours": total_hours
+            "remainingHours": total_hours,
+            "breakdown": detailed_balances
         },
         "holidays": hols
     }
+
+
+@router.get("/balances/my")
+def get_my_leave_balances(
+    year: int = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get dynamic leave balance breakdown for the authenticated employee.
+    """
+    employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+    if not employee:
+        raise HTTPException(status_code=400, detail="Only employees can view leave balances.")
+    return timeoff_service.get_employee_leave_balances(db, employee.id, year)
+
+
+@router.get("/balances/yearly/{employee_id}")
+def get_yearly_employee_balances(
+    employee_id: int,
+    year: int = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get yearly leave balance list for an employee (HR/Admin or self).
+    """
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+        emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not emp or emp.id != employee_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    from app.services.leave_balance_service import LeaveBalanceService
+    return LeaveBalanceService.get_employee_balances_summary(db, employee_id, year)
+
 
 
 @router.post("/requests/{id}/decision")
@@ -581,12 +646,30 @@ async def cancel_request(
     if req.status.lower() in ["cancelled", "rejected"]:
         raise HTTPException(status_code=400, detail=f"Request is already {req.status.lower()}")
 
-    # If it was approved, refund the timeoff hours
+    from app.services.leave_balance_service import LeaveBalanceService
+    req_days = (req.duration_hours / 8.0) if req.duration_hours and req.duration_hours > 0 else 1.0
+
+    # If it was approved, refund the timeoff hours and release yearly consumed balance
     if req.status.lower() == "approved":
         req_employee = db.query(Employee).filter(Employee.id == req.employee_id).first()
         if req_employee:
             current_balance = req_employee.timeoff_balance_hours if req_employee.timeoff_balance_hours is not None else 80.0
             req_employee.timeoff_balance_hours = current_balance + req.duration_hours
+        LeaveBalanceService.release_cancelled_approved_balance(
+            db=db,
+            employee_id=req.employee_id,
+            leave_type_identifier=req.leave_type,
+            year=req.date.year,
+            days=req_days
+        )
+    elif req.status.lower() == "pending":
+        LeaveBalanceService.release_rejected_balance(
+            db=db,
+            employee_id=req.employee_id,
+            leave_type_identifier=req.leave_type,
+            year=req.date.year,
+            days=req_days
+        )
 
     req.status = "Cancelled"
     

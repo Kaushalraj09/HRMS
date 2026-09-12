@@ -39,19 +39,30 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   }
 
   formatDuration(req: GroupedTimeOffRequest): string {
-    if (req.leave_type === 'Full-Day' || req.leave_type === 'Full Day') {
+    const lt = (req.leave_type || '').toLowerCase();
+    const isHalf = lt === 'half-day' || lt === 'half day' || lt.includes('half');
+    const isFull = lt === 'full-day' || lt === 'full day' || lt.includes('casual') || lt.includes('sick') || lt.includes('earned') || lt.includes('privilege') || lt.includes('comp') || lt.includes('wfh') || lt.includes('home') || lt.includes('remote');
+
+    if (isFull) {
       const days = req.requests.length;
       return `${days} Day${days > 1 ? 's' : ''}`;
     }
-    if (req.leave_type === 'Half-Day' || req.leave_type === 'Half Day') {
+    if (isHalf) {
       const days = req.requests.length * 0.5;
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    }
+    if (req.totalDurationHours >= 8 && req.totalDurationHours % 8 === 0) {
+      const days = req.totalDurationHours / 8;
       return `${days} Day${days > 1 ? 's' : ''}`;
     }
     return this.formatHours(req.totalDurationHours);
   }
 
   formatTimeSlot(startTime?: string | null, endTime?: string | null, leaveType?: string | null): string {
-    if (!startTime || leaveType === 'Full-Day' || leaveType === 'Full Day') {
+    const lt = (leaveType || '').toLowerCase();
+    const isFull = !startTime || lt === 'full-day' || lt === 'full day' || lt.includes('casual') || lt.includes('sick') || lt.includes('earned') || lt.includes('privilege') || lt.includes('comp') || lt.includes('wfh') || lt.includes('home') || lt.includes('remote');
+
+    if (isFull) {
       return 'Full Day';
     }
     const formatTime = (t: string) => {

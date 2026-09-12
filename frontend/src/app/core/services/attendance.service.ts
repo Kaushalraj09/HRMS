@@ -25,6 +25,8 @@ interface BackendAttendanceResponse {
   breakMinutes: number;
   grandTotalMinutes: number;
   lateMinutes: number;
+  timeoffMinutes?: number;
+  timeoffHours?: number;
 }
 
 interface BackendAttendanceRecord {
@@ -451,6 +453,9 @@ export class AttendanceService {
       : (overtimeMinutes > 0 && totalWorkingMinutes > overtimeMinutes ? totalWorkingMinutes - overtimeMinutes : totalWorkingMinutes);
     const displayWorkMinutes = overtimeMinutes > 0 ? regularWorkMinutes : totalWorkingMinutes;
 
+    const timeoffMins = Number(row.timeoffMinutes) || 0;
+    const displayTimeOff = timeoffMins > 0 ? formatMinutesToHours(timeoffMins) : '-';
+
     return {
       date: row.date,
       day: new Date(row.date).toLocaleDateString('en-US', { weekday: 'short' }),
@@ -460,6 +465,7 @@ export class AttendanceService {
       entry: displayPunchIn || displayScheduledStart || '-',
       exit: displayPunchOut || displayScheduledEnd || '-',
       late: punchIn ? formatMinutesToHours(row.lateMinutes ?? 0) : '-',
+      timeOff: displayTimeOff,
       total: (punchOut || displayWorkMinutes > 0) ? formatMinutesToHours(displayWorkMinutes) : '-',
       overtime: (punchOut || overtimeMinutes > 0) ? formatMinutesToHours(overtimeMinutes) : '-',
       break: (punchOut || breakMinutes > 0) ? formatMinutesToHours(breakMinutes) : '-',

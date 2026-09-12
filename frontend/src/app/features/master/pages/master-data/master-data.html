@@ -74,7 +74,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredDepartments.length === 0">
@@ -105,7 +108,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredDesignations.length === 0">
@@ -144,7 +150,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredShifts.length === 0">
@@ -179,7 +188,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredLocations.length === 0">
@@ -196,7 +208,8 @@
               <tr>
                 <th>Code</th>
                 <th>Leave Type Name</th>
-                <th>Max Days Allowable</th>
+                <th>Annual Allocation</th>
+                <th>Applicable To</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -204,19 +217,34 @@
             <tbody>
               <tr *ngFor="let item of filteredLeaves" class="table-row-hover">
                 <td><span class="badge-type">{{ item.code }}</span></td>
-                <td>{{ item.name }}</td>
-                <td>{{ item.max_days || 'No limit' }} days</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="font-bold">{{ item.name }}</span>
+                    <span *ngIf="item.code === 'WFH' || (item.name && item.name.toLowerCase().includes('home'))" class="badge-tag" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
+                      <i class="fas fa-house-laptop"></i> WFH
+                    </span>
+                  </div>
+                </td>
+                <td><span class="font-bold text-primary">{{ item.max_days || 0 }} Days / Year</span></td>
+                <td>
+                  <span class="badge-tag" [ngClass]="item.applicable_employee_type === 'office_only' ? 'tag-office' : 'tag-all'" style="font-size: 11px; padding: 3px 8px; border-radius: 6px;">
+                    {{ item.applicable_employee_type === 'office_only' ? 'Office Workers Only' : 'All Employees' }}
+                  </span>
+                </td>
                 <td>
                   <span class="badge-status" [class.status-active]="item.is_active" [class.status-inactive]="!item.is_active">
                     {{ item.is_active ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredLeaves.length === 0">
-                <td colspan="5" class="empty-state">No leave types found matching the filter criteria.</td>
+                <td colspan="6" class="empty-state">No leave types found matching the filter criteria.</td>
               </tr>
             </tbody>
           </table>
@@ -243,7 +271,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                  <div class="action-buttons-group">
+                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="filteredHolidays.length === 0">
@@ -597,39 +628,99 @@
         </div>
 
         <!-- Leave details -->
-        <div class="form-group mt-4" *ngIf="activeTab === 'leaves'">
-          <label for="modal-max-days">Max Days allowable</label>
-          <input 
-            id="modal-max-days"
-            type="number" 
-            [(ngModel)]="formModel.max_days" 
-            name="max_days" 
-            class="premium-input" 
-            placeholder="e.g. 12"
-          />
+        <div *ngIf="activeTab === 'leaves'">
+          <div class="form-group mt-4">
+            <label for="modal-max-days">Annual Allocation (Days / Year) <span class="required">*</span></label>
+            <input 
+              id="modal-max-days"
+              type="number" 
+              [(ngModel)]="formModel.max_days" 
+              name="max_days" 
+              class="premium-input" 
+              placeholder="e.g. 12"
+            />
+            <small style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">
+              Annual entitlement allocated on the first day of the year (01 Jan). Modifying this applies to future years without altering past years' records.
+            </small>
+          </div>
+
+          <div class="shift-row mt-4">
+            <div class="form-group">
+              <label for="modal-applicable-type">Applicable Employees</label>
+              <app-custom-select inputId="modal-applicable-type" [(ngModel)]="formModel.applicable_employee_type" name="applicable_employee_type" [options]="leaveApplicableTypeSelectOptions" placeholder="Select Applicable Mode"></app-custom-select>
+            </div>
+            <div class="form-group">
+              <label for="modal-unit-type">Leave Unit Type</label>
+              <app-custom-select inputId="modal-unit-type" [(ngModel)]="formModel.unit_type" name="unit_type" [options]="leaveUnitTypeSelectOptions" placeholder="Select Unit"></app-custom-select>
+            </div>
+          </div>
+
+          <div class="shift-row shift-row-mixed mt-4">
+            <div class="form-group shift-checkbox-group">
+              <label class="shift-toggle-label">Punch Rules</label>
+              <label class="toggle-pill" for="modal-remote-punch">
+                <input 
+                  id="modal-remote-punch"
+                  type="checkbox" 
+                  [(ngModel)]="formModel.remote_punch_allowed" 
+                  name="remote_punch_allowed"
+                />
+                <span class="toggle-track"></span>
+                <span class="toggle-text">Allow Remote Punch (WFH Mode)</span>
+              </label>
+            </div>
+            <div class="form-group shift-checkbox-group">
+              <label class="shift-toggle-label">Attendance Required</label>
+              <label class="toggle-pill" for="modal-attendance-required">
+                <input 
+                  id="modal-attendance-required"
+                  type="checkbox" 
+                  [(ngModel)]="formModel.attendance_required" 
+                  name="attendance_required"
+                />
+                <span class="toggle-track"></span>
+                <span class="toggle-text">Must Punch In/Out (Not Absent)</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- Holiday details -->
-        <div class="form-group" *ngIf="activeTab === 'holidays'">
-          <label for="modal-holiday-name">Holiday Description <span class="required">*</span></label>
-          <input 
-            id="modal-holiday-name"
-            type="text" 
-            [(ngModel)]="formModel.name" 
-            name="name" 
-            class="premium-input" 
-            placeholder="e.g. Independence Day"
-            required
-          />
+        <div *ngIf="activeTab === 'holidays'">
+          <div class="form-group">
+            <label for="modal-holiday-name">Holiday Description <span class="required">*</span></label>
+            <input 
+              id="modal-holiday-name"
+              type="text" 
+              [(ngModel)]="formModel.name" 
+              name="name" 
+              class="premium-input" 
+              placeholder="e.g. Independence Day"
+              required
+            />
+          </div>
+
+          <div class="holiday-row mt-4">
+            <div class="form-group holiday-date-group">
+              <label for="modal-date">Date <span class="required">*</span></label>
+              <app-custom-datepicker inputId="modal-date" [(ngModel)]="formModel.date" name="date" placeholder="Select Holiday Date"></app-custom-datepicker>
+            </div>
+
+            <div class="form-group-checkbox holiday-active-group">
+              <input 
+                id="modal-active-holiday"
+                type="checkbox" 
+                [(ngModel)]="formModel.is_active" 
+                name="is_active" 
+                class="premium-checkbox"
+              />
+              <label for="modal-active-holiday" class="checkbox-label">Record Active</label>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group mt-4" *ngIf="activeTab === 'holidays'">
-          <label for="modal-date">Date <span class="required">*</span></label>
-          <app-custom-datepicker inputId="modal-date" [(ngModel)]="formModel.date" name="date" placeholder="Select Holiday Date"></app-custom-datepicker>
-        </div>
-
-        <!-- Active check field -->
-        <div class="form-group-checkbox mt-4">
+        <!-- Active check field for non-holiday tabs -->
+        <div class="form-group-checkbox mt-4" *ngIf="activeTab !== 'holidays'">
           <input 
             id="modal-active"
             type="checkbox" 
@@ -648,4 +739,45 @@
     </form>
   </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="camera-modal-overlay" *ngIf="deleteModalOpen" (click)="closeDeleteModal()">
+  <div class="camera-modal-box" (click)="$event.stopPropagation()">
+    <div class="camera-modal-header">
+      <div class="camera-modal-title">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>Confirm Deletion</span>
+      </div>
+      <button type="button" class="close-btn" (click)="closeDeleteModal()" title="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="camera-modal-body">
+      <div class="punch-out-confirm">
+        <div class="punch-out-confirm__icon">
+          <i class="fas fa-trash-alt"></i>
+        </div>
+        <h3>Delete {{ deleteModalEntityTitle }}?</h3>
+        <p class="confirm-desc">
+          Are you sure you want to delete <strong>{{ deleteItemDisplayName }}</strong>
+          <span class="emp-code-pill" *ngIf="deleteItemCode">({{ deleteItemCode }})</span>?
+        </p>
+        <div class="delete-warning-box">
+          <i class="fas fa-shield-alt"></i>
+          <span>This action will permanently remove this record from Master Data. If it is assigned to any active employee records, the system will prevent deletion to preserve data integrity.</span>
+        </div>
+      </div>
+    </div>
+    <div class="camera-modal-footer">
+      <button type="button" class="btn btn-secondary modal-cancel-btn" (click)="closeDeleteModal()" [disabled]="isDeleting">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-danger modal-delete-btn" (click)="executeDelete()" [disabled]="isDeleting">
+        <i class="fas" [ngClass]="isDeleting ? 'fa-spinner fa-spin' : 'fa-trash-alt'"></i>
+        {{ isDeleting ? 'Deleting...' : 'Delete ' + deleteModalEntityTitle }}
+      </button>
+    </div>
+  </div>
+</div>
+
 

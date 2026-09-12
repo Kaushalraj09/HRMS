@@ -67,8 +67,16 @@ export interface LeaveType {
   id: number;
   name: string;
   code: string;
+  unit_type?: string;
+  default_balance_hours?: number;
   /** Mapped from backend `default_balance_hours` / 8 (hours → days) */
   max_days?: number;
+  applicable_employee_type?: 'all' | 'office_only' | string;
+  carry_forward?: boolean;
+  max_consecutive_days?: number;
+  counts_as_leave?: boolean;
+  attendance_required?: boolean;
+  remote_punch_allowed?: boolean;
   is_active: boolean;
 }
 

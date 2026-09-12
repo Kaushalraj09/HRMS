@@ -87,13 +87,13 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 1050;
-  width: 290px;
+  z-index: 9999;
+  width: 255px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 16px 40px -6px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.08);
-  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.16), 0 4px 14px rgba(15, 23, 42, 0.06);
+  padding: 8px 10px;
   box-sizing: border-box;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   animation: dpSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -103,6 +103,17 @@
   top: auto;
   bottom: calc(100% + 6px);
   animation: dpSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.datepicker-popup-card.align-right {
+  left: auto;
+  right: 0;
+}
+
+/* Expand container when open inside modals to naturally enclose popup inside the modal card */
+:host-context(.modal-card, .modal-dialog, .modal-content, [class*="modal"]) .custom-datepicker-container.is-open {
+  margin-bottom: 255px;
+  transition: margin-bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes dpSlideDown {
@@ -132,8 +143,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -141,16 +152,16 @@
 .dp-month-select-btn {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border-radius: 7px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #0f172a;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.15s ease;
 }
 
@@ -161,7 +172,7 @@
 }
 
 .dp-chevron {
-  font-size: 10px;
+  font-size: 9px;
   transition: transform 0.2s ease;
   color: #64748b;
 }
@@ -178,14 +189,14 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #64748b;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 10px;
   transition: all 0.15s ease;
 }
 
@@ -200,12 +211,12 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .dp-weekday {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -216,14 +227,14 @@
 .dp-days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: 1.5px;
 }
 
 .dp-day-cell {
   background: transparent;
   border: none;
-  width: 35px;
-  height: 35px;
+  width: 28px;
+  height: 27px;
   margin: 0 auto;
   border-radius: 50%;
   display: flex;
@@ -236,7 +247,7 @@
 
 .day-num {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -335,8 +346,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid #f1f5f9;
 }
 
@@ -344,14 +355,14 @@
   background: transparent;
   border: none;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 7px;
+  padding: 3px 6px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   transition: all 0.15s ease;
 }
 

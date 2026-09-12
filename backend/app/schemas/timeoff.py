@@ -12,6 +12,9 @@ class TimeOffRequestCreate(BaseModel):
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
     batch_id: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    total_days: Optional[float] = None
 
 class TimeOffBatchRequestCreate(BaseModel):
     dates: list[date]
@@ -38,6 +41,9 @@ class TimeOffRequestResponse(BaseModel):
     reason: Optional[str] = None
     attachment_name: Optional[str] = None
     batch_id: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    total_days: Optional[float] = None
 
 class TimeOffBatchResponse(BaseModel):
     created_requests: list[TimeOffRequestResponse]

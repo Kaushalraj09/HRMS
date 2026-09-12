@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import { AttendanceService } from '../../../../core/services/attendance.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { MyProfileService } from '../../../../core/services/profile.service';
 import { EmployeeTimesheetRow } from '../../../../core/models/attendance.model';
 import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
 
@@ -21,7 +23,7 @@ export class MyAttendance implements OnInit {
   timeSheetPage = 1;
   readonly timeSheetPageSize = 10;
   filterForm;
-  activeRange: 'this-month' | 'last-month' | 'last-7-days' | 'all' | 'custom' = 'all';
+  activeRange: 'this-month' | 'last-month' | 'last-7-days' | 'all' | 'custom' = 'this-month';
 
   readonly statusSelectOptions = [
     { label: 'All Statuses', value: '' },
@@ -36,17 +38,25 @@ export class MyAttendance implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly attendanceService: AttendanceService,
+    private readonly authService: AuthService,
+    private readonly myProfileService: MyProfileService,
     private readonly cdr: ChangeDetectorRef
   ) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fromStr = this.formatDate(startOfMonth);
+    const toStr = this.formatDate(now);
+
     this.filterForm = this.fb.group({
-      fromDate: [''],
-      toDate: [''],
+      fromDate: [fromStr],
+      toDate: [toStr],
       status: ['']
     });
   }
 
   ngOnInit(): void {
-    this.loadTimesheets();
+    const { fromDate, toDate, status } = this.filterForm.getRawValue();
+    this.loadTimesheets(fromDate || '', toDate || '', status || '');
   }
 
   get pagedTimeSheets(): EmployeeTimesheetRow[] {
@@ -185,15 +195,50 @@ export class MyAttendance implements OnInit {
     this.loadTimesheets();
   }
 
-  exportToPdf(): void {
+  showPreviewModal = false;
+  employeeName = 'Employee';
+  employeeCode = 'EMP';
+  departmentName = 'General';
+
+  openExportPreview(): void {
     if (this.timeSheets.length === 0) return;
-    const headers = ['Date', 'Day', 'Entry', 'Exit', 'Late', 'Total', 'Overtime', 'Break', 'Grand Total', 'Status'];
+    this.myProfileService.getProfile().subscribe({
+      next: (prof: any) => {
+        const p = prof?.personalDetails;
+        const e = prof?.employmentDetails;
+        if (p?.firstName || p?.lastName) {
+          this.employeeName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+        } else if (prof?.displayName) {
+          this.employeeName = prof.displayName;
+        } else {
+          this.employeeName = this.authService.getDisplayName();
+        }
+        this.employeeCode = e?.employeeCode || prof?.employeeCode || 'EMP';
+        this.departmentName = e?.department || prof?.department || 'Operations';
+        this.showPreviewModal = true;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.employeeName = this.authService.getDisplayName();
+        this.showPreviewModal = true;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeExportPreview(): void {
+    this.showPreviewModal = false;
+  }
+
+  printReport(): void {
+    const headers = ['Date', 'Day', 'Entry', 'Exit', 'Late', 'Time-Off', 'Total', 'Overtime', 'Break', 'Grand Total', 'Status'];
     const rows = this.timeSheets.map(r => [
       r.date || '-',
       r.day || '-',
       r.entry || '-',
       r.exit || '-',
       r.late || '-',
+      r.timeOff || '-',
       r.total || '-',
       r.overtime || '-',
       r.break || '-',
@@ -206,21 +251,41 @@ export class MyAttendance implements OnInit {
     const absentDays = this.timeSheets.filter(r => r.status === 'Absent').length;
 
     exportTableToPdf({
-      title: 'Employee Personal Attendance Timesheet',
-      subtitle: 'Daily attendance logs, check-in/out times, and total work hours',
-      filename: `my_attendance_${new Date().toISOString().slice(0, 10)}.pdf`,
+      title: `Attendance Report - ${this.employeeName} (${this.employeeCode})`,
+      subtitle: `Reporting Period: ${this.previewDateRangeLabel} | Department: ${this.departmentName}`,
+      filename: `attendance_report_${this.employeeCode}_${new Date().toISOString().slice(0, 10)}.pdf`,
       headers,
       rows,
+      orientation: 'portrait',
       metadata: [
+        { label: 'Employee Name', value: this.employeeName },
+        { label: 'Employee ID', value: this.employeeCode },
+        { label: 'Department', value: this.departmentName },
         { label: 'Total Logs', value: totalDays },
-        { label: 'Present / Working', value: presentDays },
+        { label: 'Present Days', value: presentDays },
         { label: 'Absent', value: absentDays }
       ]
     });
   }
 
+  get previewDateRangeLabel(): string {
+    const { fromDate, toDate } = this.filterForm.getRawValue();
+    if (fromDate && toDate) {
+      return `${fromDate} to ${toDate}`;
+    } else if (fromDate) {
+      return `From ${fromDate}`;
+    } else if (toDate) {
+      return `Up to ${toDate}`;
+    }
+    return 'All Time History';
+  }
+
+  exportToPdf(): void {
+    this.openExportPreview();
+  }
+
   exportToCsv(): void {
-    this.exportToPdf();
+    this.openExportPreview();
   }
 
   private loadTimesheets(fromDate: string = '', toDate: string = '', status: string = ''): void {

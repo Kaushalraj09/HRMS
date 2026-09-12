@@ -183,6 +183,12 @@ def create_leave_type(db: Session, payload) -> LeaveType:
         unit_type=payload.unit_type,
         default_balance_hours=payload.default_balance_hours,
         requires_approval=payload.requires_approval,
+        applicable_employee_type=getattr(payload, "applicable_employee_type", "all") or "all",
+        carry_forward=getattr(payload, "carry_forward", False) or False,
+        max_consecutive_days=getattr(payload, "max_consecutive_days", None),
+        counts_as_leave=getattr(payload, "counts_as_leave", True) if getattr(payload, "counts_as_leave", None) is not None else True,
+        attendance_required=getattr(payload, "attendance_required", False) or False,
+        remote_punch_allowed=getattr(payload, "remote_punch_allowed", False) or False,
         is_active=payload.is_active
     )
     db.add(db_lt)
@@ -200,6 +206,18 @@ def update_leave_type(db: Session, lt_id: int, payload) -> LeaveType:
     db_lt.unit_type = payload.unit_type
     db_lt.default_balance_hours = payload.default_balance_hours
     db_lt.requires_approval = payload.requires_approval
+    if hasattr(payload, "applicable_employee_type") and payload.applicable_employee_type is not None:
+        db_lt.applicable_employee_type = payload.applicable_employee_type
+    if hasattr(payload, "carry_forward") and payload.carry_forward is not None:
+        db_lt.carry_forward = payload.carry_forward
+    if hasattr(payload, "max_consecutive_days"):
+        db_lt.max_consecutive_days = payload.max_consecutive_days
+    if hasattr(payload, "counts_as_leave") and payload.counts_as_leave is not None:
+        db_lt.counts_as_leave = payload.counts_as_leave
+    if hasattr(payload, "attendance_required") and payload.attendance_required is not None:
+        db_lt.attendance_required = payload.attendance_required
+    if hasattr(payload, "remote_punch_allowed") and payload.remote_punch_allowed is not None:
+        db_lt.remote_punch_allowed = payload.remote_punch_allowed
     db_lt.is_active = payload.is_active
     db.commit()
     db.refresh(db_lt)
@@ -240,3 +258,115 @@ def update_holiday(db: Session, h_id: int, payload) -> Holiday:
     db.refresh(db_holiday)
     _invalidate_cache(db)
     return db_holiday
+
+
+# Delete Operations
+def delete_department(db: Session, dept_id: int) -> bool:
+    dept = db.query(Department).filter(Department.id == dept_id).first()
+    if not dept:
+        return False
+    from app.models.employee import Employee
+    assigned_count = db.query(Employee).filter(
+        (Employee.department == dept.name) | (Employee.department == dept.code)
+    ).count()
+    if assigned_count > 0:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete department '{dept.name}' as it is currently assigned to {assigned_count} employee(s). Please reassign them first."
+        )
+    db.delete(dept)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+
+
+def delete_designation(db: Session, designation_id: int) -> bool:
+    desig = db.query(Designation).filter(Designation.id == designation_id).first()
+    if not desig:
+        return False
+    from app.models.employee import Employee
+    assigned_count = db.query(Employee).filter(
+        (Employee.designation == desig.name) | (Employee.designation == desig.code)
+    ).count()
+    if assigned_count > 0:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete designation '{desig.name}' as it is currently assigned to {assigned_count} employee(s). Please reassign them first."
+        )
+    db.delete(desig)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+
+
+def delete_shift(db: Session, shift_id: int) -> bool:
+    shift = db.query(Shift).filter(Shift.id == shift_id).first()
+    if not shift:
+        return False
+    from app.models.employee import Employee, EmployeeShift
+    assigned_emp_count = db.query(Employee).filter(Employee.shift_id == shift_id).count()
+    assigned_shift_count = db.query(EmployeeShift).filter(EmployeeShift.shift_id == shift_id).count()
+    total_assigned = assigned_emp_count + assigned_shift_count
+    if total_assigned > 0:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete shift '{shift.name}' as it is currently assigned to active employee shift schedules. Please reassign them first."
+        )
+    db.delete(shift)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+
+
+def delete_work_location(db: Session, loc_id: int) -> bool:
+    loc = db.query(WorkLocation).filter(WorkLocation.id == loc_id).first()
+    if not loc:
+        return False
+    from app.models.employee import Employee
+    assigned_count = db.query(Employee).filter(
+        (Employee.work_location == loc.name) | (Employee.work_location == loc.code)
+    ).count()
+    if assigned_count > 0:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete location '{loc.name}' as it is currently assigned to {assigned_count} employee(s). Please reassign them first."
+        )
+    db.delete(loc)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+
+
+def delete_leave_type(db: Session, lt_id: int) -> bool:
+    lt = db.query(LeaveType).filter(LeaveType.id == lt_id).first()
+    if not lt:
+        return False
+    from app.models.timeoff import TimeOffRequest
+    req_count = db.query(TimeOffRequest).filter(
+        (TimeOffRequest.leave_type == lt.name) | (TimeOffRequest.leave_type == lt.code)
+    ).count()
+    if req_count > 0:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete leave type '{lt.name}' as there are {req_count} time-off request(s) associated with it."
+        )
+    db.delete(lt)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+
+
+def delete_holiday(db: Session, h_id: int) -> bool:
+    h = db.query(Holiday).filter(Holiday.id == h_id).first()
+    if not h:
+        return False
+    db.delete(h)
+    db.commit()
+    _invalidate_cache(db)
+    return True
+

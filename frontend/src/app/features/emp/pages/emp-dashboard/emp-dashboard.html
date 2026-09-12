@@ -181,8 +181,13 @@
                                     <span class="mode-dot remote"></span> Remote
                                 </div>
 
+                                <!-- Office Worker with Approved WFH: Show WFH badge -->
+                                <div class="work-mode-fixed-pill" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);" *ngIf="!isAssignedRemoteWorker && hasApprovedWfhToday">
+                                    <span class="mode-dot remote" style="background: #10b981;"></span> WFH (Approved)
+                                </div>
+
                                 <!-- Office Worker: Retain existing toggle and switching capability -->
-                                <div class="work-mode-pill-toggle" *ngIf="!isAssignedRemoteWorker">
+                                <div class="work-mode-pill-toggle" *ngIf="!isAssignedRemoteWorker && !hasApprovedWfhToday">
                                     <button type="button" class="mode-pill-btn office-btn" [class.active]="status === 'Office'" (click)="requestSwitchWorkMode('Office')">
                                         <span class="mode-dot"></span> Office
                                     </button>
@@ -316,28 +321,12 @@
                             </div>
 
                             <div class="leave-balance-rows">
-                                <div class="lb-row-item">
+                                <div class="lb-row-item" *ngFor="let item of leaveBalanceItems">
                                     <div class="lb-left">
-                                        <div class="lb-icon-circle blue-icon">C</div>
-                                        <span class="lb-name">Casual Leave</span>
+                                        <div class="lb-icon-circle" [ngClass]="item.colorClass">{{ item.initial }}</div>
+                                        <span class="lb-name">{{ item.name }}</span>
                                     </div>
-                                    <span class="lb-days-val blue-days">{{ formatTwoDigits(casualLeaveBalanceDays) }} <small>Days</small></span>
-                                </div>
-
-                                <div class="lb-row-item">
-                                    <div class="lb-left">
-                                        <div class="lb-icon-circle green-icon">S</div>
-                                        <span class="lb-name">Sick Leave</span>
-                                    </div>
-                                    <span class="lb-days-val green-days">{{ formatTwoDigits(sickLeaveBalanceDays) }} <small>Days</small></span>
-                                </div>
-
-                                <div class="lb-row-item">
-                                    <div class="lb-left">
-                                        <div class="lb-icon-circle orange-icon">E</div>
-                                        <span class="lb-name">Earned Leave</span>
-                                    </div>
-                                    <span class="lb-days-val orange-days">{{ formatTwoDigits(earnedLeaveBalanceDays) }} <small>Days</small></span>
+                                    <span class="lb-days-val" [ngClass]="item.textClass">{{ formatTwoDigits(item.days) }} <small>Days</small></span>
                                 </div>
                             </div>
 

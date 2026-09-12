@@ -78,6 +78,16 @@ export interface DashboardRecentRequestItem {
   statusClass: string;
 }
 
+export interface LeaveBalanceItem {
+  id?: number;
+  name: string;
+  code: string;
+  initial: string;
+  days: number;
+  colorClass: string;
+  textClass: string;
+}
+
 export interface DashboardTimesheetDisplayRow {
   date: string;
   day: string;
@@ -161,6 +171,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   overtimeExtended = false;
   wsShiftEndReminderActive = false;
   wsOvertimeReminderActive = false;
+  hasApprovedWfhToday = false;
 
   approvedHours = 0;
   remainingHours = 9;
@@ -185,17 +196,30 @@ export class EmpDashboard implements OnInit, OnDestroy {
   monthPresentDays = 0;
   monthTotalWorkingDays = 22;
   monthAttendancePercentage = 0;
-  casualLeaveBalanceDays = 0;
-  sickLeaveBalanceDays = 0;
-  earnedLeaveBalanceDays = 0;
-  leaveBalanceDays = 0;
+  casualLeaveBalanceDays = 3;
+  sickLeaveBalanceDays = 5;
+  earnedLeaveBalanceDays = 10;
+  leaveBalanceDays = 18;
+
+  leaveBalanceItems: LeaveBalanceItem[] = [
+    { name: 'Casual Leave', code: 'CL', initial: 'C', days: 3, colorClass: 'blue-icon', textClass: 'blue-days' },
+    { name: 'Sick Leave', code: 'SL', initial: 'S', days: 5, colorClass: 'green-icon', textClass: 'green-days' },
+    { name: 'Earned Leave', code: 'EL', initial: 'E', days: 10, colorClass: 'orange-icon', textClass: 'orange-days' },
+    { name: 'Comp Off', code: 'CO', initial: 'C', days: 2, colorClass: 'amber-icon', textClass: 'amber-days' },
+    { name: 'Half Day', code: 'HD', initial: 'H', days: 3, colorClass: 'purple-icon', textClass: 'purple-days' },
+    { name: 'Work From Home', code: 'WFH', initial: 'W', days: 15, colorClass: 'teal-icon', textClass: 'teal-days' },
+  ];
 
   get totalAvailableLeaveDays(): number {
-    return this.casualLeaveBalanceDays + this.sickLeaveBalanceDays + this.earnedLeaveBalanceDays;
+    if (this.leaveBalanceItems && this.leaveBalanceItems.length > 0) {
+      return Math.round(this.leaveBalanceItems.reduce((acc, item) => acc + (Number(item.days) || 0), 0));
+    }
+    return Math.round(this.casualLeaveBalanceDays + this.sickLeaveBalanceDays + this.earnedLeaveBalanceDays);
   }
 
   formatTwoDigits(num: number): string {
-    return num < 10 ? `0${num}` : `${num}`;
+    const intVal = Math.round(Number(num) || 0);
+    return intVal < 10 ? `0${intVal}` : `${intVal}`;
   }
 
   get isTodayWorkingDay(): boolean {
@@ -534,7 +558,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
       return items;
     }
 
-    // 3. Working Day Shift Schedule
+    // 3. Working Day Shift Schedule & Actual Events
     const shiftStart = this.shiftStart || '09:00 AM';
     const shiftEnd = this.shiftEnd || '06:00 PM';
     const lunchStart = this.lunchStart || '01:00 PM';
@@ -542,89 +566,170 @@ export class EmpDashboard implements OnInit, OnDestroy {
     const shiftName = this.shiftName || 'General Shift';
     const workMode = isToday ? (this.status || 'Office') : (day?.workMode || 'Office');
 
-    // Morning block
-    items.push({
-      time: shiftStart,
-      title: shiftName,
-      sub: workMode,
-      span: `${shiftStart} - ${lunchStart}`,
-      dotColor: 'blue',
-      lineType: 'down'
+    interface RawScheduleEvent {
+      minutes: number;
+      item: DashboardScheduleDisplayItem;
+    }
+
+    const eventList: RawScheduleEvent[] = [];
+
+    // A. Shift Starts
+    const shiftStartMins = parseTimeToMinutes(this.formatTime12to24(shiftStart) || '09:00') ?? 540;
+    eventList.push({
+      minutes: shiftStartMins,
+      item: {
+        time: shiftStart,
+        title: 'Shift Starts',
+        sub: `${shiftName} (${workMode})`,
+        span: 'Scheduled Start',
+        dotColor: 'blue',
+        lineType: 'down'
+      }
     });
 
-    // If there is a real punch-in on this day
+    // B. Punch In (Actual or Pending)
     const effectivePunchIn = isToday ? this.punchInTime : day?.punchIn;
     if (effectivePunchIn) {
-      items.push({
-        time: this.formatTime12h(effectivePunchIn),
-        title: 'Punch In Recorded',
-        sub: isToday ? (this.isPunchedIn ? 'Currently Working' : 'Completed') : 'Punched In',
-        span: `In: ${this.formatTime12h(effectivePunchIn)}`,
-        dotColor: 'green',
-        lineType: 'both'
+      const punchInDisplay = this.formatTime12h(effectivePunchIn);
+      const punchInMins = parseTimeToMinutes(this.formatTime12to24(effectivePunchIn) || '') ?? (shiftStartMins + 5);
+      eventList.push({
+        minutes: punchInMins,
+        item: {
+          time: punchInDisplay,
+          title: 'Punch In',
+          sub: isToday ? (this.isPunchedIn ? 'Currently Working' : 'Completed') : 'Punched In',
+          span: `In: ${punchInDisplay}`,
+          dotColor: 'green',
+          lineType: 'both'
+        }
+      });
+    } else if (isToday) {
+      // Pending Punch In
+      eventList.push({
+        minutes: shiftStartMins + 1,
+        item: {
+          time: '--:--',
+          title: 'Punch In (Pending)',
+          sub: 'Not yet punched in today',
+          span: 'Pending',
+          dotColor: 'orange',
+          lineType: 'both'
+        }
       });
     }
 
-    // Lunch break
-    items.push({
-      time: lunchStart,
-      title: 'Lunch Break',
-      sub: 'Break Time',
-      span: `${lunchStart} - ${lunchEnd}`,
-      dotColor: 'orange',
-      lineType: 'both'
+    // C. Lunch Break Start & End
+    const lunchStartMins = parseTimeToMinutes(this.formatTime12to24(lunchStart) || '13:00') ?? 780;
+    const lunchEndMins = parseTimeToMinutes(this.formatTime12to24(lunchEnd) || '13:40') ?? 820;
+    eventList.push({
+      minutes: lunchStartMins,
+      item: {
+        time: lunchStart,
+        title: 'Lunch Break',
+        sub: 'Break Starts',
+        span: `${lunchStart} - ${lunchEnd}`,
+        dotColor: 'orange',
+        lineType: 'both'
+      }
+    });
+    eventList.push({
+      minutes: lunchEndMins,
+      item: {
+        time: lunchEnd,
+        title: 'Lunch Break End',
+        sub: 'Shift Resumes',
+        span: 'Resumed',
+        dotColor: 'blue',
+        lineType: 'both'
+      }
     });
 
-    // Afternoon block
-    items.push({
-      time: lunchEnd,
-      title: shiftName,
-      sub: workMode,
-      span: `${lunchEnd} - ${shiftEnd}`,
-      dotColor: 'blue',
-      lineType: 'both'
-    });
+    // D. Approved Time-Off for this date
+    const dayTimeoffs = this.allTimeoffs.filter((to: any) =>
+      to.date === selectedIso &&
+      (to.status === 'Approved' || to.status === 'Completed')
+    );
+    for (const to of dayTimeoffs) {
+      const toStart = to.start_time ? this.formatTime12h(to.start_time) : lunchStart;
+      const toEnd = to.end_time ? this.formatTime12h(to.end_time) : lunchEnd;
+      const toMins = to.start_time ? (parseTimeToMinutes(this.formatTime12to24(to.start_time) || '') ?? 900) : 900;
+      eventList.push({
+        minutes: toMins,
+        item: {
+          time: toStart,
+          title: 'Time Off',
+          sub: `${to.leave_type || 'Approved'} (${to.duration_hours || 0} hrs)`,
+          span: `${toStart} - ${toEnd}`,
+          dotColor: 'purple',
+          lineType: 'both'
+        }
+      });
+    }
 
-    // If there is a real punch-out on this day
+    // E. Punch Out (Actual if occurred)
     const effectivePunchOut = isToday ? this.punchOutTime : day?.punchOut;
     if (effectivePunchOut) {
-      items.push({
-        time: this.formatTime12h(effectivePunchOut),
-        title: 'Punch Out Recorded',
-        sub: 'Shift Completed',
-        span: `Out: ${this.formatTime12h(effectivePunchOut)}`,
-        dotColor: 'purple',
-        lineType: 'both'
+      const punchOutDisplay = this.formatTime12h(effectivePunchOut);
+      const punchOutMins = parseTimeToMinutes(this.formatTime12to24(effectivePunchOut) || '') ?? 1080;
+      eventList.push({
+        minutes: punchOutMins,
+        item: {
+          time: punchOutDisplay,
+          title: 'Punch Out',
+          sub: 'Shift Completed',
+          span: `Out: ${punchOutDisplay}`,
+          dotColor: 'purple',
+          lineType: 'both'
+        }
       });
     }
 
-    // Overtime
-    items.push({
-      time: shiftEnd,
-      title: 'Overtime',
-      sub: isToday && this.overtimeApproved ? 'Active Overtime' : '(If Required)',
-      span: `${shiftEnd} Onwards`,
-      dotColor: isToday && this.overtimeApproved ? 'green' : 'purple',
-      lineType: 'up'
+    // F. Shift Ends
+    const shiftEndMins = parseTimeToMinutes(this.formatTime12to24(shiftEnd) || '18:00') ?? 1080;
+    eventList.push({
+      minutes: shiftEndMins,
+      item: {
+        time: shiftEnd,
+        title: 'Shift Ends',
+        sub: 'Scheduled End Time',
+        span: 'End of Shift',
+        dotColor: 'blue',
+        lineType: 'up'
+      }
     });
 
-    // Add any scheduled tasks from selectedEvents
-    if (this.selectedEvents && this.selectedEvents.length > 0) {
-      for (const ev of this.selectedEvents) {
-        if (ev.type === 'schedule') {
-          items.push({
-            time: ev.time || 'Scheduled',
-            title: ev.title || 'Scheduled Task',
-            sub: ev.taskDescription || ev.location,
-            span: ev.location,
-            dotColor: 'blue',
-            lineType: 'both'
-          });
+    // G. Active Overtime (if approved & applicable)
+    if (isToday && this.overtimeApproved) {
+      eventList.push({
+        minutes: shiftEndMins + 1,
+        item: {
+          time: shiftEnd,
+          title: 'Overtime',
+          sub: 'Active Approved Overtime',
+          span: `${shiftEnd} Onwards`,
+          dotColor: 'green',
+          lineType: 'up'
         }
-      }
+      });
     }
 
-    return items;
+    // Sort all events chronologically by minute of day
+    eventList.sort((a, b) => a.minutes - b.minutes);
+
+    // Set proper lineType connectors: first is 'down', middle are 'both', last is 'up'
+    const sortedItems = eventList.map((ev, index) => {
+      const it = { ...ev.item };
+      if (index === 0) {
+        it.lineType = 'down';
+      } else if (index === eventList.length - 1) {
+        it.lineType = 'up';
+      } else {
+        it.lineType = 'both';
+      }
+      return it;
+    });
+
+    return sortedItems;
   }
 
   get isPunchDisabled(): boolean {
@@ -1740,8 +1845,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
         timesheets: this.attendanceService.getMyTimesheets().pipe(catchError(() => of([]))),
         timeoffs: this.timeoffService.getMyTimeOffRequests(1, 100).pipe(catchError(() => of({ items: [], totalItems: 0 } as any))),
         regularizations: this.regularizationService.getMyRequests(1, 100).pipe(catchError(() => of({ items: [], totalItems: 0 } as any))),
-        masterData: this.masterDataService.getBootstrapData().pipe(catchError(() => of({ holidays: [], workLocations: [], leaveTypes: [] } as any)))
-      }).subscribe(({ timesheets, timeoffs, regularizations, masterData }) => {
+        masterData: this.masterDataService.getBootstrapData().pipe(catchError(() => of({ holidays: [], workLocations: [], leaveTypes: [] } as any))),
+        leaveBalances: this.timeoffService.getMyLeaveBalances().pipe(catchError(() => of(null)))
+      }).subscribe(({ timesheets, timeoffs, regularizations, masterData, leaveBalances }) => {
         const todayIso = this.toIsoDate(new Date());
 
         this.allTimesheets = timesheets || [];
@@ -1773,33 +1879,67 @@ export class EmpDashboard implements OnInit, OnDestroy {
         const pendingReg = this.allRegularizations.filter((reg: any) => (reg.status || '').toLowerCase() === 'pending').length;
         this.pendingRequestsCount = pendingTimeoff + pendingReg;
 
-        // Calculate leave balances dynamically from actual approved timeoff requests and Master Data quotas
-        const casualUsed = this.allTimeoffs
-          .filter(r => (r.status === 'Approved' || r.status === 'Completed') && String(r.leave_type || '').toLowerCase().includes('casual'))
-          .reduce((acc, r) => acc + (r.duration_days || (r.duration_hours ? r.duration_hours / 8 : 1)), 0);
+        // Populate leave balances from LeaveBalanceService
+        if (leaveBalances?.yearlyBalances && leaveBalances.yearlyBalances.length > 0) {
+          const dynamicItems: LeaveBalanceItem[] = [];
+          for (const yb of leaveBalances.yearlyBalances) {
+            const code = (yb.code || '').toUpperCase();
+            const name = yb.name || code;
+            const nameLower = name.toLowerCase();
 
-        const sickUsed = this.allTimeoffs
-          .filter(r => (r.status === 'Approved' || r.status === 'Completed') && String(r.leave_type || '').toLowerCase().includes('sick'))
-          .reduce((acc, r) => acc + (r.duration_days || (r.duration_hours ? r.duration_hours / 8 : 1)), 0);
+            let initial = name.charAt(0).toUpperCase();
+            let colorClass = 'indigo-icon';
+            let textClass = 'indigo-days';
 
-        const earnedUsed = this.allTimeoffs
-          .filter(r => (r.status === 'Approved' || r.status === 'Completed') && (String(r.leave_type || '').toLowerCase().includes('earned') || String(r.leave_type || '').toLowerCase().includes('privilege')))
-          .reduce((acc, r) => acc + (r.duration_days || (r.duration_hours ? r.duration_hours / 8 : 1)), 0);
+            if (code === 'CL' || nameLower.includes('casual')) {
+              initial = 'C';
+              colorClass = 'blue-icon';
+              textClass = 'blue-days';
+              this.casualLeaveBalanceDays = Math.round(Number(yb.available_days) || 0);
+            } else if (code === 'SL' || nameLower.includes('sick')) {
+              initial = 'S';
+              colorClass = 'green-icon';
+              textClass = 'green-days';
+              this.sickLeaveBalanceDays = Math.round(Number(yb.available_days) || 0);
+            } else if (code === 'EL' || nameLower.includes('earned') || nameLower.includes('privilege') || code === 'PL') {
+              initial = 'E';
+              colorClass = 'orange-icon';
+              textClass = 'orange-days';
+              this.earnedLeaveBalanceDays = Math.round(Number(yb.available_days) || 0);
+            } else if (code === 'CO' || nameLower.includes('comp')) {
+              initial = 'C';
+              colorClass = 'amber-icon';
+              textClass = 'amber-days';
+            } else if (code === 'HD' || nameLower.includes('half')) {
+              initial = 'H';
+              colorClass = 'purple-icon';
+              textClass = 'purple-days';
+            } else if (code === 'WFH' || nameLower.includes('work from home') || nameLower.includes('remote')) {
+              initial = 'W';
+              colorClass = 'teal-icon';
+              textClass = 'teal-days';
+            } else if (code === 'ML' || nameLower.includes('maternity')) {
+              initial = 'M';
+              colorClass = 'rose-icon';
+              textClass = 'rose-days';
+            }
 
-        const leaveTypesList: any[] = masterData?.leaveTypes || (masterData as any)?.leave_types || [];
-        const clType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('casual') || (l.code || '').toUpperCase() === 'CL');
-        const slType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('sick') || (l.code || '').toUpperCase() === 'SL');
-        const elType = leaveTypesList.find((l: any) => (l.name || '').toLowerCase().includes('earned') || (l.name || '').toLowerCase().includes('privilege') || (l.code || '').toUpperCase() === 'EL' || (l.code || '').toUpperCase() === 'PL');
+            dynamicItems.push({
+              id: yb.leave_type_id,
+              name: name,
+              code: code,
+              initial: initial,
+              days: Math.round(Number(yb.available_days) || 0),
+              colorClass: colorClass,
+              textClass: textClass
+            });
+          }
 
-        const shiftHours = (this.shiftTotalSeconds ? this.shiftTotalSeconds / 3600 : 8) || 8;
-        const clQuotaDays = clType?.default_balance_hours ? Math.round(Number(clType.default_balance_hours) / shiftHours) : (clType?.max_days ?? 12);
-        const slQuotaDays = slType?.default_balance_hours ? Math.round(Number(slType.default_balance_hours) / shiftHours) : (slType?.max_days ?? 8);
-        const elQuotaDays = elType?.default_balance_hours ? Math.round(Number(elType.default_balance_hours) / shiftHours) : (elType?.max_days ?? 10);
-
-        this.casualLeaveBalanceDays = Math.max(0, clQuotaDays - Math.round(casualUsed));
-        this.sickLeaveBalanceDays = Math.max(0, slQuotaDays - Math.round(sickUsed));
-        this.earnedLeaveBalanceDays = Math.max(0, elQuotaDays - Math.round(earnedUsed));
-        this.leaveBalanceDays = this.casualLeaveBalanceDays + this.sickLeaveBalanceDays + this.earnedLeaveBalanceDays;
+          if (dynamicItems.length > 0) {
+            this.leaveBalanceItems = dynamicItems;
+          }
+          this.leaveBalanceDays = Math.round(Number(leaveBalances.totalAvailableDays ?? this.totalAvailableLeaveDays) || 0);
+        }
 
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -2260,7 +2400,8 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (todayState.workLocationName) {
       this.assignedWorkLocationName = todayState.workLocationName;
     }
-    if (this.isAssignedRemoteWorker || todayState.isRemoteWorker) {
+    this.hasApprovedWfhToday = !!(todayState as any).hasApprovedWfh;
+    if (this.isAssignedRemoteWorker || todayState.isRemoteWorker || this.hasApprovedWfhToday) {
       this.status = 'Remote';
       this.pendingPunchWorkMode = 'Remote';
       this.pendingWorkModeToSwitch = 'Remote';

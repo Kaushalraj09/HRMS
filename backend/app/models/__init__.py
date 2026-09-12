@@ -3,7 +3,9 @@ from app.models.employee import Employee, EmployeeShift
 from app.models.hr_user import HrUser
 from app.models.user import Role, User
 from app.models.timeoff import TimeOffRequest
+from app.models.leave_balance import EmployeeLeaveBalance
 from app.models.approval_log import ApprovalLog
+from app.models.rate_limit import RateLimitRecord
 from app.models.login_activity import LoginActivity
 from app.models.notification import Notification
 from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday, BreakPolicy, AttendancePolicy
@@ -26,6 +28,25 @@ from app.models.training import (
     AssessmentOption,
     AssessmentAttempt,
     AssessmentAnswer,
+)
+
+from app.models.payroll import (
+    SalaryComponent,
+    SalaryStructure,
+    SalaryStructureComponent,
+    EmployeeSalaryAssignment,
+    EmployeeSalaryComponent,
+    SalaryRevision,
+    PayrollPeriod,
+    PayrollRun,
+    PayrollRecord,
+    PayrollRecordItem,
+    PayrollInput,
+    PayrollException,
+    PayrollAdjustment,
+    Payslip,
+    PayrollAuditLog,
+    StatutoryConfiguration,
 )
 
 __all__ = [
@@ -66,6 +87,22 @@ __all__ = [
     "AssessmentOption",
     "AssessmentAnswer",
     "AssessmentAttempt",
+    "SalaryComponent",
+    "SalaryStructure",
+    "SalaryStructureComponent",
+    "EmployeeSalaryAssignment",
+    "EmployeeSalaryComponent",
+    "SalaryRevision",
+    "PayrollPeriod",
+    "PayrollRun",
+    "PayrollRecord",
+    "PayrollRecordItem",
+    "PayrollInput",
+    "PayrollException",
+    "PayrollAdjustment",
+    "Payslip",
+    "PayrollAuditLog",
+    "StatutoryConfiguration",
 ]
 
 

@@ -1,0 +1,1060 @@
+<div class="payroll-wrapper">
+  <div class="payroll-container">
+
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-text">
+        <h1>Payroll Management</h1>
+        <p>Enterprise compensation management, automated batch processing, statutory compliance & payslips.</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="openExecuteRunModal()">
+          <i class="fas fa-play"></i> Execute Payroll Run
+        </button>
+        <button class="btn btn-primary" (click)="switchTab('salaries')">
+          <i class="fas fa-user-plus"></i> Assign Salary Structure
+        </button>
+      </div>
+    </div>
+
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Loading payroll data...</span>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 1: DASHBOARD -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'dashboard' && !isLoading" class="tab-content">
+      <!-- KPI Stats Grid -->
+      <div class="stats-grid" *ngIf="dashboardSummary">
+        <div class="stat-card">
+          <div class="stat-icon-wrapper icon-blue">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">Total Employees</span>
+            <span class="stat-value">{{ dashboardSummary.total_employees }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper icon-green">
+            <i class="fas fa-id-card"></i>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">Configured Salaries</span>
+            <span class="stat-value">{{ dashboardSummary.configured_salaries || dashboardSummary.assigned_salary_count }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper icon-amber">
+            <i class="fas fa-user-clock"></i>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">Missing Salaries</span>
+            <span class="stat-value">{{ dashboardSummary.missing_salaries || dashboardSummary.missing_salary_count }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper icon-purple">
+            <i class="fas fa-money-check-alt"></i>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">Last Net Payout</span>
+            <span class="stat-value">{{ formatCurrency(dashboardSummary.last_net_payout || dashboardSummary.current_month_net) }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper" [ngClass]="(dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) >= 0 ? 'icon-emerald' : 'icon-red'">
+            <i class="fas fa-percentage"></i>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">Monthly Variance</span>
+            <span class="stat-value" [ngClass]="(dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) >= 0 ? 'text-green' : 'text-red'">
+              {{ (dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) > 0 ? '+' : '' }}{{ (dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) | number:'1.2-2' }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variance Alert Warning if variance > 10% -->
+      <div class="alert-banner" *ngIf="dashboardSummary && (dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct) && ((dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) > 10 || (dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) < -10)">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>
+          <strong>Variance Notice:</strong> Net payout shifted by {{ (dashboardSummary.monthly_variance || dashboardSummary.net_variance_pct || 0) | number:'1.2-2' }}% compared to the prior month. Check adjustments and exceptions in the latest payroll run.
+        </span>
+      </div>
+
+      <!-- Quick Action Cards Grid -->
+      <div class="dashboard-sections-grid">
+        <!-- Statutory Summary Card -->
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h3><i class="fas fa-landmark"></i> Statutory Compliance Overview</h3>
+            <button class="btn-link" (click)="switchTab('statutory')">Manage Slabs &rarr;</button>
+          </div>
+          <div class="statutory-overview-list" *ngIf="dashboardSummary">
+            <div class="statutory-item">
+              <div class="statutory-title">
+                <strong>Employees' Provident Fund (EPF)</strong>
+                <span class="badge badge-success">Active</span>
+              </div>
+              <p>Employee: 12% of Basic | Employer: 12% (Wage Ceiling: ₹15,000)</p>
+            </div>
+            <div class="statutory-item">
+              <div class="statutory-title">
+                <strong>Employees' State Insurance (ESI)</strong>
+                <span class="badge badge-success">Active</span>
+              </div>
+              <p>Employee: 0.75% of Gross | Employer: 3.25% (Gross Ceiling: ₹21,000)</p>
+            </div>
+            <div class="statutory-item">
+              <div class="statutory-title">
+                <strong>Professional Tax (PT)</strong>
+                <span class="badge badge-success">Active</span>
+              </div>
+              <p>State slab deductions (e.g. ₹200 / month based on gross bracket)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Department Cost Breakdown Card -->
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h3><i class="fas fa-building"></i> Department Cost Allocation</h3>
+          </div>
+          <div class="dept-cost-table-container" *ngIf="dashboardSummary?.department_cost_breakdown?.length; else noDeptCosts">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Headcount</th>
+                  <th>Total Cost</th>
+                  <th>Avg / Emp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of dashboardSummary?.department_cost_breakdown">
+                  <td><strong>{{ item.department }}</strong></td>
+                  <td>{{ item.employee_count }}</td>
+                  <td>{{ formatCurrency(item.total_cost) }}</td>
+                  <td>{{ formatCurrency(item.total_cost / (item.employee_count || 1)) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noDeptCosts>
+            <div class="empty-state-card">
+              <i class="fas fa-folder-open"></i>
+              <p>Department cost allocation will populate once payroll runs are locked.</p>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 2: EMPLOYEE SALARIES -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'salaries' && !isLoading" class="tab-content">
+      <!-- Search & Filters -->
+      <div class="filters-bar">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            placeholder="Search by employee name or code..."
+            [(ngModel)]="searchSalary"
+            (ngModelChange)="onSalariesFilterChange()"
+          />
+        </div>
+        <div class="select-filter-wrapper">
+          <app-custom-select
+            [options]="departmentOptions"
+            [(value)]="selectedDepartment"
+            (valueChange)="onSalariesFilterChange()"
+          ></app-custom-select>
+        </div>
+      </div>
+
+      <!-- Employee Salaries Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Structure</th>
+              <th>Annual CTC</th>
+              <th>Monthly Gross</th>
+              <th>Monthly Net</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of salaryOverviewItems">
+              <td>
+                <div class="employee-identity">
+                  <div class="avatar-circle">{{ item.employee_name ? item.employee_name.charAt(0) : 'E' }}</div>
+                  <div class="emp-details">
+                    <span class="emp-name">{{ item.employee_name }}</span>
+                    <span class="emp-code">{{ item.employee_code }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>{{ item.department || '—' }}</td>
+              <td>
+                <span *ngIf="item.structure_name" class="badge badge-info">{{ item.structure_name }}</span>
+                <span *ngIf="!item.structure_name" class="badge badge-warning">Not Assigned</span>
+              </td>
+              <td><strong>{{ item.annual_ctc ? formatCurrency(item.annual_ctc) : '—' }}</strong></td>
+              <td>{{ item.gross_monthly ? formatCurrency(item.gross_monthly) : '—' }}</td>
+              <td>{{ item.net_monthly ? formatCurrency(item.net_monthly) : '—' }}</td>
+              <td>
+                <span class="badge" [ngClass]="item.has_salary ? 'badge-success' : 'badge-danger'">
+                  {{ item.has_salary ? 'Configured' : 'Missing' }}
+                </span>
+              </td>
+              <td>
+                <div class="action-buttons-group">
+                  <button class="btn-icon" title="View Breakdown" (click)="viewEmployeeBreakdown(item.employee_id)" *ngIf="item.has_salary">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn-action-primary" (click)="openAssignModal(item)">
+                    <i class="fas fa-cog"></i> {{ item.has_salary ? 'Reassign' : 'Assign' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="salaryOverviewItems.length === 0">
+              <td colspan="8" class="text-center empty-state-row">No employee salary records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 3: SALARY STRUCTURES -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'structures' && !isLoading" class="tab-content">
+      <div class="tab-toolbar">
+        <p class="tab-toolbar-desc">Predefined templates configured with basic, allowances, and statutory rules.</p>
+        <button class="btn btn-primary" (click)="openCreateStructureModal()">
+          <i class="fas fa-plus"></i> Create Salary Structure
+        </button>
+      </div>
+
+      <div class="structures-grid">
+        <div class="structure-card glass-card" *ngFor="let s of structures">
+          <div class="structure-header">
+            <div>
+              <h3>{{ s.name }}</h3>
+              <span class="structure-code-badge">{{ s.code }}</span>
+            </div>
+            <span class="badge badge-success" *ngIf="s.is_active">Active</span>
+          </div>
+          <p class="structure-desc">{{ s.description || 'Standard compensation structure template.' }}</p>
+
+          <div class="structure-meta">
+            <span><strong>Mode:</strong> {{ s.salary_basis === 'CTC' ? 'CTC (Annual)' : 'Gross (Monthly)' }}</span>
+            <span><strong>Components:</strong> {{ s.components.length || 0 }}</span>
+          </div>
+
+          <div class="structure-components-preview" *ngIf="s.components && s.components.length > 0">
+            <span class="component-chip" *ngFor="let c of s.components">
+              {{ c.component_code }} ({{ c.percentage_or_value }}{{ c.calculation_type.includes('percentage') ? '%' : '₹' }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 4: PAYROLL RUNS -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'runs' && !isLoading" class="tab-content">
+
+      <!-- LIST VIEW OF RUNS -->
+      <div *ngIf="!selectedRun">
+        <div class="filters-bar">
+          <div class="select-filter-wrapper">
+            <app-custom-select
+              [options]="yearOptions"
+              [(value)]="selectedRunYear"
+              (valueChange)="loadRuns()"
+            ></app-custom-select>
+          </div>
+          <div class="select-filter-wrapper">
+            <app-custom-select
+              [options]="runStatusFilterOptions"
+              [(value)]="selectedRunStatus"
+              (valueChange)="loadRuns()"
+            ></app-custom-select>
+          </div>
+          <button class="btn btn-primary ml-auto" (click)="openExecuteRunModal()">
+            <i class="fas fa-play"></i> Execute New Run
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Run Number</th>
+                <th>Period</th>
+                <th>Employees</th>
+                <th>Gross Payout</th>
+                <th>Deductions</th>
+                <th>Net Payout</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let run of payrollRuns">
+                <td><strong>{{ run.run_number }}</strong></td>
+                <td>{{ getMonthName(run.month || 1) }} {{ run.year }}</td>
+                <td>{{ run.total_employees }}</td>
+                <td>{{ formatCurrency(run.total_gross) }}</td>
+                <td>{{ formatCurrency(run.total_deductions) }}</td>
+                <td><strong>{{ formatCurrency(run.total_net) }}</strong></td>
+                <td>
+                  <span class="badge" [ngClass]="getStatusBadgeClass(run.status)">{{ run.status }}</span>
+                </td>
+                <td>
+                  <button class="btn-action-primary" (click)="viewRunDetails(run)">
+                    <i class="fas fa-clipboard-list"></i> View Run Details
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="payrollRuns.length === 0">
+                <td colspan="8" class="text-center empty-state-row">No payroll runs found for selected criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RUN DRILL-DOWN VIEW -->
+      <div *ngIf="selectedRun" class="run-drilldown-container">
+        <!-- Drilldown Top Navigation -->
+        <div class="run-drilldown-header">
+          <div class="run-title-group">
+            <button class="btn-back" (click)="backToRunsList()">
+              <i class="fas fa-arrow-left"></i> Back to Runs
+            </button>
+            <h2>Payroll Run #{{ selectedRun.run_number }} — {{ getMonthName(selectedRun.month || 1) }} {{ selectedRun.year }}</h2>
+            <span class="badge" [ngClass]="getStatusBadgeClass(selectedRun.status)">{{ selectedRun.status }}</span>
+          </div>
+
+          <!-- Lifecycle Action Buttons -->
+          <div class="run-actions-group">
+            <button class="btn btn-warning" *ngIf="selectedRun.status === 'DRAFT'" (click)="submitSelectedRunForApproval()">
+              <i class="fas fa-paper-plane"></i> Submit for Approval
+            </button>
+
+            <button class="btn btn-success" *ngIf="selectedRun.status === 'PENDING_APPROVAL' && isAdmin" (click)="approveSelectedRun()">
+              <i class="fas fa-check-circle"></i> Approve Run
+            </button>
+
+            <button class="btn btn-danger" *ngIf="selectedRun.status === 'PENDING_APPROVAL' && isAdmin" (click)="rejectSelectedRun()">
+              <i class="fas fa-times-circle"></i> Reject Run
+            </button>
+
+            <button class="btn btn-purple" *ngIf="selectedRun.status === 'APPROVED'" (click)="lockSelectedRun()">
+              <i class="fas fa-lock"></i> Lock & Publish Payslips
+            </button>
+
+            <button class="btn btn-emerald" *ngIf="selectedRun.status === 'LOCKED'" (click)="markSelectedRunPaid()">
+              <i class="fas fa-check-double"></i> Mark Paid & Disbursed
+            </button>
+
+            <button class="btn btn-secondary" (click)="exportPayrollCsv()">
+              <i class="fas fa-file-csv"></i> Export Payroll CSV
+            </button>
+
+            <button class="btn btn-secondary" (click)="exportBankCsv()">
+              <i class="fas fa-university"></i> Export Bank Payout
+            </button>
+          </div>
+        </div>
+
+        <!-- Exceptions Alert Panel (if any) -->
+        <div class="exceptions-panel glass-card" *ngIf="runExceptions.length > 0">
+          <div class="exceptions-header">
+            <h4><i class="fas fa-exclamation-triangle text-amber"></i> Validation Exceptions ({{ runExceptions.length }})</h4>
+            <span class="text-muted">Review potential anomalies flagged by the payroll engine</span>
+          </div>
+          <div class="exceptions-list">
+            <div class="exception-item" *ngFor="let exc of runExceptions">
+              <div class="exc-info">
+                <span class="badge" [ngClass]="exc.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning'">
+                  {{ exc.severity }}
+                </span>
+                <strong>{{ exc.error_code || 'EXCEPTION' }}:</strong>
+                <span>{{ exc.message }}</span>
+              </div>
+              <div class="exc-action" *ngIf="!exc.is_resolved">
+                <button class="btn-sm btn-outline-warning" (click)="openResolveExceptionModal(exc)">Resolve</button>
+              </div>
+              <div class="exc-resolved" *ngIf="exc.is_resolved">
+                <span class="badge badge-success"><i class="fas fa-check"></i> Resolved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Line Item Records Table -->
+        <div class="table-container mt-4">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Days Present</th>
+                <th>LOP Days</th>
+                <th>OT Hours</th>
+                <th>Gross Earned</th>
+                <th>Deductions</th>
+                <th>Net Payout</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let rec of runRecords">
+                <td>
+                  <div class="employee-identity">
+                    <div class="avatar-circle">{{ rec.employee_name ? rec.employee_name.charAt(0) : 'E' }}</div>
+                    <div class="emp-details">
+                      <span class="emp-name">{{ rec.employee_name }}</span>
+                      <span class="emp-code">{{ rec.employee_code }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ rec.department || '—' }}</td>
+                <td>{{ rec.payable_days | number:'1.1-1' }} / {{ rec.total_payroll_days }}</td>
+                <td>
+                  <span [class.text-red]="rec.unpaid_leave_days > 0">{{ rec.unpaid_leave_days | number:'1.1-1' }}</span>
+                </td>
+                <td>{{ rec.overtime_hours | number:'1.1-1' }} hrs</td>
+                <td>{{ formatCurrency(rec.gross_earnings) }}</td>
+                <td>{{ formatCurrency(rec.total_deductions) }}</td>
+                <td><strong>{{ formatCurrency(rec.net_salary) }}</strong></td>
+                <td>
+                  <span class="badge" [ngClass]="getStatusBadgeClass(rec.status)">{{ rec.status }}</span>
+                </td>
+                <td>
+                  <button
+                    class="btn-sm btn-outline-primary"
+                    [disabled]="selectedRun.status === 'LOCKED' || selectedRun.status === 'PAID'"
+                    (click)="openAdjustmentModal(rec)"
+                    title="Add manual adjustment"
+                  >
+                    <i class="fas fa-sliders-h"></i> Adjust
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="runRecords.length === 0">
+                <td colspan="10" class="text-center empty-state-row">No records found for this payroll run.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 5: SALARY REVISIONS -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'revisions' && !isLoading" class="tab-content">
+      <div class="tab-toolbar">
+        <div class="select-filter-wrapper">
+          <app-custom-select
+            [options]="revisionStatusOptions"
+            [(value)]="selectedRevisionStatus"
+            (valueChange)="loadRevisions()"
+          ></app-custom-select>
+        </div>
+        <button class="btn btn-primary" (click)="openCreateRevisionModal()">
+          <i class="fas fa-plus"></i> Request Increment / Revision
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Current CTC</th>
+              <th>Proposed CTC</th>
+              <th>Increment %</th>
+              <th>Effective Date</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let rev of revisions">
+              <td>
+                <strong>{{ rev.employee_name }}</strong>
+                <div class="text-muted small">{{ rev.employee_code }}</div>
+              </td>
+              <td>{{ formatCurrency(rev.old_annual_ctc) }}</td>
+              <td><strong>{{ formatCurrency(rev.new_annual_ctc) }}</strong></td>
+              <td><span class="badge badge-success">+{{ rev.increment_percentage }}%</span></td>
+              <td>{{ rev.effective_from }}</td>
+              <td>{{ rev.reason || 'Appraisal' }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(rev.status)">{{ rev.status }}</span>
+              </td>
+              <td>
+                <div class="action-buttons-group" *ngIf="rev.status === 'PENDING'">
+                  <button class="btn-sm btn-success" (click)="actionRevision(rev.id, true)">Approve</button>
+                  <button class="btn-sm btn-danger" (click)="actionRevision(rev.id, false)">Reject</button>
+                </div>
+                <span *ngIf="rev.status !== 'PENDING'" class="text-muted">Reviewed</span>
+              </td>
+            </tr>
+            <tr *ngIf="revisions.length === 0">
+              <td colspan="8" class="text-center empty-state-row">No revision requests found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 6: PAYSLIPS -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'payslips' && !isLoading" class="tab-content">
+      <div class="tab-toolbar">
+        <p class="tab-toolbar-desc">Published, immutable payslips ready for employee review and PDF download.</p>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Payslip #</th>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Period</th>
+              <th>Gross Earnings</th>
+              <th>Deductions</th>
+              <th>Net Pay</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of allPayslips">
+              <td><strong>{{ p.payslip_number }}</strong></td>
+              <td>
+                <strong>{{ p.employee_name }}</strong>
+                <div class="text-muted small">{{ p.employee_code }}</div>
+              </td>
+              <td>{{ p.department || '—' }}</td>
+              <td>{{ p.payroll_month }}</td>
+              <td>{{ formatCurrency(p.gross_earnings) }}</td>
+              <td>{{ formatCurrency(p.total_deductions) }}</td>
+              <td><strong>{{ formatCurrency(p.net_salary) }}</strong></td>
+              <td>
+                <button class="btn-action-primary" (click)="downloadPayslipPdf(p)">
+                  <i class="fas fa-file-pdf"></i> Download PDF
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="allPayslips.length === 0">
+              <td colspan="8" class="text-center empty-state-row">No published payslips found. Lock a payroll run to generate payslips.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- TAB 7: STATUTORY COMPLIANCE -->
+    <!-- ==================================================== -->
+    <div *ngIf="activeTab === 'statutory' && !isLoading" class="tab-content">
+      <div class="tab-toolbar">
+        <p class="tab-toolbar-desc">Configure EPF, ESI, and Professional Tax parameters and rate ceilings.</p>
+      </div>
+
+      <div class="statutory-cards-grid">
+        <div class="statutory-card glass-card" *ngFor="let cfg of statutoryConfigs">
+          <div class="statutory-card-header">
+            <div>
+              <h3>{{ cfg.name }}</h3>
+              <span class="badge badge-info">{{ cfg.code }}</span>
+            </div>
+            <button class="btn-icon" (click)="openEditStatutoryModal(cfg)" title="Edit rule">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+          </div>
+          <div class="statutory-card-body">
+            <div class="statutory-metric">
+              <span class="metric-label">Employee Rate</span>
+              <span class="metric-value">{{ cfg.employee_rate_pct }} %</span>
+            </div>
+            <div class="statutory-meta">
+              <span><strong>Calculation Basis:</strong> {{ cfg.calculation_basis }}</span>
+              <span *ngIf="cfg.description" class="text-muted"><br>{{ cfg.description }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: ASSIGN SALARY STRUCTURE -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isAssignModalOpen">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3>Assign Salary Structure</h3>
+      <button class="close-btn" (click)="closeAssignModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert-banner mb-3">
+        <i class="fas fa-user"></i>
+        <span>Assigning to: <strong>{{ assignEmployeeName }}</strong> ({{ assignEmployeeCode }})</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Salary Structure</label>
+          <app-custom-select
+            [options]="structureOptions"
+            [(value)]="assignStructureId"
+            (valueChange)="calculateSalaryPreview()"
+          ></app-custom-select>
+        </div>
+
+        <div class="form-group">
+          <label>Calculation Mode</label>
+          <app-custom-select
+            [options]="modeOptions"
+            [(value)]="assignMode"
+            (valueChange)="calculateSalaryPreview()"
+          ></app-custom-select>
+        </div>
+
+        <div class="form-group">
+          <label>{{ assignMode === 'ctc_based' ? 'Annual CTC (₹)' : 'Monthly Gross (₹)' }}</label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="assignBaseAmount"
+            (ngModelChange)="calculateSalaryPreview()"
+            placeholder="e.g. 600000"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Effective Date</label>
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="assignEffectiveDate"
+          />
+        </div>
+      </div>
+
+      <!-- Live Calculation Preview -->
+      <div class="preview-container glass-card mt-3" *ngIf="salaryPreview">
+        <div class="preview-header">
+          <h4><i class="fas fa-calculator"></i> Real-time Salary Breakdown Preview</h4>
+          <span class="badge badge-success">Engine Verified</span>
+        </div>
+        <div class="preview-metrics-row">
+          <div class="preview-metric">
+            <span>Annual CTC</span>
+            <strong>{{ formatCurrency(salaryPreview.annual_ctc) }}</strong>
+          </div>
+          <div class="preview-metric">
+            <span>Monthly Gross</span>
+            <strong>{{ formatCurrency(salaryPreview.gross_monthly) }}</strong>
+          </div>
+          <div class="preview-metric">
+            <span>Monthly Deductions</span>
+            <strong class="text-red">{{ formatCurrency(salaryPreview.total_deductions_monthly) }}</strong>
+          </div>
+          <div class="preview-metric">
+            <span>Take Home (Net)</span>
+            <strong class="text-green">{{ formatCurrency(salaryPreview.net_monthly) }}</strong>
+          </div>
+        </div>
+
+        <!-- Components Breakdown List -->
+        <div class="components-preview-table mt-2">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Type</th>
+                <th>Monthly Amount</th>
+                <th>Annual Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of salaryPreview.components">
+                <td><strong>{{ c.name }}</strong> ({{ c.code }})</td>
+                <td><span class="badge" [ngClass]="c.component_type === 'EARNING' ? 'badge-success' : 'badge-warning'">{{ c.component_type }}</span></td>
+                <td>{{ formatCurrency(c.monthly_amount) }}</td>
+                <td>{{ formatCurrency(c.annual_amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div *ngIf="isPreviewLoading" class="preview-loading mt-2">
+        <i class="fas fa-spinner fa-spin"></i> Calculating structure breakdown...
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="isAssigning || !salaryPreview" (click)="saveEmployeeSalaryAssignment()">
+        <i class="fas fa-save"></i> {{ isAssigning ? 'Saving...' : 'Save & Assign Structure' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: VIEW EMPLOYEE SALARY BREAKDOWN -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isBreakdownModalOpen && selectedEmployeeSalary">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3>Configured Salary Breakdown</h3>
+      <button class="close-btn" (click)="closeBreakdownModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="preview-metrics-row mb-3">
+        <div class="preview-metric">
+          <span>Annual CTC</span>
+          <strong>{{ formatCurrency(selectedEmployeeSalary.annual_ctc) }}</strong>
+        </div>
+        <div class="preview-metric">
+          <span>Monthly Gross</span>
+          <strong>{{ formatCurrency(selectedEmployeeSalary.gross_monthly) }}</strong>
+        </div>
+        <div class="preview-metric">
+          <span>Monthly Net</span>
+          <strong class="text-green">{{ formatCurrency(selectedEmployeeSalary.net_monthly) }}</strong>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Type</th>
+            <th>Monthly Amount</th>
+            <th>Annual Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of selectedEmployeeSalary.components">
+            <td><strong>{{ item.code || item.name }}</strong></td>
+            <td><span class="badge" [ngClass]="item.component_type === 'EARNING' ? 'badge-success' : 'badge-warning'">{{ item.component_type }}</span></td>
+            <td>{{ formatCurrency(item.monthly_amount) }}</td>
+            <td>{{ formatCurrency(item.annual_amount) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeBreakdownModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: EXECUTE PAYROLL RUN -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isExecuteRunModalOpen">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Execute Payroll Batch Run</h3>
+      <button class="close-btn" (click)="closeExecuteRunModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted">
+        The payroll engine will compile finalized attendance, loss of pay (LOP), approved overtime (1.5x), statutory deductions (EPF, ESI, PT), and generate draft line-item payroll records.
+      </p>
+
+      <div class="form-grid mt-3">
+        <div class="form-group">
+          <label>Year</label>
+          <app-custom-select
+            [options]="yearOptions"
+            [(value)]="newRunYear"
+          ></app-custom-select>
+        </div>
+
+        <div class="form-group">
+          <label>Month</label>
+          <app-custom-select
+            [options]="monthOptions"
+            [(value)]="newRunMonth"
+          ></app-custom-select>
+        </div>
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Remarks / Note (Optional)</label>
+        <textarea
+          class="form-control"
+          rows="2"
+          [(ngModel)]="newRunRemarks"
+          placeholder="e.g. Regular monthly run for September 2026"
+        ></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeExecuteRunModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="executingRun" (click)="executePayrollRun()">
+        <i class="fas fa-cogs fa-spin" *ngIf="executingRun"></i>
+        <i class="fas fa-play" *ngIf="!executingRun"></i>
+        {{ executingRun ? 'Executing Engine...' : 'Run Payroll Batch' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: CREATE SALARY STRUCTURE -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isStructureModalOpen">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3>Create Salary Structure</h3>
+      <button class="close-btn" (click)="closeCreateStructureModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Structure Code</label>
+          <input type="text" class="form-control" [(ngModel)]="newStructureCode" placeholder="e.g. TECH_LEAD_STRUCT" />
+        </div>
+        <div class="form-group">
+          <label>Structure Name</label>
+          <input type="text" class="form-control" [(ngModel)]="newStructureName" placeholder="e.g. Technical Leadership Structure" />
+        </div>
+        <div class="form-group">
+          <label>Calculation Mode</label>
+          <app-custom-select [options]="modeOptions" [(value)]="newStructureCalculationMode"></app-custom-select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-control" [(ngModel)]="newStructureDescription" placeholder="Description of this structure" />
+        </div>
+      </div>
+
+      <div class="tab-toolbar mt-3">
+        <h4>Structure Components</h4>
+        <button class="btn-sm btn-outline-primary" (click)="addStructureComponent()">
+          <i class="fas fa-plus"></i> Add Component
+        </button>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Calculation Type</th>
+            <th>Value (% / ₹)</th>
+            <th>Taxable</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of newStructureComponents; let i = index">
+            <td>
+              <span class="badge badge-info">{{ item.component_code }}</span>
+            </td>
+            <td>
+              <app-custom-select
+                [options]="calcTypeOptions"
+                [(value)]="item.calculation_type"
+              ></app-custom-select>
+            </td>
+            <td>
+              <input type="number" class="form-control" [(ngModel)]="item.value" />
+            </td>
+            <td>
+              <input type="checkbox" [(ngModel)]="item.is_taxable" />
+            </td>
+            <td>
+              <button class="btn-icon text-red" (click)="removeStructureComponent(i)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeCreateStructureModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="isSavingStructure" (click)="saveStructure()">
+        {{ isSavingStructure ? 'Saving...' : 'Save Structure' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: MANUAL ADJUSTMENT -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isAdjustmentModalOpen && selectedRecordForAdjustment">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Add Manual Payroll Adjustment</h3>
+      <button class="close-btn" (click)="closeAdjustmentModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted">
+        Adjusting line-item record for <strong>{{ selectedRecordForAdjustment.employee_name }}</strong>.
+      </p>
+
+      <div class="form-group mt-3">
+        <label>Adjustment Type</label>
+        <app-custom-select
+          [options]="adjustmentTypeOptions"
+          [(value)]="adjustmentType"
+        ></app-custom-select>
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Amount (₹)</label>
+        <input type="number" class="form-control" [(ngModel)]="adjustmentAmount" placeholder="e.g. 5000" />
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Reason / Audit Justification</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="adjustmentReason" placeholder="e.g. Special quarterly performance bonus"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeAdjustmentModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="isSavingAdjustment" (click)="saveAdjustment()">
+        {{ isSavingAdjustment ? 'Applying...' : 'Apply Adjustment' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: RESOLVE EXCEPTION -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isExceptionModalOpen && resolvingException">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Resolve Payroll Exception</h3>
+      <button class="close-btn" (click)="closeResolveExceptionModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert-banner mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ resolvingException.message }}</span>
+      </div>
+
+      <div class="form-group">
+        <label>Resolution Notes</label>
+        <textarea class="form-control" rows="3" [(ngModel)]="exceptionResolutionNotes" placeholder="Describe the audit resolution or reason for override..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeResolveExceptionModal()">Cancel</button>
+      <button class="btn btn-primary" (click)="resolveException()">Mark as Resolved</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: CREATE REVISION -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isRevisionModalOpen">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Request Salary Increment / Revision</h3>
+      <button class="close-btn" (click)="closeCreateRevisionModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Employee</label>
+        <app-custom-select
+          [options]="revisionEmployeeOptions"
+          [(value)]="revisionEmployeeId"
+        ></app-custom-select>
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Proposed Annual CTC (₹)</label>
+        <input type="number" class="form-control" [(ngModel)]="revisionProposedAnnualCtc" placeholder="e.g. 750000" />
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Increment Percentage (%)</label>
+        <input type="number" class="form-control" [(ngModel)]="revisionIncrementPercent" placeholder="e.g. 15" />
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Effective Date</label>
+        <input type="date" class="form-control" [(ngModel)]="revisionEffectiveDate" />
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Reason / Appraisal Notes</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="revisionReason" placeholder="e.g. Annual merit-based performance appraisal"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeCreateRevisionModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="isSavingRevision" (click)="saveRevision()">
+        {{ isSavingRevision ? 'Submitting...' : 'Submit Revision' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: EDIT STATUTORY RULE -->
+<!-- ==================================================== -->
+<div class="modal-backdrop" *ngIf="isEditStatutoryModalOpen && editingStatutoryConfig">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Statutory Rule: {{ editingStatutoryConfig.name }}</h3>
+      <button class="close-btn" (click)="closeEditStatutoryModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Employee Rate (%)</label>
+        <input type="number" class="form-control" [(ngModel)]="editStatutoryValue" />
+      </div>
+      <div class="form-group mt-3">
+        <label>Notes / Legal Reference</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="editStatutoryNotes"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeEditStatutoryModal()">Cancel</button>
+      <button class="btn btn-primary" (click)="saveStatutoryConfig()">Save Configuration</button>
+    </div>
+  </div>
+</div>

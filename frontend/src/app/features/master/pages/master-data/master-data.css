@@ -316,6 +316,36 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
+.action-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-delete {
+  background-color: #ffffff;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.btn-delete:hover {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.08);
+}
+
 .empty-state {
   text-align: center;
   color: #94a3b8;
@@ -373,12 +403,14 @@
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(226, 232, 240, 0.8);
-  overflow: hidden;
+  overflow: visible;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Wider card for the shift form */
 .modal-card.shift-modal-card {
   max-width: 680px;
+  overflow: hidden;
 }
 
 /* Form inside modal must flex so footer pins to bottom */
@@ -387,6 +419,10 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow: visible;
+}
+
+.modal-card.shift-modal-card form {
   overflow: hidden;
 }
 
@@ -406,6 +442,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
 }
 
 .modal-header h3 {
@@ -441,6 +479,10 @@
 .modal-body {
   padding: 1.5rem;
   flex: 1;
+  overflow: visible;
+}
+
+.modal-card.shift-modal-card .modal-body {
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -502,6 +544,28 @@
   cursor: pointer;
 }
 
+.holiday-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.holiday-date-group {
+  flex: 1;
+  max-width: 275px;
+}
+
+.holiday-active-group {
+  margin-top: 1.85rem;
+}
+
+/* Ensure that when the datepicker opens inside a modal, the card naturally expands to contain it completely */
+.modal-card .custom-datepicker-container.is-open,
+.modal-body .custom-datepicker-container.is-open {
+  margin-bottom: 255px;
+  transition: margin-bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .modal-footer {
   padding: 1rem 1.5rem;
   background: #f8fafc;
@@ -510,6 +574,8 @@
   justify-content: flex-end;
   gap: 0.75rem;
   flex-shrink: 0;
+  border-bottom-left-radius: 1.25rem;
+  border-bottom-right-radius: 1.25rem;
 }
 
 .btn-secondary {
@@ -657,3 +723,249 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Delete Confirmation Modal Styles (Aligned with website design system) */
+.camera-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.camera-modal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  position: relative;
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.camera-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+}
+
+.camera-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+}
+
+.camera-modal-title i {
+  font-size: 16px;
+  color: #fef2f2;
+}
+
+.camera-modal-header .close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.camera-modal-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: rotate(90deg);
+}
+
+.camera-modal-body {
+  padding: 24px 24px 20px;
+  background: #ffffff;
+}
+
+.punch-out-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.punch-out-confirm__icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 0 8px #fef2f2;
+}
+
+.punch-out-confirm h3 {
+  margin: 0 0 8px 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.punch-out-confirm .confirm-desc {
+  margin: 0;
+  max-width: 360px;
+  color: #475569;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.emp-code-pill {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+
+.delete-warning-box {
+  margin-top: 16px;
+  padding: 11px 14px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  font-size: 12px;
+  color: #9f1239;
+  line-height: 1.45;
+}
+
+.delete-warning-box i {
+  font-size: 14px;
+  color: #e11d48;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.camera-modal-footer {
+  padding: 14px 22px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-cancel-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-cancel-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.modal-delete-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
+.modal-delete-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.modal-delete-btn:disabled,
+.modal-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile & Tablet Responsiveness */
+@media (max-width: 640px) {
+  .camera-modal-box {
+    max-width: 100%;
+    margin: 0 8px;
+  }
+
+  .camera-modal-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-cancel-btn,
+  .modal-delete-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .action-buttons-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+    width: 100%;
+    justify-content: center;
+  }
+}
+

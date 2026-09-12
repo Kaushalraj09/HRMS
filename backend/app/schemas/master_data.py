@@ -108,6 +108,12 @@ class LeaveTypeBase(BaseModel):
     unit_type: str = Field("full_day", max_length=20)
     default_balance_hours: float = 0.0
     requires_approval: bool = True
+    applicable_employee_type: Optional[str] = "all"
+    carry_forward: bool = False
+    max_consecutive_days: Optional[int] = None
+    counts_as_leave: bool = True
+    attendance_required: bool = False
+    remote_punch_allowed: bool = False
     is_active: bool = True
 
 class LeaveTypeCreate(LeaveTypeBase):
