@@ -1,3 +1,5 @@
+from typing import Optional, List, Dict, Any
+from datetime import date
 from sqlalchemy import (
     Column,
     String,
