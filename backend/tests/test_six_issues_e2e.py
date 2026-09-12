@@ -24,18 +24,25 @@ def test_issue_6_multitab_auth_payload(client):
     from app.core.security import hash_password
     db: Session = SessionLocal()
     try:
+        role = db.query(Role).first()
+        if not role:
+            role = Role(name="Employee", description="Employee Role")
+            db.add(role)
+            db.commit()
+            db.refresh(role)
+
         user = db.query(User).filter(User.email == "test_auth@hrms.com").first()
         if not user:
-            role = db.query(Role).first()
             user = User(
                 email="test_auth@hrms.com",
                 password_hash=hash_password("password123"),
                 display_name="Test Auth User",
-                role_id=role.id if role else 1,
+                role_id=role.id,
                 status="Active"
             )
             db.add(user)
         else:
+            user.role_id = role.id
             user.password_hash = hash_password("password123")
         db.commit()
     finally:
@@ -64,6 +71,37 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
     try:
         # Find or create a test employee
         emp = db.query(Employee).filter(Employee.status == "Active").first()
+        if not emp:
+            user = db.query(User).first()
+            if not user:
+                role = db.query(Role).first()
+                if not role:
+                    role = Role(name="Employee", description="Employee Role")
+                    db.add(role)
+                    db.commit()
+                    db.refresh(role)
+                user = User(
+                    email="test_emp_e2e@hrms.com",
+                    password_hash="testhash",
+                    display_name="Test Employee",
+                    role_id=role.id,
+                    status="Active"
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            emp = Employee(
+                user_id=user.id,
+                employee_code="E2E001",
+                first_name="Test",
+                last_name="Employee",
+                official_email="test_emp_e2e@hrms.com",
+                status="Active"
+            )
+            db.add(emp)
+            db.commit()
+            db.refresh(emp)
+
         assert emp is not None, "Active employee required"
         emp_id = emp.id
 
@@ -124,6 +162,37 @@ def test_issue_5_timeoff_in_attendance_response():
     db: Session = SessionLocal()
     try:
         emp = db.query(Employee).filter(Employee.status == "Active").first()
+        if not emp:
+            user = db.query(User).first()
+            if not user:
+                role = db.query(Role).first()
+                if not role:
+                    role = Role(name="Employee", description="Employee Role")
+                    db.add(role)
+                    db.commit()
+                    db.refresh(role)
+                user = User(
+                    email="test_emp_att@hrms.com",
+                    password_hash="testhash",
+                    display_name="Test Attendance Employee",
+                    role_id=role.id,
+                    status="Active"
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            emp = Employee(
+                user_id=user.id,
+                employee_code="ATT001",
+                first_name="Test",
+                last_name="Attendance",
+                official_email="test_emp_att@hrms.com",
+                status="Active"
+            )
+            db.add(emp)
+            db.commit()
+            db.refresh(emp)
+
         att = db.query(Attendance).filter(Attendance.employee_id == emp.id).first()
         if not att:
             att = Attendance(

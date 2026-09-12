@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ from app.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest
 
 def authenticate_user(db: Session, request: LoginRequest):
     # 1. Look for user in DB
-    user = db.query(User).filter(User.email.ilike(request.email)).first()
+    user = db.query(User).options(joinedload(User.role)).filter(User.email.ilike(request.email)).first()
     if not user:
         return None
     
@@ -36,7 +36,7 @@ def authenticate_user(db: Session, request: LoginRequest):
         if user.status in ["Inactive", "Deleted"]:
             return None
             
-        role_name = user.role.name.lower() if user.role else ""
+        role_name = user.role.name.lower() if user.role else "employee"
         
         # Ensure shadow employee profile exists for HR and Admin users dynamically
         if role_name in ["hr", "admin"]:
@@ -89,7 +89,7 @@ def authenticate_user(db: Session, request: LoginRequest):
                     "id": user.id,
                     "email": user.email,
                     "displayName": user.display_name,
-                    "role": user.role.name,
+                    "role": user.role.name if user.role else "Employee",
                     "designation": user_designation,
                     "status": user.status,
                     "accessibleDashboards": ["HR", "EMPLOYEE"],
@@ -122,7 +122,7 @@ def authenticate_user(db: Session, request: LoginRequest):
                 "id": user.id,
                 "email": user.email,
                 "displayName": user.display_name,
-                "role": user.role.name,
+                "role": user.role.name if user.role else "Employee",
                 "designation": user_designation,
                 "status": user.status,
                 "accessibleDashboards": user.accessibleDashboards,

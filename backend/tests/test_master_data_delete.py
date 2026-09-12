@@ -16,6 +16,23 @@ from sqlalchemy.orm import joinedload
 def override_user():
     db = SessionLocal()
     admin_user = db.query(User).options(joinedload(User.role)).join(Role).filter(func.lower(Role.name).in_(["admin", "hr"])).first()
+    if not admin_user:
+        admin_role = db.query(Role).filter(func.lower(Role.name) == "admin").first()
+        if not admin_role:
+            admin_role = Role(name="Admin", description="Administrator")
+            db.add(admin_role)
+            db.commit()
+            db.refresh(admin_role)
+        admin_user = User(
+            email="admin_test_delete@hrms.com",
+            password_hash="testhash",
+            display_name="Admin Test",
+            role_id=admin_role.id,
+            status="Active"
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
     db.close()
     app.dependency_overrides[get_current_user] = lambda: admin_user
     yield
