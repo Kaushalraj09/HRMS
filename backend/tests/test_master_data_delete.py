@@ -12,29 +12,39 @@ client = TestClient(app)
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
+from fastapi import Depends
+from app.core.database import get_db
+
 @pytest.fixture(autouse=True)
 def override_user():
     db = SessionLocal()
-    admin_user = db.query(User).options(joinedload(User.role)).join(Role).filter(func.lower(Role.name).in_(["admin", "hr"])).first()
-    if not admin_user:
-        admin_role = db.query(Role).filter(func.lower(Role.name) == "admin").first()
-        if not admin_role:
-            admin_role = Role(name="Admin")
-            db.add(admin_role)
+    try:
+        admin_user = db.query(User).options(joinedload(User.role)).join(Role).filter(func.lower(Role.name).in_(["admin", "hr"])).first()
+        if not admin_user:
+            admin_role = db.query(Role).filter(func.lower(Role.name) == "admin").first()
+            if not admin_role:
+                admin_role = Role(name="Admin")
+                db.add(admin_role)
+                db.commit()
+                db.refresh(admin_role)
+            admin_user = User(
+                email="admin_test_delete@hrms.com",
+                password_hash="testhash",
+                display_name="Admin Test",
+                role_id=admin_role.id,
+                status="Active"
+            )
+            db.add(admin_user)
             db.commit()
-            db.refresh(admin_role)
-        admin_user = User(
-            email="admin_test_delete@hrms.com",
-            password_hash="testhash",
-            display_name="Admin Test",
-            role_id=admin_role.id,
-            status="Active"
-        )
-        db.add(admin_user)
-        db.commit()
-        db.refresh(admin_user)
-    db.close()
-    app.dependency_overrides[get_current_user] = lambda: admin_user
+            db.refresh(admin_user)
+        admin_user_id = admin_user.id
+    finally:
+        db.close()
+
+    def get_test_admin(db_session: Session = Depends(get_db)):
+        return db_session.query(User).options(joinedload(User.role)).filter(User.id == admin_user_id).first()
+
+    app.dependency_overrides[get_current_user] = get_test_admin
     yield
     app.dependency_overrides.clear()
 

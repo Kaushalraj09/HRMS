@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.user import User
@@ -31,7 +31,7 @@ def get_current_user(
     except jwt.InvalidTokenError:
         raise credentials_exception
         
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).options(joinedload(User.role)).filter(User.email == email).first()
     if user is None or user.status in ["Inactive", "Deleted"]:
         raise credentials_exception
 

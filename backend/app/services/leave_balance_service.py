@@ -75,24 +75,32 @@ class LeaveBalanceService:
 
         # Fallback for unseeded test environments/fixtures
         if db.query(LeaveType).count() == 0:
-            is_half = "half" in name_str
-            default_lt = LeaveType(
-                name="Half Day" if is_half else "Casual Leave",
-                code="HD" if is_half else "CL",
-                unit_type="half_day" if is_half else "full_day",
-                default_balance_hours=240.0,
-                is_active=True
-            )
-            db.add(default_lt)
-            db.commit()
-            db.refresh(default_lt)
-            return default_lt
+            LeaveBalanceService.ensure_default_leave_types(db)
+            return LeaveBalanceService.resolve_leave_type(db, leave_type_identifier)
 
         # Fallback to first active leave type if full-day is passed
         if name_str in ("full-day", "full day", "fullday"):
             return db.query(LeaveType).filter(LeaveType.is_active == True).first()
             
         return None
+
+    @classmethod
+    def ensure_default_leave_types(cls, db: Session) -> List[LeaveType]:
+        """Ensures standard leave types exist in database (useful for unseeded test environments)."""
+        active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
+        if not active_leave_types:
+            default_types = [
+                LeaveType(name="Casual Leave", code="CL", unit_type="full_day", default_balance_hours=96.0, is_active=True),
+                LeaveType(name="Sick Leave", code="SL", unit_type="full_day", default_balance_hours=64.0, is_active=True),
+                LeaveType(name="Earned Leave", code="EL", unit_type="full_day", default_balance_hours=144.0, is_active=True),
+                LeaveType(name="Half Day", code="HD", unit_type="half_day", default_balance_hours=32.0, is_active=True),
+                LeaveType(name="Work From Home", code="WFH", unit_type="full_day", default_balance_hours=192.0, is_active=True),
+                LeaveType(name="Comp Off", code="CO", unit_type="full_day", default_balance_hours=16.0, is_active=True)
+            ]
+            db.add_all(default_types)
+            db.commit()
+            active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
+        return active_leave_types
 
     @classmethod
     def get_or_initialize_yearly_balances(
@@ -110,7 +118,7 @@ class LeaveBalanceService:
         if not employee:
             return []
 
-        active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
+        active_leave_types = cls.ensure_default_leave_types(db)
         existing_balances = db.query(EmployeeLeaveBalance).filter(
             EmployeeLeaveBalance.employee_id == employee_id,
             EmployeeLeaveBalance.year == year
