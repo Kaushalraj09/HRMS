@@ -19,7 +19,7 @@ def override_user():
     if not admin_user:
         admin_role = db.query(Role).filter(func.lower(Role.name) == "admin").first()
         if not admin_role:
-            admin_role = Role(name="Admin", description="Administrator")
+            admin_role = Role(name="Admin")
             db.add(admin_role)
             db.commit()
             db.refresh(admin_role)

@@ -26,7 +26,7 @@ def test_issue_6_multitab_auth_payload(client):
     try:
         role = db.query(Role).first()
         if not role:
-            role = Role(name="Employee", description="Employee Role")
+            role = Role(name="Employee")
             db.add(role)
             db.commit()
             db.refresh(role)
@@ -76,7 +76,7 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
             if not user:
                 role = db.query(Role).first()
                 if not role:
-                    role = Role(name="Employee", description="Employee Role")
+                    role = Role(name="Employee")
                     db.add(role)
                     db.commit()
                     db.refresh(role)
@@ -167,7 +167,7 @@ def test_issue_5_timeoff_in_attendance_response():
             if not user:
                 role = db.query(Role).first()
                 if not role:
-                    role = Role(name="Employee", description="Employee Role")
+                    role = Role(name="Employee")
                     db.add(role)
                     db.commit()
                     db.refresh(role)
