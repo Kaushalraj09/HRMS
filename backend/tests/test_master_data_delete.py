@@ -10,7 +10,7 @@ from app.models.user import User, Role
 client = TestClient(app)
 
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, Session
 
 from fastapi import Depends
 from app.core.database import get_db
