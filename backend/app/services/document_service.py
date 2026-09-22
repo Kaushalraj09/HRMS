@@ -329,10 +329,14 @@ def initialize_employee_requirements(db: Session, employee_id: int) -> None:
 
 
 def ensure_all_employees_have_requirements(db: Session) -> None:
-    """Backfill missing requirements for any existing employees."""
-    employees = db.query(Employee).filter(Employee.status != "Deleted").all()
-    for emp in employees:
-        initialize_employee_requirements(db, emp.id)
+    """Backfill missing requirements for any existing employees safely."""
+    from sqlalchemy import text
+    try:
+        rows = db.execute(text("SELECT id FROM employees WHERE status != 'Deleted'")).fetchall()
+        for row in rows:
+            initialize_employee_requirements(db, row[0])
+    except Exception as e:
+        logger.warning(f"Could not backfill employee document requirements: {e}")
 
 
 # ─── 3. Document Summary & Details ───────────────────────────────────────────

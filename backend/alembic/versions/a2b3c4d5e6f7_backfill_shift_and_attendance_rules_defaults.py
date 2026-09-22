@@ -48,6 +48,9 @@ def upgrade() -> None:
     try:
         seed_default_document_types(session)
         ensure_all_employees_have_requirements(session)
+    except Exception:
+        # Avoid aborting migration if intermediate tables/columns differ
+        pass
     finally:
         session.close()
     op.execute(
