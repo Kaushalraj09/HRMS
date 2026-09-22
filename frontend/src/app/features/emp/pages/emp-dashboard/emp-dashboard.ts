@@ -171,7 +171,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
   overtimeExtended = false;
   wsShiftEndReminderActive = false;
   wsOvertimeReminderActive = false;
-  hasApprovedWfhToday = false;
 
   approvedHours = 0;
   remainingHours = 9;
@@ -207,7 +206,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
     { name: 'Earned Leave', code: 'EL', initial: 'E', days: 10, colorClass: 'orange-icon', textClass: 'orange-days' },
     { name: 'Comp Off', code: 'CO', initial: 'C', days: 2, colorClass: 'amber-icon', textClass: 'amber-days' },
     { name: 'Half Day', code: 'HD', initial: 'H', days: 3, colorClass: 'purple-icon', textClass: 'purple-days' },
-    { name: 'Work From Home', code: 'WFH', initial: 'W', days: 15, colorClass: 'teal-icon', textClass: 'teal-days' },
   ];
 
   get totalAvailableLeaveDays(): number {
@@ -230,7 +228,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   timeOffDate = toIsoDateLocal(new Date());
-  timeOffLeaveType: 'Hourly' | 'Half Day' | 'Full Day' = 'Hourly';
+  timeOffLeaveType: 'Half Day' | 'Full Day' = 'Half Day';
   timeOffHalfDaySession: 'First Half' | 'Second Half' = 'First Half';
   timeOffStart = '09:00';
   timeOffEnd = '10:00';
@@ -749,14 +747,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   get endTimeOptions(): TimeSlotOption[] {
-    if (this.timeOffLeaveType !== 'Hourly') {
-      return [];
-    }
-    const startMin = parseTimeToMinutes(this.timeOffStart);
-    return this.startTimeOptions.filter((option) => {
-      const optionMinutes = parseTimeToMinutes(option.value);
-      return optionMinutes !== null && startMin !== null && optionMinutes > startMin;
-    });
+    return [];
   }
 
   get todayIsoMin(): string {
@@ -767,20 +758,14 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (this.timeOffLeaveType === 'Full Day') {
       return this.shiftTotalHours;
     }
-    if (this.timeOffLeaveType === 'Half Day') {
-      return this.shiftTotalHours / 2;
-    }
-    return hoursBetweenSameDay(this.timeOffStart, this.timeOffEnd);
+    return this.shiftTotalHours / 2;
   }
 
   get previewRequestedSeconds(): number {
     if (this.timeOffLeaveType === 'Full Day') {
       return this.shiftTotalSeconds;
     }
-    if (this.timeOffLeaveType === 'Half Day') {
-      return (this.shiftTotalHours / 2) * 3600;
-    }
-    return clampSeconds(this.previewRequestedHours * 3600);
+    return (this.shiftTotalHours / 2) * 3600;
   }
 
   get previewRemainingAfterRequestSeconds(): number {
@@ -830,9 +815,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
       return false;
     }
     if (this.isFutureDateSelected) {
-      if (this.timeOffLeaveType === 'Hourly') {
-        return this.previewRequestedSeconds > 0 && this.previewRequestedSeconds <= this.shiftTotalSeconds;
-      }
       return true;
     }
     if (!this.isPunchedIn) {
@@ -1549,9 +1531,9 @@ export class EmpDashboard implements OnInit, OnDestroy {
 
     this.isTimeOffSubmitting = true;
 
-    let leaveTypeBackend = 'Hourly';
-    let startTimeBackend: string | null = this.timeOffStart;
-    let endTimeBackend: string | null = this.timeOffEnd;
+    let leaveTypeBackend = 'Half-Day';
+    let startTimeBackend: string | null = null;
+    let endTimeBackend: string | null = null;
 
     if (this.timeOffLeaveType === 'Full Day') {
       leaveTypeBackend = 'Full-Day';
@@ -1580,7 +1562,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
           leaveTypeBackend,
           startTimeBackend,
           endTimeBackend,
-          this.timeOffLeaveType === 'Full Day' ? 9.0 : (this.timeOffLeaveType === 'Half Day' ? 4.0 : this.previewRequestedSeconds / 3600)
+          this.timeOffLeaveType === 'Full Day' ? 9.0 : 4.5
         )
         .pipe(finalize(() => { this.isTimeOffSubmitting = false; }))
         .subscribe({
@@ -1819,15 +1801,6 @@ export class EmpDashboard implements OnInit, OnDestroy {
   }
 
   private ensureTimeSelectionsValid(): void {
-    if (this.timeOffLeaveType !== 'Hourly') {
-      return;
-    }
-
-    const startOptions = this.startTimeOptions;
-    if (startOptions.length && !startOptions.some((option) => option.value === this.timeOffStart)) {
-      this.timeOffStart = startOptions[0].value;
-    }
-    this.onStartTimeChange();
   }
 
   private loadDashboardData(): void {
@@ -1915,9 +1888,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
               colorClass = 'purple-icon';
               textClass = 'purple-days';
             } else if (code === 'WFH' || nameLower.includes('work from home') || nameLower.includes('remote')) {
-              initial = 'W';
-              colorClass = 'teal-icon';
-              textClass = 'teal-days';
+              continue;
             } else if (code === 'ML' || nameLower.includes('maternity')) {
               initial = 'M';
               colorClass = 'rose-icon';
@@ -2025,9 +1996,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
           .filter((req: any) => ['Approved', 'Active', 'Completed', 'Pending', 'Expired'].includes(req.status))
           .map((req: any) => {
             let timeLabel = 'Full Day';
-            if (req.leave_type === 'Hourly' && req.start_time && req.end_time) {
-              timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
-            } else if (req.leave_type === 'Half-Day' && req.start_time && req.end_time) {
+            if (req.leave_type === 'Half-Day' && req.start_time && req.end_time) {
               timeLabel = `${req.start_time.substring(0, 5)} - ${req.end_time.substring(0, 5)}`;
             }
             return {
@@ -2400,8 +2369,7 @@ export class EmpDashboard implements OnInit, OnDestroy {
     if (todayState.workLocationName) {
       this.assignedWorkLocationName = todayState.workLocationName;
     }
-    this.hasApprovedWfhToday = !!(todayState as any).hasApprovedWfh;
-    if (this.isAssignedRemoteWorker || todayState.isRemoteWorker || this.hasApprovedWfhToday) {
+    if (this.isAssignedRemoteWorker || todayState.isRemoteWorker) {
       this.status = 'Remote';
       this.pendingPunchWorkMode = 'Remote';
       this.pendingWorkModeToSwitch = 'Remote';

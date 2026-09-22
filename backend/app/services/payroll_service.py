@@ -209,6 +209,16 @@ class PayrollService:
     def update_structure(db: Session, structure_id: int, data: SalaryStructureUpdate, user_id: Optional[int] = None) -> SalaryStructure:
         structure = PayrollService.get_structure(db, structure_id)
 
+        if data.code is not None and data.code.strip():
+            new_code = data.code.strip().upper()
+            existing = db.query(SalaryStructure).filter(
+                SalaryStructure.code == new_code,
+                SalaryStructure.id != structure_id
+            ).first()
+            if existing:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Structure code '{new_code}' already exists")
+            structure.code = new_code
+
         if data.name is not None:
             structure.name = data.name
         if data.salary_basis is not None:
@@ -233,9 +243,40 @@ class PayrollService:
 
         db.commit()
         db.refresh(structure)
-        PayrollService.log_audit(db, "UPDATE", "SalaryStructure", structure.id, user_id, {"id": structure.id})
+        PayrollService.log_audit(db, "UPDATE", "SalaryStructure", structure.id, user_id, {"id": structure.id, "code": structure.code})
         db.commit()
         return PayrollService.get_structure(db, structure.id)
+
+    @staticmethod
+    def delete_structure(db: Session, structure_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
+        structure = PayrollService.get_structure(db, structure_id)
+
+        # Check if structure is in use by any employee salary assignments
+        assignment_count = db.query(EmployeeSalaryAssignment).filter(
+            EmployeeSalaryAssignment.salary_structure_id == structure_id
+        ).count()
+        if assignment_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete structure '{structure.name}'. It is currently assigned to {assignment_count} employee(s). Consider deactivating it instead."
+            )
+
+        # Check if structure is in use by any salary revisions
+        revision_count = db.query(SalaryRevision).filter(
+            SalaryRevision.new_salary_structure_id == structure_id
+        ).count()
+        if revision_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete structure '{structure.name}'. It is referenced in {revision_count} salary revision(s)."
+            )
+
+        db.delete(structure)
+        db.commit()
+        PayrollService.log_audit(db, "DELETE", "SalaryStructure", structure_id, user_id, {"code": structure.code, "name": structure.name})
+        db.commit()
+        return {"message": f"Salary structure '{structure.name}' deleted successfully", "id": structure_id}
+
 
     # =========================================================================
     # 3. Dynamic Salary Preview / Calculation
@@ -749,6 +790,17 @@ class PayrollService:
                 )
                 db.add(exc)
 
+            snapshot_data = calc_result.get("calculation_snapshot") or {}
+            if isinstance(snapshot_data, dict):
+                snapshot_data.setdefault("pan", getattr(emp, "pan_number", None) or getattr(emp, "pan", None))
+                snapshot_data.setdefault("pf_uan", getattr(emp, "uan_number", None) or getattr(emp, "uan", None))
+                snapshot_data.setdefault("pf_no", getattr(emp, "pf_number", None) or getattr(emp, "pf_no", None))
+                snapshot_data.setdefault("bank_micr", getattr(emp, "micr_code", None))
+                snapshot_data.setdefault("gender", getattr(emp, "gender", None))
+                snapshot_data.setdefault("dob", emp.dob.isoformat() if getattr(emp, "dob", None) else None)
+                snapshot_data.setdefault("doj", emp.doj.isoformat() if getattr(emp, "doj", None) else None)
+                snapshot_data.setdefault("work_location", getattr(emp, "work_location", None))
+
             record = PayrollRecord(
                 payroll_run_id=payroll_run.id,
                 employee_id=emp.id,
@@ -784,7 +836,7 @@ class PayrollService:
                 bank_name=bank_name,
                 account_number=account_number,
                 ifsc_code=ifsc_code,
-                calculation_snapshot=calc_result["calculation_snapshot"],
+                calculation_snapshot=snapshot_data,
             )
             db.add(record)
             db.flush()
@@ -851,6 +903,11 @@ class PayrollService:
                 "id": r.id,
                 "period_id": r.period_id,
                 "period_name": r.period.name if r.period else "Unknown",
+                "year": r.period.year if r.period else None,
+                "month": r.period.month if r.period else None,
+                "start_date": r.period.start_date if r.period else None,
+                "end_date": r.period.end_date if r.period else None,
+                "pay_date": r.period.pay_date if r.period else None,
                 "run_number": r.run_number,
                 "title": r.title,
                 "status": r.status,
@@ -1001,13 +1058,69 @@ class PayrollService:
             run.period.status = "PAID"
 
         db.query(PayrollRecord).filter(PayrollRecord.payroll_run_id == run.id).update(
-            {"payment_status": "PAID", "paid_at": datetime.now(timezone.utc)}
+            {"payment_status": "PAID"}
         )
         db.commit()
 
         PayrollService.log_audit(db, "MARK_PAID", "PayrollRun", run.id, user_id)
         db.commit()
         return {"message": "Payroll run and all associated records marked as PAID", "status": run.status}
+
+    @staticmethod
+    def delete_payroll_run(db: Session, run_id: int, user_id: int) -> Dict[str, Any]:
+        run = db.query(PayrollRun).options(joinedload(PayrollRun.period)).filter(PayrollRun.id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payroll run not found")
+        if run.status == "PAID":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete a PAID payroll run. Processed disbursements must be retained for compliance."
+            )
+
+        period = run.period
+        period_id = run.period_id
+        run_number = run.run_number
+
+        # 1. Gather all record IDs for this run
+        records = db.query(PayrollRecord).filter(PayrollRecord.payroll_run_id == run.id).all()
+        record_ids = [rec.id for rec in records]
+
+        if record_ids:
+            # Delete payslips associated with these records
+            db.query(Payslip).filter(Payslip.payroll_record_id.in_(record_ids)).delete(synchronize_session=False)
+            # Delete adjustments
+            db.query(PayrollAdjustment).filter(PayrollAdjustment.payroll_record_id.in_(record_ids)).delete(synchronize_session=False)
+            # Delete record line items
+            db.query(PayrollRecordItem).filter(PayrollRecordItem.record_id.in_(record_ids)).delete(synchronize_session=False)
+            # Delete payroll records
+            db.query(PayrollRecord).filter(PayrollRecord.id.in_(record_ids)).delete(synchronize_session=False)
+
+        # Delete exceptions
+        db.query(PayrollException).filter(PayrollException.payroll_run_id == run.id).delete(synchronize_session=False)
+
+        # Delete the run itself
+        db.delete(run)
+        db.commit()
+
+        # Update period status if applicable
+        if period:
+            remaining_runs = db.query(PayrollRun).filter(PayrollRun.period_id == period_id).all()
+            if not remaining_runs:
+                period.status = "OPEN"
+            elif any(r.status == "PAID" for r in remaining_runs):
+                period.status = "PAID"
+            elif any(r.status == "LOCKED" for r in remaining_runs):
+                period.status = "LOCKED"
+            elif any(r.status in ["PROCESSING", "APPROVED", "UNDER_REVIEW"] for r in remaining_runs):
+                period.status = "PROCESSING"
+            else:
+                period.status = "OPEN"
+            db.commit()
+
+        PayrollService.log_audit(db, "DELETE_RUN", "PayrollRun", run_id, user_id, {"run_number": run_number})
+        db.commit()
+
+        return {"message": f"Payroll run #{run_number} deleted successfully", "run_number": run_number}
 
     # =========================================================================
     # 7. Payroll Records & Adjustments
@@ -1306,6 +1419,27 @@ class PayrollService:
         db.commit()
         return {"message": "Exception resolved successfully"}
 
+    @staticmethod
+    def resolve_all_exceptions(db: Session, run_id: int, resolution_notes: str, user_id: int) -> Dict[str, Any]:
+        unresolved = (
+            db.query(PayrollException)
+            .filter(
+                PayrollException.payroll_run_id == run_id,
+                PayrollException.is_resolved == False,
+            )
+            .all()
+        )
+        count = len(unresolved)
+        for exc in unresolved:
+            exc.is_resolved = True
+            exc.resolution_notes = resolution_notes
+            exc.resolved_by = user_id
+
+        db.commit()
+        PayrollService.log_audit(db, "RESOLVE_ALL_EXCEPTIONS", "PayrollRun", run_id, user_id, {"count": count, "notes": resolution_notes})
+        db.commit()
+        return {"message": f"Successfully resolved {count} exceptions", "resolved_count": count}
+
     # =========================================================================
     # 10. Payslips & Employee Self-Service
     # =========================================================================
@@ -1338,10 +1472,158 @@ class PayrollService:
         return slip
 
     @staticmethod
+    def _get_logo_path():
+        import os
+        candidates = [
+            os.path.join(os.path.dirname(__file__), "..", "assets", "Logo.png"),
+            os.path.abspath("backend/app/assets/Logo.png"),
+            os.path.abspath("frontend/src/assets/Logo.png"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "assets", "Logo.png"),
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                return os.path.abspath(c)
+        return None
+
+    @staticmethod
+    def _get_tight_logo_path() -> Optional[str]:
+        """Returns path to tightly-cropped logo (without surrounding blank padding)."""
+        import os
+        logo_path = PayrollService._get_logo_path()
+        if not logo_path or not os.path.exists(logo_path):
+            return None
+        tight_path = os.path.join(os.path.dirname(logo_path), "Logo_tight.png")
+        try:
+            if not os.path.exists(tight_path) or os.path.getmtime(logo_path) > os.path.getmtime(tight_path):
+                from PIL import Image as PILImage
+                with PILImage.open(logo_path) as im:
+                    im_rgba = im.convert("RGBA")
+                    bbox = im_rgba.getbbox()
+                    cropped = im_rgba.crop(bbox) if bbox else im_rgba
+                    cropped.save(tight_path, "PNG")
+            return tight_path
+        except Exception:
+            return logo_path
+
+    @staticmethod
+    def _get_watermark_path() -> Optional[str]:
+        """
+        Returns path to a color-calibrated watermark image with authentic company blue
+        colors and 16% opacity baked into its alpha channel for perfect reproduction.
+        """
+        import os
+        logo_path = PayrollService._get_logo_path()
+        if not logo_path or not os.path.exists(logo_path):
+            return None
+        wm_path = os.path.join(os.path.dirname(logo_path), "Logo_watermark.png")
+        try:
+            if not os.path.exists(wm_path) or os.path.getmtime(logo_path) > os.path.getmtime(wm_path):
+                from PIL import Image as PILImage
+                with PILImage.open(logo_path) as im:
+                    im_rgba = im.convert("RGBA")
+                    bbox = im_rgba.getbbox()
+                    cropped = im_rgba.crop(bbox) if bbox else im_rgba
+                    r, g, b, a = cropped.split()
+                    # 16% alpha preserves perfect corporate blue color while staying elegant in background
+                    new_a = a.point(lambda p: int(p * 0.16))
+                    wm_img = PILImage.merge("RGBA", (r, g, b, new_a))
+                    wm_img.save(wm_path, "PNG")
+            return wm_path
+        except Exception:
+            return logo_path
+
+    @staticmethod
+    def _get_company_logo(max_width=95, max_height=48, width=None, height=None):
+        import os
+        from reportlab.platypus import Image, Paragraph
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib import colors
+
+        logo_path = PayrollService._get_tight_logo_path() or PayrollService._get_logo_path()
+        if logo_path:
+            try:
+                from PIL import Image as PILImage
+                with PILImage.open(logo_path) as pil_img:
+                    orig_w, orig_h = pil_img.size
+                aspect = orig_w / float(orig_h)
+
+                target_h = height or max_height
+                target_w = target_h * aspect
+                if target_w > (width or max_width):
+                    target_w = width or max_width
+                    target_h = target_w / aspect
+
+                img = Image(logo_path, width=target_w, height=target_h)
+                img.hAlign = 'LEFT'
+                return img
+            except Exception:
+                try:
+                    img = Image(logo_path, width=68, height=48)
+                    img.hAlign = 'LEFT'
+                    return img
+                except Exception:
+                    pass
+        return Paragraph("<b>AIVAN 360</b><br/><font size=7 color='#64748B'>SOLUTIONS</font>", ParagraphStyle('LogoFallback', fontSize=12, leading=14, textColor=colors.HexColor('#1E3A8A')))
+
+    @staticmethod
+    def _number_to_words_indian(num: float | int) -> str:
+        n = int(round(num))
+        if n == 0:
+            return "zero only"
+
+        ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+                "seventeen", "eighteen", "nineteen"]
+        tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+
+        def two_digits(num_val: int) -> str:
+            if num_val < 20:
+                return ones[num_val]
+            else:
+                t = tens[num_val // 10]
+                o = ones[num_val % 10]
+                return f"{t}-{o}".strip("-") if o else t
+
+        def three_digits(num_val: int) -> str:
+            h = num_val // 100
+            rem = num_val % 100
+            parts = []
+            if h > 0:
+                parts.append(f"{ones[h]} hundred")
+            if rem > 0:
+                if parts:
+                    parts.append("and")
+                parts.append(two_digits(rem))
+            return " ".join(parts)
+
+        parts = []
+        crore = n // 10000000
+        n %= 10000000
+        lakh = n // 100000
+        n %= 100000
+        thousand = n // 1000
+        n %= 1000
+        remainder = n
+
+        if crore > 0:
+            parts.append(f"{two_digits(crore)} crore")
+        if lakh > 0:
+            parts.append(f"{two_digits(lakh)} lakh")
+        if thousand > 0:
+            parts.append(f"{two_digits(thousand)} thousand")
+        if remainder > 0:
+            parts.append(three_digits(remainder))
+
+        words = " ".join(parts).strip()
+        if not words:
+            return "Zero only"
+        return words[0].upper() + words[1:] + " only"
+
+    @staticmethod
     def generate_payslip_pdf(db: Session, payslip_id: int) -> StreamingResponse:
         slip = PayrollService.get_payslip_detail(db, payslip_id)
 
-        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.pagesizes import A4
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib import colors
@@ -1349,114 +1631,239 @@ class PayrollService:
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
-            pagesize=letter,
-            rightMargin=36,
-            leftMargin=36,
-            topMargin=36,
-            bottomMargin=36,
+            pagesize=A4,
+            rightMargin=35,
+            leftMargin=35,
+            topMargin=32,
+            bottomMargin=32,
             title=f"Payslip_{slip.employee_code}_{slip.payroll_month}",
         )
         elements = []
         styles = getSampleStyleSheet()
 
-        title_style = ParagraphStyle(
-            'CompanyTitle',
-            parent=styles['Heading1'],
-            fontName='Helvetica-Bold',
-            fontSize=16,
-            textColor=colors.HexColor('#1E3A8A'),
-            spaceAfter=2,
-        )
-        sub_title_style = ParagraphStyle(
-            'SubTitle',
-            parent=styles['Normal'],
-            fontName='Helvetica',
-            fontSize=11,
-            textColor=colors.HexColor('#4B5563'),
-            spaceAfter=12,
-        )
+        # Styles matching official corporate template
         label_style = ParagraphStyle(
             'FieldLabel',
             parent=styles['Normal'],
             fontName='Helvetica-Bold',
             fontSize=8,
-            textColor=colors.HexColor('#374151'),
+            leading=10,
+            textColor=colors.HexColor('#0F172A'),
         )
         val_style = ParagraphStyle(
             'FieldValue',
             parent=styles['Normal'],
             fontName='Helvetica',
             fontSize=8,
-            textColor=colors.HexColor('#111827'),
+            leading=10,
+            textColor=colors.HexColor('#1E293B'),
         )
-        th_style = ParagraphStyle(
-            'TableHeader',
+        center_bold_style = ParagraphStyle(
+            'CenterBold',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=8.5,
+            leading=11,
+            alignment=1,
+            textColor=colors.HexColor('#0F172A'),
+        )
+        left_bold_style = ParagraphStyle(
+            'LeftBold',
             parent=styles['Normal'],
             fontName='Helvetica-Bold',
             fontSize=8,
-            textColor=colors.white,
+            leading=10,
+            textColor=colors.HexColor('#0F172A'),
         )
-        tr_label_style = ParagraphStyle(
-            'RowLabel',
+        right_bold_style = ParagraphStyle(
+            'RightBold',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=8,
+            leading=10,
+            alignment=2,
+            textColor=colors.HexColor('#0F172A'),
+        )
+        cell_left_style = ParagraphStyle(
+            'CellLeft',
             parent=styles['Normal'],
             fontName='Helvetica',
             fontSize=8,
-            textColor=colors.HexColor('#1F2937'),
+            leading=10,
+            textColor=colors.HexColor('#1E293B'),
         )
-        tr_val_style = ParagraphStyle(
-            'RowVal',
+        cell_right_style = ParagraphStyle(
+            'CellRight',
             parent=styles['Normal'],
-            fontName='Helvetica-Bold',
+            fontName='Helvetica',
             fontSize=8,
+            leading=10,
             alignment=2,
-            textColor=colors.HexColor('#1F2937'),
+            textColor=colors.HexColor('#1E293B'),
         )
 
-        elements.append(Paragraph("HRMS ENTERPRISE SOLUTIONS", title_style))
-        elements.append(Paragraph(f"Salary Slip for the Period: <b>{slip.payroll_month}</b> | Payslip #: <b>{slip.payslip_number}</b>", sub_title_style))
-        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1E3A8A'), spaceAfter=14))
+        # 1. Corporate Header with Proportional Logo & Centered Company Details
+        logo_flowable = PayrollService._get_company_logo(max_width=85, max_height=52)
 
-        emp_grid = [
-            [
-                Paragraph("Employee ID:", label_style), Paragraph(slip.employee_code, val_style),
-                Paragraph("Total Days:", label_style), Paragraph(str(slip.total_payroll_days), val_style),
-            ],
-            [
-                Paragraph("Employee Name:", label_style), Paragraph(slip.employee_name, val_style),
-                Paragraph("Payable Days:", label_style), Paragraph(str(slip.payable_days), val_style),
-            ],
-            [
-                Paragraph("Department:", label_style), Paragraph(slip.department or "N/A", val_style),
-                Paragraph("Loss of Pay (LOP):", label_style), Paragraph(str(slip.unpaid_leave_days), val_style),
-            ],
-            [
-                Paragraph("Designation:", label_style), Paragraph(slip.designation or "N/A", val_style),
-                Paragraph("Bank Name:", label_style), Paragraph(slip.bank_name or "N/A", val_style),
-            ],
-            [
-                Paragraph("Date of Joining:", label_style), Paragraph(str(slip.doj) if slip.doj else "N/A", val_style),
-                Paragraph("Bank A/C No:", label_style), Paragraph(slip.account_number or "N/A", val_style),
-            ],
-        ]
+        # Format payroll month to human-readable month name & year (e.g. "2026-11" -> "November 2026")
+        month_display = str(slip.payroll_month or "—")
+        if slip.payroll_month:
+            try:
+                from datetime import datetime as dt
+                m_str = str(slip.payroll_month).strip()
+                if len(m_str) == 7 and "-" in m_str:
+                    month_display = dt.strptime(m_str, "%Y-%m").strftime("%B %Y")
+                elif len(m_str) >= 10 and "-" in m_str:
+                    month_display = dt.strptime(m_str[:10], "%Y-%m-%d").strftime("%B %Y")
+            except Exception:
+                month_display = str(slip.payroll_month)
 
-        t_emp = Table(emp_grid, colWidths=[90, 180, 110, 160])
-        t_emp.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        if (not month_display or month_display == "—" or ("-" in month_display and len(month_display) <= 7)) and slip.record and slip.record.payroll_run and slip.record.payroll_run.period:
+            try:
+                import calendar
+                p = slip.record.payroll_run.period
+                month_display = f"{calendar.month_name[p.month]} {p.year}"
+            except Exception:
+                pass
+
+        header_text = (
+            "<para align='center' leading='13'>"
+            "<font size=13 fontName='Helvetica-Bold' color='#475569'><b>AIVAN 360 SOLUTIONS PRIVATE LIMITED</b></font><br/>"
+            "<font size=8 fontName='Helvetica' color='#64748B'>2863, Devtal Road, Near Rani Durgawati Ward, Garha,Jabalpur- 482003</font><br/>"
+            "<font size=8 fontName='Helvetica-Bold' color='#64748B'>MADHYA PRADESH</font><br/><br/>"
+            f"<font size=9.5 fontName='Helvetica-Bold' color='#374151'>Pay Slip for the month of {month_display}</font><br/>"
+            "<font size=8.5 fontName='Helvetica-Bold' color='#4B5563'>All amounts are in INR</font>"
+            "</para>"
+        )
+        t_header = Table(
+            [[logo_flowable, Paragraph(header_text, styles['Normal']), ""]],
+            colWidths=[85, 355, 85]
+        )
+        t_header.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
-        elements.append(t_emp)
-        elements.append(Spacer(1, 14))
+        elements.append(t_header)
+        elements.append(Spacer(1, 10))
 
+        # 2. Employee Metadata Box (2-column info grid matching the user template)
+        emp = slip.employee
+        rec = slip.record
+
+        emp_code = slip.employee_code or "—"
+        emp_name = slip.employee_name or "—"
+        department = slip.department or "—"
+        designation = slip.designation or "—"
+        snapshot = rec.calculation_snapshot if (rec and isinstance(rec.calculation_snapshot, dict)) else {}
+
+        gender = (emp.gender if (emp and emp.gender) else (snapshot.get("gender") or "—"))
+        if emp and emp.dob:
+            dob_str = emp.dob.strftime("%d %B %Y")
+        elif snapshot.get("dob"):
+            try:
+                from datetime import datetime as dt
+                dob_str = dt.strptime(str(snapshot["dob"])[:10], "%Y-%m-%d").strftime("%d %B %Y")
+            except Exception:
+                dob_str = str(snapshot["dob"])
+        else:
+            dob_str = "—"
+
+        if emp and emp.doj:
+            doj_str = emp.doj.strftime("%d %B %Y")
+        elif slip.doj:
+            doj_str = slip.doj.strftime("%d %B %Y")
+        elif snapshot.get("doj"):
+            try:
+                from datetime import datetime as dt
+                doj_str = dt.strptime(str(snapshot["doj"])[:10], "%Y-%m-%d").strftime("%d %B %Y")
+            except Exception:
+                doj_str = str(snapshot["doj"])
+        else:
+            doj_str = "—"
+
+        payable_days_str = f"{slip.payable_days:.2f}"
+        lop_str = f"{slip.unpaid_leave_days:.2f}"
+
+        location_str = (emp.work_location if (emp and emp.work_location) else (snapshot.get("work_location") or "Main Office"))
+        b_name = slip.bank_name or (emp.bank_name if emp else None)
+        b_acc = slip.account_number or (emp.bank_account_no if emp else None)
+        bank_acc_str = f"{b_acc} ({b_name})" if (b_acc and b_name) else (b_acc or b_name or "—")
+
+        pan_str = snapshot.get("pan") or getattr(emp, "pan_number", None) or getattr(emp, "pan_card_number", None) or getattr(emp, "pan", None) or "—"
+        pf_uan_str = snapshot.get("pf_uan") or getattr(emp, "uan_number", None) or getattr(emp, "uan", None) or "—"
+        pf_no_str = snapshot.get("pf_no") or getattr(emp, "pf_number", None) or getattr(emp, "pf_no", None) or "—"
+        bank_micr_str = snapshot.get("bank_micr") or getattr(emp, "micr_code", None) or "—"
+
+        emp_info_data = [
+            [Paragraph("<b>Emp Code</b>", label_style), ":", Paragraph(emp_code, val_style),
+             Paragraph("<b>Location</b>", label_style), ":", Paragraph(location_str, val_style)],
+            [Paragraph("<b>Emp Name</b>", label_style), ":", Paragraph(emp_name, val_style),
+             Paragraph("<b>Bank/MICR</b>", label_style), ":", Paragraph(bank_micr_str, val_style)],
+            [Paragraph("<b>Department</b>", label_style), ":", Paragraph(department, val_style),
+             Paragraph("<b>Bank A/c No.</b>", label_style), ":", Paragraph(bank_acc_str, val_style)],
+            [Paragraph("<b>Designation</b>", label_style), ":", Paragraph(designation, val_style),
+             "", "", ""],
+            [Paragraph("<b>Gender</b>", label_style), ":", Paragraph(gender, val_style),
+             Paragraph("<b>PAN</b>", label_style), ":", Paragraph(pan_str, val_style)],
+            [Paragraph("<b>DOB</b>", label_style), ":", Paragraph(dob_str, val_style),
+             Paragraph("<b>PF No.</b>", label_style), ":", Paragraph(pf_no_str, val_style)],
+            [Paragraph("<b>DOJ</b>", label_style), ":", Paragraph(doj_str, val_style),
+             Paragraph("<b>PF UAN.</b>", label_style), ":", Paragraph(pf_uan_str, val_style)],
+            [Paragraph("<b>Payable Days</b>", label_style), ":", Paragraph(payable_days_str, val_style),
+             "", "", ""],
+            [Paragraph("<b>L.O. P</b>", label_style), ":", Paragraph(lop_str, val_style),
+             "", "", ""],
+        ]
+
+        t_emp_info = Table(emp_info_data, colWidths=[80, 12, 170.5, 80, 12, 170.5])
+        t_emp_info.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#334155')),
+            ('LINEBEFORE', (3, 0), (3, -1), 0.75, colors.HexColor('#334155')),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#CBD5E1')),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (4, 0), (4, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (1, 0), (1, -1), 8),
+            ('FONTSIZE', (4, 0), (4, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t_emp_info)
+
+        # 3. Earnings & Deductions Table
         earnings_list = slip.earnings or []
         deductions_list = slip.deductions or []
-        max_rows = max(len(earnings_list), len(deductions_list), 1)
 
-        breakdown_rows = [
+        if not earnings_list and snapshot.get("items"):
+            earnings_list = [it for it in snapshot["items"] if it.get("component_type") == "EARNING"]
+            deductions_list = [it for it in snapshot["items"] if it.get("component_type") == "DEDUCTION"]
+
+        def fmt_amt(val: float | None) -> str:
+            if val is None or val == 0:
+                return ""
+            if abs(val - round(val)) < 0.001:
+                return f"{int(round(val))}"
+            return f"{val:,.2f}"
+
+        max_rows = max(len(earnings_list), len(deductions_list), 3)
+
+        table_data = [
+            # Header Row 1
             [
-                Paragraph("EARNINGS", th_style), Paragraph("AMOUNT (₹)", th_style),
-                Paragraph("DEDUCTIONS", th_style), Paragraph("AMOUNT (₹)", th_style),
+                Paragraph("<b>Earnings</b>", center_bold_style), "",
+                Paragraph("<b>Deductions</b>", center_bold_style), ""
+            ],
+            # Header Row 2
+            [
+                Paragraph("<b>Description</b>", left_bold_style),
+                Paragraph("<b>Amount (Monthly)</b>", right_bold_style),
+                Paragraph("<b>Description</b>", left_bold_style),
+                Paragraph("<b>Amount</b>", right_bold_style),
             ]
         ]
 
@@ -1464,84 +1871,104 @@ class PayrollService:
             earn = earnings_list[i] if i < len(earnings_list) else None
             ded = deductions_list[i] if i < len(deductions_list) else None
 
-            e_name = Paragraph(earn.get("name", earn.get("code", "")), tr_label_style) if earn else Paragraph("", tr_label_style)
-            e_amt = Paragraph(f"₹{earn.get('amount', 0.0):,.2f}", tr_val_style) if earn else Paragraph("", tr_val_style)
+            e_name = Paragraph(earn.get("name", earn.get("code", "")), cell_left_style) if earn else Paragraph("", cell_left_style)
+            e_amt = Paragraph(fmt_amt(earn.get("amount", 0.0)), cell_right_style) if earn else Paragraph("", cell_right_style)
 
-            d_name = Paragraph(ded.get("name", ded.get("code", "")), tr_label_style) if ded else Paragraph("", tr_label_style)
-            d_amt = Paragraph(f"₹{ded.get('amount', 0.0):,.2f}", tr_val_style) if ded else Paragraph("", tr_val_style)
+            d_name = Paragraph(ded.get("name", ded.get("code", "")), cell_left_style) if ded else Paragraph("", cell_left_style)
+            d_amt = Paragraph(fmt_amt(ded.get("amount", 0.0)), cell_right_style) if ded else Paragraph("", cell_right_style)
 
-            breakdown_rows.append([e_name, e_amt, d_name, d_amt])
+            table_data.append([e_name, e_amt, d_name, d_amt])
 
-        total_earn_p = Paragraph(f"₹{slip.gross_earnings:,.2f}", tr_val_style)
-        total_ded_p = Paragraph(f"₹{slip.total_deductions:,.2f}", tr_val_style)
-        breakdown_rows.append([
-            Paragraph("<b>Total Gross Earnings</b>", label_style), total_earn_p,
-            Paragraph("<b>Total Deductions</b>", label_style), total_ded_p,
+        # Blank padding separator row
+        table_data.append([Paragraph("", cell_left_style), Paragraph("", cell_right_style), Paragraph("", cell_left_style), Paragraph("", cell_right_style)])
+
+        # Totals Row
+        gross_earn_str = fmt_amt(slip.gross_earnings)
+        gross_ded_str = fmt_amt(slip.total_deductions)
+        table_data.append([
+            Paragraph("<b>GROSS EARNINGS</b>", left_bold_style),
+            Paragraph(f"<b>{gross_earn_str}</b>", right_bold_style),
+            Paragraph("<b>GROSS DEDUCTIONS</b>", left_bold_style),
+            Paragraph(f"<b>{gross_ded_str}</b>", right_bold_style),
         ])
 
-        t_breakdown = Table(breakdown_rows, colWidths=[180, 90, 180, 90])
+        # Net Pay Row (spanned across all 4 cols)
+        net_amt_str = fmt_amt(slip.net_salary)
+        net_words = PayrollService._number_to_words_indian(slip.net_salary)
+        net_text = f"<b>Net Pay: {net_amt_str} ({net_words})</b>"
+        table_data.append([Paragraph(net_text, center_bold_style), "", "", ""])
+
+        t_breakdown = Table(table_data, colWidths=[182.5, 80, 182.5, 80])
         t_breakdown.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1E3A8A')),
-            ('BACKGROUND', (2, 0), (3, 0), colors.HexColor('#475569')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#F1F5F9')),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#1E293B')),
+            ('SPAN', (0, 0), (1, 0)),
+            ('SPAN', (2, 0), (3, 0)),
+            ('SPAN', (0, -1), (3, -1)),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.75, colors.HexColor('#1E293B')),
+            ('LINEBELOW', (0, 1), (-1, 1), 0.75, colors.HexColor('#1E293B')),
+            ('LINEAFTER', (1, 0), (1, -2), 0.75, colors.HexColor('#1E293B')),
+            ('LINEBEFORE', (1, 1), (1, -2), 0.4, colors.HexColor('#CBD5E1')),
+            ('LINEBEFORE', (3, 1), (3, -2), 0.4, colors.HexColor('#CBD5E1')),
+            ('LINEABOVE', (0, -2), (-1, -2), 0.75, colors.HexColor('#1E293B')),
+            ('LINEABOVE', (0, -1), (-1, -1), 0.75, colors.HexColor('#1E293B')),
+            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         elements.append(t_breakdown)
-        elements.append(Spacer(1, 14))
+        elements.append(Spacer(1, 12))
 
-        net_banner = [
-            [
-                Paragraph(f"<b>NET SALARY PAYABLE: ₹{slip.net_salary:,.2f}</b>", ParagraphStyle(
-                    'NetPay', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#065F46')
-                )),
-                Paragraph(f"Payment Status: <b>PAID</b>", ParagraphStyle(
-                    'NetPayStatus', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#065F46'), alignment=2
-                )),
-            ]
-        ]
-        t_net = Table(net_banner, colWidths=[360, 180])
-        t_net.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#D1FAE5')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#10B981')),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        elements.append(t_net)
-        elements.append(Spacer(1, 14))
-
-        if slip.employer_contributions:
-            contrib_rows = [
-                [Paragraph("EMPLOYER STATUTORY CONTRIBUTION", th_style), Paragraph("AMOUNT (₹)", th_style)]
-            ]
-            for c in slip.employer_contributions:
-                contrib_rows.append([
-                    Paragraph(c.get("name", c.get("code", "")), tr_label_style),
-                    Paragraph(f"₹{c.get('amount', 0.0):,.2f}", tr_val_style),
-                ])
-            t_contrib = Table(contrib_rows, colWidths=[360, 180])
-            t_contrib.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#334155')),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ]))
-            elements.append(t_contrib)
-            elements.append(Spacer(1, 14))
-
-        note_style = ParagraphStyle(
-            'FooterNote',
+        # 4. Official System Disclaimer
+        disc_style = ParagraphStyle(
+            'Disclaimer',
             parent=styles['Normal'],
-            fontName='Helvetica-Oblique',
+            fontName='Helvetica-Bold',
             fontSize=8,
-            textColor=colors.HexColor('#9CA3AF'),
-            alignment=1,
+            textColor=colors.HexColor('#111827'),
         )
-        elements.append(Spacer(1, 10))
-        elements.append(Paragraph("This is a computer-generated salary slip and does not require a physical signature.", note_style))
+        elements.append(Paragraph("<b>Disclaimer: This is a system generated payslip, does not require any signature.</b>", disc_style))
 
-        doc.build(elements)
+        def draw_watermark(canvas, document):
+            import os
+            wm_path = PayrollService._get_watermark_path()
+            if not wm_path or not os.path.exists(wm_path):
+                return
+            canvas.saveState()
+            try:
+                page_w, page_h = document.pagesize
+                aspect_ratio = 1.4327
+                try:
+                    from PIL import Image as PILImage
+                    with PILImage.open(wm_path) as img:
+                        orig_w, orig_h = img.size
+                        if orig_h > 0:
+                            aspect_ratio = orig_w / float(orig_h)
+                except Exception:
+                    pass
+
+                # Large, vibrant watermark spanning virtually the full page width
+                wm_width = min(page_w - 24.0, 565.0)
+                wm_height = wm_width / aspect_ratio
+                if wm_height > page_h * 0.85:
+                    wm_height = page_h * 0.85
+                    wm_width = wm_height * aspect_ratio
+
+                x = (page_w - wm_width) / 2.0
+                y = (page_h - wm_height) / 2.0
+                canvas.drawImage(
+                    wm_path,
+                    x, y,
+                    width=wm_width,
+                    height=wm_height,
+                    mask='auto',
+                    preserveAspectRatio=True
+                )
+            except Exception:
+                pass
+            finally:
+                canvas.restoreState()
+
+        doc.build(elements, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
         buffer.seek(0)
 
         response = StreamingResponse(
@@ -1552,91 +1979,14 @@ class PayrollService:
         return response
 
     # =========================================================================
-    # 11. Reporting & CSV Exports
+    # 11. Reporting & PDF Exports
     # =========================================================================
     @staticmethod
-    def export_payroll_csv(db: Session, run_id: int) -> StreamingResponse:
-        records = (
-            db.query(PayrollRecord)
-            .options(
-                joinedload(PayrollRecord.employee),
-            )
-            .filter(PayrollRecord.payroll_run_id == run_id)
-            .all()
-        )
+    def export_payroll_pdf(db: Session, run_id: int) -> StreamingResponse:
+        run = db.query(PayrollRun).options(joinedload(PayrollRun.period)).filter(PayrollRun.id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payroll run not found")
 
-        headers = [
-            "Employee Code",
-            "Employee Name",
-            "Department",
-            "Designation",
-            "Total Days",
-            "Payable Days",
-            "LOP Days",
-            "Fixed Gross",
-            "Earned Gross",
-            "Overtime Pay",
-            "Bonus",
-            "Incentive",
-            "Employee PF",
-            "Employee ESI",
-            "Total Deductions",
-            "Net Salary",
-            "Employer PF",
-            "Employer ESI",
-            "Total CTC Cost",
-            "Bank Name",
-            "Account Number",
-            "IFSC Code",
-            "Payment Status",
-        ]
-
-        rows = []
-        for r in records:
-            emp = r.employee
-            rows.append([
-                emp.employee_code if emp else "",
-                f"{emp.first_name} {emp.last_name}" if emp else "",
-                emp.department if emp else "",
-                emp.designation if emp else "",
-                r.total_payroll_days,
-                r.payable_days,
-                r.unpaid_leave_days,
-                r.fixed_gross_salary,
-                r.gross_earnings,
-                r.overtime_amount,
-                r.bonus_amount,
-                r.incentive_amount,
-                r.employer_pf,
-                r.employer_esi,
-                r.total_deductions,
-                r.net_salary,
-                r.employer_pf,
-                r.employer_esi,
-                r.total_cost_to_company,
-                r.bank_name or "",
-                r.account_number or "",
-                r.ifsc_code or "",
-                r.payment_status,
-            ])
-
-        output = io.StringIO()
-        output.write('\ufeff')
-        writer = csv.writer(output)
-        writer.writerow(headers)
-        for row in rows:
-            writer.writerow(row)
-        output.seek(0)
-
-        response = StreamingResponse(
-            iter([output.getvalue().encode("utf-8")]),
-            media_type="text/csv",
-        )
-        response.headers["Content-Disposition"] = f"attachment; filename=Payroll_Summary_Run_{run_id}.csv"
-        return response
-
-    @staticmethod
-    def export_bank_transfer_csv(db: Session, run_id: int) -> StreamingResponse:
         records = (
             db.query(PayrollRecord)
             .options(joinedload(PayrollRecord.employee))
@@ -1644,47 +1994,482 @@ class PayrollService:
             .all()
         )
 
-        headers = [
-            "Beneficiary Code",
-            "Beneficiary Name",
-            "Bank Name",
-            "Account Number",
-            "IFSC Code",
-            "Amount",
-            "Currency",
-            "Payment Mode",
-            "Narration",
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36,
+            title=f"Payroll_Summary_{run.run_number}",
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=16,
+            textColor=colors.HexColor('#1E3A8A'),
+            spaceAfter=2,
+        )
+        sub_title_style = ParagraphStyle(
+            'ReportSubTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9.5,
+            textColor=colors.HexColor('#4B5563'),
+            spaceAfter=10,
+        )
+        card_label_style = ParagraphStyle(
+            'CardLabel',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=8,
+            textColor=colors.HexColor('#64748B'),
+            alignment=1,
+        )
+        card_val_style = ParagraphStyle(
+            'CardVal',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            textColor=colors.HexColor('#0F172A'),
+            alignment=1,
+        )
+        th_style = ParagraphStyle(
+            'ReportTH',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=7.5,
+            textColor=colors.white,
+            alignment=1,
+        )
+        td_style = ParagraphStyle(
+            'ReportTD',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=7.5,
+            textColor=colors.HexColor('#1E293B'),
+        )
+        td_num_style = ParagraphStyle(
+            'ReportTDNum',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=7.5,
+            textColor=colors.HexColor('#1E293B'),
+            alignment=2,
+        )
+        td_bold_num_style = ParagraphStyle(
+            'ReportTDBoldNum',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=7.5,
+            textColor=colors.HexColor('#0F172A'),
+            alignment=2,
+        )
+        td_center_style = ParagraphStyle(
+            'ReportTDCenter',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=7.5,
+            textColor=colors.HexColor('#1E293B'),
+            alignment=1,
+        )
+
+        logo_flowable = PayrollService._get_company_logo(width=120, height=48)
+        period_name = run.period.name if run.period else "N/A"
+        header_text = (
+            "<para align='center' leading='13'>"
+            "<font size=13 fontName='Helvetica-Bold' color='#475569'><b>AIVAN 360 SOLUTIONS PRIVATE LIMITED</b></font><br/>"
+            "<font size=8 fontName='Helvetica' color='#64748B'>2863, Devtal Road, Near Rani Durgawati Ward, Garha,Jabalpur- 482003</font><br/>"
+            "<font size=8 fontName='Helvetica-Bold' color='#64748B'>MADHYA PRADESH</font><br/><br/>"
+            f"<font size=10 fontName='Helvetica-Bold' color='#1E3A8A'>PAYROLL SUMMARY REPORT — {period_name}</font><br/>"
+            f"<font size=8 fontName='Helvetica' color='#4B5563'>Payroll Run: <b>#{run.run_number}</b> | Status: <b>{run.status}</b> | Generated: <b>{datetime.now().strftime('%d-%b-%Y %H:%M')}</b></font><br/>"
+            "<font size=8 fontName='Helvetica-Bold' color='#4B5563'>All amounts are in INR</font>"
+            "</para>"
+        )
+        t_header = Table(
+            [[logo_flowable, Paragraph(header_text, styles['Normal']), ""]],
+            colWidths=[120, 480, 120]
+        )
+        t_header.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t_header)
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1E3A8A'), spaceAfter=10))
+
+        # KPI Summary Table
+        kpi_data = [
+            [
+                Paragraph("TOTAL EMPLOYEES", card_label_style),
+                Paragraph("GROSS PAYOUT", card_label_style),
+                Paragraph("TOTAL DEDUCTIONS", card_label_style),
+                Paragraph("NET DISBURSEMENT", card_label_style),
+                Paragraph("TOTAL CTC EXPENSE", card_label_style),
+            ],
+            [
+                Paragraph(str(run.total_employees), card_val_style),
+                Paragraph(f"Rs. {run.total_gross:,.2f}", card_val_style),
+                Paragraph(f"Rs. {run.total_deductions:,.2f}", card_val_style),
+                Paragraph(f"Rs. {run.total_net:,.2f}", card_val_style),
+                Paragraph(f"Rs. {run.total_employer_cost:,.2f}", card_val_style),
+            ]
+        ]
+        t_kpi = Table(kpi_data, colWidths=[144, 144, 144, 144, 144])
+        t_kpi.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(t_kpi)
+        elements.append(Spacer(1, 12))
+
+        # Table Header
+        table_data = [
+            [
+                Paragraph("Emp Code", th_style),
+                Paragraph("Employee Name", th_style),
+                Paragraph("Department", th_style),
+                Paragraph("Payable / Total Days", th_style),
+                Paragraph("Fixed Gross (INR)", th_style),
+                Paragraph("Earned Gross (INR)", th_style),
+                Paragraph("Deductions (INR)", th_style),
+                Paragraph("Net Pay (INR)", th_style),
+                Paragraph("Status", th_style),
+            ]
         ]
 
-        rows = []
+        sum_fixed = 0.0
+        sum_earned = 0.0
+        sum_deductions = 0.0
+        sum_net = 0.0
+
         for r in records:
             emp = r.employee
-            rows.append([
-                emp.employee_code if emp else "",
-                f"{emp.first_name} {emp.last_name}" if emp else "",
-                r.bank_name or "",
-                r.account_number or "",
-                r.ifsc_code or "",
-                r.net_salary,
-                "INR",
-                "NEFT/RTGS",
-                f"Salary Payout Run {run_id}",
+            sum_fixed += (r.fixed_gross_salary or 0.0)
+            sum_earned += (r.gross_earnings or 0.0)
+            sum_deductions += (r.total_deductions or 0.0)
+            sum_net += (r.net_salary or 0.0)
+
+            emp_name = f"{emp.first_name} {emp.last_name}" if emp else "Unknown"
+            table_data.append([
+                Paragraph(emp.employee_code if emp else "—", td_style),
+                Paragraph(emp_name, td_style),
+                Paragraph(emp.department or "—" if emp else "—", td_style),
+                Paragraph(f"{r.payable_days} / {r.total_payroll_days}", td_center_style),
+                Paragraph(f"Rs. {(r.fixed_gross_salary or 0.0):,.2f}", td_num_style),
+                Paragraph(f"Rs. {(r.gross_earnings or 0.0):,.2f}", td_num_style),
+                Paragraph(f"Rs. {(r.total_deductions or 0.0):,.2f}", td_num_style),
+                Paragraph(f"Rs. {(r.net_salary or 0.0):,.2f}", td_bold_num_style),
+                Paragraph(r.payment_status or "PENDING", td_center_style),
             ])
 
-        output = io.StringIO()
-        output.write('\ufeff')
-        writer = csv.writer(output)
-        writer.writerow(headers)
-        for row in rows:
-            writer.writerow(row)
-        output.seek(0)
+        # Summary Row
+        table_data.append([
+            Paragraph("TOTAL", th_style),
+            Paragraph(f"{len(records)} Employees", th_style),
+            Paragraph("", th_style),
+            Paragraph("", th_style),
+            Paragraph(f"Rs. {sum_fixed:,.2f}", th_style),
+            Paragraph(f"Rs. {sum_earned:,.2f}", th_style),
+            Paragraph(f"Rs. {sum_deductions:,.2f}", th_style),
+            Paragraph(f"Rs. {sum_net:,.2f}", th_style),
+            Paragraph("", th_style),
+        ])
 
-        response = StreamingResponse(
-            iter([output.getvalue().encode("utf-8")]),
-            media_type="text/csv",
-        )
-        response.headers["Content-Disposition"] = f"attachment; filename=Bank_Transfer_Run_{run_id}.csv"
+        col_widths = [65, 120, 85, 80, 80, 80, 75, 85, 50]  # total = 720
+        t_records = Table(table_data, colWidths=col_widths, repeatRows=1)
+        t_records_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#334155')),
+        ]
+        for row_idx in range(1, len(table_data) - 1):
+            if row_idx % 2 == 0:
+                t_records_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor('#F8FAFC')))
+        t_records.setStyle(TableStyle(t_records_style))
+        elements.append(t_records)
+        elements.append(Spacer(1, 14))
+
+        # Sign-off block
+        signoff_data = [
+            [
+                Paragraph("Prepared By: ___________________", td_style),
+                Paragraph("Verified By (HR Head): ___________________", td_style),
+                Paragraph("Approved By (Finance Director): ___________________", td_style),
+            ]
+        ]
+        t_sign = Table(signoff_data, colWidths=[240, 240, 240])
+        t_sign.setStyle(TableStyle([
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t_sign)
+
+        doc.build(elements)
+        pdf_bytes = buffer.getvalue()
+
+        response = StreamingResponse(iter([pdf_bytes]), media_type="application/pdf")
+        response.headers["Content-Disposition"] = f"attachment; filename=Payroll_Run_{run.run_number}.pdf"
         return response
+
+    @staticmethod
+    def export_payroll_csv(db: Session, run_id: int) -> StreamingResponse:
+        # Default all exports to PDF per system requirement
+        return PayrollService.export_payroll_pdf(db, run_id)
+
+    @staticmethod
+    def export_bank_transfer_pdf(db: Session, run_id: int) -> StreamingResponse:
+        run = db.query(PayrollRun).options(joinedload(PayrollRun.period)).filter(PayrollRun.id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payroll run not found")
+
+        records = (
+            db.query(PayrollRecord)
+            .options(joinedload(PayrollRecord.employee))
+            .filter(PayrollRecord.payroll_run_id == run_id)
+            .all()
+        )
+
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36,
+            title=f"Bank_Disbursement_{run.run_number}",
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'BankTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=16,
+            textColor=colors.HexColor('#0F766E'),
+            spaceAfter=2,
+        )
+        sub_title_style = ParagraphStyle(
+            'BankSubTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9.5,
+            textColor=colors.HexColor('#4B5563'),
+            spaceAfter=10,
+        )
+        card_label_style = ParagraphStyle(
+            'CardLabel',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=8,
+            textColor=colors.HexColor('#64748B'),
+            alignment=1,
+        )
+        card_val_style = ParagraphStyle(
+            'CardVal',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            textColor=colors.HexColor('#0F172A'),
+            alignment=1,
+        )
+        th_style = ParagraphStyle(
+            'ReportTH',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=8,
+            textColor=colors.white,
+            alignment=1,
+        )
+        td_style = ParagraphStyle(
+            'ReportTD',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=8,
+            textColor=colors.HexColor('#1E293B'),
+        )
+        td_num_style = ParagraphStyle(
+            'ReportTDNum',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=8,
+            textColor=colors.HexColor('#0F172A'),
+            alignment=2,
+        )
+        td_center_style = ParagraphStyle(
+            'ReportTDCenter',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=8,
+            textColor=colors.HexColor('#1E293B'),
+            alignment=1,
+        )
+
+        logo_flowable = PayrollService._get_company_logo(width=120, height=48)
+        period_name = run.period.name if run.period else "N/A"
+        header_text = (
+            "<para align='center' leading='13'>"
+            "<font size=13 fontName='Helvetica-Bold' color='#475569'><b>AIVAN 360 SOLUTIONS PRIVATE LIMITED</b></font><br/>"
+            "<font size=8 fontName='Helvetica' color='#64748B'>2863, Devtal Road, Near Rani Durgawati Ward, Garha,Jabalpur- 482003</font><br/>"
+            "<font size=8 fontName='Helvetica-Bold' color='#64748B'>MADHYA PRADESH</font><br/><br/>"
+            f"<font size=10 fontName='Helvetica-Bold' color='#0F766E'>BANK SALARY DISBURSEMENT ADVICE — {period_name}</font><br/>"
+            f"<font size=8 fontName='Helvetica' color='#4B5563'>Corporate Transfer Mandate | Direct NEFT / RTGS | Run: <b>#{run.run_number}</b></font><br/>"
+            "<font size=8 fontName='Helvetica-Bold' color='#4B5563'>All amounts are in INR</font>"
+            "</para>"
+        )
+        t_header = Table(
+            [[logo_flowable, Paragraph(header_text, styles['Normal']), ""]],
+            colWidths=[120, 480, 120]
+        )
+        t_header.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t_header)
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0F766E'), spaceAfter=10))
+
+        # KPI Box
+        kpi_data = [
+            [
+                Paragraph("TOTAL BENEFICIARIES", card_label_style),
+                Paragraph("TOTAL DISBURSEMENT AMOUNT", card_label_style),
+                Paragraph("CURRENCY", card_label_style),
+                Paragraph("TRANSFER TYPE", card_label_style),
+            ],
+            [
+                Paragraph(str(len(records)), card_val_style),
+                Paragraph(f"Rs. {run.total_net:,.2f}", card_val_style),
+                Paragraph("INR (Indian Rupee)", card_val_style),
+                Paragraph("NEFT / RTGS Batch Transfer", card_val_style),
+            ]
+        ]
+        t_kpi = Table(kpi_data, colWidths=[180, 180, 180, 180])
+        t_kpi.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F0FDFA')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#99F6E4')),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(t_kpi)
+        elements.append(Spacer(1, 12))
+
+        # Table
+        table_data = [
+            [
+                Paragraph("#", th_style),
+                Paragraph("Employee ID", th_style),
+                Paragraph("Beneficiary Name", th_style),
+                Paragraph("Bank Name", th_style),
+                Paragraph("Account Number", th_style),
+                Paragraph("IFSC Code", th_style),
+                Paragraph("Net Amount (INR)", th_style),
+                Paragraph("Mode", th_style),
+            ]
+        ]
+
+        total_amount = 0.0
+        for idx, r in enumerate(records, start=1):
+            emp = r.employee
+            total_amount += (r.net_salary or 0.0)
+            emp_name = f"{emp.first_name} {emp.last_name}" if emp else "Unknown"
+            table_data.append([
+                Paragraph(str(idx), td_center_style),
+                Paragraph(emp.employee_code if emp else "—", td_style),
+                Paragraph(emp_name, td_style),
+                Paragraph(r.bank_name or "N/A", td_style),
+                Paragraph(r.account_number or "N/A", td_style),
+                Paragraph(r.ifsc_code or "N/A", td_center_style),
+                Paragraph(f"Rs. {(r.net_salary or 0.0):,.2f}", td_num_style),
+                Paragraph(r.payment_mode or "NEFT", td_center_style),
+            ])
+
+        table_data.append([
+            Paragraph("TOTAL", th_style),
+            Paragraph("", th_style),
+            Paragraph(f"{len(records)} Beneficiaries", th_style),
+            Paragraph("", th_style),
+            Paragraph("", th_style),
+            Paragraph("", th_style),
+            Paragraph(f"Rs. {total_amount:,.2f}", th_style),
+            Paragraph("", th_style),
+        ])
+
+        col_widths = [30, 75, 140, 115, 120, 80, 95, 65]  # total = 720
+        t_bank = Table(table_data, colWidths=col_widths, repeatRows=1)
+        t_bank_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F766E')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCFBF1')),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#115E59')),
+        ]
+        for row_idx in range(1, len(table_data) - 1):
+            if row_idx % 2 == 0:
+                t_bank_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor('#F0FDFA')))
+        t_bank.setStyle(TableStyle(t_bank_style))
+        elements.append(t_bank)
+        elements.append(Spacer(1, 14))
+
+        # Authorization instruction block
+        auth_p = Paragraph(
+            "<b>Corporate Authorization Instruction:</b> Please debit our company primary operating account "
+            f"for the sum of <b>Rs. {total_amount:,.2f}</b> (INR) and disburse credits to the beneficiary bank accounts listed above.",
+            td_style
+        )
+        elements.append(auth_p)
+        elements.append(Spacer(1, 12))
+
+        signoff_data = [
+            [
+                Paragraph("Authorised Signatory 1: ___________________", td_style),
+                Paragraph("Authorised Signatory 2: ___________________", td_style),
+                Paragraph("Company Seal: [                      ]", td_style),
+            ]
+        ]
+        t_sign = Table(signoff_data, colWidths=[240, 240, 240])
+        t_sign.setStyle(TableStyle([
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t_sign)
+
+        doc.build(elements)
+        pdf_bytes = buffer.getvalue()
+
+        response = StreamingResponse(iter([pdf_bytes]), media_type="application/pdf")
+        response.headers["Content-Disposition"] = f"attachment; filename=Bank_Payout_{run.run_number}.pdf"
+        return response
+
+    @staticmethod
+    def export_bank_transfer_csv(db: Session, run_id: int) -> StreamingResponse:
+        # Default all exports to PDF per system requirement
+        return PayrollService.export_bank_transfer_pdf(db, run_id)
 
     # =========================================================================
     # 12. Dashboard Analytics & Statutory Configuration

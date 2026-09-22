@@ -84,6 +84,10 @@ export class PayrollService {
     return this.http.put<SalaryStructure>(buildApiUrl(`/payroll/structures/${id}`), data);
   }
 
+  deleteStructure(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(buildApiUrl(`/payroll/structures/${id}`));
+  }
+
   // ==========================================
   // Salary Preview
   // ==========================================
@@ -185,6 +189,10 @@ export class PayrollService {
     return this.http.post(buildApiUrl(`/payroll/runs/${runId}/mark-paid`), {});
   }
 
+  deleteRun(runId: number): Observable<any> {
+    return this.http.delete(buildApiUrl(`/payroll/runs/${runId}`));
+  }
+
   // ==========================================
   // Payroll Records & Adjustments
   // ==========================================
@@ -244,6 +252,12 @@ export class PayrollService {
     });
   }
 
+  resolveAllExceptions(runId: number, resolutionNotes: string): Observable<any> {
+    return this.http.post(buildApiUrl(`/payroll/runs/${runId}/exceptions/resolve-all`), {
+      resolution_notes: resolutionNotes,
+    });
+  }
+
   // ==========================================
   // Payslips & Downloads
   // ==========================================
@@ -269,16 +283,24 @@ export class PayrollService {
     });
   }
 
+  exportPayrollPdf(runId: number): Observable<Blob> {
+    return this.http.get(buildApiUrl(`/payroll/runs/${runId}/export-pdf`), {
+      responseType: 'blob',
+    });
+  }
+
   exportPayrollCsv(runId: number): Observable<Blob> {
-    return this.http.get(buildApiUrl(`/payroll/runs/${runId}/export-csv`), {
+    return this.exportPayrollPdf(runId);
+  }
+
+  exportBankPdf(runId: number): Observable<Blob> {
+    return this.http.get(buildApiUrl(`/payroll/runs/${runId}/export-bank-pdf`), {
       responseType: 'blob',
     });
   }
 
   exportBankCsv(runId: number): Observable<Blob> {
-    return this.http.get(buildApiUrl(`/payroll/runs/${runId}/export-bank-csv`), {
-      responseType: 'blob',
-    });
+    return this.exportBankPdf(runId);
   }
 
   // ==========================================

@@ -32,6 +32,13 @@ interface BackendEmployee {
   emergency_contact_name?: string | null;
   emergency_contact_number?: string | null;
   status: 'Active' | 'Inactive';
+  bank_name?: string | null;
+  bank_account_no?: string | null;
+  ifsc_code?: string | null;
+  micr_code?: string | null;
+  pan_number?: string | null;
+  uan_number?: string | null;
+  pf_number?: string | null;
 }
 
 interface BackendEmployeeStats {
@@ -69,6 +76,13 @@ interface BackendEmployeePayload {
   emergency_contact_number?: string;
   reporting_manager_id?: number | null;
   status: 'Active' | 'Inactive';
+  bank_name?: string;
+  bank_account_no?: string;
+  ifsc_code?: string;
+  micr_code?: string;
+  pan_number?: string;
+  uan_number?: string;
+  pf_number?: string;
 }
 
 interface BackendEmployeeCredentials {
@@ -246,7 +260,14 @@ export class EmployeeService {
       alternate_mobile: payload.contactInfo.alternateMobile || undefined,
       emergency_contact_name: payload.contactInfo.emergencyContactName || undefined,
       emergency_contact_number: payload.contactInfo.emergencyContactNumber || undefined,
-      status: 'Active'
+      status: 'Active',
+      bank_name: payload.statutoryInfo?.bankName || undefined,
+      bank_account_no: payload.statutoryInfo?.bankAccountNo || undefined,
+      ifsc_code: payload.statutoryInfo?.ifscCode || undefined,
+      micr_code: payload.statutoryInfo?.micrCode || undefined,
+      pan_number: payload.statutoryInfo?.panNumber || undefined,
+      uan_number: payload.statutoryInfo?.uanNumber || undefined,
+      pf_number: payload.statutoryInfo?.pfNumber || undefined
     };
   }
 
@@ -282,7 +303,14 @@ export class EmployeeService {
       shiftType: row.shift_type || '',
       shiftId: row.shift_id ?? null,
       shift: row.shift || null,
-      doj: row.doj || ''
+      doj: row.doj || '',
+      bankName: row.bank_name || '',
+      bankAccountNo: row.bank_account_no || '',
+      ifscCode: row.ifsc_code || '',
+      micrCode: row.micr_code || '',
+      panNumber: row.pan_number || '',
+      uanNumber: row.uan_number || '',
+      pfNumber: row.pf_number || ''
     };
   }
 }

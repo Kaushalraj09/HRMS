@@ -589,20 +589,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
     emp_rec = db.query(Employee).filter(Employee.id == employee_id).first()
     is_remote = _is_remote_worker(db, emp_rec)
 
-    # Check for approved WFH request for today
-    from app.models.timeoff import TimeOffRequest
-    from sqlalchemy import func
-    approved_wfh = db.query(TimeOffRequest).filter(
-        TimeOffRequest.employee_id == employee_id,
-        TimeOffRequest.date == today,
-        TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-        (
-            (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
-            (func.lower(TimeOffRequest.leave_type).like("%home%"))
-        )
-    ).first()
-    has_approved_wfh = approved_wfh is not None
-    effective_remote = is_remote or has_approved_wfh
+    effective_remote = is_remote
     default_work_mode = "Remote" if effective_remote else "Office"
     
     attendance = (
@@ -738,7 +725,7 @@ def get_today_state(db: Session, employee_id: int) -> dict:
         "lunchDurationMinutes": shift.lunch_duration_minutes or 40,
         "workMode": "Remote" if effective_remote else (attendance.work_mode if attendance else "Office"),
         "isRemoteWorker": is_remote,
-        "hasApprovedWfh": has_approved_wfh,
+        "hasApprovedWfh": False,
         "workLocationName": assigned_loc_name,
         "workLocationId": attendance.work_location_id if attendance else None,
         "punchIn": attendance.punch_in if attendance else None,

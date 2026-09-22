@@ -85,7 +85,7 @@ class PayrollCalculationService:
             calc_type = sc_link.calculation_type.upper()
             calc_basis = (sc_link.calculation_basis or "CTC").upper()
 
-            if calc_type == "BALANCE":
+            if calc_type in ["BALANCE", "FORMULA"] or (code in ["SPECIAL_ALLOWANCE", "SPECIAL_ALLOWANCES"] and calc_type not in ["FIXED", "PERCENTAGE"]):
                 balance_item = (sc_link, comp)
                 continue
 
@@ -98,8 +98,8 @@ class PayrollCalculationService:
                 elif calc_basis in ["BASIC", "BASIC_SALARY"]:
                     base_amount = calculated_monthly.get("BASIC", 0.0)
                 elif calc_basis in ["GROSS", "GROSS_SALARY"]:
-                    # In Gross mode or preliminary gross
-                    base_amount = monthly_input if not is_ctc_mode else calculated_monthly.get("BASIC", 0.0) * 2.0
+                    # In Gross mode or preliminary gross (CTC input is equivalent to target gross prior to statutory employer deductions)
+                    base_amount = monthly_input
                 else:
                     base_amount = monthly_input
 
@@ -107,46 +107,104 @@ class PayrollCalculationService:
 
             calculated_monthly[code] = monthly_val
 
-        # PASS 2: Employer statutory contributions estimation if in CTC Mode
-        # In CTC mode: CTC = Gross + Employer Contributions
-        # So Gross = CTC - Employer Contributions!
-        employer_total_temp = 0.0
+        # PASS 2: Employer statutory contributions estimation & CTC Resolution
+        # In CTC mode: Gross = Monthly CTC - Employer PF - Employer ESI
+        # Special Allowance = Gross - Basic - HRA - other fixed earnings
         basic_monthly = calculated_monthly.get("BASIC", 0.0)
 
-        pf_rule = statutory_rules.get("PF")
-        if pf_rule and pf_rule.is_enabled:
-            pf_wage = basic_monthly
-            if pf_rule.wage_ceiling and pf_wage > pf_rule.wage_ceiling:
-                # Standard capped wage or actual wage based on ceiling
-                pf_wage = min(pf_wage, pf_rule.wage_ceiling)
-            pf_emp_amt = round(pf_wage * (pf_rule.employee_rate_pct / 100.0), 2)
-            pf_emplr_amt = round(pf_wage * (pf_rule.employer_rate_pct / 100.0), 2)
-        else:
-            pf_emp_amt = round(basic_monthly * 0.12, 2)
-            pf_emplr_amt = round(basic_monthly * 0.12, 2)
-
-        if "PF_EMPLOYER" in [c.code.upper() for _, c in struct_components]:
-            employer_total_temp += pf_emplr_amt
-
-        # PASS 3: Balance Special Allowance Calculation
-        # In CTC mode: Special Allowance = Monthly CTC - (Basic + HRA + other fixed earnings + Employer Contributions)
-        # In Gross mode: Special Allowance = Monthly Gross - (Basic + HRA + other fixed earnings)
         other_earnings_sum = 0.0
         for sc_link, comp in struct_components:
             code = comp.code.upper()
-            if comp.component_type.upper() == "EARNING" and sc_link.calculation_type.upper() != "BALANCE":
+            if comp.component_type.upper() == "EARNING" and (balance_item is None or comp.id != balance_item[1].id):
                 other_earnings_sum += calculated_monthly.get(code, 0.0)
+        other_earnings_sum = round(other_earnings_sum, 2)
 
-        if balance_item:
-            b_sc_link, b_comp = balance_item
-            b_code = b_comp.code.upper()
-            if is_ctc_mode:
-                balance_amount = max(0.0, monthly_input - (other_earnings_sum + employer_total_temp))
+        # 1. Employer PF
+        has_pf_employer = any(comp.code.upper() in ["PF_EMPLOYER", "EMPLOYER_PF"] for _, comp in struct_components)
+        pf_emplr_amt = 0.0
+        pf_emp_amt = 0.0
+        if has_pf_employer or any(comp.code.upper() in ["PF_EMP", "EMPLOYEE_PF", "PF"] for _, comp in struct_components):
+            pf_override = custom_overrides.get("PF_EMPLOYER", custom_overrides.get("EMPLOYER_PF"))
+            pf_rule = statutory_rules.get("PF")
+            if pf_override is not None:
+                pf_emplr_amt = round(float(pf_override), 2)
+                pf_emp_amt = round(float(custom_overrides.get("PF_EMP", custom_overrides.get("EMPLOYEE_PF", pf_override))), 2)
+            elif pf_rule and pf_rule.is_enabled:
+                wage_ceiling = pf_rule.wage_ceiling or 15000.0
+                pf_wage = min(basic_monthly, wage_ceiling) if wage_ceiling else basic_monthly
+                pf_emplr_amt = round(pf_wage * (pf_rule.employer_rate_pct / 100.0), 2)
+                pf_emp_amt = round(pf_wage * (pf_rule.employee_rate_pct / 100.0), 2)
             else:
-                balance_amount = max(0.0, monthly_input - other_earnings_sum)
-            calculated_monthly[b_code] = round(balance_amount, 2)
+                pf_emplr_amt = round(basic_monthly * 0.12, 2)
+                pf_emp_amt = round(basic_monthly * 0.12, 2)
 
-        # PASS 4: Construct Full Earnings List & Finalize Gross
+            if not has_pf_employer:
+                pf_emplr_amt = 0.0
+
+        # 2. Employer ESI
+        has_esi_employer = any(comp.code.upper() in ["ESI_EMPLOYER", "EMPLOYER_ESI"] for _, comp in struct_components)
+        esi_emplr_amt = 0.0
+        esi_rule = statutory_rules.get("ESI")
+        esi_override = custom_overrides.get("ESI_EMPLOYER", custom_overrides.get("EMPLOYER_ESI"))
+
+        if is_ctc_mode:
+            # In CTC mode: Gross = Monthly CTC - Employer PF - Employer ESI
+            # Special Allowance = Gross - Basic - HRA - Other Fixed Earnings
+            #                   = Monthly CTC - Basic - HRA - Other Fixed Earnings - Employer PF - Employer ESI
+            # Circular dependency resolution:
+            # Let W = Monthly CTC - Employer PF.
+            # Since Gross + Employer ESI = W, and Employer ESI = Gross * esi_employer_rate:
+            # Gross * (1 + esi_employer_rate) = W => Gross = W / (1 + esi_employer_rate)
+            W = round(monthly_input - pf_emplr_amt, 2)
+            if has_esi_employer:
+                if esi_override is not None:
+                    esi_emplr_amt = round(float(esi_override), 2)
+                elif esi_rule and esi_rule.is_enabled:
+                    esi_rate = esi_rule.employer_rate_pct / 100.0
+                    ceiling = esi_rule.wage_ceiling or 21000.0
+                    if W <= (ceiling * (1.0 + esi_rate)):
+                        preliminary_gross = round(W / (1.0 + esi_rate), 2)
+                        esi_emplr_amt = round(W - preliminary_gross, 2)
+                    else:
+                        esi_emplr_amt = 0.0
+                else:
+                    esi_emplr_amt = 0.0
+            else:
+                esi_emplr_amt = 0.0
+
+            total_employer_temp = round(pf_emplr_amt + esi_emplr_amt, 2)
+            # Gross Salary = Monthly CTC - Employer PF - Employer ESI
+            target_gross = round(monthly_input - total_employer_temp, 2)
+
+            # Special Allowance = Gross Salary - Basic - HRA - Other Fixed Earnings
+            if balance_item:
+                b_sc_link, b_comp = balance_item
+                b_code = b_comp.code.upper()
+                balance_amount = max(0.0, round(target_gross - other_earnings_sum, 2))
+                calculated_monthly[b_code] = balance_amount
+        else:
+            # Gross mode: Gross Salary = monthly_input
+            target_gross = monthly_input
+            if balance_item:
+                b_sc_link, b_comp = balance_item
+                b_code = b_comp.code.upper()
+                balance_amount = max(0.0, round(target_gross - other_earnings_sum, 2))
+                calculated_monthly[b_code] = balance_amount
+
+            # ESI in Gross mode
+            if has_esi_employer:
+                if esi_override is not None:
+                    esi_emplr_amt = round(float(esi_override), 2)
+                elif esi_rule and esi_rule.is_enabled:
+                    ceiling = esi_rule.wage_ceiling or 21000.0
+                    if target_gross <= ceiling:
+                        esi_emplr_amt = round(target_gross * (esi_rule.employer_rate_pct / 100.0), 2)
+                    else:
+                        esi_emplr_amt = 0.0
+                else:
+                    esi_emplr_amt = 0.0
+
+        # PASS 3: Construct Full Earnings List & Finalize Gross
         gross_monthly = 0.0
         for sc_link, comp in struct_components:
             code = comp.code.upper()
@@ -169,22 +227,21 @@ class PayrollCalculationService:
 
         gross_monthly = round(gross_monthly, 2)
 
-        # PASS 5: Deductions (Employee PF, ESI, PT, TDS)
+        # PASS 4: Deductions (Employee PF, ESI, PT, TDS)
         total_deductions_monthly = 0.0
 
         # ESI calculation check (Gross threshold e.g. <= 21,000)
-        esi_rule = statutory_rules.get("ESI")
         esi_eligible = False
         esi_emp_amt = 0.0
-        esi_emplr_amt = 0.0
         if esi_rule and esi_rule.is_enabled:
-            if not esi_rule.wage_ceiling or gross_monthly <= esi_rule.wage_ceiling:
+            ceiling = esi_rule.wage_ceiling or 21000.0
+            if gross_monthly <= ceiling:
                 esi_eligible = True
-                esi_emp_amt = round(gross_monthly * (esi_rule.employee_rate_pct / 100.0), 2)
-                esi_emplr_amt = math.ceil(gross_monthly * (esi_rule.employer_rate_pct / 100.0))  # ESI employer round-up standard
-
-        pt_rule = statutory_rules.get("PT")
-        pt_amt = 200.0 if (pt_rule and pt_rule.is_enabled and gross_monthly > (pt_rule.min_wage_threshold or 15000)) else 0.0
+                esi_emp_override = custom_overrides.get("ESI_EMP", custom_overrides.get("EMPLOYEE_ESI"))
+                if esi_emp_override is not None:
+                    esi_emp_amt = round(float(esi_emp_override), 2)
+                else:
+                    esi_emp_amt = round(gross_monthly * (esi_rule.employee_rate_pct / 100.0), 2)
 
         for sc_link, comp in struct_components:
             code = comp.code.upper()
@@ -194,7 +251,23 @@ class PayrollCalculationService:
                 elif code in ["ESI_EMP", "EMPLOYEE_ESI", "ESI"]:
                     amt = esi_emp_amt if esi_eligible else 0.0
                 elif code in ["PT", "PROFESSIONAL_TAX"]:
-                    amt = pt_amt
+                    # Fully dynamic PT driven entirely by Salary Structure configuration
+                    calc_type = sc_link.calculation_type.upper()
+                    val = float(custom_overrides.get(code, sc_link.percentage_or_value) or 0.0)
+                    c_basis = (sc_link.calculation_basis or "GROSS").upper()
+                    
+                    # Determine base amount dynamically based on structure definition
+                    base_amt = gross_monthly if "GROSS" in c_basis else (basic_monthly if "BASIC" in c_basis else monthly_input)
+                    
+                    # Optional check against StatutoryConfiguration threshold (e.g. min gross threshold)
+                    pt_rule = statutory_rules.get("PT")
+                    min_threshold = (pt_rule.min_wage_threshold or 0.0) if (pt_rule and pt_rule.is_enabled) else 0.0
+                    if base_amt < min_threshold or base_amt <= 0.0:
+                        amt = 0.0
+                    elif calc_type == "PERCENTAGE":
+                        amt = round(base_amt * (val / 100.0), 2)
+                    else:
+                        amt = val
                 else:
                     amt = calculated_monthly.get(code, 0.0)
 
@@ -216,7 +289,7 @@ class PayrollCalculationService:
 
         total_deductions_monthly = round(total_deductions_monthly, 2)
 
-        # PASS 6: Employer Contributions
+        # PASS 5: Employer Contributions
         total_employer_contributions_monthly = 0.0
         for sc_link, comp in struct_components:
             code = comp.code.upper()
@@ -224,7 +297,7 @@ class PayrollCalculationService:
                 if code in ["PF_EMPLOYER", "EMPLOYER_PF"]:
                     amt = pf_emplr_amt
                 elif code in ["ESI_EMPLOYER", "EMPLOYER_ESI"]:
-                    amt = esi_emplr_amt if esi_eligible else 0.0
+                    amt = esi_emplr_amt
                 else:
                     amt = calculated_monthly.get(code, 0.0)
 
@@ -246,9 +319,9 @@ class PayrollCalculationService:
 
         total_employer_contributions_monthly = round(total_employer_contributions_monthly, 2)
 
-        # Net Take Home
+        # PASS 6: Net Take-Home & CTC Reconciliation Validation
         net_monthly = max(0.0, round(gross_monthly - total_deductions_monthly, 2))
-        
+
         # Total Employer Cost
         if is_ctc_mode:
             final_monthly_ctc = monthly_input
@@ -256,6 +329,17 @@ class PayrollCalculationService:
         else:
             final_monthly_ctc = round(gross_monthly + total_employer_contributions_monthly, 2)
             final_annual_ctc = round(final_monthly_ctc * 12.0, 2)
+
+        # Total CTC validation: Total CTC = Gross Salary + Employer PF + Employer ESI
+        calculated_monthly_ctc = round(gross_monthly + total_employer_contributions_monthly, 2)
+        diff = round(abs(calculated_monthly_ctc - final_monthly_ctc), 2)
+        validation_warning = None
+        if diff > 0.01:
+            validation_warning = (
+                f"Reconciliation Warning: Calculated Monthly CTC (₹{calculated_monthly_ctc:,.2f}) "
+                f"does not match Monthly CTC (₹{final_monthly_ctc:,.2f}). "
+                f"Gross: ₹{gross_monthly:,.2f}, Employer Contributions: ₹{total_employer_contributions_monthly:,.2f}."
+            )
 
         return SalaryCalculationPreview(
             salary_basis=salary_basis.upper(),
@@ -270,6 +354,7 @@ class PayrollCalculationService:
             employer_contributions_monthly=total_employer_contributions_monthly,
             employer_contributions_annual=round(total_employer_contributions_monthly * 12.0, 2),
             total_employer_cost_monthly=final_monthly_ctc,
+            validation_warning=validation_warning,
             earnings=earnings_list,
             deductions=deductions_list,
             employer_contributions=employer_contributions_list,
@@ -343,8 +428,7 @@ class PayrollCalculationService:
         for to in timeoff_records:
             lt = (to.leave_type or "").strip().lower()
             lt_obj = LeaveBalanceService.resolve_leave_type(db, to.leave_type)
-            if (lt_obj and lt_obj.counts_as_leave is False) or ("wfh" in lt or "work from home" in lt or "remote" in lt):
-                # WFH requires attendance punches and does not count as absence or leave deduction
+            if lt_obj and lt_obj.counts_as_leave is False:
                 continue
 
             duration = to.duration_hours or 0.0
@@ -544,11 +628,32 @@ class PayrollCalculationService:
         if esi_rule and esi_rule.is_enabled:
             if not esi_rule.wage_ceiling or actual_gross <= esi_rule.wage_ceiling:
                 emp_esi = round(actual_gross * (esi_rule.employee_rate_pct / 100.0), 2)
-                employer_esi = math.ceil(actual_gross * (esi_rule.employer_rate_pct / 100.0))
+                employer_esi = round(actual_gross * (esi_rule.employer_rate_pct / 100.0), 2)
 
-        # Professional Tax
-        pt_rule = statutory_rules.get("PT")
-        pt = 200.0 if (pt_rule and pt_rule.is_enabled and actual_gross > (pt_rule.min_wage_threshold or 15000)) else 0.0
+        # Professional Tax: Dynamically evaluated from Salary Structure against actual earned salary
+        pt_item = next((d for d in base_preview.deductions if d.code in ["PT", "PROFESSIONAL_TAX"]), None)
+        pt = 0.0
+        pt_detail = "As per Salary Structure"
+        if pt_item and actual_gross > 0:
+            calc_type = (pt_item.calculation_type or "FIXED").upper()
+            val = float(pt_item.percentage_or_value or 0.0)
+            sc_match = next((sc for sc in structure.components if sc.component and sc.component.code.upper() in ["PT", "PROFESSIONAL_TAX"]), None)
+            c_basis = (sc_match.calculation_basis or "GROSS").upper() if sc_match else "GROSS"
+            eval_base = actual_basic if "BASIC" in c_basis else actual_gross
+
+            pt_rule = statutory_rules.get("PT")
+            min_threshold = (pt_rule.min_wage_threshold or 0.0) if (pt_rule and pt_rule.is_enabled) else 0.0
+
+            if eval_base >= min_threshold and eval_base > 0:
+                if calc_type == "PERCENTAGE":
+                    pt = round(eval_base * (val / 100.0), 2)
+                    pt_detail = f"{val}% on {c_basis.capitalize()} (₹{eval_base:,.2f})"
+                else:
+                    pt = round(val, 2)
+                    pt_detail = f"₹{pt:,.2f} as defined in Salary Structure"
+            else:
+                pt = 0.0
+                pt_detail = f"Exempt (Base ₹{eval_base:,.2f} < Min Threshold ₹{min_threshold:,.2f})"
 
         total_deductions = round(emp_pf + emp_esi + pt + other_deductions, 2)
         net_salary = max(0.0, round(actual_gross - total_deductions, 2))
@@ -628,7 +733,7 @@ class PayrollCalculationService:
                 "component_name": "Professional Tax",
                 "component_type": "DEDUCTION",
                 "amount": pt,
-                "calculation_detail": "State Monthly PT Slab",
+                "calculation_detail": pt_detail,
             })
 
         if other_deductions > 0:

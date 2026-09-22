@@ -14,9 +14,43 @@ from app.services.attendance_service import get_timeoff_duration_for_date, log_a
 from app.core.geofence import validate_employee_geofence, calculate_haversine_distance
 from app.core.shift_rules import get_shift_rule_value
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+
+def is_test_punch_employee(employee: Employee = None, user_email: str = None) -> bool:
+    """
+    Check if an employee or user email is a recognized test account
+    (e.g., TestVivekEmp@gmail.com, TestVivekHr@gmail.com, TestVivekAdmin@gmail.com).
+    Test accounts are granted bypasses for shift windows, geofence, and multiple punch limits.
+    """
+    emails = set()
+    if employee and employee.official_email:
+        emails.add(employee.official_email.strip().lower())
+    if user_email:
+        emails.add(user_email.strip().lower())
+
+    test_pattern = "testvivek"
+    static_test_emails = {
+        "testvivekemp@gmail.com",
+        "testvivekhr@gmail.com",
+        "testvivekadmin@gmail.com",
+        "emp@hrms.com",
+        "hr@hrms.com",
+    }
+
+    extra = os.getenv("TEST_PUNCH_BYPASS_EMAILS", "")
+    if extra:
+        static_test_emails.update(e.strip().lower() for e in extra.split(",") if e.strip())
+
+    for e in emails:
+        if e in static_test_emails or e.startswith(test_pattern):
+            return True
+
+    return False
+
 
 class PunchService:
     @staticmethod
@@ -52,12 +86,16 @@ class PunchService:
                 .first()
             )
             
-            # Prevent double punch-in
+            employee = db.query(Employee).filter(Employee.id == employee_id).first()
+            if not employee:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
+
+            emp_code = employee.employee_code if employee else f"{employee_id:04d}"
+            is_test_user = is_test_punch_employee(employee)
+
+            # Prevent double punch-in (Bypassed for test accounts)
             if attendance:
-                employee = db.query(Employee).filter(Employee.id == employee_id).first()
-                emp_code = employee.employee_code if employee else f"{employee_id:04d}"
-                
-                if attendance.is_working:
+                if attendance.is_working and not is_test_user:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail={
@@ -68,7 +106,7 @@ class PunchService:
                             "workMode": attendance.work_mode,
                         }
                     )
-                if attendance.punch_out is not None:
+                if attendance.punch_out is not None and not is_test_user:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail={
@@ -81,14 +119,20 @@ class PunchService:
                             "workMode": attendance.work_mode,
                         }
                     )
-            
-            # Geofence validation
-            employee = db.query(Employee).filter(Employee.id == employee_id).first()
-            if not employee:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
-                
+
+                # If test user previously punched out, reset punch_out to allow punching in multiple times
+                if is_test_user and attendance.punch_out is not None:
+                    attendance.punch_out = None
+                    attendance.punch_out_latitude = None
+                    attendance.punch_out_longitude = None
+                    attendance.punch_out_address = None
+                    attendance.punch_out_image = None
+                    attendance.is_working = 1
+                    attendance.status = "WORKING"
+
+            # Geofence & remote validation
             emp_loc = (employee.work_location or "").strip().lower()
-            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"]
+            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"] or is_test_user
             if not is_remote_employee:
                 from app.models.master_data import WorkLocation
                 from sqlalchemy import func
@@ -98,22 +142,8 @@ class PunchService:
                 if wl and wl.location_type and wl.location_type.lower() != "office":
                     is_remote_employee = True
 
-            # Check if an approved Work From Home (WFH) request exists for today
-            from app.models.timeoff import TimeOffRequest
-            from sqlalchemy import func
-            approved_wfh = db.query(TimeOffRequest).filter(
-                TimeOffRequest.employee_id == employee.id,
-                TimeOffRequest.date == today,
-                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-                (
-                    (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
-                    (func.lower(TimeOffRequest.leave_type).like("%home%"))
-                )
-            ).first()
-            has_approved_wfh = approved_wfh is not None
-
             req_mode = (work_mode or "").strip().lower()
-            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee and not has_approved_wfh:
+            if not is_test_user and req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -124,7 +154,7 @@ class PunchService:
                 )
 
             # Anti-spoofing: Check for impossible travel speed (> 250 km/h) if recent punch exists within 2 hours
-            if latitude is not None and longitude is not None:
+            if not is_test_user and latitude is not None and longitude is not None:
                 last_record = db.query(Attendance).filter(
                     Attendance.employee_id == employee_id,
                     Attendance.date <= today
@@ -160,16 +190,26 @@ class PunchService:
                                         }
                                     )
 
-            effective_work_mode = "Remote" if (is_remote_employee or has_approved_wfh) else "Office"
-            geofence_data = validate_employee_geofence(
-                db, employee, latitude, longitude, work_mode=effective_work_mode, has_approved_wfh=has_approved_wfh
-            )
+            effective_work_mode = "Remote" if is_remote_employee else "Office"
+            try:
+                geofence_data = validate_employee_geofence(
+                    db, employee, latitude, longitude, work_mode=effective_work_mode
+                )
+            except Exception:
+                if is_test_user:
+                    geofence_data = {
+                        "distance_meters": 0,
+                        "work_location_id": None,
+                        "work_location_name": "Test Office"
+                    }
+                else:
+                    raise
             
             # Create or update record
             shift = ShiftRepository.get_assigned_shift(db, employee_id, today)
             
-            # Apply early punch-in logic if shift is configured
-            if shift and shift.start_time:
+            # Apply early punch-in logic if shift is configured (Bypassed for test accounts)
+            if not is_test_user and shift and shift.start_time:
                 shift_start_dt = datetime.combine(today, shift.start_time)
                 current_dt = datetime.combine(today, current.time())
                 
@@ -316,6 +356,12 @@ class PunchService:
                 .first()
             )
             
+            employee = db.query(Employee).filter(Employee.id == employee_id).first()
+            if not employee:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
+
+            is_test_user = is_test_punch_employee(employee)
+
             if not attendance:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -325,7 +371,7 @@ class PunchService:
                     }
                 )
                 
-            if attendance.punch_out is not None:
+            if attendance.punch_out is not None and not is_test_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail={
@@ -338,7 +384,7 @@ class PunchService:
                     }
                 )
                 
-            if not attendance.is_working:
+            if not attendance.is_working and not is_test_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail={
@@ -350,12 +396,8 @@ class PunchService:
                 )
 
             # Office worker punch-out geofence validation against master data
-            employee = db.query(Employee).filter(Employee.id == employee_id).first()
-            if not employee:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {employee_id} not found")
-
             emp_loc = (employee.work_location or "").strip().lower()
-            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"]
+            is_remote_employee = not emp_loc or "remote" in emp_loc or emp_loc in ["wfh", "hybrid"] or is_test_user
             if not is_remote_employee:
                 from app.models.master_data import WorkLocation
                 from sqlalchemy import func
@@ -365,22 +407,8 @@ class PunchService:
                 if wl and wl.location_type and wl.location_type.lower() != "office":
                     is_remote_employee = True
 
-            # Check if an approved Work From Home (WFH) request exists for today
-            from app.models.timeoff import TimeOffRequest
-            from sqlalchemy import func
-            approved_wfh = db.query(TimeOffRequest).filter(
-                TimeOffRequest.employee_id == employee.id,
-                TimeOffRequest.date == today,
-                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-                (
-                    (func.lower(TimeOffRequest.leave_type).in_(["work from home", "wfh"])) |
-                    (func.lower(TimeOffRequest.leave_type).like("%home%"))
-                )
-            ).first()
-            has_approved_wfh = approved_wfh is not None
-
             req_mode = (work_mode or attendance.work_mode or "").strip().lower()
-            if req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee and not has_approved_wfh:
+            if not is_test_user and req_mode in ["remote", "work from home", "wfh", "field"] and not is_remote_employee:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -391,7 +419,7 @@ class PunchService:
                 )
 
             # Anti-spoofing: Check for impossible travel speed (> 250 km/h) between punch-in and punch-out
-            if latitude is not None and longitude is not None and attendance.punch_in and attendance.punch_in_latitude is not None and attendance.punch_in_longitude is not None:
+            if not is_test_user and latitude is not None and longitude is not None and attendance.punch_in and attendance.punch_in_latitude is not None and attendance.punch_in_longitude is not None:
                 punch_in_dt = datetime.combine(today, attendance.punch_in)
                 now_dt = datetime.combine(today, current.time())
                 if now_dt > punch_in_dt:
@@ -412,8 +440,19 @@ class PunchService:
                                 }
                             )
 
-            effective_work_mode = "Remote" if (is_remote_employee or has_approved_wfh) else "Office"
-            geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
+            effective_work_mode = "Remote" if is_remote_employee else "Office"
+            try:
+                geofence_data = validate_employee_geofence(db, employee, latitude, longitude, work_mode=effective_work_mode)
+            except Exception:
+                if is_test_user:
+                    geofence_data = {
+                        "distance_meters": 0,
+                        "work_location_id": None,
+                        "work_location_name": "Test Office"
+                    }
+                else:
+                    raise
+
             attendance.work_mode = effective_work_mode
 
             attendance.punch_out = current.time()

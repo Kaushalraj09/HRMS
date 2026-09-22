@@ -181,13 +181,8 @@
                                     <span class="mode-dot remote"></span> Remote
                                 </div>
 
-                                <!-- Office Worker with Approved WFH: Show WFH badge -->
-                                <div class="work-mode-fixed-pill" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);" *ngIf="!isAssignedRemoteWorker && hasApprovedWfhToday">
-                                    <span class="mode-dot remote" style="background: #10b981;"></span> WFH (Approved)
-                                </div>
-
                                 <!-- Office Worker: Retain existing toggle and switching capability -->
-                                <div class="work-mode-pill-toggle" *ngIf="!isAssignedRemoteWorker && !hasApprovedWfhToday">
+                                <div class="work-mode-pill-toggle" *ngIf="!isAssignedRemoteWorker">
                                     <button type="button" class="mode-pill-btn office-btn" [class.active]="status === 'Office'" (click)="requestSwitchWorkMode('Office')">
                                         <span class="mode-dot"></span> Office
                                     </button>

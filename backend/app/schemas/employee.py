@@ -28,6 +28,15 @@ class EmployeeBase(BaseModel):
     emergency_contact_number: Optional[str] = None
     status: str = "Active"
 
+    # Banking & Statutory Info
+    bank_name: Optional[str] = None
+    bank_account_no: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    micr_code: Optional[str] = None
+    pan_number: Optional[str] = None
+    uan_number: Optional[str] = None
+    pf_number: Optional[str] = None
+
 class EmployeeCreate(EmployeeBase):
     reporting_manager_id: Optional[int] = None
 
@@ -53,6 +62,15 @@ class EmployeeUpdate(BaseModel):
     emergency_contact_name: Optional[str] = None
     emergency_contact_number: Optional[str] = None
     status: Optional[str] = None
+
+    # Banking & Statutory Info
+    bank_name: Optional[str] = None
+    bank_account_no: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    micr_code: Optional[str] = None
+    pan_number: Optional[str] = None
+    uan_number: Optional[str] = None
+    pf_number: Optional[str] = None
 
 class EmployeeResponse(EmployeeBase):
     id: int

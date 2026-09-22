@@ -72,13 +72,11 @@ def test_yearly_leave_balances_initialization(db):
     cl_2026 = next(b for b in balances_2026 if b.leave_type.code == "CL")
     sl_2026 = next(b for b in balances_2026 if b.leave_type.code == "SL")
     el_2026 = next(b for b in balances_2026 if b.leave_type.code == "EL")
-    wfh_2026 = next(b for b in balances_2026 if b.leave_type.code == "WFH")
 
     assert cl_2026.allocated_days == 12.0
     assert cl_2026.available_days == 12.0
     assert sl_2026.allocated_days == 8.0
     assert el_2026.allocated_days == 18.0
-    assert wfh_2026.allocated_days == 24.0
 
     # Initialize 2027
     balances_2027 = LeaveBalanceService.get_or_initialize_yearly_balances(db, emp.id, 2027)
@@ -170,41 +168,3 @@ def test_exceeding_leave_balance_rejected(db):
     assert excinfo.value.status_code == 400
     assert "Insufficient" in excinfo.value.detail
 
-
-def test_remote_workers_cannot_apply_wfh(db):
-    """Verifies that an employee designated as remote cannot apply for Work From Home."""
-    remote_emp = create_test_employee(db, "remote_guy@example.com", "REM_EMP", work_location="Remote")
-    LeaveBalanceService.get_or_initialize_yearly_balances(db, remote_emp.id, 2026)
-
-    req = TimeOffRequestCreate(
-        date=date(2026, 9, 22),
-        leave_type="Work From Home",
-        duration_hours=8.0,
-        reason="Working remotely from home"
-    )
-
-    with pytest.raises(HTTPException) as excinfo:
-        timeoff_service.request_timeoff(db, remote_emp.id, req, dispatch_event=False)
-    assert excinfo.value.status_code == 400
-    assert "Remote employees cannot apply for Work From Home" in excinfo.value.detail
-
-
-def test_office_workers_can_apply_wfh(db):
-    """Verifies that an office employee CAN apply for Work From Home and reserves WFH balance."""
-    office_emp = create_test_employee(db, "office_guy@example.com", "OFF_EMP", work_location="Belagavi ICCC Office")
-    LeaveBalanceService.get_or_initialize_yearly_balances(db, office_emp.id, 2026)
-
-    req = TimeOffRequestCreate(
-        date=date(2026, 9, 23),
-        leave_type="Work From Home",
-        duration_hours=8.0,
-        reason="Family event, working remotely"
-    )
-
-    created = timeoff_service.request_timeoff(db, office_emp.id, req, dispatch_event=False)
-    assert created.status == "Pending"
-
-    summary = LeaveBalanceService.get_employee_balances_summary(db, office_emp.id, 2026)
-    wfh_sum = next(s for s in summary if s["code"] == "WFH")
-    assert wfh_sum["pending_days"] == 1.0
-    assert wfh_sum["available_days"] == 23.0  # 24 - 1 = 23

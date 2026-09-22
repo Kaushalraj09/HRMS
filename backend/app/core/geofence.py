@@ -28,8 +28,7 @@ def validate_employee_geofence(
     employee: Employee,
     current_lat: Optional[float],
     current_lon: Optional[float],
-    work_mode: Optional[str] = None,
-    has_approved_wfh: bool = False
+    work_mode: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Validates employee's assigned work location and enforces geofence
@@ -43,21 +42,33 @@ def validate_employee_geofence(
         except (ValueError, TypeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"success": False, "message": "Invalid GPS coordinates provided."}
-            )
-        if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"success": False, "message": "GPS coordinates out of valid range (-90 to 90 lat, -180 to 180 lon)."}
-            )
-        if abs(lat) < 0.0001 and abs(lon) < 0.0001:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"success": False, "message": "Invalid GPS coordinates (Null Island / mock location detected)."}
+                detail={
+                    "success": False,
+                    "message": "Invalid latitude/longitude coordinates format.",
+                }
             )
 
-    assigned_location_name = (employee.work_location or "").strip()
-    if not assigned_location_name or assigned_location_name.lower() in ["remote", "remote home office", "wfh", "hybrid"]:
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": f"Coordinates out of range: lat {lat}, lon {lon}.",
+                }
+            )
+
+        if abs(lat) < 1e-6 and abs(lon) < 1e-6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "Invalid GPS coordinates: Null Island (0,0) mock location detected.",
+                }
+            )
+
+    # 1. Check if employee is designated as a Remote Worker
+    assigned_location_name = employee.work_location
+    if not assigned_location_name or assigned_location_name.lower() in ["remote", "remote home office", "hybrid"]:
         return {
             "is_remote": True,
             "work_location_id": None,
@@ -66,15 +77,19 @@ def validate_employee_geofence(
             "allowed_radius_meters": None,
         }
 
-    # 1. Lookup WorkLocation in DB
+    # 2. Check assigned Master WorkLocation
     work_location = (
         db.query(WorkLocation)
-        .filter(WorkLocation.name == assigned_location_name)
+        .filter(WorkLocation.name.ilike(assigned_location_name))
         .first()
     )
-
     if not work_location:
-        # Fallback case-insensitive match by name or code
+        work_location = (
+            db.query(WorkLocation)
+            .filter(WorkLocation.code.ilike(assigned_location_name))
+            .first()
+        )
+    if not work_location:
         work_location = (
             db.query(WorkLocation)
             .filter(
@@ -106,14 +121,6 @@ def validate_employee_geofence(
     # Employee is assigned to an Office location - verify they are not attempting to bypass geofence via work_mode
     mode_str = (work_mode or "").strip().lower()
     if mode_str in ["remote", "work from home", "wfh", "field"]:
-        if has_approved_wfh:
-            return {
-                "is_remote": True,
-                "work_location_id": work_location.id if work_location else None,
-                "work_location_name": work_location.name if work_location else assigned_location_name,
-                "distance_meters": None,
-                "allowed_radius_meters": None,
-            }
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={

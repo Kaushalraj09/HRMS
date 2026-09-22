@@ -8,8 +8,8 @@ import os
 import secrets
 
 
-def _demo_password(env_name: str) -> str:
-    return os.getenv(env_name) or secrets.token_urlsafe(24)
+def _demo_password(env_name: str, default: str = "Testv@1234") -> str:
+    return os.getenv(env_name) or default
 
 def seed_users(db: Session):
     # Get roles
@@ -21,44 +21,67 @@ def seed_users(db: Session):
         print("Roles not found. Please seed roles first.")
         return
 
+    admin_email = os.getenv("DEMO_ADMIN_EMAIL", "TestVivekAdmin@gmail.com")
+    hr_email = os.getenv("DEMO_HR_EMAIL", "TestVivekHr@gmail.com")
+    emp_email = os.getenv("DEMO_EMPLOYEE_EMAIL", "TestVivekEmp@gmail.com")
+
     demo_users = [
         {
-            "email": "admin@hrms.com",
+            "email": admin_email,
             "password": _demo_password("DEMO_ADMIN_PASSWORD"),
-            "display_name": "System Admin",
+            "display_name": "Vivek Admin",
             "role_id": admin_role.id,
             "profile_type": "admin"
         },
         {
-            "email": "hr@hrms.com",
+            "email": hr_email,
             "password": _demo_password("DEMO_HR_PASSWORD"),
-            "display_name": "HR Manager",
+            "display_name": "Vivek HR",
             "role_id": hr_role.id,
             "profile_type": "hr",
             "hr_data": {
-                "full_name": "HR Manager",
+                "full_name": "Vivek HR",
                 "phone": "9876543211",
                 "department": "Human Resources",
-                "designation": "HR Manager"
+                "designation": "HR Manager",
+                "gender": "Female",
+                "dob": date(1992, 5, 14),
+                "doj": date(2023, 1, 10),
+                "bank_name": "HDFC Bank",
+                "bank_account_no": "50100439281726",
+                "ifsc_code": "HDFC0001234",
+                "micr_code": "560240012",
+                "pan_number": "ABCDE1234F",
+                "pf_number": "KN/BLG/0045678/000/0000002",
+                "uan_number": "100987654321"
             }
         },
         {
-            "email": "emp@hrms.com",
+            "email": emp_email,
             "password": _demo_password("DEMO_EMPLOYEE_PASSWORD"),
-            "display_name": "Kaushal Raj",
+            "display_name": "Vivek Employee",
             "role_id": emp_role.id,
             "profile_type": "employee",
             "employee_data": {
-                "first_name": "Kaushal",
-                "last_name": "Raj",
+                "first_name": "Vivek",
+                "last_name": "Employee",
                 "department": "Engineering",
                 "designation": "Frontend Developer",
                 "employee_type": "Full-Time",
                 "work_location": "Belagavi ICCC Office",
                 "shift_type": "General Shift",
                 "mobile": "9876543212",
-                "official_email": "emp@hrms.com",
-                "doj": date(2024, 2, 1)
+                "official_email": emp_email,
+                "gender": "Male",
+                "dob": date(1996, 8, 22),
+                "doj": date(2024, 2, 1),
+                "bank_name": "State Bank of India",
+                "bank_account_no": "30894726154",
+                "ifsc_code": "SBIN0004567",
+                "micr_code": "560002015",
+                "pan_number": "FGHIJ5678K",
+                "pf_number": "KN/BLG/0045678/000/0000003",
+                "uan_number": "100123456789"
             }
         }
     ]
@@ -118,7 +141,17 @@ def seed_users(db: Session):
                 "shift_type": "General Shift",
                 "mobile": hr_data["phone"],
                 "official_email": user_info["email"],
-                "status": "Active"
+                "status": "Active",
+                "gender": hr_data.get("gender"),
+                "dob": hr_data.get("dob"),
+                "doj": hr_data.get("doj"),
+                "bank_name": hr_data.get("bank_name"),
+                "bank_account_no": hr_data.get("bank_account_no"),
+                "ifsc_code": hr_data.get("ifsc_code"),
+                "micr_code": hr_data.get("micr_code"),
+                "pan_number": hr_data.get("pan_number"),
+                "pf_number": hr_data.get("pf_number"),
+                "uan_number": hr_data.get("uan_number"),
             }
             if not existing_employee:
                 existing_employee = Employee(
@@ -144,16 +177,6 @@ def seed_users(db: Session):
                 # Keep it simple, no columns to update other than ensuring it exists
                 print(f"Verified demo HR profile: {user_info['email']}")
         else: # admin
-            if existing_employee:
-                from app.models.login_activity import LoginActivity
-                from app.models.notification import Notification
-                from app.models.attendance import Attendance, AttendanceAuditTrail
-                db.query(AttendanceAuditTrail).filter(AttendanceAuditTrail.employee_id == existing_employee.id).delete()
-                db.query(Attendance).filter(Attendance.employee_id == existing_employee.id).delete()
-                db.query(LoginActivity).filter(LoginActivity.employee_id == existing_employee.id).update({LoginActivity.employee_id: None})
-                db.query(Notification).filter(Notification.employee_id == existing_employee.id).update({Notification.employee_id: None})
-                db.delete(existing_employee)
-                print(f"Removed demo admin employee profile: {user_info['email']}")
             if existing_hr:
                 db.delete(existing_hr)
     

@@ -82,12 +82,10 @@
             <tr *ngFor="let req of requests">
               <td>
                 <span class="leave-type-badge" [ngClass]="{
-                  'type-hourly': req.leave_type === 'Hourly',
                   'type-halfday': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
                   'type-fullday': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                 }">
                   <i class="fas" [ngClass]="{
-                    'fa-clock': req.leave_type === 'Hourly',
                     'fa-adjust': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
                     'fa-calendar-day': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                   }"></i>
@@ -208,7 +206,6 @@
         <div class="detail-item">
           <span class="detail-lbl">Leave Type</span>
           <span class="leave-type-badge" [ngClass]="{
-            'type-hourly': selectedRequest.leave_type === 'Hourly',
             'type-halfday': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
             'type-fullday': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
           }">{{ selectedRequest.leave_type }}</span>

@@ -80,10 +80,22 @@ class SalaryStructureComponent(Base):
     sequence_order = Column(Integer, default=1)
 
     structure = relationship("SalaryStructure", back_populates="components")
-    component = relationship("SalaryComponent")
+    component = relationship("SalaryComponent", lazy="joined")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    @property
+    def component_code(self) -> str:
+        return self.component.code if self.component else ""
+
+    @property
+    def component_name(self) -> str:
+        return self.component.name if self.component else ""
+
+    @property
+    def component_type(self) -> str:
+        return self.component.component_type if self.component else ""
 
 
 class EmployeeSalaryAssignment(Base):

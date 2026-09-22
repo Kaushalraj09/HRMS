@@ -51,16 +51,6 @@
           </div>
         </div>
 
-        <!-- WFH Info Banner -->
-        <div class="wfh-info-box" *ngIf="isWfhSelected">
-          <div class="wfh-info-icon">
-            <i class="fas fa-house-laptop"></i>
-          </div>
-          <div class="wfh-info-text">
-            <strong>Work From Home (WFH) Notice:</strong>
-            <p>WFH is an active remote attendance day, not an absence. You will still be required to punch in and punch out for your shift. Approved WFH allows you to punch outside the office geofence.</p>
-          </div>
-        </div>
 
         <div class="form-grid-2">
           <!-- Multiple Days checkbox toggle -->
@@ -97,27 +87,6 @@
           <div></div> <!-- Spacer -->
         </div>
 
-        <!-- Conditional Time selections (if Hourly) -->
-        <div class="form-grid-2" *ngIf="isHourlyType(selectedLeaveType)">
-          <div class="form-field-group">
-            <label>Start Time <span class="req-star">*</span></label>
-            <app-custom-select 
-              [options]="startTimeSelectOptions" 
-              formControlName="startTime" 
-              placeholder="Select Start Time"
-              (valueChange)="onStartTimeChange()"
-            ></app-custom-select>
-          </div>
-
-          <div class="form-field-group">
-            <label>End Time <span class="req-star">*</span></label>
-            <app-custom-select 
-              [options]="endTimeSelectOptions" 
-              formControlName="endTime" 
-              placeholder="Select End Time"
-            ></app-custom-select>
-          </div>
-        </div>
 
         <!-- Section 2: Comments & Attachments -->
         <h4 class="form-section-title">Additional Details</h4>

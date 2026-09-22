@@ -337,8 +337,8 @@ def test_hr_cannot_skip_reporting_manager_approval(db_session):
     request = TimeOffRequest(
         employee_id=target_employee.id,
         date=date(2026, 8, 25),
-        leave_type="Hourly",
-        duration_hours=1.0,
+        leave_type="Half Day",
+        duration_hours=4.0,
         status="Pending",
     )
     db_session.add(request)
@@ -364,8 +364,8 @@ def test_hr_cannot_skip_reporting_manager_approval(db_session):
     two_step_request = TimeOffRequest(
         employee_id=target_employee.id,
         date=date(2026, 8, 26),
-        leave_type="Hourly",
-        duration_hours=1.0,
+        leave_type="Half Day",
+        duration_hours=4.0,
         status="Pending",
     )
     db_session.add(two_step_request)

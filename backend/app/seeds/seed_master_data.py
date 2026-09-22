@@ -165,7 +165,6 @@ def seed_master_data(db: Session):
         {"name": "Sick Leave", "code": "SL", "unit_type": "full_day", "default_balance_hours": 64.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
         {"name": "Earned Leave", "code": "EL", "unit_type": "full_day", "default_balance_hours": 144.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
         {"name": "Half Day", "code": "HD", "unit_type": "half_day", "default_balance_hours": 32.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
-        {"name": "Work From Home", "code": "WFH", "unit_type": "full_day", "default_balance_hours": 192.0, "applicable_employee_type": "office_only", "counts_as_leave": False, "attendance_required": True, "remote_punch_allowed": True},
         {"name": "Comp Off", "code": "CO", "unit_type": "full_day", "default_balance_hours": 16.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False}
     ]
     for lt in leave_types:

@@ -58,7 +58,7 @@ def client(db_session):
 # ==========================================
 
 def test_token_version_revocation(client, db_session):
-    user = db_session.query(User).filter(User.email == "emp@hrms.com").first()
+    user = db_session.query(User).filter(User.email.in_(["emp@hrms.com", "TestVivekEmp@gmail.com"])).first()
     assert user is not None
 
     # Generate token with current token_version
@@ -89,7 +89,8 @@ def test_token_version_revocation(client, db_session):
 
 
 def test_logout_revokes_token(client, db_session):
-    user = db_session.query(User).filter(User.email == "emp@hrms.com").first()
+    user = db_session.query(User).filter(User.email.in_(["emp@hrms.com", "TestVivekEmp@gmail.com"])).first()
+    assert user is not None
     initial_version = user.token_version
 
     token = create_access_token(
@@ -178,6 +179,8 @@ def test_geofence_null_island_rejection(db_session):
 def test_impossible_travel_detection(db_session):
     emp = db_session.query(Employee).first()
     assert emp is not None
+    emp.official_email = "regular_employee@example.com"
+    db_session.commit()
 
     today = date(2026, 9, 12)
     # Configure an office location for employee

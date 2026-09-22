@@ -32,14 +32,12 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   ];
 
   leaveApplicableTypeSelectOptions: { label: string; value: string }[] = [
-    { label: 'All Employees', value: 'all' },
-    { label: 'Office Only (WFH)', value: 'office_only' }
+    { label: 'All Employees', value: 'all' }
   ];
 
   leaveUnitTypeSelectOptions: { label: string; value: string }[] = [
     { label: 'Full Day', value: 'full_day' },
-    { label: 'Half Day', value: 'half_day' },
-    { label: 'Hourly', value: 'hourly' }
+    { label: 'Half Day', value: 'half_day' }
   ];
   
   // Data lists

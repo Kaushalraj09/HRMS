@@ -172,7 +172,7 @@
           <tbody>
             <tr *ngFor="let p of payslips">
               <td><strong>{{ p.payslip_number }}</strong></td>
-              <td>{{ p.payroll_month }}</td>
+              <td>{{ formatPayrollMonth(p.payroll_month) }}</td>
               <td>{{ (p.paid_days || p.payable_days) | number:'1.1-1' }} / {{ p.total_payroll_days }}</td>
               <td>{{ formatCurrency(p.gross_earnings) }}</td>
               <td class="text-red">{{ formatCurrency(p.total_deductions) }}</td>

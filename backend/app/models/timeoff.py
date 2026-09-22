@@ -13,7 +13,7 @@ class TimeOffRequest(Base):
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     
-    leave_type = Column(String(50), nullable=False) # Full-Day, Half-Day, Hourly
+    leave_type = Column(String(50), nullable=False) # Full-Day, Half-Day
     duration_hours = Column(Float, nullable=False, default=0.0) # E.g., 8.0, 4.0, 2.5
     start_time = Column(Time, nullable=True)
     end_time = Column(Time, nullable=True)

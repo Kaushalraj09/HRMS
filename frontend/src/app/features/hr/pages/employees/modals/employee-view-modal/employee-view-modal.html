@@ -74,6 +74,19 @@
             <div class="info-item"><span class="label-text">Blood Group</span><span>{{ detail.employee.bloodGroup || 'N/A' }}</span></div>
           </div>
         </div>
+
+        <div class="info-section">
+          <h3>Bank & Statutory Details</h3>
+          <div class="info-grid">
+            <div class="info-item"><span class="label-text">Bank Name</span><span>{{ detail.employee.bankName || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Bank A/c No.</span><span>{{ detail.employee.bankAccountNo || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">IFSC Code</span><span>{{ detail.employee.ifscCode || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">Bank MICR</span><span>{{ detail.employee.micrCode || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">PAN Number</span><span>{{ detail.employee.panNumber || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">PF UAN</span><span>{{ detail.employee.uanNumber || 'N/A' }}</span></div>
+            <div class="info-item"><span class="label-text">PF Number</span><span>{{ detail.employee.pfNumber || 'N/A' }}</span></div>
+          </div>
+        </div>
       </ng-container>
     </div>
 

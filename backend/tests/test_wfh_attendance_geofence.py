@@ -87,79 +87,72 @@ def test_office_worker_punch_without_wfh_rejected_outside_radius(db):
     assert "geofence" in detail_str or "radius" in detail_str or "distance" in detail_str or "outside" in detail_str
 
 
-def test_office_worker_with_approved_wfh_can_punch_remotely(db):
+def test_wfh_and_hourly_leave_requests_rejected(db):
     """
-    Office worker with an APPROVED WFH request for today can punch in from ANY coordinates,
-    the server detects approved WFH, sets effective work_mode to 'Remote', and bypasses geofencing.
+    Verifies that requesting Work From Home (WFH) or Hourly time off
+    is rejected by timeoff_service with 400 Bad Request.
     """
-    emp = create_office_worker(db, "wfh_approved@example.com", "WFH_APP_EMP")
+    emp = create_office_worker(db, "wfh_rejected@example.com", "WFH_REJ_EMP")
     today = date.today()
 
-    # 1. Create and approve a WFH request for today
-    LeaveBalanceService.get_or_initialize_yearly_balances(db, emp.id, today.year)
-    wfh_req = TimeOffRequest(
-        employee_id=emp.id,
-        date=today,
-        leave_type="Work From Home",
-        duration_hours=8.0,
-        status="Approved",
-        reason="Approved WFH test"
+    # 1. Requesting WFH should be rejected
+    with pytest.raises(HTTPException) as exc_wfh:
+        timeoff_service.request_timeoff(
+            db=db,
+            employee_id=emp.id,
+            request=TimeOffRequestCreate(
+                date=today,
+                leave_type="Work From Home",
+                duration_hours=8.0,
+                reason="WFH test"
+            )
+        )
+    assert exc_wfh.value.status_code == 400
+    assert "not a leave category" in str(exc_wfh.value.detail).lower()
+
+    # 2. Requesting Hourly time-off should be rejected
+    with pytest.raises(HTTPException) as exc_hr:
+        timeoff_service.request_timeoff(
+            db=db,
+            employee_id=emp.id,
+            request=TimeOffRequestCreate(
+                date=today,
+                leave_type="Hourly",
+                duration_hours=2.0,
+                reason="Hourly test"
+            )
+        )
+    assert exc_hr.value.status_code == 400
+    assert "hourly" in str(exc_hr.value.detail).lower()
+
+
+def test_designated_remote_worker_can_punch_remotely(db):
+    """
+    Assigned remote worker can punch in from remote coordinates.
+    """
+    emp_role = db.query(Role).filter(Role.name == "Employee").first()
+    user = User(email="remote_emp@example.com", password_hash="hash", display_name="Remote Worker", role_id=emp_role.id)
+    db.add(user)
+    db.flush()
+    emp = Employee(
+        user_id=user.id,
+        employee_code="REM_001",
+        first_name="Remote",
+        last_name="Worker",
+        official_email="remote_emp@example.com",
+        mobile="9888888888",
+        work_location="Remote"
     )
-    db.add(wfh_req)
+    db.add(emp)
     db.commit()
 
-    # 2. Today state should report hasApprovedWfh=True and workMode='Remote'
-    today_state = attendance_service.get_today_state(db, emp.id)
-    assert today_state["hasApprovedWfh"] is True
-    assert today_state["workMode"] == "Remote"
-
-    # 3. Punch in from far away coordinates (e.g. home/Bengaluru)
     att = PunchService.punch_in(
         db=db,
         employee_id=emp.id,
-        work_mode="Office",  # Even if client passed "Office", server recognizes approved WFH and forces Remote
+        work_mode="Remote",
         latitude=12.9716,
         longitude=77.5946
     )
-
     assert att is not None
     assert att.work_mode == "Remote"
     assert att.punch_in is not None
-
-
-def test_wfh_does_not_count_as_leave_in_payroll(db):
-    """
-    Verifies that WFH requests are excluded from paid_leave_days and unpaid_leave_days
-    in PayrollCalculationService.
-    """
-    emp = create_office_worker(db, "wfh_payroll@example.com", "WFH_PAY_EMP")
-    start = date(2026, 9, 1)
-    end = date(2026, 9, 30)
-
-    # Add approved WFH request
-    wfh_req = TimeOffRequest(
-        employee_id=emp.id,
-        date=date(2026, 9, 10),
-        leave_type="Work From Home",
-        duration_hours=8.0,
-        status="Approved",
-        reason="WFH Day"
-    )
-    db.add(wfh_req)
-
-    # Add approved Casual Leave request
-    cl_req = TimeOffRequest(
-        employee_id=emp.id,
-        date=date(2026, 9, 15),
-        leave_type="Casual Leave",
-        duration_hours=8.0,
-        status="Approved",
-        reason="Real Leave Day"
-    )
-    db.add(cl_req)
-    db.commit()
-
-    metrics = PayrollCalculationService.get_attendance_and_leave_metrics(db, emp.id, start, end)
-    # The paid leave days should only count the 1 Casual Leave day, NOT the WFH day
-    assert metrics["paid_leave_days"] == 1.0
-    assert metrics["unpaid_leave_days"] == 0.0

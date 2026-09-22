@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 
@@ -68,6 +68,7 @@ class SalaryStructureCreate(SalaryStructureBase):
 
 
 class SalaryStructureUpdate(BaseModel):
+    code: Optional[str] = None
     name: Optional[str] = None
     salary_basis: Optional[str] = None
     description: Optional[str] = None
@@ -78,14 +79,28 @@ class SalaryStructureUpdate(BaseModel):
 class SalaryStructureComponentResponse(BaseModel):
     id: int
     component_id: int
-    component_code: str
-    component_name: str
-    component_type: str
+    component_code: str = ""
+    component_name: str = ""
+    component_type: str = ""
     calculation_type: str
     calculation_basis: Optional[str] = None
     percentage_or_value: float
     sequence_order: int
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_component_meta(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            comp = data.get("component")
+            if comp:
+                if not data.get("component_code"):
+                    data["component_code"] = getattr(comp, "code", None) or (comp.get("code") if isinstance(comp, dict) else "")
+                if not data.get("component_name"):
+                    data["component_name"] = getattr(comp, "name", None) or (comp.get("name") if isinstance(comp, dict) else "")
+                if not data.get("component_type"):
+                    data["component_type"] = getattr(comp, "component_type", None) or (comp.get("component_type") if isinstance(comp, dict) else "")
+        return data
 
 
 class SalaryStructureResponse(SalaryStructureBase):
@@ -133,6 +148,7 @@ class SalaryCalculationPreview(BaseModel):
     employer_contributions_monthly: float
     employer_contributions_annual: float
     total_employer_cost_monthly: float
+    validation_warning: Optional[str] = None
     earnings: List[CalculatedComponentItem] = []
     deductions: List[CalculatedComponentItem] = []
     employer_contributions: List[CalculatedComponentItem] = []
@@ -251,6 +267,11 @@ class PayrollRunSummaryResponse(BaseModel):
     id: int
     period_id: int
     period_name: str
+    year: Optional[int] = None
+    month: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    pay_date: Optional[date] = None
     run_number: str
     title: str
     status: str

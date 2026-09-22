@@ -84,6 +84,15 @@ export class EmployeeAddModalComponent implements OnInit {
         alternateMobile: ['', Validators.pattern('^[0-9]{10}$')],
         emergencyContactName: [''],
         emergencyContactNumber: ['', Validators.pattern('^[0-9]{10}$')]
+      }),
+      statutoryInfo: this.fb.group({
+        bankName: [''],
+        bankAccountNo: ['', Validators.pattern('^[0-9]{9,18}$')],
+        ifscCode: ['', Validators.pattern('^[A-Za-z]{4}0[A-Za-z0-9]{6}$')],
+        micrCode: ['', Validators.pattern('^[0-9]{9}$')],
+        panNumber: ['', Validators.pattern('^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$')],
+        uanNumber: ['', Validators.pattern('^[0-9]{12}$')],
+        pfNumber: ['']
       })
     });
 

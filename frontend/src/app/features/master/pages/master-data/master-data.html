@@ -220,9 +220,6 @@
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     <span class="font-bold">{{ item.name }}</span>
-                    <span *ngIf="item.code === 'WFH' || (item.name && item.name.toLowerCase().includes('home'))" class="badge-tag" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
-                      <i class="fas fa-house-laptop"></i> WFH
-                    </span>
                   </div>
                 </td>
                 <td><span class="font-bold text-primary">{{ item.max_days || 0 }} Days / Year</span></td>
@@ -656,19 +653,6 @@
           </div>
 
           <div class="shift-row shift-row-mixed mt-4">
-            <div class="form-group shift-checkbox-group">
-              <label class="shift-toggle-label">Punch Rules</label>
-              <label class="toggle-pill" for="modal-remote-punch">
-                <input 
-                  id="modal-remote-punch"
-                  type="checkbox" 
-                  [(ngModel)]="formModel.remote_punch_allowed" 
-                  name="remote_punch_allowed"
-                />
-                <span class="toggle-track"></span>
-                <span class="toggle-text">Allow Remote Punch (WFH Mode)</span>
-              </label>
-            </div>
             <div class="form-group shift-checkbox-group">
               <label class="shift-toggle-label">Attendance Required</label>
               <label class="toggle-pill" for="modal-attendance-required">

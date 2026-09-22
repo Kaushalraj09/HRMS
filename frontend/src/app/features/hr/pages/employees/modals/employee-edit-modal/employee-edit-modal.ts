@@ -88,6 +88,15 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
         alternateMobile: ['', Validators.pattern('^[0-9]{10}$')],
         emergencyContactName: [''],
         emergencyContactNumber: ['', Validators.pattern('^[0-9]{10}$')]
+      }),
+      statutoryInfo: this.fb.group({
+        bankName: [''],
+        bankAccountNo: ['', Validators.pattern('^[0-9]{9,18}$')],
+        ifscCode: ['', Validators.pattern('^[A-Za-z]{4}0[A-Za-z0-9]{6}$')],
+        micrCode: ['', Validators.pattern('^[0-9]{9}$')],
+        panNumber: ['', Validators.pattern('^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$')],
+        uanNumber: ['', Validators.pattern('^[0-9]{12}$')],
+        pfNumber: ['']
       })
     });
   }
@@ -158,6 +167,15 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
                   alternateMobile: detail.employee.alternateMobile || '',
                   emergencyContactName: detail.employee.emergencyContactName || '',
                   emergencyContactNumber: detail.employee.emergencyContactNumber || ''
+                },
+                statutoryInfo: {
+                  bankName: detail.employee.bankName || '',
+                  bankAccountNo: detail.employee.bankAccountNo || '',
+                  ifscCode: detail.employee.ifscCode || '',
+                  micrCode: detail.employee.micrCode || '',
+                  panNumber: detail.employee.panNumber || '',
+                  uanNumber: detail.employee.uanNumber || '',
+                  pfNumber: detail.employee.pfNumber || ''
                 }
               });
             } catch (patchErr) {
@@ -268,6 +286,15 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
         officialEmail: raw.contactInfo.officialEmail, personalEmail: raw.contactInfo.personalEmail,
         mobile: raw.contactInfo.mobile, alternateMobile: raw.contactInfo.alternateMobile,
         emergencyContactName: raw.contactInfo.emergencyContactName, emergencyContactNumber: raw.contactInfo.emergencyContactNumber
+      },
+      statutoryInfo: {
+        bankName: raw.statutoryInfo?.bankName || undefined,
+        bankAccountNo: raw.statutoryInfo?.bankAccountNo || undefined,
+        ifscCode: raw.statutoryInfo?.ifscCode || undefined,
+        micrCode: raw.statutoryInfo?.micrCode || undefined,
+        panNumber: raw.statutoryInfo?.panNumber || undefined,
+        uanNumber: raw.statutoryInfo?.uanNumber || undefined,
+        pfNumber: raw.statutoryInfo?.pfNumber || undefined
       }
     };
 

@@ -141,4 +141,21 @@ export class MyPayrollComponent implements OnInit, OnDestroy {
     if (val === null || val === undefined || isNaN(val)) return '₹0.00';
     return '₹' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+
+  formatPayrollMonth(monthStr?: string | null): string {
+    if (!monthStr) return '—';
+    const parts = String(monthStr).trim().split('-');
+    if (parts.length === 2 && parts[0].length === 4) {
+      const year = parts[0];
+      const mNum = parseInt(parts[1], 10);
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) {
+        return `${months[mNum - 1]} ${year}`;
+      }
+    }
+    return monthStr;
+  }
 }

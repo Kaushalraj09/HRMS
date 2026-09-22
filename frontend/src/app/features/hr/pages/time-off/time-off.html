@@ -116,7 +116,6 @@
               <td class="font-medium text-dark">{{ req.employee_name || '—' }}</td>
               <td>
                 <span class="status-badge" [ngClass]="{
-                  'hourly-badge': req.leave_type === 'Hourly',
                   'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
                   'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                 }">{{ req.leave_type }}</span>
@@ -193,7 +192,6 @@
               <td class="font-medium text-dark">{{ req.employee_name || '—' }}</td>
               <td>
                 <span class="status-badge" [ngClass]="{
-                  'hourly-badge': req.leave_type === 'Hourly',
                   'halfday-badge': req.leave_type === 'Half-Day' || req.leave_type === 'Half Day',
                   'fullday-badge': req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'
                 }">{{ req.leave_type }}</span>
@@ -341,7 +339,6 @@
         <div class="detail-item">
           <span class="detail-lbl">Leave Type</span>
           <span class="leave-type-badge" [ngClass]="{
-            'type-hourly': selectedRequest.leave_type === 'Hourly',
             'type-halfday': selectedRequest.leave_type === 'Half-Day' || selectedRequest.leave_type === 'Half Day',
             'type-fullday': selectedRequest.leave_type === 'Full-Day' || selectedRequest.leave_type === 'Full Day'
           }">{{ selectedRequest.leave_type }}</span>

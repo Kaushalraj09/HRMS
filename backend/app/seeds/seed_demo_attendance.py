@@ -5,7 +5,10 @@ from app.models.employee import Employee
 
 
 def seed_attendance(db: Session):
-    employee = db.query(Employee).filter(Employee.official_email == "emp@hrms.com").first()
+    target_email = os.getenv("DEMO_EMPLOYEE_EMAIL", "TestVivekEmp@gmail.com")
+    employee = db.query(Employee).filter(
+        (Employee.official_email == target_email) | (Employee.official_email == "emp@hrms.com")
+    ).first()
     if not employee:
         print("Demo employee not found. Skipping attendance seed.")
         return

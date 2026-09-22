@@ -69,6 +69,7 @@ export interface SalaryCalculationPreview {
   earnings: CalculatedComponentItem[];
   deductions: CalculatedComponentItem[];
   employer_contributions: CalculatedComponentItem[];
+  validation_warning?: string | null;
   // UI aliases
   monthly_gross?: number;
   monthly_net?: number;
@@ -422,7 +423,8 @@ export interface PayrollDashboardSummary {
   net_variance_pct: number;
   monthly_variance?: number;
   department_costs: { department: string; monthly_cost: number; employee_count?: number; total_cost?: number }[];
-  department_cost_breakdown?: { department: string; total_cost: number; employee_count: number }[];
+  department_cost_breakdown?: { department: string; total_cost: number; employee_count: number; percentage?: number }[];
+  total_department_cost?: number;
   salary_range_distribution: { range: string; count: number }[];
   statutory_summary: { [key: string]: number };
 }

@@ -54,12 +54,6 @@ class LeaveBalanceService:
             ).first()
             if matched:
                 return matched
-        if "wfh" in name_str or "work from home" in name_str or "remote" in name_str:
-            matched = db.query(LeaveType).filter(
-                (func.lower(LeaveType.name).like("%home%")) | (LeaveType.code == "WFH")
-            ).first()
-            if matched:
-                return matched
         if "comp" in name_str:
             matched = db.query(LeaveType).filter(
                 (func.lower(LeaveType.name).like("%comp%")) | (LeaveType.code == "CO")
@@ -94,7 +88,6 @@ class LeaveBalanceService:
                 LeaveType(name="Sick Leave", code="SL", unit_type="full_day", default_balance_hours=64.0, is_active=True),
                 LeaveType(name="Earned Leave", code="EL", unit_type="full_day", default_balance_hours=144.0, is_active=True),
                 LeaveType(name="Half Day", code="HD", unit_type="half_day", default_balance_hours=32.0, is_active=True),
-                LeaveType(name="Work From Home", code="WFH", unit_type="full_day", default_balance_hours=192.0, is_active=True),
                 LeaveType(name="Comp Off", code="CO", unit_type="full_day", default_balance_hours=16.0, is_active=True)
             ]
             db.add_all(default_types)
@@ -343,7 +336,13 @@ class LeaveBalanceService:
             if not lt or lt.is_active is False:
                 continue
 
-            is_wfh = lt.code == "WFH" or "home" in lt.name.lower() or "remote" in lt.name.lower()
+            # Exclude WFH and hourly leave types completely
+            code_upper = (lt.code or "").upper()
+            name_lower = (lt.name or "").lower()
+            unit_lower = (lt.unit_type or "").lower()
+            if code_upper == "WFH" or "work from home" in name_lower or "wfh" in name_lower or unit_lower == "hourly":
+                continue
+
             result.append({
                 "leave_type_id": lt.id,
                 "code": lt.code,
@@ -355,14 +354,13 @@ class LeaveBalanceService:
                 "pending_days": int(round(bal.pending_days or 0.0)),
                 "available_days": int(round(bal.available_days or 0.0)),
                 "carry_forward_days": int(round(bal.carry_forward_days or 0.0)),
-                "is_wfh": is_wfh,
                 "counts_as_leave": lt.counts_as_leave,
                 "attendance_required": lt.attendance_required,
                 "remote_punch_allowed": lt.remote_punch_allowed,
                 "applicable_employee_type": lt.applicable_employee_type,
             })
 
-        # Priority sort: CL -> SL -> EL -> CO -> HD -> WFH -> Others
+        # Priority sort: CL -> SL -> EL -> CO -> HD -> Others
         def sort_key(item: Dict[str, Any]) -> int:
             c = (item["code"] or "").upper()
             n = (item["name"] or "").lower()
@@ -376,9 +374,7 @@ class LeaveBalanceService:
                 return 4
             if c == "HD" or "half" in n:
                 return 5
-            if c == "WFH" or "home" in n or "remote" in n:
-                return 6
-            return 7
+            return 6
 
         result.sort(key=sort_key)
         return result

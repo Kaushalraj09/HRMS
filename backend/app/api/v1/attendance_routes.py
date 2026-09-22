@@ -28,7 +28,7 @@ from app.schemas.attendance import (
 )
 from app.services import attendance_service
 from app.core.access import resolve_attendance_employee_id
-from app.domain.attendance.services.punch_service import PunchService
+from app.domain.attendance.services.punch_service import PunchService, is_test_punch_employee
 from app.domain.attendance.repositories.shift_repository import ShiftRepository
 from app.services.attendance_service import calculate_attendance_metrics, log_audit_trail_sync
 from app.services.time_calculator import calculate_late_minutes
@@ -186,7 +186,18 @@ async def punch_dynamic(
     request.employee_id = employee.id
 
     today_state = attendance_service.get_today_state(db, employee.id)
-    if not today_state.get("punchIn"):
+    is_test_user = is_test_punch_employee(employee, current_user.email)
+
+    is_currently_working = bool(today_state.get("isWorking"))
+    has_punch_in = bool(today_state.get("punchIn"))
+    has_punch_out = bool(today_state.get("punchOut"))
+
+    if not has_punch_in:
+        await punch_in(request, db, current_user)
+    elif is_currently_working:
+        await punch_out(request, db, current_user)
+    elif has_punch_out and is_test_user:
+        # Test user previously completed attendance, allow punching in again for testing
         await punch_in(request, db, current_user)
     else:
         await punch_out(request, db, current_user)

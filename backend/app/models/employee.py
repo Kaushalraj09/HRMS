@@ -38,6 +38,15 @@ class Employee(Base):
     
     status = Column(String(20), default="Active", index=True) # Active, Inactive
     timeoff_balance_hours = Column(Float, default=80.0)
+
+    # Banking & Statutory Info
+    bank_name = Column(String(100), nullable=True)
+    bank_account_no = Column(String(50), nullable=True)
+    ifsc_code = Column(String(30), nullable=True)
+    micr_code = Column(String(30), nullable=True)
+    pan_number = Column(String(20), nullable=True)
+    uan_number = Column(String(30), nullable=True)
+    pf_number = Column(String(50), nullable=True)
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
@@ -45,6 +54,22 @@ class Employee(Base):
     shift = relationship("Shift", foreign_keys=[shift_id])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    @property
+    def pan(self) -> str | None:
+        return self.pan_number
+
+    @property
+    def pan_card_number(self) -> str | None:
+        return self.pan_number
+
+    @property
+    def uan(self) -> str | None:
+        return self.uan_number
+
+    @property
+    def pf_no(self) -> str | None:
+        return self.pf_number
 
     @property
     def reporting_manager_name(self) -> str | None:

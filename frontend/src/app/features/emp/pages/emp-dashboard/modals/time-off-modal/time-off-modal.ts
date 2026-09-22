@@ -39,11 +39,10 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
 
   yearlyBalances: YearlyLeaveBalance[] = [];
   selectedLeaveBalance: YearlyLeaveBalance | null = null;
-  isRemoteEmployee = false;
-  isWfhSelected = false;
+  uploadedFileName: string | null = null;
+  isDragging = false;
 
   // File upload state
-  uploadedFileName = '';
   uploadedFileSize = '';
   uploadProgress = 0;
   isDragOver = false;
@@ -64,8 +63,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     { label: 'Sick Leave (Full Day)', value: 'Sick Leave', unitType: 'full_day' },
     { label: 'Earned Leave (Full Day)', value: 'Earned Leave', unitType: 'full_day' },
     { label: 'Full Day Leave', value: 'Full Day', unitType: 'full_day' },
-    { label: 'Half Day Leave', value: 'Half Day', unitType: 'half_day' },
-    { label: 'Hourly Time Off', value: 'Hourly', unitType: 'hourly' }
+    { label: 'Half Day Leave', value: 'Half Day', unitType: 'half_day' }
   ];
 
   halfDaySessionSelectOptions: { label: string; value: string }[] = [
@@ -88,13 +86,11 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     const today = toIsoDateLocal(new Date());
 
     this.leaveForm = this.fb.group({
-      leaveType: ['Hourly', Validators.required],
+      leaveType: ['Casual Leave', Validators.required],
       startDate: [today, Validators.required],
       multipleDays: [false],
       endDate: [today],
       halfDaySession: ['First Half'],
-      startTime: ['09:00'],
-      endTime: ['10:00'],
       reason: ['', [Validators.required, Validators.maxLength(500)]]
     });
 
@@ -103,10 +99,16 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       this.masterDataService.getBootstrapData().subscribe({
         next: (data) => {
           const rawLeaveTypes = data?.leaveTypes || (data as any)?.leave_types || [];
-          const activeLeaveTypes = rawLeaveTypes.filter((l: any) => l && l.is_active !== false);
+          const activeLeaveTypes = rawLeaveTypes.filter((l: any) => {
+            if (!l || l.is_active === false) return false;
+            const code = (l.code || '').toUpperCase();
+            const name = (l.name || '').toLowerCase();
+            const unit = (l.unit_type || '').toLowerCase();
+            return code !== 'WFH' && !name.includes('work from home') && !name.includes('wfh') && unit !== 'hourly';
+          });
 
           if (activeLeaveTypes.length > 0) {
-            // Priority sort: Casual (CL) -> Sick (SL) -> Earned/Privilege (EL/PL) -> Comp Off (CO) -> Half Day (HD) -> Work From Home (WFH) -> Others
+            // Priority sort: Casual (CL) -> Sick (SL) -> Earned/Privilege (EL/PL) -> Comp Off (CO) -> Half Day (HD) -> Others
             const getPriority = (item: any) => {
               const code = (item.code || '').toUpperCase();
               const name = (item.name || '').toLowerCase();
@@ -115,8 +117,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
               if (code === 'EL' || name.includes('earned') || name.includes('privilege') || code === 'PL') return 3;
               if (code === 'CO' || name.includes('comp')) return 4;
               if (code === 'HD' || name.includes('half')) return 5;
-              if (code === 'WFH' || name.includes('work from home') || name.includes('remote')) return 6;
-              return 7;
+              return 6;
             };
             activeLeaveTypes.sort((a: any, b: any) => getPriority(a) - getPriority(b));
 
@@ -129,7 +130,6 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
               const nameLower = name.toLowerCase();
               const unit = (lt.unit_type || '').toLowerCase();
               const isHalf = unit === 'half_day' || code === 'HD' || nameLower.includes('half');
-              const isHourly = unit === 'hourly' || code === 'HOURLY' || nameLower.includes('hourly');
 
               if (isHalf) {
                 hasHalfDay = true;
@@ -139,21 +139,11 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
                   value: name,
                   unitType: 'half_day'
                 });
-              } else if (isHourly) {
-                dynamicOptions.push({
-                  label: name,
-                  value: name,
-                  unitType: 'hourly'
-                });
               } else {
                 // Full Day type
                 let label = name;
                 if (!nameLower.includes('full day') && !nameLower.includes('(full day)')) {
-                  if (code === 'WFH' || nameLower.includes('work from home') || nameLower.includes('remote')) {
-                    label = `${name} (WFH)`;
-                  } else {
-                    label = `${name} (Full Day)`;
-                  }
+                  label = `${name} (Full Day)`;
                 }
                 dynamicOptions.push({
                   label,
@@ -172,17 +162,10 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
               });
             }
 
-            // Ensure Hourly Time Off is available
-            if (!dynamicOptions.some(o => o.value === 'Hourly' || o.unitType === 'hourly')) {
-              dynamicOptions.push({
-                label: 'Hourly Time Off',
-                value: 'Hourly',
-                unitType: 'hourly'
-              });
-            }
-
             this.leaveTypeSelectOptions = dynamicOptions;
-            this.filterLeaveTypesForRemote();
+            if (dynamicOptions.length > 0 && !dynamicOptions.some(o => o.value === this.leaveForm.value.leaveType)) {
+              this.leaveForm.patchValue({ leaveType: dynamicOptions[0].value });
+            }
             this.cdr.detectChanges();
           }
         },
@@ -278,52 +261,17 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     return leaveType.toLowerCase().includes('half');
   }
 
-  isHourlyType(leaveType?: string): boolean {
-    if (!leaveType) return false;
-    if (leaveType === 'Hourly') return true;
-    const option = this.leaveTypeSelectOptions.find(o => o.value === leaveType);
-    if (option?.unitType === 'hourly') return true;
-    return leaveType.toLowerCase().includes('hourly');
-  }
-
   isFullDayType(leaveType?: string): boolean {
     if (!leaveType) return false;
-    return !this.isHalfDayType(leaveType) && !this.isHourlyType(leaveType);
-  }
-
-  get startTimeOptions(): TimeSlotOption[] {
-    return filterSlotsNotBeforeNow(this.allTimeSlots, this.leaveForm.value.startDate);
-  }
-
-  get endTimeOptions(): TimeSlotOption[] {
-    if (!this.isHourlyType(this.selectedLeaveType)) {
-      return [];
-    }
-    const startMin = parseTimeToMinutes(this.leaveForm.value.startTime);
-    const startOptions = this.startTimeOptions;
-    return startOptions.filter((option) => {
-      const optionMinutes = parseTimeToMinutes(option.value);
-      return optionMinutes !== null && startMin !== null && optionMinutes > startMin;
-    });
-  }
-
-  get startTimeSelectOptions(): { label: string; value: string }[] {
-    return this.startTimeOptions.map(s => ({ label: s.label, value: s.value }));
-  }
-
-  get endTimeSelectOptions(): { label: string; value: string }[] {
-    return this.endTimeOptions.map(s => ({ label: s.label, value: s.value }));
+    return !this.isHalfDayType(leaveType);
   }
 
   get requestedHours(): number {
     const leaveType = this.leaveForm.value.leaveType;
-    if (this.isFullDayType(leaveType)) {
-      return this.fullDayDurationHours;
-    }
     if (this.isHalfDayType(leaveType)) {
       return this.halfDayDurationHours;
     }
-    return hoursBetweenSameDay(this.leaveForm.value.startTime, this.leaveForm.value.endTime);
+    return this.fullDayDurationHours;
   }
 
   resetEndDate(): void {
@@ -353,9 +301,6 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     this.firstHalfEnd24 = lunchStart24;
     this.secondHalfStart24 = lunchEnd24;
     this.secondHalfEnd24 = end24;
-
-    this.isRemoteEmployee = !!state.isRemoteWorker || (state.workMode || '').toLowerCase() === 'remote' || (state.workLocationName || '').toLowerCase().includes('remote');
-    this.filterLeaveTypesForRemote();
 
     if (state.halfDayHours && state.halfDayHours > 0) {
       this.halfDayDurationHours = state.halfDayHours;
@@ -390,23 +335,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  isWfhType(leaveType?: string): boolean {
-    if (!leaveType) return false;
-    const ltLower = leaveType.toLowerCase();
-    return ltLower.includes('wfh') || ltLower.includes('work from home') || ltLower.includes('remote');
-  }
-
-  filterLeaveTypesForRemote(): void {
-    if (this.isRemoteEmployee) {
-      this.leaveTypeSelectOptions = this.leaveTypeSelectOptions.filter(opt => !this.isWfhType(opt.value) && !this.isWfhType(opt.label));
-      if (this.isWfhType(this.leaveForm.value.leaveType)) {
-        this.leaveForm.patchValue({ leaveType: 'Casual Leave' });
-      }
-    }
-  }
-
   updateSelectedLeaveBalance(leaveType: string): void {
-    this.isWfhSelected = this.isWfhType(leaveType);
     if (!this.yearlyBalances || this.yearlyBalances.length === 0) {
       this.selectedLeaveBalance = null;
       return;
@@ -460,10 +389,6 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   }
 
   onStartTimeChange(): void {
-    const endOptions = this.endTimeOptions;
-    if (endOptions.length && !endOptions.some((option) => option.value === this.leaveForm.value.endTime)) {
-      this.leaveForm.patchValue({ endTime: endOptions[0].value });
-    }
   }
 
   // File drag & drop / uploader handlers
@@ -574,18 +499,11 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.isWfhType(leaveType) && this.isRemoteEmployee) {
-      const msg = 'Remote employees cannot apply for Work From Home (WFH).';
-      this.errorMessage = msg;
-      this.toastService.showError(msg);
-      return;
-    }
-
     const isFullDay = this.isFullDayType(leaveType);
     const isHalfDay = this.isHalfDayType(leaveType);
 
     if (this.selectedLeaveBalance) {
-      const requestedDays = isHalfDay ? 0.5 : (isFullDay ? datesToSubmit.length : Math.round((this.requestedHours / this.fullDayDurationHours) * 10) / 10);
+      const requestedDays = isHalfDay ? 0.5 : datesToSubmit.length;
       if (requestedDays > (this.selectedLeaveBalance.available_days + 1e-4)) {
         const msg = `Insufficient ${this.selectedLeaveBalance.name} balance. You requested ${requestedDays} days, but only ${this.selectedLeaveBalance.available_days} days are available.`;
         this.errorMessage = msg;
@@ -601,8 +519,6 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
       backendLeaveType = 'Full-Day';
     } else if (leaveType === 'Half Day') {
       backendLeaveType = 'Half-Day';
-    } else if (leaveType === 'Hourly') {
-      backendLeaveType = 'Hourly';
     }
 
     let startTimeBackend: string | null = startTime;
@@ -633,7 +549,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
         endTimeBackend,
         durationBackend,
         reason,
-        this.uploadedFileName
+        this.uploadedFileName || undefined
       );
     } else {
       requestObs$ = this.timeoffService.requestTimeOffBatch(
@@ -643,7 +559,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
         endTimeBackend,
         durationBackend,
         reason,
-        this.uploadedFileName
+        this.uploadedFileName || undefined
       );
     }
 
@@ -666,7 +582,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
             this.removeUploadedFile();
             this.closed.emit(true);
           },
-          error: (err) => {
+          error: (err: any) => {
             console.error('Submit Time Off Error:', err);
             const errorMsg = err.error?.detail || 'Failed to submit time-off request. Please try again.';
             this.errorMessage = errorMsg;

@@ -159,6 +159,16 @@ def update_structure(
     return PayrollService.update_structure(db, structure_id, data, user_id=current_user.id)
 
 
+@router.delete("/structures/{structure_id}")
+def delete_structure(
+    structure_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr_or_admin(current_user)
+    return PayrollService.delete_structure(db, structure_id, user_id=current_user.id)
+
+
 # =============================================================================
 # Salary Preview & Calculation Simulation
 # =============================================================================
@@ -345,6 +355,16 @@ def mark_payroll_run_paid(
     return PayrollService.mark_run_paid(db, run_id, user_id=current_user.id)
 
 
+@router.delete("/runs/{run_id}")
+def delete_payroll_run(
+    run_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr_or_admin(current_user)
+    return PayrollService.delete_payroll_run(db, run_id, user_id=current_user.id)
+
+
 # =============================================================================
 # Payroll Records & Adjustments
 # =============================================================================
@@ -434,27 +454,40 @@ def resolve_run_exception(
     return PayrollService.resolve_exception(db, exception_id, data.resolution_notes, user_id=current_user.id)
 
 
+@router.post("/runs/{run_id}/exceptions/resolve-all")
+def resolve_all_run_exceptions(
+    run_id: int,
+    data: ResolveExceptionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr_or_admin(current_user)
+    return PayrollService.resolve_all_exceptions(db, run_id, data.resolution_notes, user_id=current_user.id)
+
+
 # =============================================================================
-# Reports & Exports
+# Reports & Exports (PDF Format)
 # =============================================================================
+@router.get("/runs/{run_id}/export-pdf")
 @router.get("/runs/{run_id}/export-csv")
-def export_payroll_csv(
+def export_payroll_pdf(
     run_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_hr_or_admin(current_user)
-    return PayrollService.export_payroll_csv(db, run_id)
+    return PayrollService.export_payroll_pdf(db, run_id)
 
 
+@router.get("/runs/{run_id}/export-bank-pdf")
 @router.get("/runs/{run_id}/export-bank-csv")
-def export_bank_transfer_csv(
+def export_bank_transfer_pdf(
     run_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_hr_or_admin(current_user)
-    return PayrollService.export_bank_transfer_csv(db, run_id)
+    return PayrollService.export_bank_transfer_pdf(db, run_id)
 
 
 # =============================================================================

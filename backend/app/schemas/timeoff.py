@@ -5,7 +5,7 @@ from typing import Optional, Literal
 
 class TimeOffRequestCreate(BaseModel):
     date: date
-    leave_type: str # Full-Day, Half-Day, Hourly
+    leave_type: str # Full-Day, Half-Day
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     duration_hours: float
@@ -53,7 +53,7 @@ class TimeOffApplyPayload(BaseModel):
     """Inline apply: backend derives duration from times or full-day rule."""
 
     date: date
-    leave_type: str  # "Hourly" | "Full Day" (also accepts "Full-Day")
+    leave_type: str  # "Half-Day" | "Full Day" (also accepts "Full-Day")
     start_time: Optional[time] = None
     end_time: Optional[time] = None
 

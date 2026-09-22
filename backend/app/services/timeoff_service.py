@@ -94,33 +94,27 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
     from app.services.leave_balance_service import LeaveBalanceService
     matched_lt = LeaveBalanceService.resolve_leave_type(db, request.leave_type)
 
-    # Work From Home (WFH) eligibility check: Remote workers cannot apply for WFH
-    is_wfh = (matched_lt and (matched_lt.code == "WFH" or "home" in matched_lt.name.lower() or matched_lt.applicable_employee_type == "office_only")) or any(k in lt_lower for k in ("wfh", "home", "remote"))
-    if is_wfh:
-        from app.services.attendance_service import _is_remote_worker
-        emp_obj = db.query(Employee).filter(Employee.id == employee_id).first()
-        if _is_remote_worker(db, emp_obj):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Remote employees cannot apply for Work From Home (WFH)."
-            )
+    if lt_lower in ("hourly", "hour") or (matched_lt and (matched_lt.unit_type or "").lower() == "hourly"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Hourly time off is no longer supported. Please request a Half-Day or Full-Day leave."
+        )
+
+    if (matched_lt and (matched_lt.code == "WFH" or "wfh" in matched_lt.name.lower() or "work from home" in matched_lt.name.lower())) or "wfh" in lt_lower or "work from home" in lt_lower:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Work From Home (WFH) is not a leave category."
+        )
 
     if matched_lt:
         unit = (matched_lt.unit_type or "").lower()
         is_half_day = unit == "half_day" or "half" in matched_lt.name.lower() or matched_lt.code.upper() == "HD"
-        is_full_day = not is_half_day and unit != "hourly"
+        is_full_day = not is_half_day
     else:
-        is_full_day = lt_clean in ("Full-Day", "Full Day") or any(k in lt_lower for k in ("casual", "sick", "earned", "privilege", "full", "comp", "wfh", "home", "remote"))
         is_half_day = lt_clean in ("Half-Day", "Half Day") or "half" in lt_lower
+        is_full_day = not is_half_day
 
-    if is_full_day:
-        duration_hours = total_shift_working_hours
-        days_requested = 1.0
-        if st is None:
-            st = shift_start
-        if et is None:
-            et = shift_end
-    elif is_half_day:
+    if is_half_day:
         half_day_hours = float(eff_shift.half_day_hours or (total_shift_working_hours / 2.0) or 4.0)
         duration_hours = half_day_hours
         days_requested = 0.5
@@ -148,24 +142,12 @@ def request_timeoff(db: Session, employee_id: int, request: TimeOffRequestCreate
                     detail=f"Half-day time-off must match your shift session: First Half ({first_half_str}) or Second Half ({second_half_str})."
                 )
     else:
-        # Hourly request
-        if st is None or et is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="start_time and end_time are required for Hourly time off.",
-            )
-        if st.minute not in (0, 30) or et.minute not in (0, 30):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="start_time and end_time must use 30-minute intervals.",
-            )
-        if et <= st:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="end_time must be after start_time.",
-            )
-        duration_hours = (et.hour * 60 + et.minute - (st.hour * 60 + st.minute)) / 60.0
-        days_requested = round(duration_hours / (total_shift_working_hours or 8.0), 2)
+        duration_hours = total_shift_working_hours
+        days_requested = 1.0
+        if st is None:
+            st = shift_start
+        if et is None:
+            et = shift_end
 
     if duration_hours < 0.5 or duration_hours > total_shift_working_hours:
         raise HTTPException(
@@ -466,9 +448,6 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
         if unit == "half_day" or "half" in matched_lt.name.lower() or matched_lt.code.upper() == "HD":
             lt = "halfday"
             leave_store = matched_lt.name
-        elif unit == "hourly":
-            lt = "hourly"
-            leave_store = "Hourly"
         else:
             lt = "fullday"
             leave_store = matched_lt.name
@@ -504,40 +483,10 @@ def apply_time_off(db: Session, employee_id: int, payload: TimeOffApplyPayload) 
                 detail=f"Half-day session must be either First Half ({first_half_str}) or Second Half ({second_half_str}).",
             )
         requested = half_day_hours
-    elif lt == "hourly":
-        leave_store = "Hourly"
-        if payload.start_time is None or payload.end_time is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="start_time and end_time are required for Hourly time off.",
-            )
-        st = payload.start_time
-        et = payload.end_time
-        if st.minute not in (0, 30) or et.minute not in (0, 30):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="start_time and end_time must use 30-minute intervals.",
-            )
-        if st < shift_start or et > shift_end:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Time off must fall within working hours {shift_start.strftime('%H:%M')}–{shift_end.strftime('%H:%M')}.",
-            )
-        if et <= st:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="end_time must be after start_time.",
-            )
-        requested = _duration_hours_between(st, et, payload.date)
-        if requested <= 0 or requested > total_shift_working_hours:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Hourly request must be between >0 and {total_shift_working_hours} hrs.",
-            )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="leave_type must be 'Hourly', 'Half Day', or 'Full Day'.",
+            detail="leave_type must be 'Half Day' or 'Full Day'.",
         )
 
     approved_so_far = get_timeoff_duration_for_date(db, employee_id, payload.date)

@@ -9,6 +9,7 @@ import { MasterDataService } from '../../../../core/services/master-data.service
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CustomSelectComponent, SelectOption } from '../../../../shared/components/custom-select/custom-select';
+import { CustomDatepickerComponent } from '../../../../shared/components/custom-datepicker/custom-datepicker';
 import {
   PayrollDashboardSummary,
   EmployeeSalaryOverviewItem,
@@ -32,7 +33,7 @@ import {
 @Component({
   selector: 'app-payroll',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomSelectComponent],
+  imports: [CommonModule, FormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './payroll.html',
   styleUrls: ['./payroll.css']
 })
@@ -40,6 +41,7 @@ export class PayrollComponent implements OnInit, OnDestroy {
   activeTab: 'dashboard' | 'salaries' | 'structures' | 'runs' | 'revisions' | 'payslips' | 'statutory' = 'dashboard';
   isLoading = false;
   isAdmin = false;
+  canApprove = false;
   currentUserId: number | null = null;
   private subs: Subscription = new Subscription();
 
@@ -87,12 +89,18 @@ export class PayrollComponent implements OnInit, OnDestroy {
   // ----------------------------------------------------
   structures: SalaryStructure[] = [];
   componentsList: SalaryComponent[] = [];
+  componentSelectOptions: SelectOption[] = [];
   isStructureModalOpen = false;
   isSavingStructure = false;
+  editingStructureId: number | null = null;
+  deleteModalOpen = false;
+  structureToDelete: SalaryStructure | null = null;
+  isDeletingStructure = false;
   newStructureCode = '';
   newStructureName = '';
   newStructureDescription = '';
   newStructureCalculationMode: 'ctc_based' | 'gross_based' = 'ctc_based';
+  newStructureIsActive = true;
   newStructureComponents: {
     component_id: number;
     component_code: string;
@@ -101,9 +109,14 @@ export class PayrollComponent implements OnInit, OnDestroy {
     is_taxable: boolean;
   }[] = [];
 
+  structurePreviewCtc: number = 216007;
+  structurePreview: SalaryCalculationPreview | null = null;
+  isStructurePreviewLoading: boolean = false;
+
   calcTypeOptions: SelectOption[] = [
     { label: 'Percentage of Basic', value: 'percentage_of_basic' },
     { label: 'Percentage of Gross', value: 'percentage_of_gross' },
+    { label: 'Percentage of CTC', value: 'percentage_of_ctc' },
     { label: 'Flat Amount', value: 'flat_amount' },
     { label: 'Balancing Component', value: 'formula' }
   ];
@@ -162,6 +175,11 @@ export class PayrollComponent implements OnInit, OnDestroy {
   searchRecord = '';
   selectedRecordDepartment = '';
   selectedRecordStatus = '';
+
+  // Delete Run Modal
+  deleteRunModalOpen = false;
+  runToDelete: PayrollRunSummary | null = null;
+  isDeletingRun = false;
 
   // Manual Adjustment Modal
   isAdjustmentModalOpen = false;
@@ -241,7 +259,9 @@ export class PayrollComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
-    this.isAdmin = user?.role === 'admin';
+    const role = (user?.role || '').toLowerCase();
+    this.isAdmin = role === 'admin';
+    this.canApprove = role === 'admin' || role === 'hr';
     this.currentUserId = user?.id ? Number(user.id) : null;
 
     const today = new Date();
@@ -343,6 +363,10 @@ export class PayrollComponent implements OnInit, OnDestroy {
       this.payrollService.getComponents().subscribe({
         next: (comps) => {
           this.componentsList = comps;
+          this.componentSelectOptions = (comps || []).map(c => ({
+            label: `${c.name} (${c.code})`,
+            value: c.id
+          }));
         },
         error: (err) => console.error('Failed to load components', err)
       })
@@ -380,11 +404,18 @@ export class PayrollComponent implements OnInit, OnDestroy {
             res.monthly_variance = res.net_variance_pct || 0;
             res.configured_salaries = res.assigned_salary_count;
             res.missing_salaries = res.missing_salary_count;
-            res.department_cost_breakdown = res.department_costs?.map(d => ({
+            const deptList = res.department_costs?.map(d => ({
               department: d.department,
               total_cost: d.monthly_cost || d.total_cost || 0,
-              employee_count: d.employee_count || 1
+              employee_count: d.employee_count || 1,
+              percentage: 0
             })) || [];
+            const sumCost = deptList.reduce((acc, curr) => acc + curr.total_cost, 0);
+            deptList.forEach(d => {
+              d.percentage = sumCost > 0 ? Math.round((d.total_cost / sumCost) * 100) : 0;
+            });
+            res.department_cost_breakdown = deptList;
+            res.total_department_cost = sumCost;
           }
           this.dashboardSummary = res;
           this.isLoading = false;
@@ -440,11 +471,13 @@ export class PayrollComponent implements OnInit, OnDestroy {
     this.assignEmployeeName = item.employee_name;
     this.assignEmployeeCode = item.employee_code;
     this.assignBaseAmount = item.annual_ctc ? Number(item.annual_ctc) : (item.gross_monthly ? Number(item.gross_monthly) * 12 : 600000);
-    this.assignMode = 'ctc_based';
+    this.assignMode = (item.salary_basis === 'GROSS') ? 'gross_based' : 'ctc_based';
     this.salaryPreview = null;
     this.isAssignModalOpen = true;
 
-    if (this.structureOptions.length > 0) {
+    if (item.structure_id && this.structureOptions.some(o => o.value === item.structure_id)) {
+      this.assignStructureId = item.structure_id;
+    } else if (this.structureOptions.length > 0) {
       this.assignStructureId = this.structureOptions[0].value;
     }
     this.calculateSalaryPreview();
@@ -550,10 +583,12 @@ export class PayrollComponent implements OnInit, OnDestroy {
   // 3. Salary Structures
   // ==========================================
   openCreateStructureModal(): void {
+    this.editingStructureId = null;
     this.newStructureCode = '';
     this.newStructureName = '';
     this.newStructureDescription = '';
     this.newStructureCalculationMode = 'ctc_based';
+    this.newStructureIsActive = true;
     this.newStructureComponents = [];
 
     const basic = this.componentsList.find(c => c.code === 'BASIC');
@@ -591,8 +626,84 @@ export class PayrollComponent implements OnInit, OnDestroy {
     this.isStructureModalOpen = true;
   }
 
+  openEditStructureModal(structure: SalaryStructure): void {
+    this.editingStructureId = structure.id;
+    this.newStructureCode = structure.code;
+    this.newStructureName = structure.name;
+    this.newStructureDescription = structure.description || '';
+    this.newStructureCalculationMode = structure.salary_basis === 'CTC' ? 'ctc_based' : 'gross_based';
+    this.newStructureIsActive = structure.is_active !== undefined ? structure.is_active : true;
+
+    this.newStructureComponents = (structure.components || []).map(c => {
+      let calcType = 'percentage_of_basic';
+      const ct = (c.calculation_type || '').toUpperCase();
+      const cb = (c.calculation_basis || '').toUpperCase();
+
+      if (ct === 'BALANCE' || ct === 'FORMULA') {
+        calcType = 'formula';
+      } else if (ct === 'FIXED' || ct === 'FLAT_AMOUNT') {
+        calcType = 'flat_amount';
+      } else if (ct === 'PERCENTAGE' || ct.includes('PERCENTAGE')) {
+        if (cb === 'BASIC' || ct.includes('BASIC')) {
+          calcType = 'percentage_of_basic';
+        } else if (cb === 'GROSS' || ct.includes('GROSS')) {
+          calcType = 'percentage_of_gross';
+        } else {
+          calcType = 'percentage_of_ctc';
+        }
+      }
+
+      return {
+        component_id: c.component_id,
+        component_code: c.component_code || '',
+        calculation_type: calcType,
+        value: c.percentage_or_value || 0,
+        is_taxable: true
+      };
+    });
+
+    this.isStructureModalOpen = true;
+    this.calculateStructureTestPreview();
+  }
+
   closeCreateStructureModal(): void {
     this.isStructureModalOpen = false;
+    this.editingStructureId = null;
+    this.structurePreview = null;
+  }
+
+  calculateStructureTestPreview(): void {
+    if (!this.editingStructureId || !this.structurePreviewCtc || this.structurePreviewCtc <= 0) {
+      this.structurePreview = null;
+      return;
+    }
+
+    this.isStructurePreviewLoading = true;
+    this.payrollService.calculatePreview({
+      structure_id: this.editingStructureId,
+      salary_basis: this.newStructureCalculationMode === 'ctc_based' ? 'CTC' : 'GROSS',
+      ctc_amount: this.structurePreviewCtc,
+      salary_type: this.newStructureCalculationMode === 'ctc_based' ? 'Annual' : 'Monthly'
+    }).subscribe({
+      next: (preview) => {
+        preview.monthly_gross = preview.gross_monthly;
+        preview.monthly_net = preview.net_monthly;
+        preview.monthly_deductions = preview.total_deductions_monthly;
+        preview.components = [
+          ...(preview.earnings || []),
+          ...(preview.deductions || []),
+          ...(preview.employer_contributions || [])
+        ];
+        this.structurePreview = preview;
+        this.isStructurePreviewLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isStructurePreviewLoading = false;
+        this.toast.showError(err?.error?.detail || 'Structure preview calculation failed', 'Preview Error');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   addStructureComponent(): void {
@@ -611,11 +722,56 @@ export class PayrollComponent implements OnInit, OnDestroy {
     this.newStructureComponents.splice(index, 1);
   }
 
-  onComponentSelectionChange(index: number, componentId: number): void {
-    const comp = this.componentsList.find(c => c.id === componentId);
+  onComponentSelectionChange(index: number, componentId: any): void {
+    const numId = Number(componentId);
+    this.newStructureComponents[index].component_id = numId;
+    const comp = this.componentsList.find(c => c.id === numId);
     if (comp) {
       this.newStructureComponents[index].component_code = comp.code;
+      if (comp.code === 'SPECIAL_ALLOWANCE' || comp.calculation_type?.toUpperCase() === 'BALANCE') {
+        this.newStructureComponents[index].calculation_type = 'formula';
+        this.newStructureComponents[index].value = 0;
+      }
     }
+  }
+
+  openDeleteStructureModal(structure: SalaryStructure): void {
+    this.structureToDelete = structure;
+    this.deleteModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeDeleteStructureModal(): void {
+    if (this.isDeletingStructure) return;
+    this.deleteModalOpen = false;
+    this.structureToDelete = null;
+    this.cdr.markForCheck();
+  }
+
+  confirmDeleteStructure(): void {
+    if (!this.structureToDelete) return;
+    this.isDeletingStructure = true;
+    const structure = this.structureToDelete;
+
+    this.payrollService.deleteStructure(structure.id).subscribe({
+      next: (res) => {
+        this.isDeletingStructure = false;
+        this.deleteModalOpen = false;
+        this.structureToDelete = null;
+        this.toast.showSuccess(res.message || `Salary structure '${structure.name}' deleted successfully`, 'Success');
+        this.loadStructures();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isDeletingStructure = false;
+        this.toast.showError(err?.error?.detail || 'Failed to delete salary structure', 'Error');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  deleteStructure(structure: SalaryStructure): void {
+    this.openDeleteStructureModal(structure);
   }
 
   saveStructure(): void {
@@ -624,32 +780,74 @@ export class PayrollComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const componentsToSave: StructureComponentItem[] = this.newStructureComponents.map((c, idx) => ({
-      component_id: c.component_id,
-      calculation_type: c.calculation_type,
-      percentage_or_value: c.value,
-      sequence_order: idx + 1
-    }));
+    const componentsToSave: StructureComponentItem[] = this.newStructureComponents.map((c, idx) => {
+      let calcType = 'PERCENTAGE';
+      let calcBasis: string | null = 'CTC';
+
+      if (c.calculation_type === 'formula' || c.calculation_type === 'balance') {
+        calcType = 'BALANCE';
+        calcBasis = null;
+      } else if (c.calculation_type === 'flat_amount' || c.calculation_type === 'fixed') {
+        calcType = 'FIXED';
+        calcBasis = null;
+      } else if (c.calculation_type === 'percentage_of_basic') {
+        calcType = 'PERCENTAGE';
+        calcBasis = 'BASIC';
+      } else if (c.calculation_type === 'percentage_of_gross') {
+        calcType = 'PERCENTAGE';
+        calcBasis = 'GROSS';
+      } else if (c.calculation_type === 'percentage_of_ctc') {
+        calcType = 'PERCENTAGE';
+        calcBasis = 'CTC';
+      }
+
+      return {
+        component_id: c.component_id,
+        calculation_type: calcType,
+        calculation_basis: calcBasis,
+        percentage_or_value: c.value || 0,
+        sequence_order: idx + 1
+      };
+    });
 
     this.isSavingStructure = true;
-    this.payrollService.createStructure({
+    const payload = {
       code: this.newStructureCode.trim().toUpperCase(),
       name: this.newStructureName.trim(),
       description: this.newStructureDescription.trim(),
-      salary_basis: this.newStructureCalculationMode === 'ctc_based' ? 'CTC' : 'GROSS',
+      salary_basis: (this.newStructureCalculationMode === 'ctc_based' ? 'CTC' : 'GROSS') as 'CTC' | 'GROSS',
+      is_active: this.newStructureIsActive,
       components: componentsToSave
-    }).subscribe({
-      next: () => {
-        this.isSavingStructure = false;
-        this.isStructureModalOpen = false;
-        this.toast.showSuccess('Salary structure created successfully', 'Success');
-        this.loadStructures();
-      },
-      error: (err) => {
-        this.isSavingStructure = false;
-        this.toast.showError(err?.error?.detail || 'Failed to create structure', 'Error');
-      }
-    });
+    };
+
+    if (this.editingStructureId) {
+      this.payrollService.updateStructure(this.editingStructureId, payload).subscribe({
+        next: () => {
+          this.isSavingStructure = false;
+          this.isStructureModalOpen = false;
+          this.editingStructureId = null;
+          this.toast.showSuccess('Salary structure updated successfully', 'Success');
+          this.loadStructures();
+        },
+        error: (err) => {
+          this.isSavingStructure = false;
+          this.toast.showError(err?.error?.detail || 'Failed to update structure', 'Error');
+        }
+      });
+    } else {
+      this.payrollService.createStructure(payload).subscribe({
+        next: () => {
+          this.isSavingStructure = false;
+          this.isStructureModalOpen = false;
+          this.toast.showSuccess('Salary structure created successfully', 'Success');
+          this.loadStructures();
+        },
+        error: (err) => {
+          this.isSavingStructure = false;
+          this.toast.showError(err?.error?.detail || 'Failed to create structure', 'Error');
+        }
+      });
+    }
   }
 
   // ==========================================
@@ -698,7 +896,7 @@ export class PayrollComponent implements OnInit, OnDestroy {
       next: (run) => {
         this.executingRun = false;
         this.isExecuteRunModalOpen = false;
-        this.toast.showSuccess(`Payroll Run executed for ${this.getMonthName(run.month || 1)} ${run.year || ''}`, 'Batch Complete');
+        this.toast.showSuccess(`Payroll Run executed for ${run.period_name || (this.getMonthName(run.month || 1) + ' ' + (run.year || ''))}`, 'Batch Complete');
         this.loadRuns();
         this.viewRunDetails(run);
       },
@@ -790,6 +988,39 @@ export class PayrollComponent implements OnInit, OnDestroy {
     });
   }
 
+  approveRunFromList(run: PayrollRunSummary, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Are you sure you want to approve Payroll Run #${run.run_number}?`)) return;
+    this.isLoading = true;
+    this.payrollService.approveOrRejectRun(run.id, true).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.toast.showSuccess(`Payroll Run #${run.run_number} approved!`, 'Approved');
+        this.loadRuns();
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.toast.showError(err?.error?.detail || 'Approval failed', 'Error');
+      }
+    });
+  }
+
+  submitRunFromList(run: PayrollRunSummary, event: Event): void {
+    event.stopPropagation();
+    this.isLoading = true;
+    this.payrollService.submitRunForApproval(run.id).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.toast.showSuccess(`Payroll Run #${run.run_number} submitted for approval`, 'Submitted');
+        this.loadRuns();
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.toast.showError(err?.error?.detail || 'Failed to submit run', 'Error');
+      }
+    });
+  }
+
   rejectSelectedRun(): void {
     if (!this.selectedRun) return;
     const reason = prompt('Please enter reason for rejection:');
@@ -845,6 +1076,44 @@ export class PayrollComponent implements OnInit, OnDestroy {
     });
   }
 
+  promptDeleteRun(run: PayrollRunSummary, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.runToDelete = run;
+    this.deleteRunModalOpen = true;
+  }
+
+  closeDeleteRunModal(): void {
+    this.deleteRunModalOpen = false;
+    this.runToDelete = null;
+    this.isDeletingRun = false;
+  }
+
+  confirmDeleteRun(): void {
+    if (!this.runToDelete) return;
+    this.isDeletingRun = true;
+    const runNumber = this.runToDelete.run_number;
+    const wasInDrilldown = this.selectedRun?.id === this.runToDelete.id;
+
+    this.payrollService.deleteRun(this.runToDelete.id).subscribe({
+      next: (res) => {
+        this.isDeletingRun = false;
+        this.toast.showSuccess(res?.message || `Payroll Run #${runNumber} deleted successfully`, 'Deleted');
+        this.closeDeleteRunModal();
+        if (wasInDrilldown) {
+          this.backToRunsList();
+        } else {
+          this.loadRuns();
+        }
+      },
+      error: (err) => {
+        this.isDeletingRun = false;
+        this.toast.showError(err?.error?.detail || 'Failed to delete payroll run', 'Error');
+      }
+    });
+  }
+
   reloadCurrentRun(): void {
     if (!this.selectedRun) return;
     this.payrollService.getRunDetail(this.selectedRun.id).subscribe({
@@ -856,34 +1125,44 @@ export class PayrollComponent implements OnInit, OnDestroy {
     });
   }
 
-  exportPayrollCsv(): void {
+  exportPayrollPdf(): void {
     if (!this.selectedRun) return;
-    this.payrollService.exportPayrollCsv(this.selectedRun.id).subscribe({
+    this.payrollService.exportPayrollPdf(this.selectedRun.id).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Payroll_Run_${this.selectedRun?.run_number}.csv`;
+        a.download = `Payroll_Run_${this.selectedRun?.run_number}.pdf`;
         a.click();
         window.URL.revokeObjectURL(url);
+        this.toast.showSuccess('Payroll Summary PDF exported successfully', 'Downloaded');
       },
-      error: () => this.toast.showError('Export failed', 'Error')
+      error: () => this.toast.showError('PDF export failed', 'Error')
+    });
+  }
+
+  exportPayrollCsv(): void {
+    this.exportPayrollPdf();
+  }
+
+  exportBankPdf(): void {
+    if (!this.selectedRun) return;
+    this.payrollService.exportBankPdf(this.selectedRun.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Bank_Payout_${this.selectedRun?.run_number}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toast.showSuccess('Bank Disbursement PDF exported successfully', 'Downloaded');
+      },
+      error: () => this.toast.showError('PDF export failed', 'Error')
     });
   }
 
   exportBankCsv(): void {
-    if (!this.selectedRun) return;
-    this.payrollService.exportBankCsv(this.selectedRun.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Bank_Payout_${this.selectedRun?.run_number}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.toast.showError('Export failed', 'Error')
-    });
+    this.exportBankPdf();
   }
 
   // Adjust record modal
@@ -951,6 +1230,22 @@ export class PayrollComponent implements OnInit, OnDestroy {
         if (this.selectedRun) this.loadRunExceptions(this.selectedRun.id);
       },
       error: (err) => this.toast.showError(err?.error?.detail || 'Failed to resolve', 'Error')
+    });
+  }
+
+  hasUnresolvedExceptions(): boolean {
+    return this.runExceptions.some(e => !e.is_resolved);
+  }
+
+  resolveAllExceptions(): void {
+    if (!this.selectedRun) return;
+    const runId = this.selectedRun.id;
+    this.payrollService.resolveAllExceptions(runId, 'Bulk resolved by HR (Offline / Cheque payout authorized)').subscribe({
+      next: (res) => {
+        this.toast.showSuccess(res.message || 'All exceptions resolved', 'Success');
+        this.loadRunExceptions(runId);
+      },
+      error: (err) => this.toast.showError(err?.error?.detail || 'Failed to resolve all exceptions', 'Error')
     });
   }
 
@@ -1137,6 +1432,19 @@ export class PayrollComponent implements OnInit, OnDestroy {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[monthNum - 1] || `${monthNum}`;
+  }
+
+  formatPayrollMonth(monthStr?: string | null): string {
+    if (!monthStr) return '—';
+    const parts = String(monthStr).trim().split('-');
+    if (parts.length === 2 && parts[0].length === 4) {
+      const year = parts[0];
+      const mNum = parseInt(parts[1], 10);
+      if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) {
+        return `${this.getMonthName(mNum)} ${year}`;
+      }
+    }
+    return monthStr;
   }
 
   formatCurrency(val: number | null | undefined): string {

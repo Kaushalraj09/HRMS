@@ -36,7 +36,6 @@ export class HrTimeOffComponent implements OnInit, OnDestroy {
   // Custom Select options
   leaveTypeOptions = [
     { label: 'All Leave Types', value: '' },
-    { label: 'Hourly', value: 'Hourly' },
     { label: 'Half Day', value: 'Half-Day' },
     { label: 'Full Day', value: 'Full-Day' }
   ];

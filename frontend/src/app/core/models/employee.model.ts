@@ -30,6 +30,13 @@ export interface Employee {
   shiftId?: number | null;
   shift?: { id: number, name: string, code: string } | null;
   doj: string;
+  bankName?: string;
+  bankAccountNo?: string;
+  ifscCode?: string;
+  micrCode?: string;
+  panNumber?: string;
+  uanNumber?: string;
+  pfNumber?: string;
 }
 
 export interface EmployeeStatsSummary {
@@ -76,6 +83,15 @@ export interface EmployeePayload {
     alternateMobile: string;
     emergencyContactName: string;
     emergencyContactNumber: string;
+  };
+  statutoryInfo?: {
+    bankName?: string;
+    bankAccountNo?: string;
+    ifscCode?: string;
+    micrCode?: string;
+    panNumber?: string;
+    uanNumber?: string;
+    pfNumber?: string;
   };
 }
 

@@ -176,7 +176,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
     ).count()
     pending_hourly_count = db.query(TimeOffRequest).filter(
         TimeOffRequest.status == "Pending",
-        TimeOffRequest.leave_type.in_(["Hourly", "Half-Day", "Half Day"])
+        TimeOffRequest.leave_type.in_(["Half-Day", "Half Day"])
     ).count()
     pending_reg_count = db.query(ApprovalTask).filter(
         ApprovalTask.status == "pending",

@@ -110,15 +110,8 @@ async def request_timeoff_batch(
     max_date = sorted_dates[-1]
     total_days_count = len(sorted_dates)
 
-    # Check WFH eligibility
     from app.services.leave_balance_service import LeaveBalanceService
     lt = LeaveBalanceService.resolve_leave_type(db, request.leave_type)
-    is_wfh = (lt and (lt.code == "WFH" or "home" in lt.name.lower() or lt.applicable_employee_type == "office_only")) or any(k in request.leave_type.lower() for k in ("wfh", "home", "remote"))
-    if is_wfh and attendance_service._is_remote_worker(db, employee):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Remote employees cannot apply for Work From Home (WFH)."
-        )
 
     # Validate total days against yearly balance upfront
     if lt:
