@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base
-from app import modelsL
+from app import models
 from app.models.employee import Employee
 from app.models.payroll import (
     SalaryStructure,

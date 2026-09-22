@@ -21,26 +21,22 @@ def seed_users(db: Session):
         print("Roles not found. Please seed roles first.")
         return
 
-    admin_email = os.getenv("DEMO_ADMIN_EMAIL", "TestVivekAdmin@gmail.com")
-    hr_email = os.getenv("DEMO_HR_EMAIL", "TestVivekHr@gmail.com")
-    emp_email = os.getenv("DEMO_EMPLOYEE_EMAIL", "TestVivekEmp@gmail.com")
-
     demo_users = [
         {
-            "email": admin_email,
-            "password": _demo_password("DEMO_ADMIN_PASSWORD"),
-            "display_name": "Vivek Admin",
+            "email": "admin@hrms.com",
+            "password": _demo_password("DEMO_ADMIN_PASSWORD", "Admin@123"),
+            "display_name": "System Admin",
             "role_id": admin_role.id,
             "profile_type": "admin"
         },
         {
-            "email": hr_email,
-            "password": _demo_password("DEMO_HR_PASSWORD"),
-            "display_name": "Vivek HR",
+            "email": "hr@hrms.com",
+            "password": _demo_password("DEMO_HR_PASSWORD", "Hr@123"),
+            "display_name": "HR Manager",
             "role_id": hr_role.id,
             "profile_type": "hr",
             "hr_data": {
-                "full_name": "Vivek HR",
+                "full_name": "HR Manager",
                 "phone": "9876543211",
                 "department": "Human Resources",
                 "designation": "HR Manager",
@@ -57,8 +53,66 @@ def seed_users(db: Session):
             }
         },
         {
-            "email": emp_email,
-            "password": _demo_password("DEMO_EMPLOYEE_PASSWORD"),
+            "email": "emp@hrms.com",
+            "password": _demo_password("DEMO_EMPLOYEE_PASSWORD", "Emp@123"),
+            "display_name": "Kaushal Raj",
+            "role_id": emp_role.id,
+            "profile_type": "employee",
+            "employee_data": {
+                "first_name": "Kaushal",
+                "last_name": "Raj",
+                "department": "Engineering",
+                "designation": "Frontend Developer",
+                "employee_type": "Full-Time",
+                "work_location": "Belagavi ICCC Office",
+                "shift_type": "General Shift",
+                "mobile": "9876543212",
+                "official_email": "emp@hrms.com",
+                "gender": "Male",
+                "dob": date(1996, 8, 22),
+                "doj": date(2024, 2, 1),
+                "bank_name": "State Bank of India",
+                "bank_account_no": "30894726154",
+                "ifsc_code": "SBIN0004567",
+                "micr_code": "560002015",
+                "pan_number": "FGHIJ5678K",
+                "pf_number": "KN/BLG/0045678/000/0000003",
+                "uan_number": "100123456789"
+            }
+        },
+        {
+            "email": "TestVivekAdmin@gmail.com",
+            "password": "Testv@1234",
+            "display_name": "Vivek Admin",
+            "role_id": admin_role.id,
+            "profile_type": "admin"
+        },
+        {
+            "email": "TestVivekHr@gmail.com",
+            "password": "Testv@1234",
+            "display_name": "Vivek HR",
+            "role_id": hr_role.id,
+            "profile_type": "hr",
+            "hr_data": {
+                "full_name": "Vivek HR",
+                "phone": "9876543213",
+                "department": "Human Resources",
+                "designation": "HR Manager",
+                "gender": "Female",
+                "dob": date(1992, 5, 14),
+                "doj": date(2023, 1, 10),
+                "bank_name": "HDFC Bank",
+                "bank_account_no": "50100439281799",
+                "ifsc_code": "HDFC0001234",
+                "micr_code": "560240012",
+                "pan_number": "ABCDE1234F",
+                "pf_number": "KN/BLG/0045678/000/0000004",
+                "uan_number": "100987654322"
+            }
+        },
+        {
+            "email": "TestVivekEmp@gmail.com",
+            "password": "Testv@1234",
             "display_name": "Vivek Employee",
             "role_id": emp_role.id,
             "profile_type": "employee",
@@ -70,18 +124,18 @@ def seed_users(db: Session):
                 "employee_type": "Full-Time",
                 "work_location": "Belagavi ICCC Office",
                 "shift_type": "General Shift",
-                "mobile": "9876543212",
-                "official_email": emp_email,
+                "mobile": "9876543214",
+                "official_email": "TestVivekEmp@gmail.com",
                 "gender": "Male",
                 "dob": date(1996, 8, 22),
                 "doj": date(2024, 2, 1),
                 "bank_name": "State Bank of India",
-                "bank_account_no": "30894726154",
+                "bank_account_no": "30894726199",
                 "ifsc_code": "SBIN0004567",
                 "micr_code": "560002015",
                 "pan_number": "FGHIJ5678K",
-                "pf_number": "KN/BLG/0045678/000/0000003",
-                "uan_number": "100123456789"
+                "pf_number": "KN/BLG/0045678/000/0000005",
+                "uan_number": "100123456799"
             }
         }
     ]
