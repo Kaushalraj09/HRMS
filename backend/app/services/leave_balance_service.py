@@ -108,17 +108,23 @@ class LeaveBalanceService:
             db.commit()
             active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
         else:
-            # Ensure system-defined UL and PL exist even if other types were already present
+            # Ensure all standard leave types (UL, PL, CL, SL, EL, HD, CO) exist even if other types were already present
             existing_codes = {(lt.code or "").upper() for lt in active_leave_types}
             new_types = []
-            if "UL" not in existing_codes:
-                new_types.append(
-                    LeaveType(name="Unpaid Leave", code="UL", unit_type="full_day", default_balance_hours=96.0, annual_entitlement_days=12, is_paid=False, is_system_defined=True, is_editable=False, is_deletable=False, is_active=True)
-                )
-            if "PL" not in existing_codes:
-                new_types.append(
-                    LeaveType(name="Paid Leave", code="PL", unit_type="full_day", default_balance_hours=144.0, annual_entitlement_days=18, is_paid=True, is_system_defined=True, is_editable=True, is_deletable=False, is_active=True)
-                )
+            standard_defaults = [
+                ("UL", "Unpaid Leave", "full_day", 96.0, 12, False, True, False, False),
+                ("PL", "Paid Leave", "full_day", 144.0, 18, True, True, True, False),
+                ("CL", "Casual Leave", "full_day", 96.0, 12, True, False, True, True),
+                ("SL", "Sick Leave", "full_day", 64.0, 8, True, False, True, True),
+                ("EL", "Earned Leave", "full_day", 144.0, 18, True, False, True, True),
+                ("HD", "Half Day", "half_day", 32.0, 4, True, False, True, True),
+                ("CO", "Comp Off", "full_day", 16.0, 2, True, False, True, True),
+            ]
+            for code, name, unit, hrs, ent, is_p, is_sys, is_ed, is_del in standard_defaults:
+                if code not in existing_codes:
+                    new_types.append(
+                        LeaveType(name=name, code=code, unit_type=unit, default_balance_hours=hrs, annual_entitlement_days=ent, is_paid=is_p, is_system_defined=is_sys, is_editable=is_ed, is_deletable=is_del, is_active=True)
+                    )
             if new_types:
                 db.add_all(new_types)
                 db.commit()

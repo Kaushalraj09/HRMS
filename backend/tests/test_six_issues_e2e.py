@@ -67,44 +67,48 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
     from app.domain.attendance.services.shift_calculation_service import ShiftCalculationService
     from app.models.approval_log import ApprovalLog
 
+    import uuid
+    from app.models.leave_balance import EmployeeLeaveBalance
+    from app.services.leave_balance_service import LeaveBalanceService
     db: Session = SessionLocal()
+    user = None
+    emp = None
+    req = None
     try:
-        # Find or create a test employee
-        emp = db.query(Employee).filter(Employee.status == "Active").first()
-        if not emp:
-            user = db.query(User).first()
-            if not user:
-                role = db.query(Role).first()
-                if not role:
-                    role = Role(name="Employee")
-                    db.add(role)
-                    db.commit()
-                    db.refresh(role)
-                user = User(
-                    email="test_emp_e2e@hrms.com",
-                    password_hash="testhash",
-                    display_name="Test Employee",
-                    role_id=role.id,
-                    status="Active"
-                )
-                db.add(user)
-                db.commit()
-                db.refresh(user)
-            emp = Employee(
-                user_id=user.id,
-                employee_code="E2E001",
-                first_name="Test",
-                last_name="Employee",
-                official_email="test_emp_e2e@hrms.com",
-                mobile="9000000001",
-                status="Active"
-            )
-            db.add(emp)
+        suffix = uuid.uuid4().hex[:6]
+        role = db.query(Role).first()
+        if not role:
+            role = Role(name="Employee")
+            db.add(role)
             db.commit()
-            db.refresh(emp)
+            db.refresh(role)
 
-        assert emp is not None, "Active employee required"
+        user = User(
+            email=f"test_emp_e2e_{suffix}@hrms.com",
+            password_hash="testhash",
+            display_name=f"Test Employee {suffix}",
+            role_id=role.id,
+            status="Active"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        emp = Employee(
+            user_id=user.id,
+            employee_code=f"E2E{suffix.upper()}",
+            first_name="Test",
+            last_name="Employee",
+            official_email=f"test_emp_e2e_{suffix}@hrms.com",
+            mobile="9000000001",
+            status="Active"
+        )
+        db.add(emp)
+        db.commit()
+        db.refresh(emp)
+
         emp_id = emp.id
+        LeaveBalanceService.get_or_initialize_yearly_balances(db, emp_id, date.today().year)
 
         shift = ShiftRepository.get_assigned_shift(db, emp_id, date.today())
         eff_shift = ShiftCalculationService.get_effective_shift(shift)
@@ -125,6 +129,7 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
             date=target_date,
             leave_type="Casual Leave",
             duration_hours=shift_hours,
+            total_days=1.0,
             status="Pending",
             reason="E2E test leave"
         )
@@ -148,64 +153,69 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
         # 3. Calling approve again must be rejected (idempotency)
         with pytest.raises(Exception):
             approve_request(db, req.id, action="APPROVE", admin_user_id=1, enforce_approval_stage=False)
-
-        # Clean up the test request
-        db.query(ApprovalLog).filter(ApprovalLog.timeoff_request_id == req.id).delete()
-        db.delete(req)
-        db.commit()
     finally:
+        if req:
+            db.query(ApprovalLog).filter(ApprovalLog.timeoff_request_id == req.id).delete()
+            db.delete(req)
+        if emp:
+            db.query(EmployeeLeaveBalance).filter(EmployeeLeaveBalance.employee_id == emp.id).delete()
+            db.delete(emp)
+        if user:
+            db.delete(user)
+        db.commit()
         db.close()
 
 
 def test_issue_5_timeoff_in_attendance_response():
     """Issue 5: Attendance response includes timeoffMinutes and timeoffHours."""
+    import uuid
     from app.services.attendance_service import to_attendance_response
     db: Session = SessionLocal()
+    user = None
+    emp = None
+    att = None
     try:
-        emp = db.query(Employee).filter(Employee.status == "Active").first()
-        if not emp:
-            user = db.query(User).first()
-            if not user:
-                role = db.query(Role).first()
-                if not role:
-                    role = Role(name="Employee")
-                    db.add(role)
-                    db.commit()
-                    db.refresh(role)
-                user = User(
-                    email="test_emp_att@hrms.com",
-                    password_hash="testhash",
-                    display_name="Test Attendance Employee",
-                    role_id=role.id,
-                    status="Active"
-                )
-                db.add(user)
-                db.commit()
-                db.refresh(user)
-            emp = Employee(
-                user_id=user.id,
-                employee_code="ATT001",
-                first_name="Test",
-                last_name="Attendance",
-                official_email="test_emp_att@hrms.com",
-                mobile="9000000002",
-                status="Active"
-            )
-            db.add(emp)
+        suffix = uuid.uuid4().hex[:6]
+        role = db.query(Role).first()
+        if not role:
+            role = Role(name="Employee")
+            db.add(role)
             db.commit()
-            db.refresh(emp)
+            db.refresh(role)
 
-        att = db.query(Attendance).filter(Attendance.employee_id == emp.id).first()
-        if not att:
-            att = Attendance(
-                employee_id=emp.id,
-                date=date.today(),
-                status="Present",
-                total_working_minutes=480
-            )
-            db.add(att)
-            db.commit()
-            db.refresh(att)
+        user = User(
+            email=f"test_emp_att_{suffix}@hrms.com",
+            password_hash="testhash",
+            display_name=f"Test Attendance Employee {suffix}",
+            role_id=role.id,
+            status="Active"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        emp = Employee(
+            user_id=user.id,
+            employee_code=f"ATT{suffix.upper()}",
+            first_name="Test",
+            last_name="Attendance",
+            official_email=f"test_emp_att_{suffix}@hrms.com",
+            mobile="9000000002",
+            status="Active"
+        )
+        db.add(emp)
+        db.commit()
+        db.refresh(emp)
+
+        att = Attendance(
+            employee_id=emp.id,
+            date=date.today(),
+            status="Present",
+            total_working_minutes=480
+        )
+        db.add(att)
+        db.commit()
+        db.refresh(att)
 
         resp = to_attendance_response(att, db)
         assert hasattr(resp, "timeoff_minutes")
@@ -214,4 +224,11 @@ def test_issue_5_timeoff_in_attendance_response():
         assert "timeoffMinutes" in d
         assert "timeoffHours" in d
     finally:
+        if att:
+            db.delete(att)
+        if emp:
+            db.delete(emp)
+        if user:
+            db.delete(user)
+        db.commit()
         db.close()
