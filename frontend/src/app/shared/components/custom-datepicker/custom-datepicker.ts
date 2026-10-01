@@ -153,8 +153,8 @@ export class CustomDatepickerComponent implements ControlValueAccessor, OnInit {
           this.openUpward = spaceBelow < 330 && spaceAbove > 340;
         }
 
-        // Align right if calendar card (~255px wide) would overflow viewport on the right
-        this.alignRight = (rect.left + 265) > window.innerWidth;
+        // Align right if calendar card (~280px wide) would overflow viewport on the right
+        this.alignRight = (rect.left + 290) > window.innerWidth;
       }
     } catch {
       this.openUpward = false;

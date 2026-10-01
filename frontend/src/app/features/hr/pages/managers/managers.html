@@ -1,0 +1,306 @@
+<div class="managers-wrapper">
+  <div class="managers-container">
+    
+    <!-- 1. Header Section -->
+    <div class="managers-header-row">
+      <div class="header-titles">
+        <h1 class="page-main-title">Managers</h1>
+        <p class="header-subtitle">{{ userRoleLabel }} can designate managers, configure reporting hierarchies, and allocate team members</p>
+      </div>
+      <div class="header-actions-group">
+        <button type="button" class="btn-assign-manager" (click)="openAssignPickerModal()">
+          <i class="fas fa-crown"></i> Assign Employee as Manager
+        </button>
+        <button type="button" class="btn-add-manager" (click)="openAddManagerModal()">
+          <i class="fas fa-user-plus"></i> Add New Manager
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Filters Card Panel -->
+    <div class="filter-card">
+      <div class="filter-search-box">
+        <i class="fas fa-search filter-search-icon"></i>
+        <input 
+          type="text" 
+          id="managerSearch"
+          name="managerSearch"
+          autocomplete="off"
+          aria-label="Search managers" 
+          [formControl]="searchControl" 
+          placeholder="Search by name, email, employee code, or designation..." 
+          class="filter-search-input"
+        />
+      </div>
+
+      <div class="filter-dropdowns-row">
+        <div class="filter-select-item">
+          <app-custom-select 
+            name="departmentFilter" 
+            inputId="departmentFilter" 
+            [formControl]="departmentControl" 
+            [options]="departmentsOptions"
+            (ngModelChange)="applyFilters()">
+          </app-custom-select>
+        </div>
+
+        <div class="filter-select-item">
+          <app-custom-select 
+            name="statusFilter" 
+            inputId="statusFilter" 
+            [formControl]="statusControl" 
+            [options]="statusOptions"
+            (ngModelChange)="applyFilters()">
+          </app-custom-select>
+        </div>
+      </div>
+
+      <div class="filter-buttons-group">
+        <button type="button" class="btn-filter-reset" (click)="onReset()">
+          Reset
+        </button>
+        <button type="button" class="btn-filter-search" (click)="applyFilters()">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. Top Metrics Overview Grid -->
+    <div class="metrics-overview-grid">
+      <div class="kpi-mini-card total-card">
+        <div class="kpi-icon-wrap blue-wrap">
+          <i class="fas fa-user-tie"></i>
+        </div>
+        <div class="kpi-info-block">
+          <span class="kpi-value-num">{{ stats.total }}</span>
+          <span class="kpi-label-text">Total Managers</span>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card active-card">
+        <div class="kpi-icon-wrap green-wrap">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="kpi-info-block">
+          <span class="kpi-value-num">{{ stats.totalTeamMembers }}</span>
+          <span class="kpi-label-text">Team Members Managed</span>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card dept-card">
+        <div class="kpi-icon-wrap purple-wrap">
+          <i class="fas fa-sitemap"></i>
+        </div>
+        <div class="kpi-info-block">
+          <span class="kpi-value-num">{{ stats.departmentsCount }}</span>
+          <span class="kpi-label-text">Departments Covered</span>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card ready-card">
+        <div class="kpi-icon-wrap amber-wrap">
+          <i class="fas fa-user-check"></i>
+        </div>
+        <div class="kpi-info-block">
+          <span class="kpi-value-num">{{ stats.active }}</span>
+          <span class="kpi-label-text">Active Managers</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Managers Table Card -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="managers-table">
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Manager</th>
+              <th>Contact Info</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Direct Reports</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody *ngIf="isLoading">
+            <tr *ngFor="let i of [1,2,3,4,5]">
+              <td><div class="skeleton-bar text-skel"></div></td>
+              <td><div class="skeleton-bar card-skel"></div></td>
+              <td><div class="skeleton-bar text-skel"></div></td>
+              <td><div class="skeleton-bar text-skel"></div></td>
+              <td><div class="skeleton-bar text-skel"></div></td>
+              <td><div class="skeleton-bar pill-skel"></div></td>
+              <td><div class="skeleton-bar badge-skel"></div></td>
+              <td><div class="skeleton-bar action-skel"></div></td>
+            </tr>
+          </tbody>
+
+          <tbody *ngIf="!isLoading">
+            <tr *ngFor="let manager of filteredManagers; trackBy: trackById">
+              <!-- Code -->
+              <td class="emp-code-col">
+                <span class="code-pill">{{ manager.employeeCode || manager.id }}</span>
+              </td>
+
+              <!-- Manager Name + Avatar -->
+              <td class="emp-profile-cell">
+                <div class="avatar-info-group">
+                  <div class="avatar-circle">
+                    {{ getInitials(manager.name) }}
+                  </div>
+                  <div class="profile-meta">
+                    <span class="profile-name">{{ manager.name }}</span>
+                    <span class="profile-sub-badge"><i class="fas fa-crown"></i> Manager</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Contact -->
+              <td class="contact-col">
+                <div class="contact-lines">
+                  <span class="contact-email" [title]="manager.officialEmail">{{ manager.officialEmail }}</span>
+                  <span class="contact-phone" *ngIf="manager.mobile">{{ manager.mobile }}</span>
+                </div>
+              </td>
+
+              <!-- Department -->
+              <td>
+                <span class="dept-badge">{{ manager.department || '—' }}</span>
+              </td>
+
+              <!-- Designation -->
+              <td>
+                <span class="designation-text">{{ manager.designation || 'Manager' }}</span>
+              </td>
+
+              <!-- Direct Reports / Team Members -->
+              <td>
+                <button type="button" class="team-count-btn" (click)="openTeamModal(manager)" title="Click to view/manage reporting team">
+                  <i class="fas fa-users"></i>
+                  <span>{{ manager.directReportsCount || 0 }} Members</span>
+                  <i class="fas fa-angle-right arrow-mini"></i>
+                </button>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span class="status-pill" [ngClass]="manager.status === 'Active' ? 'status-active' : 'status-inactive'">
+                  {{ manager.status }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="actions-cell">
+                <div class="actions-row">
+                  <button type="button" class="btn-action btn-team" (click)="openTeamModal(manager)" title="Manage Team Allocation">
+                    <i class="fas fa-users-cog"></i> Team
+                  </button>
+                  <button type="button" class="btn-action btn-edit" (click)="openEditModal(manager)" title="Edit Manager Details">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="btn-action btn-revoke" (click)="revokeRole(manager)" title="Revoke Manager Role">
+                    <i class="fas fa-user-minus"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr *ngIf="filteredManagers.length === 0">
+              <td colspan="8" class="empty-state-cell">
+                <div class="empty-state-wrap">
+                  <div class="empty-icon-box">
+                    <i class="fas fa-user-tie"></i>
+                  </div>
+                  <h3>No Managers Found</h3>
+                  <p>No manager profiles match your current search and filters. You can promote existing employees or add new managers.</p>
+                  <div class="empty-action-buttons">
+                    <button type="button" class="btn-assign-manager" (click)="openAssignPickerModal()">
+                      <i class="fas fa-crown"></i> Assign Employee as Manager
+                    </button>
+                    <button type="button" class="btn-add-manager" (click)="openAddManagerModal()">
+                      <i class="fas fa-plus"></i> Add New Manager
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== Quick Modal: Promote Existing Employee ==================== -->
+<div class="modal-overlay" *ngIf="assignPickerModalOpen" (click)="closeAssignPickerModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <h2 class="modal-title">Designate Employee as Manager</h2>
+        <p class="modal-subtitle">Select an existing employee in the organization to grant Manager privileges</p>
+      </div>
+      <button type="button" class="btn-close" (click)="closeAssignPickerModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="employeeSelect" class="form-label">Select Employee to Promote</label>
+        <app-custom-select
+          name="employeeSelect"
+          inputId="employeeSelect"
+          [(ngModel)]="selectedEmployeeIdToPromote"
+          [options]="eligibleEmployeesToPromote"
+          placeholder="Choose employee...">
+        </app-custom-select>
+        <p class="form-hint">Only active employees who do not already hold the Manager role are listed.</p>
+      </div>
+
+      <div class="promotion-info-box">
+        <i class="fas fa-info-circle info-icon"></i>
+        <div class="info-content">
+          <h4>What happens next?</h4>
+          <p>The selected employee's account role will be updated to <strong>Manager</strong>. You will immediately be prompted to allocate direct reporting employees to their team.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeAssignPickerModal()" [disabled]="isPromoting">
+        Cancel
+      </button>
+      <button type="button" class="btn-confirm-promote" (click)="confirmPromoteEmployee()" [disabled]="isPromoting || !selectedEmployeeIdToPromote">
+        <i class="fas" [ngClass]="isPromoting ? 'fa-spinner fa-spin' : 'fa-crown'"></i>
+        {{ isPromoting ? 'Promoting...' : 'Promote & Configure Team' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Team Allocation Modal ==================== -->
+<app-manager-assignment-modal
+  [isOpen]="teamModalOpen"
+  [employee]="selectedManagerForTeam"
+  (close)="closeTeamModal()"
+  (updated)="loadManagers()">
+</app-manager-assignment-modal>
+
+<!-- ==================== Add New Manager Modal ==================== -->
+<app-employee-add-modal
+  *ngIf="addManagerModalOpen"
+  [defaultRole]="'manager'"
+  (closed)="closeAddManagerModal($event)">
+</app-employee-add-modal>
+
+<!-- ==================== Edit Manager Modal ==================== -->
+<app-employee-edit-modal
+  *ngIf="editManagerModalOpen && selectedManagerForEdit"
+  [employeeId]="selectedManagerForEdit.id"
+  (closed)="closeEditModal($event)">
+</app-employee-edit-modal>

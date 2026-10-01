@@ -312,7 +312,7 @@ export class PayrollComponent implements OnInit, OnDestroy {
 
     if (updateUrl) {
       const currentUrl = this.router.url.split('?')[0];
-      const base = currentUrl.includes('/master-dashboard') ? '/master-dashboard/payroll' : '/hr-dashboard/payroll';
+      const base = currentUrl.includes('/master-dashboard') ? '/master-dashboard/payroll' : (currentUrl.includes('/emp-dashboard') ? '/emp-dashboard/hr-payroll' : '/hr-dashboard/payroll');
       this.router.navigate([base, tab], { replaceUrl: true });
     }
 

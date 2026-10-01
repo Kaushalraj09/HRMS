@@ -28,9 +28,12 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     if existing_user:
         raise ValueError(f"An account with the email '{obj_in.official_email}' is already registered.")
 
-    # Support either "Employee" or "employee" naming in the roles table.
-    emp_role = db.query(Role).filter(func.lower(Role.name) == "employee").first()
-    if not emp_role:
+    # Determine target role (defaults to employee, supports manager)
+    target_role_name = (obj_in.role or "employee").lower().strip()
+    user_role = db.query(Role).filter(func.lower(Role.name) == target_role_name).first()
+    if not user_role:
+        user_role = db.query(Role).filter(func.lower(Role.name) == "employee").first()
+    if not user_role:
         raise ValueError("Employee role not found")
     
     first_name = (obj_in.first_name or "").strip()
@@ -46,15 +49,35 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
         email=official_email,
         password_hash=hash_password(initial_password),
         display_name=f"{first_name} {last_name}".strip(),
-        role_id=emp_role.id,
+        role_id=user_role.id,
         status="Active"
     )
     db.add(new_user)
     db.flush()
     
-    # 3. Create the Employee Profile
-    emp_code = f"{new_user.id:04d}"
+    # 3. Create the Employee Profile using atomic sequential AIVAN code or custom code
+    from app.services.employee_code_service import allocate_next_employee_code, record_code_history
+    from app.utils.employee_code import normalize_employee_code
+
+    custom_code = getattr(obj_in, "employee_code", None)
+    if custom_code and custom_code.strip() and custom_code.strip().upper() not in ["AUTO", "NEW"]:
+        emp_code = normalize_employee_code(custom_code)
+        existing = db.query(Employee).filter(Employee.employee_code == emp_code).first()
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Employee code '{emp_code}' is already in use.")
+        reason = "Initial custom assignment"
+    else:
+        emp_code = allocate_next_employee_code(db, "AIVAN")
+        reason = "Initial sequential assignment"
+
+    if getattr(obj_in, "reporting_manager_id", None):
+        mgr = db.query(Employee).filter(Employee.id == obj_in.reporting_manager_id, Employee.status != "Deleted").first()
+        if not mgr:
+            raise ValueError("Selected reporting manager does not exist or has been deleted.")
+
     dump_dict = obj_in.model_dump()
+    dump_dict.pop("role", None)
+    dump_dict.pop("employee_code", None)
     dump_dict["first_name"] = first_name
     dump_dict["last_name"] = last_name
     dump_dict["official_email"] = official_email
@@ -65,6 +88,15 @@ def create_employee(db: Session, obj_in: EmployeeCreate):
     )
     db.add(new_employee)
     db.flush()
+
+    record_code_history(
+        db=db,
+        employee_id=new_employee.id,
+        old_code=None,
+        new_code=emp_code,
+        reason=reason,
+        changed_by="SYSTEM",
+    )
 
     # Send a one-time password setup link; credentials never leave the server.
     from app.services.auth_service import generate_reset_token
@@ -101,6 +133,7 @@ def _matches_employee_filters(employee, search: str, department: str, employee_t
         searchable_values = [
             f"{employee.first_name or ''} {employee.last_name or ''}",
             employee.employee_code or "",
+            getattr(employee, "legacy_employee_code", None) or "",
             employee.department or "",
             employee.official_email or "",
         ]
@@ -134,6 +167,7 @@ def list_employees(
             Employee.user_id.label("user_id"),
             Employee.reporting_manager_id.label("reporting_manager_id"),
             Employee.employee_code.label("employee_code"),
+            Employee.legacy_employee_code.label("legacy_employee_code"),
             Employee.first_name.label("first_name"),
             Employee.last_name.label("last_name"),
             Employee.gender.label("gender"),
@@ -178,6 +212,7 @@ def list_employees(
                 Employee.last_name.ilike(like_value),
                 full_name.ilike(like_value),
                 Employee.employee_code.ilike(like_value),
+                Employee.legacy_employee_code.ilike(like_value),
                 Employee.department.ilike(like_value),
                 Employee.official_email.ilike(like_value),
             )
@@ -206,6 +241,7 @@ def list_employees(
     from app.models.master_data import Shift
     for r in paged_records:
         r_dict = dict(r._mapping)
+        r_dict["employee_id"] = r_dict["id"]
         if r_dict.get("shift_id"):
             s_obj = db.query(Shift).filter(Shift.id == r_dict["shift_id"]).first()
             if s_obj:
@@ -309,12 +345,17 @@ def update_employee(db: Session, employee_id: int, payload: EmployeeUpdate):
         return None
 
     updates = payload.model_dump(exclude_unset=True)
+    role_to_set = updates.pop("role", None)
     for field, value in updates.items():
         setattr(employee, field, value)
 
     # Keep the linked login account aligned with profile changes.
     user = db.query(User).filter(User.id == employee.user_id).first()
     if user:
+        if role_to_set:
+            role_rec = db.query(Role).filter(func.lower(Role.name) == role_to_set.lower().strip()).first()
+            if role_rec:
+                user.role_id = role_rec.id
         if "official_email" in updates and updates["official_email"]:
             user.email = updates["official_email"]
         if "status" in updates and updates["status"]:
@@ -348,5 +389,96 @@ def delete_employee(db: Session, employee_id: int) -> bool:
 
     from app.services.dashboard_service import invalidate_dashboard_cache
     invalidate_dashboard_cache(db)
-
     return True
+
+
+def assign_manager_role(db: Session, employee_id: int) -> Employee:
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise ValueError("Employee not found")
+
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if not user:
+        raise ValueError("User account not found for employee")
+
+    manager_role = db.query(Role).filter(func.lower(Role.name) == "manager").first()
+    if not manager_role:
+        manager_role = Role(name="Manager")
+        db.add(manager_role)
+        db.flush()
+
+    user.role_id = manager_role.id
+    db.commit()
+    db.refresh(employee)
+    return employee
+
+
+def revoke_manager_role(db: Session, employee_id: int) -> Employee:
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise ValueError("Employee not found")
+
+    user = db.query(User).filter(User.id == employee.user_id).first()
+    if not user:
+        raise ValueError("User account not found for employee")
+
+    emp_role = db.query(Role).filter(func.lower(Role.name) == "employee").first()
+    if not emp_role:
+        raise ValueError("Employee role not found")
+
+    user.role_id = emp_role.id
+    db.commit()
+    db.refresh(employee)
+    return employee
+
+
+def get_all_managers(db: Session) -> list[Employee]:
+    manager_role = db.query(Role).filter(func.lower(Role.name) == "manager").first()
+    if not manager_role:
+        return []
+    managers = (
+        db.query(Employee)
+        .join(User, Employee.user_id == User.id)
+        .filter(User.role_id == manager_role.id, Employee.status != "Deleted")
+        .order_by(Employee.first_name, Employee.last_name)
+        .all()
+    )
+    for m in managers:
+        m.direct_reports_count = (
+            db.query(Employee)
+            .filter(Employee.reporting_manager_id == m.id, Employee.status != "Deleted")
+            .count()
+        )
+    return managers
+
+
+def assign_team_to_manager(db: Session, manager_employee_id: int, employee_ids: list[int]) -> list[Employee]:
+    manager = db.query(Employee).filter(Employee.id == manager_employee_id).first()
+    if not manager:
+        raise ValueError("Manager employee not found")
+
+    # Unassign existing employees under this manager who are not in the new list
+    existing_team = db.query(Employee).filter(Employee.reporting_manager_id == manager_employee_id).all()
+    for emp in existing_team:
+        if emp.id not in employee_ids:
+            emp.reporting_manager_id = None
+
+    # Assign new employees under this manager (prevent self-reporting)
+    for emp_id in employee_ids:
+        if emp_id == manager_employee_id:
+            continue
+        emp = db.query(Employee).filter(Employee.id == emp_id).first()
+        if emp:
+            emp.reporting_manager_id = manager_employee_id
+
+    db.commit()
+    return db.query(Employee).filter(Employee.reporting_manager_id == manager_employee_id).all()
+
+
+def get_manager_team(db: Session, manager_employee_id: int) -> list[Employee]:
+    return (
+        db.query(Employee)
+        .filter(Employee.reporting_manager_id == manager_employee_id, Employee.status != "Deleted")
+        .order_by(Employee.first_name, Employee.last_name)
+        .all()
+    )

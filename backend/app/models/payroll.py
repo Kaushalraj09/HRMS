@@ -406,15 +406,24 @@ class Payslip(Base):
     is_published = Column(Boolean, default=True)
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Historical Profile Snapshots (Preserved even if employee profile or code changes later)
+    employee_code_at_generation = Column(String(50), nullable=True)
+    employee_name_at_generation = Column(String(200), nullable=True)
+    payroll_year = Column(Integer, nullable=True)
+
     record = relationship("PayrollRecord", back_populates="payslip")
     employee = relationship("Employee")
 
     @property
     def employee_code(self) -> str:
+        if self.employee_code_at_generation:
+            return self.employee_code_at_generation
         return self.employee.employee_code if self.employee else ""
 
     @property
     def employee_name(self) -> str:
+        if self.employee_name_at_generation:
+            return self.employee_name_at_generation
         if not self.employee:
             return ""
         return f"{self.employee.first_name} {self.employee.last_name}"

@@ -1,0 +1,57 @@
+<div class="status-chart-card">
+  <div class="card-header">
+    <h3 class="card-title">Team Attendance Status</h3>
+  </div>
+
+  <div class="chart-flex-body">
+    <div class="canvas-wrapper">
+      <canvas #chartCanvas></canvas>
+      <div class="donut-center-info">
+        <span class="center-percentage">{{ data.presentPct }}</span>
+        <span class="center-label">Present</span>
+      </div>
+    </div>
+
+    <div class="legend-list">
+      <div class="legend-item">
+        <div class="legend-left">
+          <span class="legend-dot dot-present"></span>
+          <span class="legend-name">Present</span>
+        </div>
+        <div class="legend-right">
+          <span class="legend-val">{{ data.present }} ({{ data.presentPct }})</span>
+        </div>
+      </div>
+
+      <div class="legend-item">
+        <div class="legend-left">
+          <span class="legend-dot dot-leave"></span>
+          <span class="legend-name">Leave</span>
+        </div>
+        <div class="legend-right">
+          <span class="legend-val">{{ data.leave }} ({{ data.leavePct }})</span>
+        </div>
+      </div>
+
+      <div class="legend-item">
+        <div class="legend-left">
+          <span class="legend-dot dot-absent"></span>
+          <span class="legend-name">Absent</span>
+        </div>
+        <div class="legend-right">
+          <span class="legend-val">{{ data.absent }} ({{ data.absentPct }})</span>
+        </div>
+      </div>
+
+      <div class="legend-item">
+        <div class="legend-left">
+          <span class="legend-dot dot-late"></span>
+          <span class="legend-name">Late</span>
+        </div>
+        <div class="legend-right">
+          <span class="legend-val">{{ data.late }} ({{ data.latePct }})</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

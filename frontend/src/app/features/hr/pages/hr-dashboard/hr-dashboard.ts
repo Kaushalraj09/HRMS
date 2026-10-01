@@ -151,6 +151,7 @@ export interface WorkforceDataPoint {
 export class HrDashboard implements OnInit {
   isHrSidebarOpen$!: import('rxjs').Observable<boolean>;
   isDashboardHome: boolean = true;
+  isEmbedded: boolean = false;
   userName = 'System Admin';
   currentDate = new Date();
   masterHolidays: Holiday[] = [];
@@ -555,12 +556,16 @@ export class HrDashboard implements OnInit {
     private readonly toastService: ToastService
   ) {
     this.isHrSidebarOpen$ = this.hrsidebarService.isHrSidebarOpen$;
-    this.isDashboardHome = this.router.url.split('?')[0] === '/hr-dashboard';
+    const currentUrl = this.router.url.split('?')[0];
+    this.isEmbedded = currentUrl.includes('/emp-dashboard');
+    this.isDashboardHome = ['/hr-dashboard', '/emp-dashboard/hr-overview', '/emp-dashboard/hr-dashboard'].includes(currentUrl);
     this.userName = this.authService.getDisplayName() || 'System Admin';
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        this.isDashboardHome = event.urlAfterRedirects.split('?')[0] === '/hr-dashboard';
+        const path = event.urlAfterRedirects.split('?')[0];
+        this.isEmbedded = path.includes('/emp-dashboard');
+        this.isDashboardHome = ['/hr-dashboard', '/emp-dashboard/hr-overview', '/emp-dashboard/hr-dashboard'].includes(path);
         this.cdr.detectChanges();
       }
     });

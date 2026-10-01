@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Observable, BehaviorSubject, combineLatest, of, timer } from 'rxjs';
@@ -21,6 +21,7 @@ import { exportTableToPdf } from '../../../../core/utils/pdf-export.util';
 })
 export class AttendanceComponent implements OnInit {
   filterForm!: FormGroup;
+  isExporting = false;
 
   departments = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Support'];
   statuses = ['Working', 'Present', 'Absent', 'Not Marked','Half Day','Time Off'];
@@ -66,7 +67,8 @@ export class AttendanceComponent implements OnInit {
   constructor(
     private fb: FormBuilder, 
     private attendanceService: AttendanceService,
-    private masterDataService: MasterDataService
+    private masterDataService: MasterDataService,
+    private cdr: ChangeDetectorRef
   ) {
     const now = new Date();
     const year = now.getFullYear();
@@ -236,7 +238,59 @@ export class AttendanceComponent implements OnInit {
     return record.id;
   }
 
-  exportPdf(data: AttendanceRecord[]) {
+  exportPdf(currentData?: AttendanceRecord[], totalCount?: number): void {
+    if (this.isExporting) return;
+
+    // If total records fit on the current page, export immediately without re-fetching
+    if (currentData && totalCount !== undefined && totalCount <= currentData.length) {
+      this.generateAttendancePdf(currentData, this.lastMetrics);
+      return;
+    }
+
+    // Otherwise, fetch all records matching the current filters
+    this.isExporting = true;
+    this.cdr.markForCheck();
+    const filters = this.filterForm.value;
+    const fetchLimit = Math.max(totalCount || 5000, 1000);
+
+    this.attendanceService
+      .getAttendanceLogs(
+        1,
+        fetchLimit,
+        filters.fromDate || '',
+        filters.toDate || '',
+        filters.employeeSearch || '',
+        filters.department || '',
+        filters.status || '',
+        filters.location || ''
+      )
+      .subscribe({
+        next: (res) => {
+          this.isExporting = false;
+          const sorted = [...res.data].sort((a, b) => {
+            const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+            if (dateDiff !== 0) return dateDiff;
+            if (a.punchIn && b.punchIn) return b.punchIn.localeCompare(a.punchIn);
+            if (b.punchIn) return 1;
+            if (a.punchIn) return -1;
+            return 0;
+          });
+          this.generateAttendancePdf(sorted, res.metrics || this.lastMetrics);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.isExporting = false;
+          console.error('Failed to export all attendance records:', err);
+          // Fallback to current page data if available
+          if (currentData && currentData.length > 0) {
+            this.generateAttendancePdf(currentData, this.lastMetrics);
+          }
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private generateAttendancePdf(data: AttendanceRecord[], metrics: any): void {
     if (!data || data.length === 0) return;
     const headers = ['Employee ID', 'Name', 'Department', 'Date', 'Punch In', 'Punch Out', 'Hours', 'Status', 'Location'];
     const rows = data.map(r => [
@@ -251,11 +305,11 @@ export class AttendanceComponent implements OnInit {
       r.workMode || '-'
     ]);
 
-    const metadata = this.lastMetrics ? [
-      { label: 'Working Now', value: this.lastMetrics.working },
-      { label: 'Present Today', value: this.lastMetrics.present },
-      { label: 'Absent', value: this.lastMetrics.absent },
-      { label: 'Not Marked', value: this.lastMetrics.notMarked }
+    const metadata = metrics ? [
+      { label: 'Working Now', value: metrics.working },
+      { label: 'Present Today', value: metrics.present },
+      { label: 'Absent', value: metrics.absent },
+      { label: 'Not Marked', value: metrics.notMarked }
     ] : [];
 
     exportTableToPdf({
@@ -268,7 +322,7 @@ export class AttendanceComponent implements OnInit {
     });
   }
 
-  exportCsv(data: AttendanceRecord[]) {
-    this.exportPdf(data);
+  exportCsv(data?: AttendanceRecord[], totalCount?: number): void {
+    this.exportPdf(data, totalCount);
   }
 }

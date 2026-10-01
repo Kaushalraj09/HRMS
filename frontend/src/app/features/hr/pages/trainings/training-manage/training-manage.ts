@@ -6,6 +6,7 @@ import { TrainingService } from '../../../../../core/services/training.service';
 import { Training, TrainingMaterial, TrainingAssignment } from '../../../../../core/models/training.model';
 import { MasterDataService } from '../../../../../core/services/master-data.service';
 import { EmployeeService } from '../../../../../core/services/employee.service';
+import { Employee } from '../../../../../core/models/employee.model';
 import { ToastService } from '../../../../../core/services/toast.service';
 
 import { CustomDatepickerComponent } from '../../../../../shared/components/custom-datepicker/custom-datepicker';
@@ -44,7 +45,7 @@ export class TrainingManageComponent implements OnInit {
   isAssigning = false;
 
   // Employee & Master data selection lists
-  allEmployees: any[] = [];
+  allEmployees: Employee[] = [];
   selectedEmployeeIds: number[] = [];
   employeeSearchTerm = '';
 
@@ -136,7 +137,7 @@ export class TrainingManageComponent implements OnInit {
   }
 
   getBasePrefix(): string {
-    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : (this.router.url.includes('/emp-dashboard') ? '/emp-dashboard' : '/hr-dashboard');
   }
 
   getAssessmentRoute(): string[] {
@@ -306,8 +307,24 @@ export class TrainingManageComponent implements OnInit {
     this.onDrop(event);
   }
 
+  readonly ALLOWED_EXTENSIONS = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+    'mp4', 'webm', 'mov',
+    'mp3', 'wav', 'm4a', 'ogg',
+    'jpg', 'jpeg', 'png', 'webp', 'svg'
+  ];
+
   private addFiles(files: File[]): void {
     for (const f of files) {
+      const ext = f.name?.split('.').pop()?.toLowerCase() || '';
+      if (!this.ALLOWED_EXTENSIONS.includes(ext)) {
+        this.showToast(`"${f.name}" format (.${ext}) is not supported. Supported: PDF, Office, Videos, Audio, Images.`, 'error');
+        continue;
+      }
+      if (f.size > 100 * 1024 * 1024) {
+        this.showToast(`"${f.name}" (${(f.size / (1024 * 1024)).toFixed(1)} MB) exceeds maximum 100 MB limit.`, 'error');
+        continue;
+      }
       if (!this.selectedFiles.some(existing => existing.name === f.name && existing.size === f.size)) {
         this.selectedFiles.push(f);
       }
@@ -391,7 +408,13 @@ export class TrainingManageComponent implements OnInit {
         },
         error: (err) => {
           this.isUploading = false;
-          this.showToast('Upload failed: ' + (err.error?.detail || err.message), 'error');
+          let detail = err.error?.detail;
+          if (err.status === 413) {
+            detail = 'File size exceeds server upload limit (maximum 100 MB per file).';
+          } else if (!detail) {
+            detail = err.status === 0 ? 'Network or connection timeout.' : (err.message || 'Upload failed.');
+          }
+          this.showToast('Upload failed: ' + detail, 'error');
           this.cdr.detectChanges();
         }
       });
@@ -422,17 +445,20 @@ export class TrainingManageComponent implements OnInit {
 
   // ─── Assignment Methods ─────────────────────────────────────────────────
 
-  toggleEmployeeSelection(empId: number): void {
-    const idx = this.selectedEmployeeIds.indexOf(empId);
+  toggleEmployeeSelection(empId: number | string): void {
+    const numericId = Number(empId);
+    if (!numericId) return;
+    const idx = this.selectedEmployeeIds.indexOf(numericId);
     if (idx > -1) {
       this.selectedEmployeeIds.splice(idx, 1);
     } else {
-      this.selectedEmployeeIds.push(empId);
+      this.selectedEmployeeIds.push(numericId);
     }
   }
 
-  isEmployeeSelected(empId: number): boolean {
-    return this.selectedEmployeeIds.includes(empId);
+  isEmployeeSelected(empId: number | string): boolean {
+    const numericId = Number(empId);
+    return this.selectedEmployeeIds.includes(numericId);
   }
 
   toggleDeptSelection(deptName: string): void {
@@ -448,15 +474,15 @@ export class TrainingManageComponent implements OnInit {
     return this.selectedDepartmentNames.includes(deptName);
   }
 
-  get filteredEmployees(): any[] {
+  get filteredEmployees(): Employee[] {
     if (!this.employeeSearchTerm) return this.allEmployees;
-    const s = this.employeeSearchTerm.toLowerCase();
-    return this.allEmployees.filter(
-      (e) =>
-        (e.first_name + ' ' + e.last_name).toLowerCase().includes(s) ||
-        (e.employee_code || '').toLowerCase().includes(s) ||
-        (e.department || '').toLowerCase().includes(s)
-    );
+    const s = this.employeeSearchTerm.trim().toLowerCase();
+    return this.allEmployees.filter((e) => {
+      const fullName = (e.name || `${e.firstName || ''} ${e.lastName || ''}`).toLowerCase();
+      const code = (e.employeeCode || e.legacyEmployeeCode || '').toLowerCase();
+      const dept = (e.department || '').toLowerCase();
+      return fullName.includes(s) || code.includes(s) || dept.includes(s);
+    });
   }
 
   selectAllDepartments(): void {
@@ -468,7 +494,7 @@ export class TrainingManageComponent implements OnInit {
   }
 
   selectAllEmployees(): void {
-    const currentFiltered = this.filteredEmployees.map(e => e.id);
+    const currentFiltered = this.filteredEmployees.map(e => Number(e.id)).filter(id => !isNaN(id));
     this.selectedEmployeeIds = Array.from(new Set([...this.selectedEmployeeIds, ...currentFiltered]));
   }
 

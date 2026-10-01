@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { EmployeeService } from '../../../../../../core/services/employee.service';
@@ -24,6 +24,7 @@ function pastDateValidator(control: AbstractControl): ValidationErrors | null {
   styleUrls: ['./employee-add-modal.css']
 })
 export class EmployeeAddModalComponent implements OnInit {
+  @Input() defaultRole: 'employee' | 'manager' = 'employee';
   @Output() closed = new EventEmitter<boolean>();
   
   form: FormGroup;
@@ -45,8 +46,13 @@ export class EmployeeAddModalComponent implements OnInit {
   departmentOptions = [{label: 'Engineering', value: 'Engineering'}, {label: 'Human Resources', value: 'Human Resources'}, {label: 'Finance', value: 'Finance'}];
   designationOptions = [{label: 'Software Engineer', value: 'Software Engineer'}, {label: 'QA Engineer', value: 'QA Engineer'}];
   locationOptions = [{label: 'Main Office', value: 'Main Office'}, {label: 'Remote', value: 'Remote'}];
-  roleOptions = [{label: 'Employee', value: 'employee'}];
-  managerOptions: Array<{ label: string; value: string | null }> = [{ label: 'No reporting manager', value: null }];
+  roleOptions = [
+    { label: 'Employee', value: 'employee' },
+    { label: 'Manager', value: 'manager' },
+    { label: 'HR', value: 'hr' }
+  ];
+  managerOptions: Array<{ label: string; value: string | null }> = [];
+  nextEmployeeCode: string = 'AIVAN001';
 
   constructor(
     private fb: FormBuilder,
@@ -75,7 +81,9 @@ export class EmployeeAddModalComponent implements OnInit {
         shiftType: [''],
         shiftId: [null],
         doj: [''],
-        reportingManagerId: [null]
+        reportingManagerId: [null, Validators.required],
+        employeeCode: [''],
+        legacyEmployeeCode: ['']
       }),
       contactInfo: this.fb.group({
         officialEmail: ['', [Validators.required, Validators.email]],
@@ -124,21 +132,21 @@ export class EmployeeAddModalComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.defaultRole) {
+      this.form.get('accountAccess.role')?.setValue(this.defaultRole);
+    }
     // Load reporting managers
     this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
       .subscribe({
         next: (result) => {
-          this.managerOptions = [
-            { label: 'No reporting manager', value: null },
-            ...result.data.map(employee => ({
-              label: `${employee.name} (${employee.employeeCode})`,
-              value: employee.id
-            }))
-          ];
+          this.managerOptions = (result.data || []).map(employee => ({
+            label: `${employee.employeeCode} - ${employee.name}`,
+            value: employee.id
+          }));
           this.cdr.markForCheck();
         },
         error: () => {
-          this.managerOptions = [{ label: 'No reporting manager', value: null }];
+          this.managerOptions = [];
           this.cdr.markForCheck();
         }
       });
@@ -165,6 +173,21 @@ export class EmployeeAddModalComponent implements OnInit {
       },
       error: (err) => console.warn('Failed to load master data for employee add modal:', err)
     });
+
+    // Fetch next sequential employee code preview and populate
+    this.employeeService.getNextEmployeeCode('AIVAN').subscribe({
+      next: (res) => {
+        if (res && res.nextCode) {
+          this.nextEmployeeCode = res.nextCode;
+          const currentVal = this.form.get('employmentInfo.employeeCode')?.value;
+          if (!currentVal) {
+            this.form.get('employmentInfo.employeeCode')?.setValue(res.nextCode);
+          }
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err) => console.warn('Failed to fetch next employee code preview:', err)
+    });
   }
 
   isInvalid(group: string, field: string): boolean {
@@ -184,9 +207,9 @@ export class EmployeeAddModalComponent implements OnInit {
 
     const payload = this.form.getRawValue() as EmployeePayload;
     
-    // Default values matching backend requirements if not strictly provided
-    if (!payload.employmentInfo.employeeCode) {
-      payload.employmentInfo.employeeCode = 'NEW';
+    // If employee code is empty, remove it so backend auto-generates sequential code
+    if (!payload.employmentInfo.employeeCode || !payload.employmentInfo.employeeCode.trim()) {
+      delete (payload.employmentInfo as any).employeeCode;
     }
 
     this.employeeService.createEmployee(payload)

@@ -1,0 +1,96 @@
+<aside class="sidebar bg-dark-theme" [class.collapsed]="!(isSidebarOpen$ | async)">
+  <!-- Sidebar Top Brand Header -->
+  <div class="sidebar-brand-header">
+    <div class="brand-logo-wrap">
+      <img src="assets/Logo.png" alt="AIVAN 360 SOLUTIONS" class="sidebar-brand-logo" />
+    </div>
+    <div class="brand-title-wrap">
+      <span class="brand-company-name">AIVAN 360</span>
+      <span class="brand-sub">SOLUTIONS</span>
+    </div>
+  </div>
+
+  <div class="sidebar-inner menu-container scroll-enabled">
+    <ng-container *ngFor="let group of menuConfig">
+      <div class="menu-group">
+        <h5 class="group-title" *ngIf="group.groupName">
+          <span class="title-text">{{ group.groupName }}</span>
+          <span class="collapsed-divider"></span>
+        </h5>
+        
+        <ul class="menu-list">
+          <li *ngFor="let item of group.items" class="menu-item-wrapper">
+            
+            <!-- Item without children -->
+            <a *ngIf="!item.children && !item.isLogout" 
+               [routerLink]="item.route" 
+               (click)="handleItemClick(item)"
+               routerLinkActive="active" 
+               [routerLinkActiveOptions]="{exact: item.route === '/manager-dashboard' || item.route === '/emp-dashboard'}"
+               class="menu-link hover-effect"> 
+              <i [class]="item.icon" class="menu-icon"></i>
+              <span class="menu-text">{{ item.label }}</span>
+            </a>
+
+            <!-- Logout Item -->
+            <a *ngIf="item.isLogout" 
+               (click)="handleItemClick(item)"
+               style="cursor: pointer;"
+               class="menu-link hover-effect"> 
+              <i [class]="item.icon" class="menu-icon"></i>
+              <span class="menu-text">{{ item.label }}</span>
+            </a>
+            
+            <!-- Item with children -->
+            <ng-container *ngIf="item.children">
+              <a (click)="handleItemClick(item)" 
+                 class="menu-link has-dropdown hover-effect" 
+                 [class.active-parent]="isParentActive(item)"
+                 [class.expanded]="item.expanded"
+                 href="javascript:void(0)">
+                <i [class]="item.icon" class="menu-icon"></i>
+                <span class="menu-text">{{ item.label }}</span>
+                <span class="notification-dot" *ngIf="isParentActive(item) && !(isSidebarOpen$ | async)"></span>
+                <span class="menu-arrow">
+                  <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>
+                </span>
+              </a>
+              
+              <!-- Sub Menu -->
+              <ul class="sub-menu" [class.open]="item.expanded" [style.maxHeight]="item.expanded ? (item.children.length * 48 + 30) + 'px' : '0'">
+                <li *ngFor="let child of item.children" class="sub-menu-item">
+                  <a [routerLink]="child.route" 
+                     routerLinkActive="active" 
+                     [routerLinkActiveOptions]="{exact: true}"
+                     class="sub-menu-link">
+                    <i *ngIf="child.icon" [class]="child.icon" class="sub-menu-icon"></i>
+                    <span class="sub-menu-text">{{ child.label }}</span>
+                  </a>
+                </li>
+              </ul>
+            </ng-container>
+          </li>
+        </ul>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Sidebar Bottom Card -->
+  <div class="sidebar-bottom-card" *ngIf="(isSidebarOpen$ | async)">
+    <div class="bottom-card-inner">
+      <span class="bottom-brand-badge">360 HR+</span>
+      <p class="bottom-brand-sub">Complete HR Management</p>
+    </div>
+  </div>
+</aside>
+
+<div class="logout-popup" *ngIf="isLogoutPopupOpen">
+  <div class="popup-box">
+    <p>Are you sure you want to logout?</p>
+
+    <div class="actions">
+      <button class="yes-btn" (click)="confirmLogout()">Yes</button>
+      <button class="no-btn" (click)="closeLogoutPopup()">No</button>
+    </div>
+  </div>
+</div>

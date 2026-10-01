@@ -114,9 +114,17 @@ class LeaveTypeBase(BaseModel):
     counts_as_leave: bool = True
     attendance_required: bool = False
     remote_punch_allowed: bool = False
+    is_paid: bool = True
+    is_system_defined: bool = False
+    is_editable: bool = True
+    is_deletable: bool = True
+    annual_entitlement_days: float = 0.0
     is_active: bool = True
 
 class LeaveTypeCreate(LeaveTypeBase):
+    pass
+
+class LeaveTypeUpdate(LeaveTypeBase):
     pass
 
 class LeaveTypeResponse(LeaveTypeBase):

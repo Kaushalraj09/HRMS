@@ -77,33 +77,18 @@ def authenticate_user(db: Session, request: LoginRequest):
                 user_designation = "System Admin"
             elif role_name == "hr":
                 user_designation = "HR Manager"
+            elif role_name == "manager":
+                user_designation = "Team Manager"
             else:
                 user_designation = "Software Engineer"
 
-        # Handle HR role selection step
-        if role_name == "hr" and not request.activeDashboard:
-            return {
-                "requiresDashboardSelection": True,
-                "availableDashboards": ["HR", "EMPLOYEE"],
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "displayName": user.display_name,
-                    "role": user.role.name if user.role else "Employee",
-                    "designation": user_designation,
-                    "status": user.status,
-                    "accessibleDashboards": ["HR", "EMPLOYEE"],
-                    "activeDashboard": None,
-                    "profileImage": user.profile_image
-                }
-            }
-
-        # Resolve active dashboard
+        # Resolve active dashboard (Employees, Managers, and HR land on EMPLOYEE dashboard first)
         if role_name == "admin":
             active_dashboard = "MASTER"
         elif role_name == "hr":
-            # HR selected active dashboard (should be HR or EMPLOYEE)
-            active_dashboard = request.activeDashboard if request.activeDashboard in ["HR", "EMPLOYEE"] else "HR"
+            active_dashboard = request.activeDashboard if request.activeDashboard in ["HR", "EMPLOYEE"] else "EMPLOYEE"
+        elif role_name == "manager":
+            active_dashboard = request.activeDashboard if request.activeDashboard in ["MANAGER", "EMPLOYEE"] else "EMPLOYEE"
         else:
             active_dashboard = "EMPLOYEE"
 

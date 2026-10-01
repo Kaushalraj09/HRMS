@@ -1,0 +1,20 @@
+<div class="alert-bar">
+  <div class="alert-left">
+    <div class="alert-icon-box">
+      <i class="fas fa-bullhorn"></i>
+    </div>
+    <div class="alert-content">
+      <span class="alert-important">Important</span>
+      <span class="alert-pipe">|</span>
+      <span class="alert-clause">{{ pendingLeaves }} leave requests are awaiting your approval.</span>
+      <span class="alert-pipe">|</span>
+      <span class="alert-clause">{{ overdueTasks }} tasks are overdue.</span>
+      <span class="alert-pipe">|</span>
+      <span class="alert-clause">Your team's training compliance is {{ compliancePct }}.</span>
+    </div>
+  </div>
+
+  <button type="button" class="btn-view-details" (click)="onViewDetails()">
+    View Details <i class="fas fa-arrow-right btn-arrow"></i>
+  </button>
+</div>

@@ -1,0 +1,195 @@
+<div class="manager-team-page">
+  <!-- Header Card -->
+  <div class="header-card">
+    <div class="header-title-box">
+      <h1 class="page-title">My Team</h1>
+      <p class="page-subtitle">Direct reports and team members reporting to you</p>
+    </div>
+    <div class="header-actions">
+      <span class="team-count-badge">
+        <i class="fas fa-users"></i> {{ totalItems }} Members
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="filter-toolbar">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search search-icon"></i>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search team member by name, code, designation..."
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()" />
+    </div>
+    <button class="btn-search" (click)="onSearch()">
+      Search
+    </button>
+  </div>
+
+  <!-- Team Table Card -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="team-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Email</th>
+            <th>Contact</th>
+            <th>Status</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let member of teamMembers">
+            <td>
+              <div class="emp-identity-cell">
+                <div class="emp-avatar">
+                  {{ (member.firstName || 'E').charAt(0).toUpperCase() }}
+                </div>
+                <div class="emp-names">
+                  <span class="full-name">{{ member.firstName }} {{ member.lastName }}</span>
+                  <span class="emp-id-tag">{{ member.employeeCode }}</span>
+                </div>
+              </div>
+            </td>
+            <td>{{ member.department || '—' }}</td>
+            <td>{{ member.designation || '—' }}</td>
+            <td>
+              <a [href]="'mailto:' + (member.officialEmail || member.email)" class="email-link">
+                {{ member.officialEmail || member.email }}
+              </a>
+            </td>
+            <td>{{ member.mobile || member.phone || '—' }}</td>
+            <td>
+              <span class="status-pill" [ngClass]="(member.status || 'Active').toLowerCase()">
+                {{ member.status || 'Active' }}
+              </span>
+            </td>
+            <td class="text-right">
+              <button class="btn-view-profile" (click)="viewDetails(member)" title="View Member Profile">
+                <i class="far fa-eye"></i> View
+              </button>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && teamMembers.length === 0">
+            <td colspan="7" class="empty-table-state">
+              <i class="fas fa-user-friends empty-icon"></i>
+              <h3>No team members found</h3>
+              <p>You currently do not have any employees assigned to your direct reporting line, or no records match your search.</p>
+            </td>
+          </tr>
+
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i> Loading team members...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-footer" *ngIf="totalPages > 1">
+      <span class="pagination-info">
+        Showing Page {{ currentPage }} of {{ totalPages }} ({{ totalItems }} total)
+      </span>
+      <div class="pagination-btns">
+        <button
+          class="btn-page-nav"
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button
+          class="btn-page-nav"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal-backdrop" *ngIf="isDetailModalOpen" (click)="closeDetailModal()">
+  <div class="modal-dialog-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-info">
+        <div class="modal-emp-avatar">
+          {{ (selectedEmployee?.firstName || 'E').charAt(0).toUpperCase() }}
+        </div>
+        <div>
+          <h2 class="modal-title">{{ selectedEmployee?.firstName }} {{ selectedEmployee?.lastName }}</h2>
+          <span class="modal-sub">{{ selectedEmployee?.employeeCode }} · {{ selectedEmployee?.designation || 'Team Member' }}</span>
+        </div>
+      </div>
+      <button class="btn-close" (click)="closeDetailModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedEmployee">
+      <div class="details-grid">
+        <div class="detail-section">
+          <h3 class="section-title"><i class="far fa-id-badge"></i> Employment Information</h3>
+          <div class="detail-item">
+            <span class="d-label">Department</span>
+            <span class="d-val">{{ selectedEmployee.department || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Designation</span>
+            <span class="d-val">{{ selectedEmployee.designation || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Employment Type</span>
+            <span class="d-val">{{ selectedEmployee.employeeType || selectedEmployee.employmentType || 'Full-time' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Joining Date</span>
+            <span class="d-val">{{ (selectedEmployee.doj || selectedEmployee.joiningDate) ? ((selectedEmployee.doj || selectedEmployee.joiningDate) | date:'longDate') : '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Work Shift</span>
+            <span class="d-val">{{ selectedEmployee.shiftType || 'General Shift' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3 class="section-title"><i class="far fa-address-book"></i> Contact Details</h3>
+          <div class="detail-item">
+            <span class="d-label">Work Email</span>
+            <span class="d-val">{{ selectedEmployee.officialEmail || selectedEmployee.email }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Contact Number</span>
+            <span class="d-val">{{ selectedEmployee.mobile || selectedEmployee.phone || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Work Location</span>
+            <span class="d-val">{{ selectedEmployee.workLocation || 'Headquarters' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="d-label">Account Status</span>
+            <span class="d-val">
+              <span class="status-pill active">{{ selectedEmployee.status || 'Active' }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-close-modal-footer" (click)="closeDetailModal()">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

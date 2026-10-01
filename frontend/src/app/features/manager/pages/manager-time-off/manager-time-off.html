@@ -1,0 +1,305 @@
+<div class="manager-timeoff-page">
+  <!-- Header Card -->
+  <div class="header-card">
+    <div class="header-title-box">
+      <h1 class="page-title">Leave Approvals</h1>
+      <p class="page-subtitle">Review, endorse, and manage leave requests submitted by your team members</p>
+    </div>
+    <div class="header-actions">
+      <span class="pending-pill" *ngIf="pendingTotal > 0">
+        <i class="fas fa-hourglass-half"></i> {{ pendingTotal }} Pending Action
+      </span>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tab-nav">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'pending'"
+      (click)="switchTab('pending')">
+      <i class="fas fa-inbox"></i> Pending Review
+      <span class="tab-badge" *ngIf="pendingTotal > 0">{{ pendingTotal }}</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'history'"
+      (click)="switchTab('history')">
+      <i class="fas fa-history"></i> Decision History
+    </button>
+  </div>
+
+  <!-- TAB 1: PENDING REVIEW TABLE -->
+  <div class="table-card" *ngIf="activeTab === 'pending'">
+    <div class="table-responsive">
+      <table class="timeoff-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Leave Type</th>
+            <th>Duration / Dates</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Workflow Stage</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let req of pendingRequests">
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar">
+                  {{ ((req.employee_name || req.employeeName || 'E').charAt(0)).toUpperCase() }}
+                </div>
+                <div class="emp-info">
+                  <span class="emp-name">{{ req.employee_name || req.employeeName }}</span>
+                  <span class="emp-code">{{ req.employee_code || req.employeeCode || ('EMP#' + req.employee_id) }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="type-pill">{{ req.leave_type || req.leaveTypeName || 'Leave' }}</span>
+            </td>
+            <td>
+              <div class="dates-cell">
+                <i class="far fa-calendar-alt date-icon"></i>
+                <span>{{ (req.start_date || req.startDate || req.date) | date:'mediumDate' }} — {{ (req.end_date || req.endDate || req.date) | date:'mediumDate' }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="days-tag">{{ req.total_days || req.daysCount || 1 }} {{ (req.total_days || req.daysCount || 1) === 1 ? 'day' : 'days' }}</span>
+            </td>
+            <td>
+              <span class="reason-text" [title]="req.reason || ''">
+                {{ req.reason || '—' }}
+              </span>
+            </td>
+            <td>
+              <span class="stage-pill stage-manager">
+                Pending Manager Approval
+              </span>
+            </td>
+            <td class="text-right">
+              <div class="action-buttons-row">
+                <button class="btn-reject" (click)="openDecisionModal(req, 'reject')">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="btn-approve" (click)="openDecisionModal(req, 'approve')">
+                  <i class="fas fa-check"></i> Approve
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && pendingRequests.length === 0">
+            <td colspan="7" class="empty-state">
+              <i class="fas fa-check-circle empty-icon check"></i>
+              <h3>All Caught Up!</h3>
+              <p>There are no leave requests currently pending your review.</p>
+            </td>
+          </tr>
+
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i> Loading pending requests...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-footer" *ngIf="pendingTotalPages > 1">
+      <span class="pagination-info">
+        Page {{ pendingPage }} of {{ pendingTotalPages }} ({{ pendingTotal }} total)
+      </span>
+      <div class="pagination-btns">
+        <button
+          class="btn-page-nav"
+          [disabled]="pendingPage === 1"
+          (click)="goToPendingPage(pendingPage - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button
+          class="btn-page-nav"
+          [disabled]="pendingPage === pendingTotalPages"
+          (click)="goToPendingPage(pendingPage + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PROCESSED / DECISION HISTORY TABLE -->
+  <div class="table-card" *ngIf="activeTab === 'history'">
+    <div class="table-responsive">
+      <table class="timeoff-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Leave Type</th>
+            <th>Duration / Dates</th>
+            <th>Days</th>
+            <th>Manager Review</th>
+            <th>Final Stage / Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let req of historyRequests">
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar">
+                  {{ ((req.employee_name || req.employeeName || 'E').charAt(0)).toUpperCase() }}
+                </div>
+                <div class="emp-info">
+                  <span class="emp-name">{{ req.employee_name || req.employeeName }}</span>
+                  <span class="emp-code">{{ req.employee_code || req.employeeCode || ('EMP#' + req.employee_id) }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="type-pill">{{ req.leave_type || req.leaveTypeName || 'Leave' }}</span>
+            </td>
+            <td>
+              <div class="dates-cell">
+                <i class="far fa-calendar-alt date-icon"></i>
+                <span>{{ (req.start_date || req.startDate || req.date) | date:'mediumDate' }} — {{ (req.end_date || req.endDate || req.date) | date:'mediumDate' }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="days-tag">{{ req.total_days || req.daysCount || 1 }} {{ (req.total_days || req.daysCount || 1) === 1 ? 'day' : 'days' }}</span>
+            </td>
+            <td>
+              <div class="decision-meta-box">
+                <span class="decision-tag" [ngClass]="(req.manager_decision || req.managerDecision) === 'Approved' ? 'tag-approved' : 'tag-rejected'">
+                  {{ req.manager_decision || req.managerDecision || 'Endorsed' }}
+                </span>
+                <span class="decision-comment" *ngIf="req.manager_comment || req.managerComment">
+                  "{{ req.manager_comment || req.managerComment }}"
+                </span>
+                <span class="decision-time" *ngIf="req.manager_reviewed_at || req.managerReviewedAt">
+                  {{ (req.manager_reviewed_at || req.managerReviewedAt) | date:'mediumDate' }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="stage-pill" [ngClass]="'stage-' + (req.status || 'pending').toLowerCase()">
+                {{ req.status }}
+              </span>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && historyRequests.length === 0">
+            <td colspan="6" class="empty-state">
+              <i class="fas fa-folder-open empty-icon"></i>
+              <h3>No History Records</h3>
+              <p>No processed leave requests found in the history archive.</p>
+            </td>
+          </tr>
+
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="6" class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i> Loading decision history...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-footer" *ngIf="historyTotalPages > 1">
+      <span class="pagination-info">
+        Page {{ historyPage }} of {{ historyTotalPages }} ({{ historyTotal }} total)
+      </span>
+      <div class="pagination-btns">
+        <button
+          class="btn-page-nav"
+          [disabled]="historyPage === 1"
+          (click)="goToHistoryPage(historyPage - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button
+          class="btn-page-nav"
+          [disabled]="historyPage === historyTotalPages"
+          (click)="goToHistoryPage(historyPage + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manager Decision Modal -->
+<div class="modal-backdrop" *ngIf="isDecisionModalOpen" (click)="closeDecisionModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header" [class.approve-theme]="decisionType === 'approve'" [class.reject-theme]="decisionType === 'reject'">
+      <div class="modal-icon-badge">
+        <i class="fas" [ngClass]="decisionType === 'approve' ? 'fa-check-circle' : 'fa-times-circle'"></i>
+      </div>
+      <div>
+        <h3 class="modal-title">
+          {{ decisionType === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request' }}
+        </h3>
+        <p class="modal-desc">
+          {{ decisionType === 'approve' ? 'Request will be approved and sent to HR for final sign-off.' : 'Request will be formally rejected.' }}
+        </p>
+      </div>
+      <button class="btn-close-modal" (click)="closeDecisionModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedRequest">
+      <div class="request-summary-box">
+        <div class="summary-row">
+          <span class="summary-label">Employee:</span>
+          <span class="summary-val">{{ selectedRequest.employee_name || selectedRequest.employeeName }} ({{ selectedRequest.employee_code || selectedRequest.employeeCode || ('EMP#' + selectedRequest.employee_id) }})</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Leave Type:</span>
+          <span class="summary-val">{{ selectedRequest.leave_type || selectedRequest.leaveTypeName || 'Leave' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Duration:</span>
+          <span class="summary-val">{{ (selectedRequest.start_date || selectedRequest.startDate || selectedRequest.date) | date:'mediumDate' }} to {{ (selectedRequest.end_date || selectedRequest.endDate || selectedRequest.date) | date:'mediumDate' }} ({{ selectedRequest.total_days || selectedRequest.daysCount || 1 }} days)</span>
+        </div>
+        <div class="summary-row" *ngIf="selectedRequest.reason">
+          <span class="summary-label">Reason:</span>
+          <span class="summary-val note-val">{{ selectedRequest.reason }}</span>
+        </div>
+      </div>
+
+      <div class="comment-field">
+        <label class="input-label">
+          {{ decisionType === 'reject' ? 'Rejection Reason (Required)' : 'Manager Comment / Note (Optional)' }}
+        </label>
+        <textarea
+          class="form-control-textarea"
+          rows="3"
+          [(ngModel)]="decisionComment"
+          placeholder="{{ decisionType === 'reject' ? 'Please provide a clear reason for rejection...' : 'Add any remarks or context for HR review...' }}"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeDecisionModal()" [disabled]="isProcessing">
+        Cancel
+      </button>
+      <button
+        class="btn-primary"
+        [class.btn-danger]="decisionType === 'reject'"
+        (click)="submitDecision()"
+        [disabled]="isProcessing || (decisionType === 'reject' && !decisionComment.trim())">
+        <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+        <span *ngIf="!isProcessing">
+          <i class="fas" [ngClass]="decisionType === 'approve' ? 'fa-check' : 'fa-times'"></i>
+          {{ decisionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection' }}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -18,24 +18,80 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: R
 
   // Protect HR Dashboard
   if (url.includes('/hr-dashboard')) {
-    if (currentUser.role === 'hr') {
-      if (currentUser.activeDashboard === 'HR') {
-        return true;
+    const isHr = currentUser.role === 'hr' ||
+                 currentUser.role === 'admin' ||
+                 (currentUser.accessibleDashboards && currentUser.accessibleDashboards.includes('HR'));
+    if (isHr) {
+      if (currentUser.activeDashboard !== 'HR') {
+        currentUser.activeDashboard = 'HR';
+        authService.saveSession({ me: currentUser });
       }
-      return router.createUrlTree(['/emp-dashboard']);
-    }
-  }
-
-  // Protect Employee Dashboard
-  if (url.includes('/emp-dashboard')) {
-    const isEmployeeMode = currentUser.role === 'employee' || currentUser.role === 'admin' || currentUser.activeDashboard === 'EMPLOYEE';
-    if (isEmployeeMode) {
       return true;
     }
     return router.createUrlTree([authService.getLandingRoute(currentUser.role)]);
   }
 
-  if (!allowedRoles.length || allowedRoles.includes(currentUser.role)) {
+  // Protect Manager Dashboard
+  if (url.includes('/manager-dashboard')) {
+    const isManager = currentUser.role === 'manager' ||
+                      currentUser.role === 'admin' ||
+                      currentUser.isManager === true ||
+                      (currentUser.accessibleDashboards && currentUser.accessibleDashboards.includes('MANAGER'));
+    if (isManager) {
+      if (currentUser.activeDashboard !== 'MANAGER') {
+        currentUser.activeDashboard = 'MANAGER';
+        authService.saveSession({ me: currentUser });
+      }
+      return true;
+    }
+    return router.createUrlTree([authService.getLandingRoute(currentUser.role)]);
+  }
+
+  // Protect Employee Dashboard
+  if (url.includes('/emp-dashboard')) {
+    const isEmployeeMode = currentUser.role === 'employee' ||
+                           currentUser.role === 'admin' ||
+                           currentUser.role === 'manager' ||
+                           currentUser.role === 'hr' ||
+                           currentUser.isManager === true ||
+                           currentUser.activeDashboard === 'EMPLOYEE' ||
+                           (currentUser.accessibleDashboards && currentUser.accessibleDashboards.includes('EMPLOYEE'));
+    if (!isEmployeeMode) {
+      return router.createUrlTree([authService.getLandingRoute(currentUser.role)]);
+    }
+
+    // Verify manager privileges for manager-specific routes
+    const isManagerRoute = url.includes('/emp-dashboard/manager-dashboard') ||
+                           url.includes('/emp-dashboard/team') ||
+                           url.includes('/emp-dashboard/team-attendance') ||
+                           url.includes('/emp-dashboard/leave-approvals');
+    if (isManagerRoute) {
+      const isManager = currentUser.role === 'manager' ||
+                        currentUser.role === 'admin' ||
+                        currentUser.isManager === true ||
+                        (currentUser.accessibleDashboards && currentUser.accessibleDashboards.includes('MANAGER'));
+      if (!isManager) {
+        return router.createUrlTree(['/emp-dashboard']);
+      }
+    }
+
+    // Verify HR privileges for hr-specific routes inside emp-dashboard
+    if (url.includes('/emp-dashboard/hr-')) {
+      const isHr = currentUser.role === 'hr' ||
+                   currentUser.role === 'admin' ||
+                   (currentUser.accessibleDashboards && currentUser.accessibleDashboards.includes('HR'));
+      if (!isHr) {
+        return router.createUrlTree(['/emp-dashboard']);
+      }
+    }
+
+    return true;
+  }
+
+  const isAllowed = !allowedRoles.length ||
+                    allowedRoles.includes(currentUser.role) ||
+                    (currentUser.isManager && allowedRoles.includes('manager'));
+  if (isAllowed) {
     return true;
   }
 

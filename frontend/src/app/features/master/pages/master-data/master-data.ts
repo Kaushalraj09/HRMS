@@ -237,6 +237,10 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(item: any): void {
+    if (this.activeTab === 'leaves' && (item.is_editable === false || (item.code || '').toUpperCase() === 'UL')) {
+      this.showToast('Protected Leave Type', true, "System-defined leave type 'Unpaid Leave' entitlement is fixed at 12 days and cannot be modified.");
+      return;
+    }
     this.modalMode = 'edit';
     this.selectedItemId = item.id;
     this.formModel = { ...item };
@@ -422,6 +426,10 @@ export class MasterDataComponent implements OnInit, OnDestroy {
   }
 
   openDeleteModal(item: any): void {
+    if (this.activeTab === 'leaves' && (item.is_system_defined || item.is_deletable === false || ['UL', 'PL'].includes((item.code || '').toUpperCase()))) {
+      this.showToast('Protected Leave Type', true, "System-defined leave types cannot be deleted.");
+      return;
+    }
     this.itemToDelete = item;
     this.deleteModalOpen = true;
     this.cdr.detectChanges();

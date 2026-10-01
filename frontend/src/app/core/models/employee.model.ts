@@ -6,6 +6,8 @@ export interface Employee {
   userId: string;
   reportingManagerId?: string | null;
   reportingManagerName?: string | null;
+  userRole?: string;
+  isManager?: boolean;
   employeeCode: string;
   name: string;
   firstName: string;
@@ -17,7 +19,9 @@ export interface Employee {
   login: LoginStatus;
   officialEmail: string;
   personalEmail: string;
+  email?: string;
   mobile: string;
+  phone?: string;
   alternateMobile: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
@@ -30,6 +34,8 @@ export interface Employee {
   shiftId?: number | null;
   shift?: { id: number, name: string, code: string } | null;
   doj: string;
+  joiningDate?: string;
+  employmentType?: string;
   bankName?: string;
   bankAccountNo?: string;
   ifscCode?: string;
@@ -37,6 +43,8 @@ export interface Employee {
   panNumber?: string;
   uanNumber?: string;
   pfNumber?: string;
+  legacyEmployeeCode?: string | null;
+  directReportsCount?: number;
 }
 
 export interface EmployeeStatsSummary {
@@ -48,6 +56,7 @@ export interface EmployeeStatsSummary {
 
 export interface PaginatedResult<T> {
   data: T[];
+  items?: T[];
   total: number;
   stats?: EmployeeStatsSummary;
 }
@@ -55,7 +64,7 @@ export interface PaginatedResult<T> {
 export interface EmployeePayload {
   accountAccess?: {
     loginEmail?: string;
-    role?: 'employee';
+    role?: 'employee' | 'manager' | string;
   };
   personalInfo: {
     firstName: string;
@@ -75,6 +84,7 @@ export interface EmployeePayload {
     doj: string;
     reportingManagerId?: string | null;
     employeeCode?: string;
+    legacyEmployeeCode?: string;
   };
   contactInfo: {
     officialEmail: string;
@@ -112,3 +122,19 @@ export interface EmployeeCredentials {
   temporaryPasswordHint: string;
   status: EmployeeStatus;
 }
+
+export interface EmployeeCodeHistory {
+  id: number;
+  employee_id: number;
+  old_employee_code?: string | null;
+  new_employee_code: string;
+  reason: string;
+  changed_by: string;
+  changed_at: string;
+}
+
+export interface ChangeEmployeeCodePayload {
+  new_employee_code: string;
+  reason: string;
+}
+

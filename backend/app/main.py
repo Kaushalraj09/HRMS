@@ -29,6 +29,7 @@ from app.api.v1 import (
     document_routes,
     training_routes,
     payroll_routes,
+    manager_routes,
 )
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(self), geolocation=(self), microphone=()"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; font-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws: wss: http: https:;"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; font-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:;"
     return response
 
 
@@ -139,6 +140,8 @@ app.add_middleware(
         "Cache-Control",
         "Pragma",
         "Expires",
+        "X-CSRF-Token",
+        "X-Requested-With",
     ],
 )
 
@@ -171,6 +174,7 @@ app.include_router(dashboard_routes.router, prefix="/api/v1")
 app.include_router(notification_routes.router, prefix="/api/v1")
 app.include_router(login_activity_routes.router, prefix="/api/v1")
 app.include_router(timeoff_routes.router, prefix="/api/v1")
+app.include_router(timeoff_routes.leave_router, prefix="/api/v1")
 app.include_router(regularization_routes.router, prefix="/api/v1")
 app.include_router(report_routes.router, prefix="/api/v1")
 app.include_router(master_data_routes.router, prefix="/api/v1")
@@ -178,3 +182,4 @@ app.include_router(approval_routes.router, prefix="/api/v1")
 app.include_router(document_routes.router, prefix="/api/v1")
 app.include_router(training_routes.router, prefix="/api/v1")
 app.include_router(payroll_routes.router, prefix="/api/v1")
+app.include_router(manager_routes.router, prefix="/api/v1")

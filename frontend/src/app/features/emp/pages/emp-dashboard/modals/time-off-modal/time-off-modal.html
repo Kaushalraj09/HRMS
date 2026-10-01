@@ -51,6 +51,12 @@
           </div>
         </div>
 
+        <!-- Unpaid Leave LOP Warning -->
+        <div class="unpaid-leave-notice" *ngIf="isUnpaidLeaveSelected">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span><strong>Notice:</strong> Unpaid Leave (UL) is subject to Loss of Pay (LOP) deduction in monthly payroll.</span>
+        </div>
+
 
         <div class="form-grid-2">
           <!-- Multiple Days checkbox toggle -->

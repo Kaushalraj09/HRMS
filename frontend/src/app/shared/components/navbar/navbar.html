@@ -6,19 +6,20 @@
             <span class="line mid"></span>
             <span class="line short"></span>
         </div>
-        <div class="brand-title-wrap">
+        <div class="brand-title-wrap" *ngIf="showBrandLogo">
             <span class="brand-logo-text">360 HR<span class="brand-plus">+</span></span>
         </div>
     </div>
 
     <!-- Center Section: Search Bar -->
-    <div class="centernav">
+    <div class="centernav" [class.align-left]="!showBrandLogo">
         <div class="searchbar" *ngIf="showSearch">
+            <i class="fas fa-search search-icon" aria-hidden="true"></i> 
             <input
                 type="search"
                 id="navSearch"
                 name="navSearch"
-                placeholder="Search modules, attendance, leave, reports..."
+                [placeholder]="searchPlaceholder"
                 [value]="searchTerm"
                 (input)="onSearchInput($event)"
                 (keydown.escape)="clearSearch($event)"
@@ -35,7 +36,6 @@
             >
                 <i class="fas fa-times"></i>
             </button>
-            <i class="fas fa-search search-icon" aria-hidden="true"></i> 
             
             <!-- Omni-Search Dropdown -->
             <div class="omni-search-dropdown" *ngIf="isSearchDropdownOpen">
@@ -65,7 +65,7 @@
 
     <!-- Right Section: Language, Notification Bell, User Profile -->
     <div class="rightnav">
-        <div class="language-selector" (click)="toggleLanguageDropdown($event)">
+        <div class="language-selector" *ngIf="showLanguage" (click)="toggleLanguageDropdown($event)">
             <div class="globeicon">
                 <i class="fas fa-globe"></i>
             </div>

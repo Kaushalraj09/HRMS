@@ -59,12 +59,21 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
   readonly allTimeSlots: TimeSlotOption[] = buildHalfHourSlots();
 
   leaveTypeSelectOptions: { label: string; value: string; unitType?: string }[] = [
+    { label: 'Paid Leave (Full Day)', value: 'Paid Leave', unitType: 'full_day' },
+    { label: 'Unpaid Leave (Full Day)', value: 'Unpaid Leave', unitType: 'full_day' },
     { label: 'Casual Leave (Full Day)', value: 'Casual Leave', unitType: 'full_day' },
     { label: 'Sick Leave (Full Day)', value: 'Sick Leave', unitType: 'full_day' },
     { label: 'Earned Leave (Full Day)', value: 'Earned Leave', unitType: 'full_day' },
-    { label: 'Full Day Leave', value: 'Full Day', unitType: 'full_day' },
     { label: 'Half Day Leave', value: 'Half Day', unitType: 'half_day' }
   ];
+
+  get isUnpaidLeaveSelected(): boolean {
+    const val = (this.leaveForm?.value?.leaveType || '').toLowerCase();
+    if (this.selectedLeaveBalance && (this.selectedLeaveBalance as any).is_paid === false) {
+      return true;
+    }
+    return val.includes('unpaid') || val.includes('lop') || val.includes('loss of pay');
+  }
 
   halfDaySessionSelectOptions: { label: string; value: string }[] = [
     { label: 'First Half (09:00 AM - 01:00 PM)', value: 'First Half' },
@@ -86,7 +95,7 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
     const today = toIsoDateLocal(new Date());
 
     this.leaveForm = this.fb.group({
-      leaveType: ['Casual Leave', Validators.required],
+      leaveType: ['Paid Leave', Validators.required],
       startDate: [today, Validators.required],
       multipleDays: [false],
       endDate: [today],
@@ -108,16 +117,18 @@ export class TimeOffModalComponent implements OnInit, OnDestroy {
           });
 
           if (activeLeaveTypes.length > 0) {
-            // Priority sort: Casual (CL) -> Sick (SL) -> Earned/Privilege (EL/PL) -> Comp Off (CO) -> Half Day (HD) -> Others
+            // Priority sort: PL -> UL -> CL -> SL -> EL -> CO -> HD -> Others
             const getPriority = (item: any) => {
               const code = (item.code || '').toUpperCase();
               const name = (item.name || '').toLowerCase();
-              if (code === 'CL' || name.includes('casual')) return 1;
-              if (code === 'SL' || name.includes('sick')) return 2;
-              if (code === 'EL' || name.includes('earned') || name.includes('privilege') || code === 'PL') return 3;
-              if (code === 'CO' || name.includes('comp')) return 4;
-              if (code === 'HD' || name.includes('half')) return 5;
-              return 6;
+              if (code === 'PL' || name.includes('paid leave')) return 1;
+              if (code === 'UL' || name.includes('unpaid')) return 2;
+              if (code === 'CL' || name.includes('casual')) return 3;
+              if (code === 'SL' || name.includes('sick')) return 4;
+              if (code === 'EL' || name.includes('earned') || name.includes('privilege')) return 5;
+              if (code === 'CO' || name.includes('comp')) return 6;
+              if (code === 'HD' || name.includes('half')) return 7;
+              return 8;
             };
             activeLeaveTypes.sort((a: any, b: any) => getPriority(a) - getPriority(b));
 

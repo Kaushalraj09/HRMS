@@ -118,7 +118,7 @@ export class TrainingViewComponent implements OnInit {
     if (type === 'video' || name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.webm')) {
       return 'fas fa-video';
     }
-    if (type === 'audio' || name.endsWith('.mp3') || name.endsWith('.wav') || name.endsWith('.ogg')) {
+    if (type === 'audio' || name.endsWith('.mp3') || name.endsWith('.wav') || name.endsWith('.ogg') || name.endsWith('.m4a')) {
       return 'fas fa-volume-up';
     }
     if (type === 'image' || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp') || name.endsWith('.svg')) {

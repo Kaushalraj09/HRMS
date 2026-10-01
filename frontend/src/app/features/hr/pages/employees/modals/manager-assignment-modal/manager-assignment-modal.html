@@ -1,0 +1,160 @@
+<div class="modal-backdrop" *ngIf="isOpen" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="header-info">
+        <div class="badge-icon">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div>
+          <h2 class="modal-title">Manager Assignment & Team Allocation</h2>
+          <p class="modal-subtitle">Designate employee as manager and configure their reporting team</p>
+        </div>
+      </div>
+      <button class="close-btn" (click)="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body" *ngIf="employee">
+      <!-- Employee Profile Summary Card -->
+      <div class="manager-card">
+        <div class="avatar-circle">
+          {{ ((employee.firstName && employee.firstName[0]) || 'M') + ((employee.lastName && employee.lastName[0]) || '') }}
+        </div>
+        <div class="mgr-details">
+          <div class="mgr-name-row">
+            <span class="mgr-name">{{ employee.name }}</span>
+            <span class="role-badge" [ngClass]="isManagerRole() ? 'badge-manager' : 'badge-employee'">
+              <i class="fas" [ngClass]="isManagerRole() ? 'fa-crown' : 'fa-user'"></i>
+              {{ isManagerRole() ? 'Manager' : 'Employee' }}
+            </span>
+          </div>
+          <div class="mgr-meta">
+            <span><i class="fas fa-id-badge"></i> {{ employee.employeeCode }}</span>
+            <span><i class="fas fa-envelope"></i> {{ employee.officialEmail }}</span>
+            <span><i class="fas fa-building"></i> {{ employee.department || 'General' }}</span>
+            <span><i class="fas fa-briefcase"></i> {{ employee.designation || 'Staff' }}</span>
+          </div>
+        </div>
+
+        <!-- Role Action Button -->
+        <div class="mgr-action">
+          <button *ngIf="!isManagerRole()" class="btn-promote" (click)="assignManagerRole()" [disabled]="isSaving">
+            <i class="fas fa-crown"></i> Assign as Manager
+          </button>
+          <button *ngIf="isManagerRole()" class="btn-demote" (click)="revokeManagerRole()" [disabled]="isSaving" title="Revoke Manager Role">
+            <i class="fas fa-user-minus"></i> Remove Role
+          </button>
+        </div>
+      </div>
+
+      <!-- State 1: Prompt to Assign as Manager first -->
+      <div *ngIf="!isManagerRole()" class="empty-manager-state">
+        <div class="state-icon">
+          <i class="fas fa-crown"></i>
+        </div>
+        <h3>Employee Role Active</h3>
+        <p>Click <strong>"Assign as Manager"</strong> above to promote {{ employee.name }} to a Manager. Once assigned, you will be able to allocate employees to report to them.</p>
+      </div>
+
+      <!-- State 2: Team Members Selection (When Role is Manager) -->
+      <div *ngIf="isManagerRole()" class="team-allocation-section">
+        <div class="section-header">
+          <div>
+            <h3>Employees Under {{ employee.firstName }}</h3>
+            <p class="section-desc">Select employees who report directly to this manager</p>
+          </div>
+          <div class="count-pill">
+            <span>{{ selectedEmployeeIds.size }} Assigned</span>
+          </div>
+        </div>
+
+        <!-- Search Bar and Quick Select -->
+        <div class="filter-row">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              type="text" 
+              placeholder="Search by name, code or department..." 
+              [(ngModel)]="searchTerm" 
+            />
+            <button *ngIf="searchTerm" class="clear-search" (click)="searchTerm = ''">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="quick-actions">
+            <button class="btn-text" (click)="selectAllFiltered()">Select All</button>
+            <span class="divider">|</span>
+            <button class="btn-text" (click)="deselectAll()">Clear All</button>
+          </div>
+        </div>
+
+        <!-- Loading spinner -->
+        <div *ngIf="isLoading" class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i> Loading team and employee data...
+        </div>
+
+        <!-- Employee Checkbox List -->
+        <div *ngIf="!isLoading" class="employee-list-container">
+          <div 
+            *ngFor="let emp of filteredEmployees" 
+            class="employee-item"
+            [class.selected]="selectedEmployeeIds.has(+emp.id)"
+            (click)="toggleEmployee(emp.id)"
+          >
+            <div class="checkbox-wrapper">
+              <input 
+                type="checkbox" 
+                [checked]="selectedEmployeeIds.has(+emp.id)"
+                (click)="$event.stopPropagation(); toggleEmployee(emp.id)"
+              />
+            </div>
+            <div class="emp-avatar">
+              {{ ((emp.firstName && emp.firstName[0]) || 'E') + ((emp.lastName && emp.lastName[0]) || '') }}
+            </div>
+            <div class="emp-info">
+              <div class="emp-main">
+                <span class="emp-name">{{ emp.name }}</span>
+                <span class="emp-code">({{ emp.employeeCode }})</span>
+              </div>
+              <div class="emp-sub">
+                <span>{{ emp.designation || 'Staff' }}</span>
+                <span class="dot">•</span>
+                <span>{{ emp.department || 'General' }}</span>
+                <span class="dot">•</span>
+                <span class="current-manager" *ngIf="emp.reportingManagerName && emp.reportingManagerId !== employee.id">
+                  Current: {{ emp.reportingManagerName }}
+                </span>
+                <span class="current-manager my-team" *ngIf="emp.reportingManagerId === employee.id">
+                  <i class="fas fa-check"></i> Already Assigned
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="filteredEmployees.length === 0" class="no-matches">
+            <i class="fas fa-search"></i>
+            <p>No employees match "{{ searchTerm }}"</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeModal()">Close</button>
+      <button 
+        *ngIf="isManagerRole()" 
+        class="btn-save" 
+        (click)="saveTeamAssignment()" 
+        [disabled]="isSaving"
+      >
+        <i class="fas fa-save" *ngIf="!isSaving"></i>
+        <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+        {{ isSaving ? 'Saving...' : 'Save Assignment (' + selectedEmployeeIds.size + ' Employees)' }}
+      </button>
+    </div>
+  </div>
+</div>

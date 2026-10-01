@@ -442,7 +442,7 @@ export class TrainingListComponent implements OnInit {
   }
 
   getBasePrefix(): string {
-    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : '/hr-dashboard';
+    return this.router.url.includes('/master-dashboard') ? '/master-dashboard' : (this.router.url.includes('/emp-dashboard') ? '/emp-dashboard' : '/hr-dashboard');
   }
 
   getCreateRoute(): string {

@@ -2,7 +2,7 @@ export interface TrainingMaterial {
   id: number;
   training_id: number;
   file_name: string;
-  storage_path: string;
+  storage_path?: string;
   file_type: 'document' | 'video' | 'audio' | 'image';
   mime_type: string;
   file_size: number;

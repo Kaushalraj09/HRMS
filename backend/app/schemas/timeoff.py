@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
-from datetime import date, time
+from datetime import date, time, datetime
 from typing import Optional, Literal
 
 class TimeOffRequestCreate(BaseModel):
@@ -44,6 +44,13 @@ class TimeOffRequestResponse(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     total_days: Optional[float] = None
+    approval_stage: Optional[str] = "Manager"
+    manager_name: Optional[str] = None
+    manager_decision: Optional[str] = None
+    manager_comment: Optional[str] = None
+    manager_reviewed_at: Optional[datetime] = None
+    hr_reviewed_at: Optional[datetime] = None
+    hr_comment: Optional[str] = None
 
 class TimeOffBatchResponse(BaseModel):
     created_requests: list[TimeOffRequestResponse]

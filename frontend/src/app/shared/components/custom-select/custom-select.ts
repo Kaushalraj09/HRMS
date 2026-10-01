@@ -31,6 +31,8 @@ export class CustomSelectComponent implements ControlValueAccessor {
   // To bind when not explicitly applying formControl objects
   @Input() value: any = null;
   @Output() valueChange = new EventEmitter<any>();
+  @Input() size: 'sm' | 'md' = 'md';
+  @Input() align: 'left' | 'right' = 'left';
 
   isOpen = false;
   

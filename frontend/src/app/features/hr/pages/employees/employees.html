@@ -210,7 +210,12 @@
                         {{ getInitials(emp.name) }}
                       </div>
                       <div class="emp-meta-info">
-                        <span class="emp-full-name">{{ emp.name }}</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                          <span class="emp-full-name">{{ emp.name }}</span>
+                          <span *ngIf="emp.isManager || emp.userRole === 'Manager'" class="badge-tag-manager" title="Assigned as Manager">
+                            <i class="fas fa-crown"></i> Manager
+                          </span>
+                        </div>
                         <span class="emp-email-text">{{ emp.officialEmail || emp.personalEmail || (emp.name.toLowerCase().replace(' ', '.') + '@aivan.com') }}</span>
                       </div>
                     </div>
@@ -218,7 +223,8 @@
 
                   <!-- Employee ID -->
                   <td>
-                    <span class="emp-id-text">{{ emp.employeeCode || ('000' + emp.id).slice(-4) }}</span>
+                    <span class="emp-id-text">{{ emp.employeeCode }}</span>
+                    <span *ngIf="emp.legacyEmployeeCode" class="text-muted d-block small" title="Legacy Code">({{ emp.legacyEmployeeCode }})</span>
                   </td>
 
                   <!-- Department -->
@@ -275,6 +281,9 @@
                   <!-- Action Icons Row -->
                   <td>
                     <div class="actions-icon-row">
+                      <button type="button" class="btn-row-action manager" (click)="openManagerModal(emp)" [title]="(emp.isManager || emp.userRole === 'Manager') ? 'Manage Team Members' : 'Assign as Manager'">
+                        <i class="fas" [ngClass]="(emp.isManager || emp.userRole === 'Manager') ? 'fa-crown' : 'fa-user-shield'"></i>
+                      </button>
                       <button type="button" class="btn-row-action view" (click)="openViewModal(emp, 'details')" title="View Details">
                         <i class="fas fa-eye"></i>
                       </button>
@@ -423,3 +432,10 @@
     </div>
   </div>
 </div>
+
+<app-manager-assignment-modal
+  [isOpen]="managerModalOpen"
+  [employee]="employeeForManagerModal"
+  (close)="closeManagerModal()"
+  (updated)="onManagerUpdated()">
+</app-manager-assignment-modal>

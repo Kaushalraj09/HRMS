@@ -1,4 +1,8 @@
-<div class="custom-select-container" [class.disabled]="disabled" [class.dropup]="dropup">
+<div class="custom-select-container" 
+     [class.disabled]="disabled" 
+     [class.dropup]="dropup"
+     [class.size-sm]="size === 'sm'"
+     [class.align-right]="align === 'right'">
   <button type="button" class="select-trigger" [id]="inputId" (click)="toggleDropdown()" [class.open]="isOpen" [disabled]="disabled">
     <span class="selected-value" [class.placeholder-text]="!value && value !== ''">{{ currentLabel }}</span>
     <i class="fas fa-chevron-down caret" [class.rotated]="isOpen"></i>
@@ -10,8 +14,10 @@
         *ngFor="let option of options" 
         (click)="selectOption(option)"
         [class.active]="option.value === value">
-        {{ option.label }}
+        <span class="option-text">{{ option.label }}</span>
+        <i class="fas fa-check check-icon" *ngIf="option.value === value"></i>
       </li>
     </ul>
   </div>
 </div>
+

@@ -1,0 +1,29 @@
+<div class="manager-layout-wrapper">
+  <!-- Mobile Backdrop Overlay when sidebar is open -->
+  <div class="sidebar-backdrop" *ngIf="(isSidebarOpen$ | async)" (click)="toggleSidebar()"></div>
+
+  <!-- Sidebar -->
+  <app-manager-sidebar [class.collapsed]="!(isSidebarOpen$ | async)"></app-manager-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="manager-main-content" [class.sidebar-collapsed]="!(isSidebarOpen$ | async)">
+    <!-- Header Navbar -->
+    <app-navbar
+      [userName]="userName"
+      [userRole]="userRole"
+      [showBrandLogo]="!(isSidebarOpen$ | async)"
+      [showLanguage]="false"
+      [customUnreadCount]="1"
+      [customAvatarUrl]="userAvatarUrl"
+      [searchPlaceholder]="'Search employees, training, reports...'"
+      [isSidebarOpen]="(isSidebarOpen$ | async) ?? true"
+      (hamburgerClick)="toggleSidebar()"
+      (profileClick)="onProfileClick()">
+    </app-navbar>
+
+    <!-- Router Content -->
+    <main class="manager-page-container">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

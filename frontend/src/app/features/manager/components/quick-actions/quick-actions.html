@@ -1,0 +1,41 @@
+<div class="quick-actions-card">
+  <div class="card-header">
+    <h3 class="card-title">Quick Actions</h3>
+  </div>
+
+  <div class="actions-grid">
+    <button 
+      type="button" 
+      class="action-btn" 
+      [routerLink]="attendanceRoute"
+      (click)="onAction('mark_attendance')">
+      <i class="far fa-calendar-check action-icon"></i>
+      <span class="action-label">Mark Attendance</span>
+    </button>
+
+    <button 
+      type="button" 
+      class="action-btn" 
+      [routerLink]="timeOffRoute"
+      (click)="onAction('approve_leaves')">
+      <i class="fas fa-check-circle action-icon"></i>
+      <span class="action-label">Approve Leaves</span>
+    </button>
+
+    <button 
+      type="button" 
+      class="action-btn" 
+      (click)="onAction('send_reminder')">
+      <i class="far fa-bell action-icon"></i>
+      <span class="action-label">Send Reminder</span>
+    </button>
+
+    <button 
+      type="button" 
+      class="action-btn" 
+      (click)="onAction('view_reports')">
+      <i class="fas fa-chart-bar action-icon"></i>
+      <span class="action-label">View Reports</span>
+    </button>
+  </div>
+</div>

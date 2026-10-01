@@ -348,6 +348,15 @@ class AttendanceListResponse(BaseModel):
     total: int
     metrics: AttendanceMetrics
 
+
+class ManagerAttendancePaginatedResponse(BaseModel):
+    """Paginated attendance response for manager team view."""
+    items: List[AttendanceResponse]
+    total: int
+    page: int
+    limit: int
+    totalPages: int
+
 class TodayAnalytics(BaseModel):
     punch_in: Optional[str] = Field(default=None, alias="punchIn")
     punch_out: Optional[str] = Field(default=None, alias="punchOut")

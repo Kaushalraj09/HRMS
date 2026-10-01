@@ -28,7 +28,12 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   @Input() userRole: string = '';
   @Input() showSearch: boolean = true;
   @Input() searchValue: string = '';
+  @Input() searchPlaceholder: string = 'Search modules, attendance, leave, reports...';
   @Input() isSidebarOpen?: boolean;
+  @Input() showBrandLogo: boolean = true;
+  @Input() showLanguage: boolean = true;
+  @Input() customAvatarUrl?: string;
+  @Input() customUnreadCount?: number;
 
   @Output() hamburgerClick = new EventEmitter<void>();
   @Output() searchChange = new EventEmitter<string>();
@@ -47,7 +52,10 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
   isSearchDropdownOpen = false;
   searchResults: SearchModule[] = [];
   readonly allModules: SearchModule[] = [
-    { name: 'Dashboard', route: '', icon: 'fas fa-home', roles: ['admin', 'hr', 'employee'] },
+    { name: 'Dashboard', route: '', icon: 'fas fa-home', roles: ['admin', 'hr', 'employee', 'manager'] },
+    { name: 'My Team', route: 'team', icon: 'fas fa-users', roles: ['manager'] },
+    { name: 'Team Attendance', route: 'attendance', icon: 'fas fa-clock', roles: ['manager'] },
+    { name: 'Leave Approvals', route: 'time-off', icon: 'fas fa-calendar-check', roles: ['manager'] },
     { name: 'Employees', route: 'employees', icon: 'fas fa-users', roles: ['admin', 'hr'] },
     { name: 'Attendance', route: 'attendance', icon: 'fas fa-clock', roles: ['admin', 'hr'] },
     { name: 'My Attendance', route: 'my-attendance', icon: 'fas fa-clock', roles: ['employee'] },
@@ -62,7 +70,7 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     { name: 'HR Users', route: 'hr-users', icon: 'fas fa-user-tie', roles: ['admin'] },
     { name: 'Master Data', route: 'master-data', icon: 'fas fa-database', roles: ['admin'] },
     { name: 'Login Activity', route: 'login-activity', icon: 'fas fa-history', roles: ['admin', 'hr'] },
-    { name: 'My Profile', route: 'my-profile', icon: 'fas fa-user', roles: ['admin', 'hr', 'employee'] },
+    { name: 'My Profile', route: 'my-profile', icon: 'fas fa-user', roles: ['admin', 'hr', 'employee', 'manager'] },
   ];
 
   // New notification fields
@@ -94,6 +102,7 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     const r = role.toLowerCase();
     if (r === 'admin' || r === 'master' || r === 'system admin') return 'System Admin';
     if (r === 'hr' || r === 'hr manager') return 'HR Manager';
+    if (r === 'manager') return 'Manager';
     if (r === 'employee') return 'Employee';
     return role;
   }
@@ -130,14 +139,20 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     this.sub.add(
       this.authService.currentUser$.subscribe(user => {
         if (user) {
-          this.userName = user.displayName || this.userName;
-          this.profileImage = user.profileImage || null;
+          if (!this.userName || this.userName === 'System Admin') {
+            this.userName = user.displayName || this.userName;
+          }
+          if (this.customAvatarUrl) {
+            this.profileImage = this.customAvatarUrl;
+          } else {
+            this.profileImage = user.profileImage || null;
+          }
           
           if (!this.userRole || this.userRole === 'Software Engineer' || this.userRole === 'Employee' || this.userRole === 'System Admin') {
             this.userRole = user.designation || this.formatUserRole(user.role);
           }
           
-          const names = (user.displayName || '').trim().split(/\s+/).filter(Boolean);
+          const names = (this.userName || user.displayName || '').trim().split(/\s+/).filter(Boolean);
           const first = names[0]?.[0] || '';
           const last = names.length > 1 ? names[names.length - 1]?.[0] || '' : '';
           this.userInitials = (first + last).toUpperCase() || 'U';
@@ -169,10 +184,17 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
     this.sub.add(
       this.notificationService.unreadCount$.subscribe(count => {
         setTimeout(() => {
-          this.unreadCount = count;
+          this.unreadCount = this.customUnreadCount !== undefined ? this.customUnreadCount : count;
         });
       })
     );
+
+    if (this.customAvatarUrl) {
+      this.profileImage = this.customAvatarUrl;
+    }
+    if (this.customUnreadCount !== undefined) {
+      this.unreadCount = this.customUnreadCount;
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {

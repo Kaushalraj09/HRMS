@@ -21,53 +21,69 @@
         <ul class="menu-list">
           <li *ngFor="let item of group.items" class="menu-item-wrapper">
             
-            <!-- Item without children -->
-            <a *ngIf="!item.children && !item.isLogout" 
-               [routerLink]="item.route" 
-               routerLinkActive="active" 
-               [routerLinkActiveOptions]="{exact: true}"
+            <!-- Menu Item (Standard Link, Dropdown Trigger, or Logout) -->
+            <a [routerLink]="item.children || item.isLogout ? null : item.route" 
+               (click)="handleItemClick(item, $event)"
+               [routerLinkActive]="item.children || item.isLogout ? '' : 'active'" 
+               [routerLinkActiveOptions]="{exact: item.route === '/emp-dashboard'}"
+               [class.active-parent]="isParentActive(item)"
+               [class.expanded]="item.expanded"
+               [class.has-dropdown]="!!item.children"
                class="menu-link hover-effect"> 
-              <i [class]="item.icon" class="menu-icon"></i>
+              <i [class]="item.icon + ' fa-fw menu-icon'"></i>
               <span class="menu-text">{{ item.label }}</span>
+              <span class="menu-arrow" *ngIf="item.children">
+                <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>
+              </span>
             </a>
 
-            <!-- Logout Item -->
-            <a *ngIf="item.isLogout" 
-               (click)="handleLogout(item)"
-               style="cursor: pointer;"
-               class="menu-link hover-effect"> 
-              <i [class]="item.icon" class="menu-icon"></i>
-              <span class="menu-text">{{ item.label }}</span>
-            </a>
-            
-            <!-- Item with children -->
-            <ng-container *ngIf="item.children">
-              <a (click)="toggleExpand(item)" 
-                 class="menu-link has-dropdown hover-effect" 
-                 [class.active-parent]="isParentActive(item)"
-                 [class.expanded]="item.expanded"
-                 href="javascript:void(0)">
-                <i [class]="item.icon" class="menu-icon"></i>
-                <span class="menu-text">{{ item.label }}</span>
-                <span class="notification-dot" *ngIf="isParentActive(item) && !(isEmpSidebarOpen$ | async)"></span>
-                <span class="menu-arrow">
-                  <span class="notification-dot position-relative mr-2" *ngIf="isParentActive(item)"></span>
-                  <i class="fas fa-angle-right" [class.rotated]="item.expanded"></i>
-                </span>
-              </a>
-              
-              <!-- Sub Menu -->
-              <ul class="sub-menu" [class.open]="item.expanded" [style.maxHeight]="item.expanded ? item.children.length * 45 + 'px' : '0'">
-                <li *ngFor="let child of item.children" class="sub-menu-item">
-                  <a [routerLink]="child.route" 
-                     routerLinkActive="active" 
-                     [routerLinkActiveOptions]="{exact: true}"
-                     class="sub-menu-link">
+            <!-- Sub Menu for dropdown items -->
+            <ul class="sub-menu" *ngIf="item.children && item.expanded">
+              <li *ngFor="let child of item.children" class="sub-menu-item">
+                
+                <!-- Leaf Child Item (direct route) -->
+                <a *ngIf="!child.children"
+                   [routerLink]="child.route" 
+                   (click)="checkMobileCollapse()"
+                   routerLinkActive="active" 
+                   [routerLinkActiveOptions]="{exact: false}"
+                   class="sub-menu-link">
+                  <i [class]="child.icon + ' fa-fw sub-menu-icon'" *ngIf="child.icon"></i>
+                  <span class="sub-menu-text">{{ child.label }}</span>
+                </a>
+
+                <!-- Branch Child Item with Sub-Parts (e.g. Trainings, Payroll) -->
+                <ng-container *ngIf="child.children">
+                  <a (click)="toggleChildExpand(child, $event)"
+                     [class.expanded]="child.expanded"
+                     [class.active-parent]="isParentActive(child)"
+                     class="sub-menu-link has-nested-dropdown"
+                     style="cursor: pointer;">
+                    <i [class]="child.icon + ' fa-fw sub-menu-icon'" *ngIf="child.icon"></i>
                     <span class="sub-menu-text">{{ child.label }}</span>
+                    <span class="menu-arrow">
+                      <i class="fas fa-angle-right" [class.rotated]="child.expanded"></i>
+                    </span>
                   </a>
-                </li>
-              </ul>
-            </ng-container>
+
+                  <!-- Level 2 Nested Sub Menu -->
+                  <ul class="nested-sub-menu" *ngIf="child.expanded">
+                    <li *ngFor="let subChild of child.children" class="nested-sub-menu-item">
+                      <a [routerLink]="subChild.route"
+                         (click)="checkMobileCollapse()"
+                         routerLinkActive="active"
+                         [routerLinkActiveOptions]="{exact: false}"
+                         class="nested-sub-menu-link">
+                        <i [class]="subChild.icon + ' fa-fw nested-icon'" *ngIf="subChild.icon"></i>
+                        <span class="nested-sub-menu-text">{{ subChild.label }}</span>
+                      </a>
+                    </li>
+                  </ul>
+                </ng-container>
+
+              </li>
+            </ul>
+
           </li>
         </ul>
       </div>

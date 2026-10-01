@@ -1,0 +1,160 @@
+<div class="manager-attendance-page">
+  <!-- Header Card -->
+  <div class="header-card">
+    <div class="header-title-box">
+      <h1 class="page-title">Team Attendance</h1>
+      <p class="page-subtitle">Track daily logs, shifts, punch in/out times, and working hours for your team</p>
+    </div>
+    <div class="header-actions">
+      <span class="record-count-badge">
+        <i class="fas fa-calendar-check"></i> {{ totalRecords }} Records
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label class="filter-label">From Date</label>
+        <app-custom-datepicker [(ngModel)]="fromDate" placeholder="Select from date"></app-custom-datepicker>
+      </div>
+
+      <div class="filter-item">
+        <label class="filter-label">To Date</label>
+        <app-custom-datepicker [(ngModel)]="toDate" placeholder="Select to date"></app-custom-datepicker>
+      </div>
+
+      <div class="filter-item">
+        <label class="filter-label">Status</label>
+        <app-custom-select [(ngModel)]="statusFilter" [options]="statusOptions" placeholder="All Statuses"></app-custom-select>
+      </div>
+
+      <div class="filter-item search-grow">
+        <label class="filter-label">Search Member</label>
+        <div class="input-with-icon">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            class="form-input search-field"
+            placeholder="Name or employee code..."
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="applyFilters()" />
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn-filter-apply" (click)="applyFilters()">
+          <i class="fas fa-filter"></i> Apply
+        </button>
+        <button class="btn-filter-reset" (click)="resetFilters()" title="Reset Filters">
+          <i class="fas fa-undo"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="attendance-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Punch In</th>
+            <th>Punch Out</th>
+            <th>Total Hours</th>
+            <th>Late (Min)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of attendanceRecords">
+            <td>
+              <span class="date-text">{{ record.date | date:'mediumDate' }}</span>
+            </td>
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar">
+                  {{ (record.employeeName || 'E').charAt(0).toUpperCase() }}
+                </div>
+                <div class="emp-info">
+                  <span class="emp-name">{{ record.employeeName }}</span>
+                  <span class="emp-code">{{ record.employeeCode }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="time-cell" [class.empty-val]="!record.punchInTime && !record.punchIn">
+                <i class="far fa-clock"></i>
+                {{ formatTime(record.punchInTime || record.punchIn) }}
+              </span>
+            </td>
+            <td>
+              <span class="time-cell" [class.empty-val]="!record.punchOutTime && !record.punchOut">
+                <i class="far fa-clock"></i>
+                {{ formatTime(record.punchOutTime || record.punchOut) }}
+              </span>
+            </td>
+            <td>
+              <span class="hours-badge">
+                {{ record.totalWorkingHours || record.effectiveHours || '0h 0m' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="record.lateMinutes && record.lateMinutes > 0" class="late-minutes-badge">
+                +{{ record.lateMinutes }} min
+              </span>
+              <span *ngIf="!record.lateMinutes || record.lateMinutes <= 0" class="on-time-text">
+                On Time
+              </span>
+            </td>
+            <td>
+              <span class="status-pill" [ngClass]="'status-' + (record.status || 'present').toLowerCase().replace(' ', '-')">
+                {{ record.status || 'Present' }}
+              </span>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && attendanceRecords.length === 0">
+            <td colspan="7" class="empty-state">
+              <i class="fas fa-calendar-times empty-icon"></i>
+              <h3>No attendance records found</h3>
+              <p>No attendance data matches the selected date range and filter criteria for your team.</p>
+            </td>
+          </tr>
+
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i> Loading attendance logs...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-footer" *ngIf="totalPages > 1">
+      <span class="pagination-info">
+        Page {{ currentPage }} of {{ totalPages }} ({{ totalRecords }} total logs)
+      </span>
+      <div class="pagination-btns">
+        <button
+          class="btn-page-nav"
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)">
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <button
+          class="btn-page-nav"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

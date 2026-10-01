@@ -291,6 +291,26 @@
   border: 1px solid #e0e7ff;
 }
 
+.badge-system-defined {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge-system-defined i {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
 /* Action Buttons */
 .btn-edit {
   background-color: #ffffff;

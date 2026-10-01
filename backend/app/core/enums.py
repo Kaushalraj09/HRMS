@@ -26,5 +26,6 @@ class UserRole(str, Enum):
     """Valid user roles in the system."""
     ADMIN = "admin"
     HR = "hr"
+    MANAGER = "manager"
     EMPLOYEE = "employee"
 

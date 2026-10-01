@@ -36,6 +36,18 @@ class LeaveBalanceService:
             return lt
 
         # Fuzzy match for standard categories
+        if "unpaid" in name_str or name_str in ("ul", "lop", "loss of pay", "unpaid leave"):
+            matched = db.query(LeaveType).filter(
+                (func.lower(LeaveType.name).like("%unpaid%")) | (LeaveType.code == "UL")
+            ).first()
+            if matched:
+                return matched
+        if "paid leave" in name_str or name_str in ("pl", "paid"):
+            matched = db.query(LeaveType).filter(
+                (func.lower(LeaveType.name).like("%paid leave%")) | (LeaveType.code == "PL")
+            ).first()
+            if matched:
+                return matched
         if "casual" in name_str or name_str in ("full-day", "full day", "fullday"):
             matched = db.query(LeaveType).filter(
                 (func.lower(LeaveType.name).like("%casual%")) | (LeaveType.code == "CL")
@@ -84,15 +96,34 @@ class LeaveBalanceService:
         active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
         if not active_leave_types:
             default_types = [
-                LeaveType(name="Casual Leave", code="CL", unit_type="full_day", default_balance_hours=96.0, is_active=True),
-                LeaveType(name="Sick Leave", code="SL", unit_type="full_day", default_balance_hours=64.0, is_active=True),
-                LeaveType(name="Earned Leave", code="EL", unit_type="full_day", default_balance_hours=144.0, is_active=True),
-                LeaveType(name="Half Day", code="HD", unit_type="half_day", default_balance_hours=32.0, is_active=True),
-                LeaveType(name="Comp Off", code="CO", unit_type="full_day", default_balance_hours=16.0, is_active=True)
+                LeaveType(name="Unpaid Leave", code="UL", unit_type="full_day", default_balance_hours=96.0, annual_entitlement_days=12, is_paid=False, is_system_defined=True, is_editable=False, is_deletable=False, is_active=True),
+                LeaveType(name="Paid Leave", code="PL", unit_type="full_day", default_balance_hours=144.0, annual_entitlement_days=18, is_paid=True, is_system_defined=True, is_editable=True, is_deletable=False, is_active=True),
+                LeaveType(name="Casual Leave", code="CL", unit_type="full_day", default_balance_hours=96.0, annual_entitlement_days=12, is_paid=True, is_system_defined=False, is_editable=True, is_deletable=True, is_active=True),
+                LeaveType(name="Sick Leave", code="SL", unit_type="full_day", default_balance_hours=64.0, annual_entitlement_days=8, is_paid=True, is_system_defined=False, is_editable=True, is_deletable=True, is_active=True),
+                LeaveType(name="Earned Leave", code="EL", unit_type="full_day", default_balance_hours=144.0, annual_entitlement_days=18, is_paid=True, is_system_defined=False, is_editable=True, is_deletable=True, is_active=True),
+                LeaveType(name="Half Day", code="HD", unit_type="half_day", default_balance_hours=32.0, annual_entitlement_days=4, is_paid=True, is_system_defined=False, is_editable=True, is_deletable=True, is_active=True),
+                LeaveType(name="Comp Off", code="CO", unit_type="full_day", default_balance_hours=16.0, annual_entitlement_days=2, is_paid=True, is_system_defined=False, is_editable=True, is_deletable=True, is_active=True)
             ]
             db.add_all(default_types)
             db.commit()
             active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
+        else:
+            # Ensure system-defined UL and PL exist even if other types were already present
+            existing_codes = {(lt.code or "").upper() for lt in active_leave_types}
+            new_types = []
+            if "UL" not in existing_codes:
+                new_types.append(
+                    LeaveType(name="Unpaid Leave", code="UL", unit_type="full_day", default_balance_hours=96.0, annual_entitlement_days=12, is_paid=False, is_system_defined=True, is_editable=False, is_deletable=False, is_active=True)
+                )
+            if "PL" not in existing_codes:
+                new_types.append(
+                    LeaveType(name="Paid Leave", code="PL", unit_type="full_day", default_balance_hours=144.0, annual_entitlement_days=18, is_paid=True, is_system_defined=True, is_editable=True, is_deletable=False, is_active=True)
+                )
+            if new_types:
+                db.add_all(new_types)
+                db.commit()
+                active_leave_types = db.query(LeaveType).filter(LeaveType.is_active == True).all()
+
         return active_leave_types
 
     @classmethod
@@ -121,8 +152,17 @@ class LeaveBalanceService:
         created_any = False
         for lt in active_leave_types:
             if lt.id not in existing_lt_ids:
-                # Calculate annual days allocation (default_balance_hours / 8.0) as integer days
-                alloc_days = float(round(float(lt.default_balance_hours) / 8.0)) if lt.default_balance_hours else 0.0
+                # Calculate annual days allocation
+                code_up = (lt.code or "").upper()
+                if code_up == "UL":
+                    alloc_days = 12.0
+                elif getattr(lt, "annual_entitlement_days", None):
+                    alloc_days = float(lt.annual_entitlement_days)
+                elif lt.default_balance_hours:
+                    alloc_days = float(round(float(lt.default_balance_hours) / 8.0))
+                else:
+                    alloc_days = 0.0
+
                 new_bal = EmployeeLeaveBalance(
                     employee_id=employee_id,
                     leave_type_id=lt.id,
@@ -353,28 +393,38 @@ class LeaveBalanceService:
                 "used_days": int(round(bal.used_days or 0.0)),
                 "pending_days": int(round(bal.pending_days or 0.0)),
                 "available_days": int(round(bal.available_days or 0.0)),
+                "remaining_days": int(round(bal.available_days or 0.0)),
                 "carry_forward_days": int(round(bal.carry_forward_days or 0.0)),
+                "is_paid": bool(getattr(lt, "is_paid", True)),
+                "is_system_defined": bool(getattr(lt, "is_system_defined", False)),
+                "is_editable": bool(getattr(lt, "is_editable", True)),
+                "is_deletable": bool(getattr(lt, "is_deletable", True)),
+                "annual_entitlement_days": getattr(lt, "annual_entitlement_days", None),
                 "counts_as_leave": lt.counts_as_leave,
                 "attendance_required": lt.attendance_required,
                 "remote_punch_allowed": lt.remote_punch_allowed,
                 "applicable_employee_type": lt.applicable_employee_type,
             })
 
-        # Priority sort: CL -> SL -> EL -> CO -> HD -> Others
+        # Priority sort: PL -> UL -> CL -> SL -> EL -> CO -> HD -> Others
         def sort_key(item: Dict[str, Any]) -> int:
             c = (item["code"] or "").upper()
             n = (item["name"] or "").lower()
-            if c == "CL" or "casual" in n:
+            if c == "PL" or "paid leave" in n:
                 return 1
-            if c == "SL" or "sick" in n:
+            if c == "UL" or "unpaid" in n:
                 return 2
-            if c in ("EL", "PL") or "earned" in n or "privilege" in n:
+            if c == "CL" or "casual" in n:
                 return 3
-            if c == "CO" or "comp" in n:
+            if c == "SL" or "sick" in n:
                 return 4
-            if c == "HD" or "half" in n:
+            if c == "EL" or "earned" in n or "privilege" in n:
                 return 5
-            return 6
+            if c == "CO" or "comp" in n:
+                return 6
+            if c == "HD" or "half" in n:
+                return 7
+            return 8
 
         result.sort(key=sort_key)
         return result

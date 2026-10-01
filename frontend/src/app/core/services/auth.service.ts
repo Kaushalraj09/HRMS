@@ -162,15 +162,9 @@ export class AuthService {
     const roleLower = role?.toLowerCase();
     if (roleLower === 'admin') {
       return '/master-dashboard';
-    } else if (roleLower === 'hr') {
-      const user = this.getCurrentUser();
-      if (user && user.activeDashboard === 'EMPLOYEE') {
-        return '/emp-dashboard';
-      }
-      return '/hr-dashboard';
-    } else {
-      return '/emp-dashboard';
     }
+    // All employees, HR, and Managers land on their personal Employee Dashboard first
+    return '/emp-dashboard';
   }
 
   getDisplayName(): string {

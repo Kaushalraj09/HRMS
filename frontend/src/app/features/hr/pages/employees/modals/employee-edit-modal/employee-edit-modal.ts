@@ -49,7 +49,11 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   departmentOptions = [{ label: 'Engineering', value: 'Engineering' }, { label: 'Human Resources', value: 'Human Resources' }, { label: 'Finance', value: 'Finance' }];
   designationOptions = [{ label: 'Software Engineer', value: 'Software Engineer' }, { label: 'QA Engineer', value: 'QA Engineer' }];
   locationOptions = [{ label: 'Main Office', value: 'Main Office' }, { label: 'Remote', value: 'Remote' }];
-  roleOptions = [{ label: 'Employee', value: 'employee' }];
+  roleOptions = [
+    { label: 'Employee', value: 'employee' },
+    { label: 'Manager', value: 'manager' },
+    { label: 'HR', value: 'hr' }
+  ];
   managerOptions: Array<{ label: string; value: string | null }> = [{ label: 'No reporting manager', value: null }];
 
   private subscription?: Subscription;
@@ -79,7 +83,8 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
         shiftType: [''],
         shiftId: [null],
         doj: [{ value: '', disabled: true }],
-        reportingManagerId: [null]
+        reportingManagerId: [null],
+        legacyEmployeeCode: ['']
       }),
       contactInfo: this.fb.group({
         officialEmail: ['', [Validators.required, Validators.email]],
@@ -158,7 +163,8 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
                   shiftType: detail.employee.shiftType || '',
                   shiftId: detail.employee.shiftId || null,
                   doj: detail.employee.doj || '',
-                  reportingManagerId: detail.employee.reportingManagerId || null
+                  reportingManagerId: detail.employee.reportingManagerId || null,
+                  legacyEmployeeCode: detail.employee.legacyEmployeeCode || ''
                 },
                 contactInfo: {
                   officialEmail: detail.employee.officialEmail || '',
@@ -240,7 +246,7 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
             ...result.data
               .filter(employee => employee.id !== currentEmployeeId)
               .map(employee => ({
-                label: `${employee.name} (${employee.employeeCode})`,
+                label: `${employee.employeeCode} - ${employee.name}`,
                 value: employee.id
               }))
           ];
@@ -271,8 +277,9 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
     this.saveError = '';
 
     const raw = this.form.getRawValue();
+    const currentRole = (this.employeeDetail?.employee?.isManager || this.employeeDetail?.employee?.userRole?.toLowerCase() === 'manager') ? 'manager' : 'employee';
     const payload: EmployeePayload = {
-      accountAccess: { loginEmail: raw.contactInfo.officialEmail, role: 'employee' },
+      accountAccess: { loginEmail: raw.contactInfo.officialEmail, role: currentRole },
       personalInfo: {
         firstName: raw.personalInfo.firstName, lastName: raw.personalInfo.lastName, gender: raw.personalInfo.gender, dob: raw.personalInfo.dob,
         maritalStatus: raw.personalInfo.maritalStatus, bloodGroup: raw.personalInfo.bloodGroup

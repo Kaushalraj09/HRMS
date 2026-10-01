@@ -539,3 +539,25 @@ input[type="date"].form-input-control {
 .balance-breakdown-text .sep {
   color: #cbd5e1;
 }
+
+.unpaid-leave-notice {
+  margin-top: -6px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.unpaid-leave-notice i {
+  color: #f59e0b;
+  font-size: 15px;
+  flex-shrink: 0;
+}

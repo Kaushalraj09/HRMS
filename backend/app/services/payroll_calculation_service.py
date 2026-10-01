@@ -378,7 +378,50 @@ class PayrollCalculationService:
         shift = emp.shift if emp else None
         daily_shift_hours = float(shift.working_hours) if shift and shift.working_hours else 8.0
 
-        # 2. Fetch attendance records in period
+        # 2. Fetch approved time-off requests first to prevent double deductions
+        timeoff_records = (
+            db.query(TimeOffRequest)
+            .filter(
+                TimeOffRequest.employee_id == employee_id,
+                TimeOffRequest.date >= start_date,
+                TimeOffRequest.date <= end_date,
+                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
+            )
+            .all()
+        )
+
+        timeoff_dates = {to.date for to in timeoff_records}
+        paid_leave_days = 0.0
+        unpaid_leave_days = 0.0
+
+        from app.services.leave_balance_service import LeaveBalanceService
+        for to in timeoff_records:
+            lt = (to.leave_type or "").strip().lower()
+            lt_obj = LeaveBalanceService.resolve_leave_type(db, to.leave_type)
+            if lt_obj and lt_obj.counts_as_leave is False:
+                continue
+
+            duration = to.duration_hours or 0.0
+            # If duration is full-day (>= daily_shift_hours) count 1.0, half-day count 0.5
+            day_fraction = 1.0 if duration >= (daily_shift_hours * 0.8) else (0.5 if duration >= 2.0 else duration / daily_shift_hours)
+            if day_fraction <= 0:
+                day_fraction = 1.0
+
+            # Determine whether leave is paid or unpaid:
+            # 1. lt_obj.is_paid attribute
+            # 2. explicit unpaid/ul/lop names
+            is_unpaid = False
+            if lt_obj and getattr(lt_obj, "is_paid", None) is not None:
+                is_unpaid = not lt_obj.is_paid
+            elif "unpaid" in lt or "loss of pay" in lt or "lop" in lt or lt == "ul":
+                is_unpaid = True
+
+            if is_unpaid:
+                unpaid_leave_days += day_fraction
+            else:
+                paid_leave_days += day_fraction
+
+        # 3. Fetch attendance records in period
         attendance_records = (
             db.query(Attendance)
             .filter(
@@ -397,6 +440,11 @@ class PayrollCalculationService:
         attendance_dates = set()
         for att in attendance_records:
             attendance_dates.add(att.date)
+            # CRITICAL: Prevent double deduction!
+            # If an approved time-off request exists on this date, skip attendance absence deduction.
+            if att.date in timeoff_dates:
+                continue
+
             st = (att.status or "").strip().upper()
             if st in ["PRESENT", "WORKING", "PUNCHED_OUT"]:
                 present_days += 1.0
@@ -408,37 +456,6 @@ class PayrollCalculationService:
             # Only approved overtime flows into payroll
             if att.overtime_approved and att.overtime_minutes and att.overtime_minutes > 0:
                 approved_ot_minutes += att.overtime_minutes
-
-        # 3. Fetch approved time-off requests
-        timeoff_records = (
-            db.query(TimeOffRequest)
-            .filter(
-                TimeOffRequest.employee_id == employee_id,
-                TimeOffRequest.date >= start_date,
-                TimeOffRequest.date <= end_date,
-                TimeOffRequest.status.in_(["Approved", "Active", "Completed"]),
-            )
-            .all()
-        )
-
-        paid_leave_days = 0.0
-        unpaid_leave_days = 0.0
-
-        from app.services.leave_balance_service import LeaveBalanceService
-        for to in timeoff_records:
-            lt = (to.leave_type or "").strip().lower()
-            lt_obj = LeaveBalanceService.resolve_leave_type(db, to.leave_type)
-            if lt_obj and lt_obj.counts_as_leave is False:
-                continue
-
-            duration = to.duration_hours or 0.0
-            # If duration is full-day (>= daily_shift_hours) count 1.0, half-day count 0.5
-            day_fraction = 1.0 if duration >= (daily_shift_hours * 0.8) else (0.5 if duration >= 2.0 else duration / daily_shift_hours)
-
-            if "unpaid" in lt or "loss of pay" in lt or "lop" in lt:
-                unpaid_leave_days += day_fraction
-            else:
-                paid_leave_days += day_fraction
 
         # 4. Fetch holidays in period
         holidays_count = float(
@@ -460,8 +477,9 @@ class PayrollCalculationService:
             curr += timedelta(days=1)
 
         # 6. Unpaid Days (LOP) Calculation
-        # LOP = explicit unpaid leaves + unregularized absent days
-        unpaid_days_total = round(unpaid_leave_days + absent_days + (half_days * 0.5 if half_days > 0 and present_days == 0 else 0.0), 2)
+        # LOP Days = Approved Unpaid Leaves + Unexcused Absences (+ half-day fractions)
+        unexcused_absent_days = round(absent_days + (half_days * 0.5), 2)
+        unpaid_days_total = round(unpaid_leave_days + unexcused_absent_days, 2)
         
         # Payable Days = total_days - unpaid_days_total
         payable_days = max(0.0, round(total_days - unpaid_days_total, 2))
@@ -471,8 +489,11 @@ class PayrollCalculationService:
             "present_days": present_days,
             "half_days": half_days,
             "absent_days": absent_days,
+            "unexcused_absent_days": unexcused_absent_days,
             "paid_leave_days": paid_leave_days,
+            "approved_unpaid_leave_days": unpaid_leave_days,
             "unpaid_leave_days": unpaid_days_total,
+            "lop_days": unpaid_days_total,
             "holidays_count": holidays_count,
             "weekly_offs_count": weekly_offs,
             "payable_days": payable_days,

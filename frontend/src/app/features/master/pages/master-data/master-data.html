@@ -220,9 +220,12 @@
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     <span class="font-bold">{{ item.name }}</span>
+                    <span class="badge-system-defined" *ngIf="item.is_system_defined || item.code === 'UL' || item.code === 'PL'">
+                      <i class="fas fa-lock"></i> System Defined
+                    </span>
                   </div>
                 </td>
-                <td><span class="font-bold text-primary">{{ item.max_days || 0 }} Days / Year</span></td>
+                <td><span class="font-bold text-primary">{{ item.annual_entitlement_days || item.max_days || (item.code === 'UL' ? 12 : (item.code === 'PL' ? 18 : 0)) }} Days / Year</span></td>
                 <td>
                   <span class="badge-tag" [ngClass]="item.applicable_employee_type === 'office_only' ? 'tag-office' : 'tag-all'" style="font-size: 11px; padding: 3px 8px; border-radius: 6px;">
                     {{ item.applicable_employee_type === 'office_only' ? 'Office Workers Only' : 'All Employees' }}
@@ -235,8 +238,20 @@
                 </td>
                 <td>
                   <div class="action-buttons-group">
-                    <button class="btn-edit" (click)="openEditModal(item)"><i class="fas fa-pencil-alt"></i> Edit</button>
-                    <button class="btn-delete" (click)="openDeleteModal(item)"><i class="fas fa-trash-alt"></i> Delete</button>
+                    <button class="btn-edit" 
+                            [disabled]="item.is_editable === false || item.code === 'UL'" 
+                            [title]="(item.is_editable === false || item.code === 'UL') ? 'System-defined Unpaid Leave entitlement cannot be edited' : 'Edit'"
+                            [ngStyle]="{'opacity': (item.is_editable === false || item.code === 'UL') ? '0.45' : '1', 'cursor': (item.is_editable === false || item.code === 'UL') ? 'not-allowed' : 'pointer'}"
+                            (click)="(item.is_editable !== false && item.code !== 'UL') ? openEditModal(item) : null">
+                      <i class="fas fa-pencil-alt"></i> Edit
+                    </button>
+                    <button class="btn-delete" 
+                            [disabled]="item.is_system_defined || item.is_deletable === false || item.code === 'UL' || item.code === 'PL'" 
+                            [title]="(item.is_system_defined || item.is_deletable === false || item.code === 'UL' || item.code === 'PL') ? 'System-defined leave types cannot be deleted' : 'Delete'"
+                            [ngStyle]="{'opacity': (item.is_system_defined || item.is_deletable === false || item.code === 'UL' || item.code === 'PL') ? '0.45' : '1', 'cursor': (item.is_system_defined || item.is_deletable === false || item.code === 'UL' || item.code === 'PL') ? 'not-allowed' : 'pointer'}"
+                            (click)="(item.is_system_defined || item.is_deletable === false || item.code === 'UL' || item.code === 'PL') ? null : openDeleteModal(item)">
+                      <i class="fas fa-trash-alt"></i> Delete
+                    </button>
                   </div>
                 </td>
               </tr>

@@ -23,6 +23,12 @@ import { RegularizationRequestsComponent } from './features/hr/pages/regularizat
 import { EmpTimeOffComponent } from './features/emp/pages/time-off/time-off';
 
 import { MasterDataComponent } from './features/master/pages/master-data/master-data';
+import { ManagersComponent } from './features/hr/pages/managers/managers';
+import { ManagerDashboard } from './features/manager/pages/manager-dashboard/manager-dashboard';
+import { ManagerHomeComponent } from './features/manager/pages/manager-home/manager-home';
+import { ManagerTeamComponent } from './features/manager/pages/manager-team/manager-team';
+import { ManagerAttendanceComponent } from './features/manager/pages/manager-attendance/manager-attendance';
+import { ManagerTimeOffComponent } from './features/manager/pages/manager-time-off/manager-time-off';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -42,6 +48,7 @@ export const routes: Routes = [
     children: [
       { path: 'attendance', component: AttendanceComponent },
       { path: 'employees', component: Employees },
+      { path: 'managers', component: ManagersComponent },
       { path: 'time-off', component: HrTimeOffComponent },
       { path: 'my-profile', component: MyProfile },
       { path: 'login-activity', component: LoginActivityList },
@@ -64,7 +71,7 @@ export const routes: Routes = [
     path: 'emp-dashboard', 
     component: EmpDashboard,
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['admin', 'hr', 'employee'] },
+    data: { roles: ['admin', 'hr', 'employee', 'manager'] },
     children: [
       { path: 'my-attendance', component: MyAttendance },
       { path: 'my-documents', loadComponent: () => import('./features/emp/pages/my-documents/my-documents').then(m => m.MyDocumentsComponent) },
@@ -78,6 +85,41 @@ export const routes: Routes = [
       { path: 'trainings/:id/view', loadComponent: () => import('./features/emp/pages/training-view/training-view').then(m => m.TrainingViewComponent) },
       { path: 'assessment/:id', loadComponent: () => import('./features/emp/pages/assessment-exam/assessment-exam').then(m => m.AssessmentExamComponent) },
       { path: 'assessment-result/:id', loadComponent: () => import('./features/emp/pages/assessment-result/assessment-result').then(m => m.AssessmentResultComponent) },
+      { path: 'manager-dashboard', component: ManagerHomeComponent },
+      { path: 'team', component: ManagerTeamComponent },
+      { path: 'team-attendance', component: ManagerAttendanceComponent },
+      { path: 'leave-approvals', component: ManagerTimeOffComponent },
+      // HR Management child routes inside emp-dashboard (opens on same page)
+      { path: 'hr-overview', component: HrDashboard },
+      { path: 'hr-employees', component: Employees },
+      { path: 'hr-managers', component: ManagersComponent },
+      { path: 'hr-documents', loadComponent: () => import('./features/hr/pages/hr-documents/hr-documents').then(m => m.HrDocumentsComponent) },
+      { path: 'hr-attendance', component: AttendanceComponent },
+      { path: 'hr-time-off', component: HrTimeOffComponent },
+      { path: 'hr-regularization', component: RegularizationRequestsComponent },
+      { path: 'hr-trainings', loadComponent: () => import('./features/hr/pages/trainings/training-list/training-list').then(m => m.TrainingListComponent) },
+      { path: 'trainings', loadComponent: () => import('./features/hr/pages/trainings/training-list/training-list').then(m => m.TrainingListComponent) },
+      { path: 'trainings/create', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/edit', loadComponent: () => import('./features/hr/pages/trainings/training-form/training-form').then(m => m.TrainingFormComponent) },
+      { path: 'trainings/:id/manage', loadComponent: () => import('./features/hr/pages/trainings/training-manage/training-manage').then(m => m.TrainingManageComponent) },
+      { path: 'trainings/:id/assessment', loadComponent: () => import('./features/hr/pages/trainings/assessment-builder/assessment-builder').then(m => m.AssessmentBuilderComponent) },
+      { path: 'training-reports', loadComponent: () => import('./features/hr/pages/trainings/training-reports/training-reports').then(m => m.TrainingReportsComponent) },
+      { path: 'hr-reports', loadComponent: () => import('./features/hr/pages/reports/reports').then(m => m.HRReportsComponent) },
+      { path: 'hr-payroll', loadComponent: () => import('./features/hr/pages/payroll/payroll').then(m => m.PayrollComponent) },
+      { path: 'hr-payroll/:tab', loadComponent: () => import('./features/hr/pages/payroll/payroll').then(m => m.PayrollComponent) },
+    ]
+  },
+  {
+    path: 'manager-dashboard',
+    component: ManagerDashboard,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin', 'manager', 'employee'] },
+    children: [
+      { path: '', component: ManagerHomeComponent },
+      { path: 'team', component: ManagerTeamComponent },
+      { path: 'attendance', component: ManagerAttendanceComponent },
+      { path: 'time-off', component: ManagerTimeOffComponent },
+      { path: 'my-profile', component: MyProfile }
     ]
   },
   {
@@ -88,6 +130,7 @@ export const routes: Routes = [
     children: [
       { path: 'hr-users', component: HrUsersComponent },
       { path: 'employees', component: Employees },
+      { path: 'managers', component: ManagersComponent },
       { path: 'documents', loadComponent: () => import('./features/hr/pages/hr-documents/hr-documents').then(m => m.HrDocumentsComponent) },
       { path: 'attendance', component: AttendanceComponent },
       { path: 'time-off', component: HrTimeOffComponent },

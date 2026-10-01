@@ -98,8 +98,23 @@
               <app-custom-datepicker inputId="doj" formControlName="doj" placeholder="Select Date of Joining"></app-custom-datepicker>
             </div>
             <div class="form-group">
-              <label for="reportingManagerId">Reporting Manager</label>
+              <label for="reportingManagerId">Reporting Manager <span class="required">*</span></label>
               <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" placeholder="Select Manager"></app-custom-select>
+              <span class="error-text" *ngIf="isInvalid('employmentInfo', 'reportingManagerId')">Reporting manager is required</span>
+            </div>
+            <div class="form-group">
+              <label for="employeeCode">Employee Code</label>
+              <input 
+                type="text" 
+                id="employeeCode" 
+                name="employeeCode" 
+                formControlName="employeeCode" 
+                class="form-input" 
+                [placeholder]="'e.g. ' + (nextEmployeeCode || 'AIVAN001')">
+            </div>
+            <div class="form-group">
+              <label for="legacyEmployeeCode">Legacy Employee Code <span class="text-muted small fw-normal">(Optional)</span></label>
+              <input type="text" id="legacyEmployeeCode" name="legacyEmployeeCode" formControlName="legacyEmployeeCode" class="form-input" placeholder="e.g. 0015 or prior code">
             </div>
           </div>
         </div>

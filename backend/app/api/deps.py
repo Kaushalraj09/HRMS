@@ -18,9 +18,38 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    token = token or request.cookies.get(settings.SESSION_COOKIE_NAME)
+    auth_header_token = token
+    token = auth_header_token or request.cookies.get(settings.SESSION_COOKIE_NAME)
     if not token:
         raise credentials_exception
+
+    # Explicit CSRF protection: If authenticated via cookie alone on state-changing methods
+    if not auth_header_token and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        origin = request.headers.get("origin")
+        referer = request.headers.get("referer")
+        allowed_origins = {o.rstrip("/") for o in settings.BACKEND_CORS_ORIGINS if o}
+        if settings.FRONTEND_URL:
+            allowed_origins.add(settings.FRONTEND_URL.rstrip("/"))
+
+        req_origin = None
+        if origin:
+            req_origin = origin.rstrip("/")
+        elif referer:
+            from urllib.parse import urlparse
+            parsed = urlparse(referer)
+            req_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+        has_custom_header = bool(
+            request.headers.get("x-requested-with") or
+            request.headers.get("x-csrf-token")
+        )
+        is_valid_origin = req_origin and (req_origin in allowed_origins or "*" in allowed_origins)
+
+        if not is_valid_origin and not has_custom_header:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="CSRF validation failed: Request origin not permitted for cookie authentication.",
+            )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")

@@ -114,6 +114,11 @@ class LeaveType(Base):
     counts_as_leave = Column(Boolean, nullable=False, default=True)
     attendance_required = Column(Boolean, nullable=False, default=False)
     remote_punch_allowed = Column(Boolean, nullable=False, default=False)
+    is_paid = Column(Boolean, nullable=False, default=True)
+    is_system_defined = Column(Boolean, nullable=False, default=False)
+    is_editable = Column(Boolean, nullable=False, default=True)
+    is_deletable = Column(Boolean, nullable=False, default=True)
+    annual_entitlement_days = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

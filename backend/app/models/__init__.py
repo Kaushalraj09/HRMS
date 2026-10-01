@@ -1,5 +1,5 @@
 from app.models.attendance import Attendance, AttendanceAuditTrail, AttendanceRegularizationRequest, OvertimeRequest
-from app.models.employee import Employee, EmployeeShift
+from app.models.employee import Employee, EmployeeShift, EmployeeCodeSequence, EmployeeCodeHistory
 from app.models.hr_user import HrUser
 from app.models.user import Role, User
 from app.models.timeoff import TimeOffRequest
@@ -56,6 +56,8 @@ __all__ = [
     "OvertimeRequest",
     "Employee",
     "EmployeeShift",
+    "EmployeeCodeSequence",
+    "EmployeeCodeHistory",
     "HrUser",
     "Role",
     "User",

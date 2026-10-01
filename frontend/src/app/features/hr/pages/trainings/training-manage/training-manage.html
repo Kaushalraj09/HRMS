@@ -97,6 +97,7 @@
                   #fileInput
                   type="file"
                   multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.mp4,.webm,.mov,.mp3,.wav,.m4a,.ogg,.jpg,.jpeg,.png,.webp,.svg"
                   style="display: none !important;"
                   (change)="onFilesSelected($event)"
                 />
@@ -106,7 +107,7 @@
                   </div>
                   <div class="dropzone-text-block">
                     <div class="dropzone-title-sm">Click to browse or drop files</div>
-                    <div class="dropzone-subtitle-sm">PDF, MP4, MP3, DOCX, Images (Max 50MB)</div>
+                    <div class="dropzone-subtitle-sm">PDF, PPT, PPTX, MP4, MP3, DOCX, Images (Max 100MB)</div>
                   </div>
                 </div>
               </div>
@@ -310,7 +311,17 @@
                     class="custom-form-input search-input-pad"
                     placeholder="Search by name, code, or department..."
                     [(ngModel)]="employeeSearchTerm"
+                    autocomplete="off"
                   />
+                  <button
+                    *ngIf="employeeSearchTerm"
+                    type="button"
+                    class="btn-clear-search"
+                    (click)="employeeSearchTerm = ''"
+                    title="Clear search"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
                 </div>
                 <div class="selection-scroll-container">
                   <div
@@ -329,11 +340,16 @@
                     />
                     <label [for]="'emp_' + emp.id" class="cursor-pointer m-0 flex-grow-1 d-flex align-items-center justify-content-between">
                       <div>
-                        <strong class="text-dark small">{{ emp.first_name }} {{ emp.last_name }}</strong>
-                        <span class="text-muted ms-1 font-mono small">({{ emp.employee_code || 'EMP' }})</span>
+                        <strong class="text-dark small">{{ emp.name || (emp.firstName + ' ' + (emp.lastName || '')) }}</strong>
+                        <span class="text-muted ms-1 font-mono small">({{ emp.employeeCode || emp.id }})</span>
+                        <span *ngIf="emp.legacyEmployeeCode" class="text-muted ms-1 font-mono small" title="Legacy Code">[{{ emp.legacyEmployeeCode }}]</span>
                       </div>
                       <span class="category-tag py-0.5 px-1.5 small">{{ emp.department || 'General' }}</span>
                     </label>
+                  </div>
+                  <div *ngIf="filteredEmployees.length === 0" class="empty-selection-placeholder">
+                    <i class="fas fa-search me-1 text-muted"></i>
+                    <span class="text-muted small">No employees found matching "{{ employeeSearchTerm }}"</span>
                   </div>
                 </div>
               </div>

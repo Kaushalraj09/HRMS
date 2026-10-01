@@ -26,6 +26,11 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
   remainingHours = 9.0;
   requestedHours = 0;
 
+  leaveYear = new Date().getFullYear();
+  paidLeave = { allocated: 18, used: 0, pending: 0, remaining: 18 };
+  unpaidLeave = { allocated: 12, used: 0, pending: 0, remaining: 12 };
+  yearlyBalances: any[] = [];
+
   selectedRequest: GroupedTimeOffRequest | null = null;
   showRequestModal = false;
   isCancelling = false;
@@ -148,6 +153,25 @@ export class EmpTimeOffComponent implements OnInit, OnDestroy {
       next: (state) => {
         this.timeEngine.updateState(state);
       }
+    });
+
+    this.timeoffService.getMyLeaveBalances().subscribe({
+      next: (res) => {
+        if (res) {
+          this.leaveYear = res.leave_year || new Date().getFullYear();
+          if (res.paid_leave) {
+            this.paidLeave = res.paid_leave;
+          }
+          if (res.unpaid_leave) {
+            this.unpaidLeave = res.unpaid_leave;
+          }
+          if (res.yearlyBalances) {
+            this.yearlyBalances = res.yearlyBalances;
+          }
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => console.warn('Could not load yearly balances', err)
     });
 
     this.timeoffService.getMyTimeOffRequests(1, 1000).subscribe({

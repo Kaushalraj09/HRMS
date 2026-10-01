@@ -10,10 +10,30 @@ export interface TimeOffRequest {
   reason?: string | null;
   attachment_name?: string | null;
   employee_name?: string | null;
+  employeeName?: string | null;
+  employee_code?: string | null;
+  employeeCode?: string | null;
+  leaveTypeName?: string | null;
   batch_id?: string | null;
   start_date?: string | null;
+  startDate?: string | null;
   end_date?: string | null;
+  endDate?: string | null;
   total_days?: number | null;
+  daysCount?: number | null;
+  approval_stage?: string | null;
+  manager_name?: string | null;
+  managerName?: string | null;
+  manager_decision?: string | null;
+  managerDecision?: string | null;
+  manager_comment?: string | null;
+  managerComment?: string | null;
+  manager_reviewed_at?: string | null;
+  managerReviewedAt?: string | null;
+  hr_reviewed_at?: string | null;
+  hrReviewedAt?: string | null;
+  hr_comment?: string | null;
+  hrComment?: string | null;
 }
 
 export interface YearlyLeaveBalance {
@@ -41,6 +61,8 @@ export interface GroupedTimeOffRequest {
   
   employee_id: number;
   employee_name?: string | null;
+  employee_code?: string | null;
+  employeeCode?: string | null;
   
   leave_type: string;
   startDate: string;
@@ -49,6 +71,11 @@ export interface GroupedTimeOffRequest {
   totalDurationHours: number;
   
   status: string;
+  approval_stage?: string | null;
+  manager_name?: string | null;
+  manager_decision?: string | null;
+  manager_comment?: string | null;
+  manager_reviewed_at?: string | null;
   reason?: string | null;
   attachment_name?: string | null;
   

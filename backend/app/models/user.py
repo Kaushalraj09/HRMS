@@ -27,6 +27,24 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     @property
+    def is_manager(self) -> bool:
+        if not self.role:
+            return False
+        role_name = self.role.name.lower()
+        if role_name in [UserRole.MANAGER, UserRole.ADMIN]:
+            return True
+        emp_id = self.linked_employee_id
+        if emp_id:
+            from app.models.employee import Employee
+            from sqlalchemy.orm import object_session
+            session = object_session(self)
+            if session:
+                emp = session.query(Employee).filter(Employee.id == emp_id).first()
+                if emp and (emp.is_manager or (emp.user_role and emp.user_role.lower() == 'manager')):
+                    return True
+        return False
+
+    @property
     def accessibleDashboards(self) -> list[str]:
         if not self.role:
             return ["EMPLOYEE"]
@@ -35,7 +53,11 @@ class User(Base):
             return ["MASTER"]
         elif role_name == UserRole.HR:
             return ["HR", "EMPLOYEE"]
+        elif role_name == UserRole.MANAGER:
+            return ["MANAGER", "EMPLOYEE"]
         else:
+            if self.is_manager:
+                return ["MANAGER", "EMPLOYEE"]
             return ["EMPLOYEE"]
 
     @property

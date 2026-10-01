@@ -939,3 +939,29 @@
   }
 }
 
+/* Align Left Search Bar for Manager Dashboard */
+.centernav.align-left {
+  flex: 0 1 420px;
+  max-width: 420px;
+  margin: 0 0 0 16px;
+  justify-content: flex-start;
+}
+
+.centernav.align-left .searchbar input {
+  padding: 0 16px 0 38px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  height: 38px;
+  font-size: 13px;
+}
+
+.centernav.align-left .search-icon {
+  left: 14px;
+  right: auto;
+  color: #94A3B8;
+}
+
+.centernav.align-left .search-clear {
+  right: 12px;
+}
+

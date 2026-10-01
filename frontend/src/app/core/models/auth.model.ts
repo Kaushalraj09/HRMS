@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'hr' | 'employee';
+export type UserRole = 'admin' | 'hr' | 'employee' | 'manager';
 
 export interface LoginRequest {
   email: string;
@@ -15,7 +15,8 @@ export interface SessionUser {
   linkedHrId?: string;
   status: 'Active' | 'Inactive';
   accessibleDashboards?: string[];
-  activeDashboard?: 'HR' | 'EMPLOYEE' | 'MASTER';
+  activeDashboard?: 'HR' | 'EMPLOYEE' | 'MASTER' | 'MANAGER';
+  isManager?: boolean;
   profileImage?: string;
 }
 

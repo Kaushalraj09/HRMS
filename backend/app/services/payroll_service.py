@@ -1017,18 +1017,28 @@ class PayrollService:
             payslip_number = f"PAYSLIP-{run.period.year}{run.period.month:02d}-{emp.employee_code}"
 
             existing = db.query(Payslip).filter(Payslip.payroll_record_id == rec.id).first()
+            emp_name = f"{emp.first_name} {emp.last_name}".strip()
             if not existing:
                 ps = Payslip(
                     payroll_record_id=rec.id,
                     employee_id=emp.id,
                     payslip_number=payslip_number,
                     payroll_month=month_str,
+                    employee_code_at_generation=emp.employee_code,
+                    employee_name_at_generation=emp_name,
+                    payroll_year=run.period.year,
                     is_published=True,
                     generated_at=datetime.now(timezone.utc),
                 )
                 db.add(ps)
             else:
                 existing.is_published = True
+                if not existing.employee_code_at_generation:
+                    existing.employee_code_at_generation = emp.employee_code
+                if not existing.employee_name_at_generation:
+                    existing.employee_name_at_generation = emp_name
+                if not existing.payroll_year:
+                    existing.payroll_year = run.period.year
 
             rec.status = "FINALIZED"
 

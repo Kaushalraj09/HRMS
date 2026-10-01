@@ -104,6 +104,7 @@
   transition: all 0.2s ease;
   cursor: pointer;
   position: relative;
+  box-sizing: border-box;
 }
 
 .menu-link:hover {
@@ -120,13 +121,22 @@
   font-weight: 600;
 }
 
-.menu-link.active-parent {
+.menu-link.active-parent:not(.expanded) {
   color: #ffffff !important;
   background: linear-gradient(90deg, #1b64f2 0%, #7e22ce 100%) !important;
-  border-left: none !important;
   border-radius: 10px;
   box-shadow: 0 4px 14px rgba(27, 100, 242, 0.35);
   font-weight: 600;
+}
+
+.menu-link.active-parent.expanded {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  font-weight: 600;
+}
+
+.menu-link.active-parent.expanded:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .menu-link.active .menu-icon,
@@ -138,10 +148,20 @@
 
 .menu-icon {
   font-size: 16px;
-  width: 28px;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  margin-right: 10px;
+  margin-right: 12px;
+  margin-left: 0;
+  padding: 0;
+  flex-shrink: 0;
   transition: color 0.2s;
+  box-sizing: border-box;
 }
 
 .sidebar.collapsed .menu-icon {
@@ -151,11 +171,15 @@
 }
 
 .menu-text {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 14.5px;
   font-weight: 500;
   white-space: nowrap;
   transition: opacity 0.3s ease;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
 .sidebar.collapsed .menu-text {
@@ -165,10 +189,14 @@
 
 .menu-arrow {
   font-size: 12px;
-  margin-left: 10px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: 0;
   transition: transform 0.3s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .sidebar.collapsed .menu-arrow {
@@ -176,20 +204,29 @@
 }
 
 .fa-angle-right {
-  transition: transform 0.3s ease;
+  transition: transform 0.25s ease;
 }
 
 .fa-angle-right.rotated {
   transform: rotate(90deg);
 }
 
+@keyframes subMenuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sub-menu {
   list-style: none;
-  padding: 2px 0;
+  padding: 4px 0 6px 0;
   margin: 0;
-  background-color: transparent;
-  overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
+  animation: subMenuSlideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar.collapsed .sub-menu {
@@ -201,14 +238,16 @@
 }
 
 .sub-menu-link {
-  display: block;
-  margin: 2px 12px 2px 20px;
-  padding: 8px 14px 8px 44px;
+  display: flex;
+  align-items: center;
+  margin: 2px 12px 2px 26px;
+  padding: 8px 14px;
   border-radius: 8px;
   color: #a0aec0;
   text-decoration: none;
   font-size: 13.5px;
-  transition: all 0.2s;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .sub-menu-link:hover {
@@ -220,7 +259,21 @@
   color: #ffffff !important;
   background: linear-gradient(90deg, #1b64f2 0%, #7e22ce 100%) !important;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(27, 100, 242, 0.3);
+  box-shadow: 0 4px 12px rgba(27, 100, 242, 0.35);
+  font-weight: 600;
+}
+
+.sub-menu-icon {
+  font-size: 13px;
+  width: 20px;
+  margin-right: 8px;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.sub-menu-link.active .sub-menu-icon {
+  opacity: 1;
+  color: #ffffff !important;
 }
 
 /* White dot for active parent item */
@@ -548,13 +601,22 @@
     padding: 10px 14px !important;
     justify-content: flex-start !important;
     border-radius: 10px !important;
+    box-sizing: border-box !important;
   }
 
   :host:not(.collapsed) .menu-icon {
-    margin-right: 10px !important;
+    margin-right: 12px !important;
+    margin-left: 0 !important;
     width: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
     font-size: 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     text-align: center !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   :host:not(.collapsed) .menu-text {
@@ -563,14 +625,15 @@
     font-size: 14px !important;
     font-weight: 500 !important;
     color: inherit !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    text-align: left !important;
   }
 
   :host:not(.collapsed) .menu-arrow {
-    display: flex !important;
-  }
-
-  :host:not(.collapsed) .sub-menu {
-    display: block !important;
+    display: inline-flex !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
   }
 
   :host:not(.collapsed) .sidebar-bottom-card {
@@ -601,3 +664,68 @@
 
 
 
+
+/* Level 2 Nested Sub Menu (for Trainings, Payroll, etc.) */
+.nested-sub-menu {
+  list-style: none;
+  padding: 2px 0 4px 0;
+  margin: 0;
+  animation: subMenuSlideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nested-sub-menu-item {
+  position: relative;
+}
+
+.nested-sub-menu-link {
+  display: flex;
+  align-items: center;
+  margin: 2px 12px 2px 38px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nested-sub-menu-link:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.nested-sub-menu-link.active {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #1b64f2 0%, #7e22ce 100%) !important;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(27, 100, 242, 0.35);
+  font-weight: 600;
+}
+
+.nested-icon {
+  font-size: 12px;
+  width: 18px;
+  margin-right: 8px;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.nested-sub-menu-link.active .nested-icon {
+  opacity: 1;
+  color: #ffffff !important;
+}
+
+.sub-menu-link.has-nested-dropdown {
+  position: relative;
+}
+
+.sub-menu-link.active-parent:not(.expanded) {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #1b64f2 0%, #7e22ce 100%) !important;
+}
+
+.sub-menu-link.active-parent.expanded {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.06);
+}

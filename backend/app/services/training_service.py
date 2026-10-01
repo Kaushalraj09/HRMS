@@ -41,15 +41,109 @@ STORAGE_BASE_DIR = Path(__file__).resolve().parents[2] / "storage" / "trainings"
 
 ALLOWED_EXTENSIONS = {
     "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt",
-    "jpg", "jpeg", "png", "webp", "svg",
+    "jpg", "jpeg", "png", "webp",
     "mp4", "webm", "mov",
     "mp3", "wav", "m4a", "ogg"
 }
 
+_CANONICAL_MIME_TYPES = {
+    "pdf": "application/pdf",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "mp4": "video/mp4",
+    "mov": "video/quicktime",
+    "webm": "video/webm",
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "m4a": "audio/mp4",
+    "ogg": "audio/ogg",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "doc": "application/msword",
+    "xls": "application/vnd.ms-excel",
+    "ppt": "application/vnd.ms-powerpoint",
+    "txt": "text/plain",
+}
+
+
+def _validate_training_file(ext: str, contents: bytes) -> str:
+    """Validate file contents against magic signatures and return canonical server MIME type."""
+    if ext == "svg":
+        raise HTTPException(
+            status_code=400,
+            detail="SVG files are not permitted for security reasons (script injection and XSS risk)."
+        )
+
+    if ext == "pdf":
+        if not contents.startswith(b"%PDF-"):
+            raise HTTPException(status_code=400, detail="Invalid PDF file: Missing %PDF- signature.")
+    elif ext == "png":
+        if not contents.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise HTTPException(status_code=400, detail="Invalid PNG file: Missing PNG signature.")
+    elif ext in ("jpg", "jpeg"):
+        if not contents.startswith(b"\xff\xd8\xff"):
+            raise HTTPException(status_code=400, detail="Invalid JPEG file: Missing JPEG SOI signature.")
+    elif ext == "webp":
+        if not (contents[:4] == b"RIFF" and contents[8:12] == b"WEBP"):
+            raise HTTPException(status_code=400, detail="Invalid WebP file: Missing RIFF/WEBP header.")
+    elif ext in ("mp4", "m4a", "mov"):
+        box_type = contents[4:8] if len(contents) >= 8 else b""
+        if box_type not in (b"ftyp", b"moov", b"mdat", b"wide", b"skip"):
+            raise HTTPException(status_code=400, detail=f"Invalid {ext.upper()} media file signature.")
+    elif ext == "webm":
+        if not contents.startswith(b"\x1a\x45\xdf\xa3"):
+            raise HTTPException(status_code=400, detail="Invalid WebM file signature.")
+    elif ext == "mp3":
+        is_mp3 = contents.startswith(b"ID3") or (len(contents) >= 2 and contents[:2] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"))
+        if not is_mp3:
+            raise HTTPException(status_code=400, detail="Invalid MP3 audio signature.")
+    elif ext == "wav":
+        if not (contents[:4] == b"RIFF" and contents[8:12] == b"WAVE"):
+            raise HTTPException(status_code=400, detail="Invalid WAV audio signature.")
+    elif ext == "ogg":
+        if not contents.startswith(b"OggS"):
+            raise HTTPException(status_code=400, detail="Invalid OGG media signature.")
+    elif ext in ("docx", "xlsx", "pptx"):
+        if not contents.startswith(b"PK\x03\x04"):
+            raise HTTPException(status_code=400, detail=f"Invalid Office OpenXML file (.${ext}): Missing ZIP signature.")
+    elif ext in ("doc", "xls", "ppt"):
+        if not contents.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+            raise HTTPException(status_code=400, detail=f"Invalid Microsoft Office file (.${ext}): Missing OLE signature.")
+    elif ext == "txt":
+        if b"\x00" in contents:
+            raise HTTPException(status_code=400, detail="Invalid text file: Binary data detected.")
+        try:
+            contents.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                contents.decode("latin-1")
+            except Exception:
+                raise HTTPException(status_code=400, detail="Invalid text file encoding.")
+    else:
+        raise HTTPException(status_code=400, detail=f"File extension '.{ext}' is not permitted.")
+
+    return _CANONICAL_MIME_TYPES.get(ext, "application/octet-stream")
+
 ALLOWED_MIME_PREFIXES = [
-    "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument",
-    "application/vnd.ms-excel", "application/vnd.ms-powerpoint", "text/plain",
-    "image/", "video/", "audio/"
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "application/powerpoint",
+    "application/mspowerpoint",
+    "application/x-mspowerpoint",
+    "application/vnd.ms-office",
+    "application/x-msword",
+    "application/x-msexcel",
+    "application/x-zip-compressed",
+    "text/plain",
+    "image/",
+    "video/",
+    "audio/"
 ]
 
 FORBIDDEN_EXTENSIONS = {"exe", "bat", "cmd", "sh", "ps1", "vbs", "jar", "msi", "com", "scr"}
@@ -171,7 +265,6 @@ def list_trainings(
                 "id": m.id,
                 "training_id": m.training_id,
                 "file_name": m.file_name,
-                "storage_path": m.storage_path,
                 "file_type": m.file_type,
                 "mime_type": m.mime_type,
                 "file_size": m.file_size,
@@ -263,20 +356,24 @@ async def upload_training_material(
             detail=f"File format '.{ext}' is not permitted. Supported formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
 
-    mime_type = file.content_type or "application/octet-stream"
-    mime_ok = any(mime_type.startswith(prefix) for prefix in ALLOWED_MIME_PREFIXES)
-    if not mime_ok and mime_type != "application/octet-stream":
-        raise HTTPException(status_code=400, detail=f"MIME type '{mime_type}' is not supported.")
+    if ext == "svg":
+        raise HTTPException(
+            status_code=400,
+            detail="SVG files are not permitted for security reasons (script injection and XSS risk)."
+        )
 
     contents = await file.read()
     file_size = len(contents)
 
-    # 50MB limit
-    max_bytes = 50 * 1024 * 1024
+    # 100MB limit for rich media, slide decks, and training presentations
+    max_bytes = 100 * 1024 * 1024
     if file_size > max_bytes:
-        raise HTTPException(status_code=400, detail="File size exceeds maximum limit of 50 MB.")
+        raise HTTPException(status_code=400, detail="File size exceeds maximum limit of 100 MB.")
     if file_size == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    # Validate file signatures server-side and derive safe canonical MIME type
+    mime_type = _validate_training_file(ext, contents)
 
     # Determine file_type category
     if ext in ["mp4", "webm", "mov"]:

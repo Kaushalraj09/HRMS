@@ -33,6 +33,11 @@ def get_employee_leave_balances(db: Session, employee_id: int, year: int = None)
     cl_item = next((item for item in yearly_list if item["code"] == "CL" or "casual" in item["name"].lower()), None)
     sl_item = next((item for item in yearly_list if item["code"] == "SL" or "sick" in item["name"].lower()), None)
     el_item = next((item for item in yearly_list if item["code"] in ("EL", "PL") or "earned" in item["name"].lower()), None)
+    pl_item = next((item for item in yearly_list if item["code"] == "PL" or (item.get("is_paid") and "paid leave" in item["name"].lower())), None)
+    ul_item = next((item for item in yearly_list if item["code"] == "UL" or "unpaid" in item["name"].lower()), None)
+
+    if not pl_item and el_item:
+        pl_item = el_item
 
     cl_quota = int(round(cl_item["allocated_days"])) if cl_item else 12
     cl_used = int(round(cl_item["used_days"])) if cl_item else 0
@@ -46,9 +51,32 @@ def get_employee_leave_balances(db: Session, employee_id: int, year: int = None)
     el_used = int(round(el_item["used_days"])) if el_item else 0
     el_avail = int(round(el_item["available_days"])) if el_item else el_quota
 
+    pl_alloc = int(round(pl_item["allocated_days"])) if pl_item else 18
+    pl_used = int(round(pl_item["used_days"])) if pl_item else 0
+    pl_pending = int(round(pl_item.get("pending_days", 0))) if pl_item else 0
+    pl_remaining = int(round(pl_item["available_days"])) if pl_item else pl_alloc
+
+    ul_alloc = int(round(ul_item["allocated_days"])) if ul_item else 12
+    ul_used = int(round(ul_item["used_days"])) if ul_item else 0
+    ul_pending = int(round(ul_item.get("pending_days", 0))) if ul_item else 0
+    ul_remaining = int(round(ul_item["available_days"])) if ul_item else ul_alloc
+
     total_avail = int(round(cl_avail + sl_avail + el_avail))
 
     return {
+        "leave_year": current_year,
+        "paid_leave": {
+            "allocated": pl_alloc,
+            "used": pl_used,
+            "pending": pl_pending,
+            "remaining": pl_remaining,
+        },
+        "unpaid_leave": {
+            "allocated": ul_alloc,
+            "used": ul_used,
+            "pending": ul_pending,
+            "remaining": ul_remaining,
+        },
         "casual": {
             "quotaDays": cl_quota,
             "usedDays": cl_used,
@@ -399,6 +427,8 @@ def approve_request(
 
     req.employee_name = f"{req.employee.first_name} {req.employee.last_name}"
     req.employee_code = req.employee.employee_code
+    if req.employee and req.employee.reporting_manager:
+        req.manager_name = f"{req.employee.reporting_manager.first_name} {req.employee.reporting_manager.last_name}".strip()
     return req
 
 def _duration_hours_between(start: time_type, end: time_type, day: date) -> float:

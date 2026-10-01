@@ -14,7 +14,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let processedReq = req;
   if (isLocalApi) {
     const token = auth.getToken();
-    const setHeaders: Record<string, string> = {};
+    const setHeaders: Record<string, string> = {
+      'X-Requested-With': 'XMLHttpRequest'
+    };
     if (token) {
       setHeaders['Authorization'] = `Bearer ${token}`;
     }

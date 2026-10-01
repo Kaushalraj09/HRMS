@@ -1,0 +1,36 @@
+<div class="trend-card">
+  <div class="card-header">
+    <h3 class="card-title">Team Attendance Trend</h3>
+    <div class="period-selector">
+      <app-custom-select
+        [options]="periodOptions"
+        [value]="selectedPeriod"
+        (valueChange)="onPeriodChange($event)"
+        size="sm"
+        align="right">
+      </app-custom-select>
+    </div>
+  </div>
+
+  <div class="legend-row">
+    <div class="legend-item">
+      <span class="legend-dot dot-present"></span>
+      <span>Present</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot dot-leave"></span>
+      <span>Leave</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot dot-absent"></span>
+      <span>Absent</span>
+    </div>
+  </div>
+
+  <div class="chart-area" [class.is-loading]="isLoading">
+    <div class="chart-loader-overlay" *ngIf="isLoading && !chartInstance">
+      <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <canvas #trendCanvas></canvas>
+  </div>
+</div>

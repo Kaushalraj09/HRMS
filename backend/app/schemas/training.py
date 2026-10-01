@@ -60,7 +60,6 @@ class TrainingMaterialResponse(BaseModel):
     id: int
     training_id: int
     file_name: str
-    storage_path: str
     file_type: str
     mime_type: str
     file_size: int

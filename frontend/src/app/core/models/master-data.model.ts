@@ -77,6 +77,11 @@ export interface LeaveType {
   counts_as_leave?: boolean;
   attendance_required?: boolean;
   remote_punch_allowed?: boolean;
+  annual_entitlement_days?: number;
+  is_paid?: boolean;
+  is_system_defined?: boolean;
+  is_editable?: boolean;
+  is_deletable?: boolean;
   is_active: boolean;
 }
 

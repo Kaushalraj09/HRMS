@@ -869,7 +869,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
-                                                        <span class="user-subcode">{{ 'EMP-' + ('0000' + req.employee_id).slice(-4) }}</span>
+                                                        <span class="user-subcode">{{ req.employee_code || req.employeeCode || req.employee_id }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -934,7 +934,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employee_name || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employee_name || '—' }}</strong>
-                                                        <span class="user-subcode">{{ 'EMP-' + ('0000' + req.employee_id).slice(-4) }}</span>
+                                                        <span class="user-subcode">{{ req.employee_code || req.employeeCode || req.employee_id }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -997,7 +997,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employeeName || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employeeName || '—' }}</strong>
-                                                        <span class="user-subcode">{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</span>
+                                                        <span class="user-subcode">{{ req.employeeCode || req.employee_code || req.employeeId }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1049,7 +1049,7 @@
                                                     <div class="user-avatar-sm">{{ (req.employeeName || 'EM').slice(0,2).toUpperCase() }}</div>
                                                     <div>
                                                         <strong class="user-fullname">{{ req.employeeName || '—' }}</strong>
-                                                        <span class="user-subcode">{{ req.employeeCode || ('EMP-' + ('0000' + req.employeeId).slice(-4)) }}</span>
+                                                        <span class="user-subcode">{{ req.employeeCode || req.employee_code || req.employeeId }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1101,7 +1101,7 @@
         <label>Employee</label>
         <div class="modal-emp-info">
             <strong>{{ selectedRequest.employee_name || '—' }}</strong>
-            <span>{{ 'EMP-' + ('0000' + selectedRequest.employee_id).slice(-4) }}</span>
+            <span>{{ selectedRequest.employee_code || selectedRequest.employeeCode || selectedRequest.employee_id }}</span>
         </div>
       </div>
       <div class="modal-detail-grid">
@@ -1192,7 +1192,7 @@
         <label>Employee</label>
         <div class="modal-emp-info">
             <strong>{{ selectedRegularization.employeeName || '—' }}</strong>
-            <span>{{ selectedRegularization.employeeCode || ('EMP-' + ('0000' + selectedRegularization.employeeId).slice(-4)) }}</span>
+            <span>{{ selectedRegularization.employeeCode || selectedRegularization.employeeId }}</span>
         </div>
       </div>
       <div class="modal-detail-grid">

@@ -27,3 +27,7 @@ class EmployeeLeaveBalance(Base):
     # Relationships
     employee = relationship("Employee", backref="yearly_leave_balances")
     leave_type = relationship("LeaveType")
+
+    @property
+    def remaining_days(self) -> float:
+        return self.available_days

@@ -14,6 +14,7 @@ import { EmployeeViewModalComponent } from './modals/employee-view-modal/employe
 import { EmployeeEditModalComponent } from './modals/employee-edit-modal/employee-edit-modal';
 import { EmployeeCredentialModalComponent } from './modals/employee-credential-modal/employee-credential-modal';
 import { EmployeeAddModalComponent } from './modals/employee-add-modal/employee-add-modal';
+import { ManagerAssignmentModalComponent } from './modals/manager-assignment-modal/manager-assignment-modal';
 
 import { MasterDataService } from '../../../../core/services/master-data.service';
 import { DocumentService } from '../../../../core/services/document.service';
@@ -47,7 +48,8 @@ export interface EmployeeDocSummaryInfo {
     EmployeeViewModalComponent,
     EmployeeEditModalComponent,
     EmployeeCredentialModalComponent,
-    EmployeeAddModalComponent
+    EmployeeAddModalComponent,
+    ManagerAssignmentModalComponent
   ],
   templateUrl: './employees.html',
   styleUrl: './employees.css'
@@ -56,6 +58,8 @@ export class Employees implements OnInit {
   currentUser: any = null;
   deleteModalOpen = false;
   employeeToDelete: Employee | null = null;
+  managerModalOpen = false;
+  employeeForManagerModal: Employee | null = null;
   searchControl = new FormControl('');
   departmentControl = new FormControl('');
   typeControl = new FormControl('');
@@ -545,5 +549,21 @@ export class Employees implements OnInit {
         this.toastService.showError(err?.error?.detail || 'An error occurred while deleting the employee.');
       }
     });
+  }
+
+  openManagerModal(employee: Employee): void {
+    this.employeeForManagerModal = employee;
+    this.managerModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeManagerModal(): void {
+    this.managerModalOpen = false;
+    this.employeeForManagerModal = null;
+    this.cdr.detectChanges();
+  }
+
+  onManagerUpdated(): void {
+    this.onSearch();
   }
 }

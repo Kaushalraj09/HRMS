@@ -198,9 +198,25 @@ def create_leave_type(db: Session, payload) -> LeaveType:
     return db_lt
 
 def update_leave_type(db: Session, lt_id: int, payload) -> LeaveType:
+    from fastapi import HTTPException
     db_lt = db.query(LeaveType).filter(LeaveType.id == lt_id).first()
     if not db_lt:
         return None
+
+    code_upper = (db_lt.code or "").upper()
+    if getattr(db_lt, "is_system_defined", False) and getattr(db_lt, "is_editable", True) is False:
+        raise HTTPException(
+            status_code=400,
+            detail=f"System-defined leave type '{db_lt.name}' entitlement is fixed at 12 days and cannot be modified."
+        )
+
+    # For system-defined Paid Leave (PL), code cannot be changed and must remain paid
+    if code_upper == "PL":
+        if (payload.code or "").upper() != "PL":
+            raise HTTPException(status_code=400, detail="Cannot alter the code of system-defined Paid Leave.")
+        if hasattr(payload, "is_paid") and payload.is_paid is False:
+            raise HTTPException(status_code=400, detail="System-defined Paid Leave must remain paid.")
+
     db_lt.name = payload.name
     db_lt.code = payload.code
     db_lt.unit_type = payload.unit_type
@@ -218,6 +234,8 @@ def update_leave_type(db: Session, lt_id: int, payload) -> LeaveType:
         db_lt.attendance_required = payload.attendance_required
     if hasattr(payload, "remote_punch_allowed") and payload.remote_punch_allowed is not None:
         db_lt.remote_punch_allowed = payload.remote_punch_allowed
+    if hasattr(payload, "annual_entitlement_days") and payload.annual_entitlement_days is not None:
+        db_lt.annual_entitlement_days = payload.annual_entitlement_days
     db_lt.is_active = payload.is_active
     db.commit()
     db.refresh(db_lt)
@@ -342,9 +360,16 @@ def delete_work_location(db: Session, loc_id: int) -> bool:
 
 
 def delete_leave_type(db: Session, lt_id: int) -> bool:
+    from fastapi import HTTPException
     lt = db.query(LeaveType).filter(LeaveType.id == lt_id).first()
     if not lt:
         return False
+    code_upper = (lt.code or "").upper()
+    if getattr(lt, "is_system_defined", False) or not getattr(lt, "is_deletable", True) or code_upper in ["UL", "PL"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"System-defined leave type '{lt.name}' cannot be deleted."
+        )
     from app.models.timeoff import TimeOffRequest
     req_count = db.query(TimeOffRequest).filter(
         (TimeOffRequest.leave_type == lt.name) | (TimeOffRequest.leave_type == lt.code)

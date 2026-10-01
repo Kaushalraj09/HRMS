@@ -6,8 +6,17 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.employee import Employee
 from app.core.enums import UserRole
-from app.schemas.employee import EmployeeCreate, EmployeeCredentialsResponse, EmployeeListResponse, EmployeeResponse, EmployeeUpdate
-from app.services import employee_service
+from app.schemas.employee import (
+    AssignTeamRequest,
+    ChangeEmployeeCodeRequest,
+    EmployeeCodeHistoryResponse,
+    EmployeeCreate,
+    EmployeeCredentialsResponse,
+    EmployeeListResponse,
+    EmployeeResponse,
+    EmployeeUpdate,
+)
+from app.services import employee_service, employee_code_service
 from app.services.account_access_service import InvitationDeliveryError
 
 router = APIRouter(prefix="/employees", tags=["employee-management"])
@@ -27,6 +36,17 @@ def add_employee(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Work location is required."
+        )
+    if not request.reporting_manager_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Assigning a reporting manager is mandatory."
+        )
+    manager = db.query(Employee).filter(Employee.id == request.reporting_manager_id, Employee.status != "Deleted").first()
+    if not manager:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected reporting manager does not exist or has been deleted."
         )
     try:
         return employee_service.create_employee(db, request)
@@ -62,6 +82,24 @@ def get_all_employees(
         status=status,
         exclude_hr=exclude_hr,
     )
+
+
+@router.get("/next-code")
+def get_next_employee_code_preview(
+    prefix: str = "AIVAN",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns preview of next sequential employee code."""
+    seq = employee_code_service.get_or_create_sequence(db, prefix)
+    from app.utils.employee_code import format_employee_code
+    formatted = format_employee_code(seq.next_number, prefix=seq.prefix, padding=seq.padding)
+    return {
+        "prefix": seq.prefix,
+        "nextNumber": seq.next_number,
+        "nextCode": formatted,
+    }
+
 
 @router.get("/{employee_id}", response_model=EmployeeResponse)
 def get_employee(
@@ -251,3 +289,127 @@ def delete_employee(
         raise HTTPException(status_code=500, detail="Failed to delete employee")
 
     return {"success": True, "message": "Employee deleted successfully"}
+
+
+@router.get("/managers/all", response_model=list[EmployeeResponse])
+def get_all_managers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to view managers"
+        )
+    return employee_service.get_all_managers(db)
+
+
+@router.post("/{employee_id}/assign-manager", response_model=EmployeeResponse)
+def assign_manager_role(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to assign manager role"
+        )
+    try:
+        return employee_service.assign_manager_role(db, employee_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{employee_id}/revoke-manager", response_model=EmployeeResponse)
+def revoke_manager_role(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to revoke manager role"
+        )
+    try:
+        return employee_service.revoke_manager_role(db, employee_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{employee_id}/assign-team", response_model=list[EmployeeResponse])
+def assign_team_to_manager(
+    employee_id: int,
+    payload: AssignTeamRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to assign teams"
+        )
+    try:
+        return employee_service.assign_team_to_manager(db, employee_id, payload.employee_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{employee_id}/team", response_model=list[EmployeeResponse])
+def get_manager_team(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    role = current_user.role.name.lower() if current_user.role else ""
+    if role not in [UserRole.ADMIN, UserRole.HR]:
+        # If not admin/hr, can only view if current user is that manager
+        emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not emp or emp.id != employee_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this team")
+    return employee_service.get_manager_team(db, employee_id)
+
+
+@router.post("/{employee_id}/change-code", response_model=EmployeeResponse)
+def change_employee_code(
+    employee_id: int,
+    payload: ChangeEmployeeCodeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Officially modify company employee code with required justification and audit logging."""
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to change employee codes",
+        )
+    try:
+        changed_by = current_user.email or current_user.display_name or "ADMIN"
+        return employee_code_service.change_employee_code(
+            db=db,
+            employee_id=employee_id,
+            new_code=payload.new_employee_code,
+            reason=payload.reason,
+            changed_by=changed_by,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{employee_id}/code-history", response_model=list[EmployeeCodeHistoryResponse])
+def get_employee_code_history(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve the full historical audit log of employee code changes."""
+    role = current_user.role.name.lower() if current_user.role else ""
+    if role not in [UserRole.ADMIN, UserRole.HR]:
+        # Self-service check: employees can only view their own code history
+        emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not emp or emp.id != employee_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this employee's code history")
+
+    return employee_code_service.get_code_history_for_employee(db, employee_id)
+

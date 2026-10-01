@@ -106,6 +106,17 @@
                 <label for="reportingManagerId">Reporting Manager</label>
                 <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" placeholder="Select Manager"></app-custom-select>
               </div>
+              <div class="form-group">
+                <label>Employee Code</label>
+                <div class="form-input readonly-note d-flex align-items-center justify-content-between" style="background: #f8fafc; font-weight: 600; padding: 0.55rem 0.75rem;">
+                  <span class="font-mono text-dark">{{ employeeDetail.employee.employeeCode }}</span>
+                  <span style="background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">Primary Code</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="legacyEmployeeCode">Legacy Employee Code <span class="text-muted small fw-normal">(Prior System Ref)</span></label>
+                <input type="text" id="legacyEmployeeCode" name="legacyEmployeeCode" formControlName="legacyEmployeeCode" class="form-input" placeholder="e.g. 0015 or prior code">
+              </div>
             </div>
           </div>
 

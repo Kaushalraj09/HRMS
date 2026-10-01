@@ -6,6 +6,10 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
+.custom-datepicker-container.is-open {
+  z-index: 1050;
+}
+
 .custom-datepicker-container.disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -16,13 +20,13 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 8px 14px;
+  padding: 8.5px 14px;
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: #1e293b;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
@@ -33,7 +37,7 @@
 
 .datepicker-trigger:hover:not(:disabled) {
   background-color: #f8fafc;
-  border-color: #cbd5e1;
+  border-color: #94a3b8;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
@@ -87,13 +91,13 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 9999;
-  width: 255px;
+  z-index: 99999;
+  width: 280px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.16), 0 4px 14px rgba(15, 23, 42, 0.06);
-  padding: 8px 10px;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px -8px rgba(15, 23, 42, 0.18), 0 8px 24px rgba(15, 23, 42, 0.08);
+  padding: 12px 14px;
   box-sizing: border-box;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   animation: dpSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -112,7 +116,7 @@
 
 /* Expand container when open inside modals to naturally enclose popup inside the modal card */
 :host-context(.modal-card, .modal-dialog, .modal-content, [class*="modal"]) .custom-datepicker-container.is-open {
-  margin-bottom: 255px;
+  margin-bottom: 280px;
   transition: margin-bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -143,8 +147,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -152,16 +156,16 @@
 .dp-month-select-btn {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 3px 8px;
-  border-radius: 7px;
+  padding: 4px 10px;
+  border-radius: 8px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   transition: all 0.15s ease;
 }
 
@@ -189,14 +193,14 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #64748b;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   transition: all 0.15s ease;
 }
 
@@ -211,12 +215,12 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  margin-bottom: 3px;
+  margin-bottom: 6px;
 }
 
 .dp-weekday {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -227,14 +231,14 @@
 .dp-days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1.5px;
+  gap: 2.5px;
 }
 
 .dp-day-cell {
   background: transparent;
   border: none;
-  width: 28px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   margin: 0 auto;
   border-radius: 50%;
   display: flex;
@@ -247,7 +251,7 @@
 
 .day-num {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -346,8 +350,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 6px;
-  padding-top: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid #f1f5f9;
 }
 
@@ -355,14 +359,14 @@
   background: transparent;
   border: none;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   transition: all 0.15s ease;
 }
 

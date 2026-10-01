@@ -1,12 +1,14 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.models.user import Role
 from app.models.master_data import Department, Designation, Shift, WorkLocation, LeaveType, Holiday
 from datetime import date
 
 def seed_roles(db: Session):
-    roles = ["Admin", "HR", "Employee"]
+    from sqlalchemy import func
+    roles = ["Admin", "HR", "Employee", "Manager"]
     for role_name in roles:
-        existing_role = db.query(Role).filter(Role.name == role_name).first()
+        existing_role = db.query(Role).filter(func.lower(Role.name) == role_name.lower()).first()
         if not existing_role:
             new_role = Role(name=role_name)
             db.add(new_role)
@@ -161,31 +163,22 @@ def seed_master_data(db: Session):
 
     # 5. Leave Types
     leave_types = [
-        {"name": "Casual Leave", "code": "CL", "unit_type": "full_day", "default_balance_hours": 96.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
-        {"name": "Sick Leave", "code": "SL", "unit_type": "full_day", "default_balance_hours": 64.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
-        {"name": "Earned Leave", "code": "EL", "unit_type": "full_day", "default_balance_hours": 144.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
-        {"name": "Half Day", "code": "HD", "unit_type": "half_day", "default_balance_hours": 32.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False},
-        {"name": "Comp Off", "code": "CO", "unit_type": "full_day", "default_balance_hours": 16.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False}
+        {"name": "Unpaid Leave", "code": "UL", "unit_type": "full_day", "default_balance_hours": 96.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": False, "is_system_defined": True, "is_editable": False, "is_deletable": False, "annual_entitlement_days": 12.0},
+        {"name": "Paid Leave", "code": "PL", "unit_type": "full_day", "default_balance_hours": 144.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": True, "is_editable": True, "is_deletable": False, "annual_entitlement_days": 18.0},
+        {"name": "Casual Leave", "code": "CL", "unit_type": "full_day", "default_balance_hours": 96.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": False, "is_editable": True, "is_deletable": True, "annual_entitlement_days": 12.0},
+        {"name": "Sick Leave", "code": "SL", "unit_type": "full_day", "default_balance_hours": 64.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": False, "is_editable": True, "is_deletable": True, "annual_entitlement_days": 8.0},
+        {"name": "Earned Leave", "code": "EL", "unit_type": "full_day", "default_balance_hours": 144.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": False, "is_editable": True, "is_deletable": True, "annual_entitlement_days": 18.0},
+        {"name": "Half Day", "code": "HD", "unit_type": "half_day", "default_balance_hours": 32.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": False, "is_editable": True, "is_deletable": True, "annual_entitlement_days": 4.0},
+        {"name": "Comp Off", "code": "CO", "unit_type": "full_day", "default_balance_hours": 16.0, "applicable_employee_type": "all", "counts_as_leave": True, "attendance_required": False, "remote_punch_allowed": False, "is_paid": True, "is_system_defined": False, "is_editable": True, "is_deletable": True, "annual_entitlement_days": 2.0}
     ]
     for lt in leave_types:
-        existing_lt = db.query(LeaveType).filter(LeaveType.code == lt["code"]).first()
+        existing_lt = db.query(LeaveType).filter((LeaveType.code == lt["code"]) | (func.lower(LeaveType.name) == lt["name"].lower())).first()
         if not existing_lt:
-            db.add(LeaveType(
-                name=lt["name"],
-                code=lt["code"],
-                unit_type=lt["unit_type"],
-                default_balance_hours=lt["default_balance_hours"],
-                applicable_employee_type=lt["applicable_employee_type"],
-                counts_as_leave=lt["counts_as_leave"],
-                attendance_required=lt["attendance_required"],
-                remote_punch_allowed=lt["remote_punch_allowed"]
-            ))
+            db.add(LeaveType(**lt))
             print(f"Added leave type: {lt['name']}")
         else:
-            existing_lt.applicable_employee_type = lt["applicable_employee_type"]
-            existing_lt.counts_as_leave = lt["counts_as_leave"]
-            existing_lt.attendance_required = lt["attendance_required"]
-            existing_lt.remote_punch_allowed = lt["remote_punch_allowed"]
+            for k, v in lt.items():
+                setattr(existing_lt, k, v)
             print(f"Updated leave type attributes: {lt['name']}")
 
     # 6. Holidays

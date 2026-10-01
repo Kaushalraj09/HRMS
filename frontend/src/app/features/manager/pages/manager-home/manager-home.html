@@ -1,0 +1,442 @@
+<div class="dashboard-wrapper">
+  <!-- 1. PAGE HEADER -->
+  <header class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">{{ greeting }}, {{ managerName }}</h1>
+      <p class="page-subtitle">Here's your team overview for today</p>
+    </div>
+
+    <div class="header-right">
+      <div class="date-selector-wrapper">
+        <button type="button" class="date-selector-card" (click)="toggleDateDropdown($event)">
+          <i class="far fa-calendar-alt date-icon"></i>
+          <span class="date-text">{{ selectedDateDisplay }}</span>
+          <i class="fas fa-chevron-down dropdown-arrow" [class.rotated]="isDateDropdownOpen"></i>
+        </button>
+
+        <div class="calendar-dropdown-panel" *ngIf="isDateDropdownOpen" (click)="$event.stopPropagation()">
+          <!-- Quick Presets -->
+          <div class="calendar-presets-bar">
+            <button type="button" class="preset-pill" (click)="selectPresetDate('today', $event)">Today</button>
+            <button type="button" class="preset-pill" (click)="selectPresetDate('yesterday', $event)">Yesterday</button>
+            <button type="button" class="preset-pill" (click)="selectPresetDate('week', $event)">This Week</button>
+          </div>
+
+          <!-- Month Navigation Header -->
+          <div class="calendar-nav-header">
+            <button type="button" class="nav-arrow-btn" (click)="prevCalendarMonth($event)" title="Previous Month">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="month-title-text">{{ calendarMonthYearDisplay }}</span>
+            <button type="button" class="nav-arrow-btn" (click)="nextCalendarMonth($event)" title="Next Month">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <!-- Weekday Row -->
+          <div class="calendar-weekdays-row">
+            <span class="weekday-lbl" *ngFor="let day of weekDays">{{ day }}</span>
+          </div>
+
+          <!-- Days Grid -->
+          <div class="calendar-days-grid">
+            <button
+              type="button"
+              *ngFor="let cell of calendarCells"
+              class="calendar-day-btn"
+              [class.other-month]="!cell.isCurrentMonth"
+              [class.is-today]="cell.isToday"
+              [class.is-selected]="cell.isSelected"
+              (click)="onSelectCalendarDay(cell, $event)">
+              <span class="day-val">{{ cell.dayNumber }}</span>
+              <span class="today-dot" *ngIf="cell.isToday && !cell.isSelected"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. FIRST KPI ROW (4 CARDS) -->
+  <section class="kpi-grid">
+    <app-dashboard-kpi-card
+      title="Team Members"
+      [value]="kpiData.teamMembers"
+      subtitle="Active Employees"
+      icon="fas fa-users"
+      colorTheme="blue"
+      [route]="teamRoute">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="Present Today"
+      [value]="kpiData.presentToday"
+      [subtitle]="kpiData.presentPct + ' of team'"
+      icon="fas fa-user-check"
+      colorTheme="green"
+      [route]="attendanceRoute">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="On Leave"
+      [value]="kpiData.onLeaveToday"
+      [subtitle]="kpiData.onLeavePct + ' of team'"
+      icon="fas fa-comment-dots"
+      colorTheme="amber"
+      [route]="timeOffRoute">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="Absent"
+      [value]="kpiData.absentToday"
+      [subtitle]="kpiData.absentPct + ' of team'"
+      icon="fas fa-triangle-exclamation"
+      colorTheme="red"
+      [route]="attendanceRoute">
+    </app-dashboard-kpi-card>
+  </section>
+
+  <!-- 3. SECOND KPI ROW (4 CARDS) -->
+  <section class="kpi-grid">
+    <app-dashboard-kpi-card
+      title="Late Today"
+      [value]="kpiData.lateToday"
+      [subtitle]="kpiData.latePct + ' of team'"
+      icon="fas fa-clock"
+      colorTheme="orange"
+      [route]="attendanceRoute">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="Pending Leave Requests"
+      [value]="kpiData.pendingLeaves"
+      subtitle="Require approval"
+      icon="fas fa-calendar-check"
+      colorTheme="teal"
+      [route]="timeOffRoute">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="Tasks Due"
+      [value]="kpiData.tasksDue"
+      [subtitle]="'Overdue: ' + kpiData.overdueTasks"
+      icon="fas fa-clipboard-list"
+      colorTheme="sky">
+    </app-dashboard-kpi-card>
+
+    <app-dashboard-kpi-card
+      title="Training Compliance"
+      [value]="kpiData.trainingCompliance"
+      subtitle="Completed (Mandatory)"
+      icon="fas fa-graduation-cap"
+      colorTheme="green">
+    </app-dashboard-kpi-card>
+  </section>
+
+  <!-- 4. MAIN CONTENT ROW (3-COLUMN SECTION) -->
+  <section class="main-content-row">
+    <!-- 4A. TODAY'S ATTENDANCE (~38% column) -->
+    <div class="content-col col-attendance">
+      <div class="dash-card attendance-card">
+        <div class="card-header-bar">
+          <h2 class="card-title">Today's Attendance</h2>
+          <a [routerLink]="attendanceRoute" class="view-all-link">View All</a>
+        </div>
+
+        <div class="table-container">
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Designation</th>
+                <th>In Time</th>
+                <th>Out Time</th>
+                <th>Working Hrs</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let emp of attendanceList">
+                <td>
+                  <div class="emp-cell">
+                    <img *ngIf="emp.avatarUrl" [src]="emp.avatarUrl" alt="" class="emp-avatar-img" />
+                    <div *ngIf="!emp.avatarUrl" class="emp-avatar" [style.background-color]="emp.avatarBg">
+                      {{ emp.avatarInitials }}
+                    </div>
+                    <span class="emp-name">{{ emp.name }}</span>
+                  </div>
+                </td>
+                <td><span class="designation-text">{{ emp.designation }}</span></td>
+                <td><span class="time-val">{{ emp.inTime }}</span></td>
+                <td><span class="time-val">{{ emp.outTime }}</span></td>
+                <td><span class="time-val font-semibold">{{ emp.workingHrs }}</span></td>
+                <td>
+                  <span class="status-pill pill-{{ emp.status.toLowerCase().replace(' ', '-') }}">
+                    {{ emp.status }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="isLoadingStats">
+                <td colspan="6" class="table-status-cell">
+                  <i class="fas fa-spinner fa-spin"></i> Loading today's attendance...
+                </td>
+              </tr>
+              <tr *ngIf="!isLoadingStats && attendanceList.length === 0">
+                <td colspan="6" class="table-status-cell">
+                  No attendance records found for today
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4B. LEAVE REQUESTS (PENDING) (~34% column) -->
+    <div class="content-col col-leaves">
+      <div class="dash-card leaves-card">
+        <div class="card-header-bar">
+          <h2 class="card-title">Leave Requests (Pending)</h2>
+          <a [routerLink]="timeOffRoute" class="view-all-link">View All</a>
+        </div>
+
+        <div class="leave-requests-list">
+          <div class="empty-requests-state" *ngIf="isLoadingLeaves">
+            <i class="fas fa-spinner fa-spin empty-icon"></i>
+            <p class="empty-title">Loading leave requests...</p>
+          </div>
+
+          <div class="leave-item" *ngFor="let req of leaveRequests">
+            <div class="leave-item-left">
+              <div class="emp-avatar-wrap">
+                <img *ngIf="req.avatarUrl" [src]="req.avatarUrl" alt="" class="emp-avatar-img" />
+                <div *ngIf="!req.avatarUrl" class="emp-avatar" [style.background-color]="req.avatarBg">
+                  {{ req.avatarInitials }}
+                </div>
+              </div>
+              <div class="leave-info-main">
+                <span class="leave-emp-name">{{ req.name }}</span>
+                <span class="leave-meta-line">{{ req.dates }} | {{ req.leaveType }} | {{ req.duration }}</span>
+                <span class="leave-reason-line" *ngIf="req.reason">Reason: {{ req.reason }}</span>
+              </div>
+            </div>
+
+            <div class="action-buttons-group">
+              <button 
+                type="button" 
+                class="btn-approve" 
+                (click)="openDecision(req, 'approve')">
+                Approve
+              </button>
+              <button 
+                type="button" 
+                class="btn-reject" 
+                (click)="openDecision(req, 'reject')">
+                Reject
+              </button>
+            </div>
+          </div>
+
+          <div class="empty-requests-state" *ngIf="!isLoadingLeaves && leaveRequests.length === 0">
+            <i class="fas fa-check-circle empty-icon"></i>
+            <p class="empty-title">All caught up!</p>
+            <p class="empty-sub">No pending leave requests requiring approval</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4C. TEAM ATTENDANCE STATUS & QUICK ACTIONS (~28% column) -->
+    <div class="content-col col-status-actions">
+      <app-attendance-status-chart 
+        [data]="attendanceStatusData">
+      </app-attendance-status-chart>
+
+      <app-quick-actions 
+        [attendanceRoute]="attendanceRoute"
+        [timeOffRoute]="timeOffRoute"
+        (actionClick)="handleQuickAction($event)">
+      </app-quick-actions>
+    </div>
+  </section>
+
+  <!-- 5. LOWER CONTENT ROW -->
+  <section class="lower-content-row">
+    <!-- 5A. TEAM ATTENDANCE TREND (~43% column) -->
+    <div class="lower-col col-trend">
+      <app-attendance-trend-chart></app-attendance-trend-chart>
+    </div>
+
+    <!-- 5B. UPCOMING TRAININGS (~27% column) -->
+    <div class="lower-col col-trainings">
+      <div class="dash-card training-card">
+        <div class="card-header-bar">
+          <h2 class="card-title">Upcoming Trainings</h2>
+          <a [routerLink]="overviewRoute" class="view-all-link">View All</a>
+        </div>
+
+        <div class="trainings-list">
+          <div class="empty-requests-state" *ngIf="isLoadingTrainings">
+            <i class="fas fa-spinner fa-spin empty-icon"></i>
+            <p class="empty-title">Loading upcoming trainings...</p>
+          </div>
+
+          <div class="training-row" *ngFor="let t of upcomingTrainings">
+            <div class="training-icon-box" [style.background-color]="t.iconBg" [style.color]="t.iconColor">
+              <i [class]="t.icon"></i>
+            </div>
+            <div class="training-details">
+              <span class="training-name">{{ t.title }}</span>
+              <span class="training-sub-count">{{ t.pendingCount }} employees pending</span>
+              <span class="training-sub-due">Due: {{ t.dueDate }}</span>
+            </div>
+            <i class="fas fa-chevron-right row-arrow"></i>
+          </div>
+
+          <div class="empty-requests-state" *ngIf="!isLoadingTrainings && upcomingTrainings.length === 0">
+            <i class="fas fa-graduation-cap empty-icon"></i>
+            <p class="empty-title">No upcoming trainings</p>
+            <p class="empty-sub">Your team has no pending mandatory trainings</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5C. TEAM PERFORMANCE (~30% column) -->
+    <div class="lower-col col-performance">
+      <div class="dash-card performance-card">
+        <div class="card-header-bar">
+          <h2 class="card-title">Team Performance</h2>
+          <a [routerLink]="overviewRoute" class="view-all-link">View All</a>
+        </div>
+
+        <div class="table-container">
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Attendance</th>
+                <th>Tasks</th>
+                <th>Training</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of performanceList">
+                <td>
+                  <div class="emp-cell">
+                    <img *ngIf="p.avatarUrl" [src]="p.avatarUrl" alt="" class="emp-avatar-img" />
+                    <div *ngIf="!p.avatarUrl" class="emp-avatar" [style.background-color]="p.avatarBg">
+                      {{ p.avatarInitials }}
+                    </div>
+                    <span class="emp-name">{{ p.name }}</span>
+                  </div>
+                </td>
+                <td><span class="stat-text">{{ p.attendance }}</span></td>
+                <td><span class="stat-text">{{ p.tasks }}</span></td>
+                <td><span class="stat-text">{{ p.training }}</span></td>
+                <td>
+                  <span class="grade-badge grade-{{ p.overall.toLowerCase().replace('+', '-plus') }}">
+                    {{ p.overall }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="isLoadingPerformance">
+                <td colspan="5" class="table-status-cell">
+                  <i class="fas fa-spinner fa-spin"></i> Loading team performance...
+                </td>
+              </tr>
+              <tr *ngIf="!isLoadingPerformance && performanceList.length === 0">
+                <td colspan="5" class="table-status-cell">
+                  No team members found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. BOTTOM INFORMATION BAR -->
+  <section class="bottom-alert-section">
+    <app-dashboard-alert-bar
+      [pendingLeaves]="kpiData.pendingLeaves"
+      [overdueTasks]="kpiData.overdueTasks"
+      [compliancePct]="kpiData.trainingCompliance"
+      (viewDetailsClick)="onViewAlertDetails()">
+    </app-dashboard-alert-bar>
+  </section>
+</div>
+
+<!-- LEAVE DECISION MODAL -->
+<div class="modal-backdrop" *ngIf="isDecisionModalOpen" (click)="closeDecisionModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header" [class.theme-approve]="decisionType === 'approve'" [class.theme-reject]="decisionType === 'reject'">
+      <div class="modal-header-icon">
+        <i class="fas" [ngClass]="decisionType === 'approve' ? 'fa-check-circle' : 'fa-times-circle'"></i>
+      </div>
+      <div class="modal-header-text">
+        <h3 class="modal-title">
+          {{ decisionType === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request' }}
+        </h3>
+        <p class="modal-subtitle">
+          {{ decisionType === 'approve' ? 'Confirm approval for this leave application.' : 'Please provide a reason for rejecting this leave request.' }}
+        </p>
+      </div>
+      <button type="button" class="btn-modal-close" (click)="closeDecisionModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedLeaveRequest">
+      <div class="request-summary">
+        <div class="summary-line">
+          <span class="lbl">Employee:</span>
+          <span class="val font-semibold">{{ selectedLeaveRequest.name }}</span>
+        </div>
+        <div class="summary-line">
+          <span class="lbl">Leave Type:</span>
+          <span class="val">{{ selectedLeaveRequest.leaveType }} ({{ selectedLeaveRequest.duration }})</span>
+        </div>
+        <div class="summary-line">
+          <span class="lbl">Dates:</span>
+          <span class="val">{{ selectedLeaveRequest.dates }}</span>
+        </div>
+        <div class="summary-line" *ngIf="selectedLeaveRequest.reason">
+          <span class="lbl">Reason:</span>
+          <span class="val italic">{{ selectedLeaveRequest.reason }}</span>
+        </div>
+      </div>
+
+      <div class="comment-box">
+        <label class="comment-label">
+          {{ decisionType === 'reject' ? 'Rejection Reason (Required)' : 'Manager Comment (Optional)' }}
+        </label>
+        <textarea
+          class="comment-textarea"
+          rows="3"
+          [(ngModel)]="decisionComment"
+          placeholder="{{ decisionType === 'reject' ? 'Enter reason for rejection...' : 'Add a note for the employee or HR...' }}">
+        </textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-modal-cancel" (click)="closeDecisionModal()" [disabled]="isProcessing">
+        Cancel
+      </button>
+      <button 
+        type="button" 
+        class="btn-modal-submit"
+        [ngClass]="decisionType === 'approve' ? 'btn-modal-approve' : 'btn-modal-reject'"
+        (click)="confirmDecision()"
+        [disabled]="isProcessing || (decisionType === 'reject' && !decisionComment.trim())">
+        <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+        <span *ngIf="!isProcessing">
+          {{ decisionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection' }}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

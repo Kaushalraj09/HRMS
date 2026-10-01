@@ -22,7 +22,7 @@ services:
   api:
     build: ./backend
     restart: unless-stopped
-    env_file: .env
+    env_file: 
     depends_on:
       db:
         condition: service_healthy

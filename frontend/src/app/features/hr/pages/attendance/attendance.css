@@ -107,11 +107,17 @@
   transition: all 0.15s ease;
 }
 
-.btn-export:hover {
+.btn-export:hover:not(:disabled) {
   background: #EFF6FF;
   border-color: #2563EB;
   color: #2563EB;
   transform: translateY(-1px);
+}
+
+.btn-export:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* 2. KPI Summary Cards Grid */

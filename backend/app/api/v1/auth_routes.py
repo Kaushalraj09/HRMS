@@ -255,5 +255,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role.name.lower() if current_user.role else "employee",
         "linkedEmployeeId": current_user.linked_employee_id,
         "linkedHrId": current_user.linked_hr_id,
-        "status": current_user.status
+        "status": current_user.status,
+        "accessibleDashboards": current_user.accessibleDashboards,
+        "isManager": current_user.is_manager,
     }

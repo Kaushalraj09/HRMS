@@ -38,6 +38,7 @@ export class HrSidebar implements OnInit {
         items: [ 
           { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
           { label: 'Employees', icon: 'fas fa-users', route: '/hr-dashboard/employees' },
+          { label: 'Managers', icon: 'fas fa-user-tie', route: '/hr-dashboard/managers' },
           { label: 'Documents', icon: 'fas fa-folder-open', route: '/hr-dashboard/documents' },
           { label: 'Attendance', icon: 'fas fa-clock', route: '/hr-dashboard/attendance' },
           { label: 'Time Off', icon: 'fas fa-calendar-times', route: '/hr-dashboard/time-off' },
@@ -75,6 +76,7 @@ export class HrSidebar implements OnInit {
       {
         groupName: 'Account',
         items: [
+          { label: 'Employee View', icon: 'fas fa-id-badge', route: '/emp-dashboard' },
           { label: 'My Profile', icon: 'far fa-user', route: '/hr-dashboard/my-profile' },
           { label: 'Login Activity', icon: 'fas fa-history', route: '/hr-dashboard/login-activity' },
           { label: 'Logout', icon: 'fas fa-sign-out-alt', isLogout: true }

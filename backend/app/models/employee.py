@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Float
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Float, Boolean, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -10,6 +10,7 @@ class Employee(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     reporting_manager_id = Column(Integer, ForeignKey("employees.id"), nullable=True, index=True)
     employee_code = Column(String(50), unique=True, index=True, nullable=False)
+    legacy_employee_code = Column(String(50), nullable=True, index=True)
     
     # Basic Info
     first_name = Column(String(100), nullable=False)
@@ -52,8 +53,19 @@ class Employee(Base):
     user = relationship("User", foreign_keys=[user_id])
     reporting_manager = relationship("Employee", remote_side=[id], foreign_keys=[reporting_manager_id])
     shift = relationship("Shift", foreign_keys=[shift_id])
+    code_history = relationship(
+        "EmployeeCodeHistory",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        order_by="desc(EmployeeCodeHistory.changed_at)"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    @property
+    def employee_id(self) -> int:
+        """Expose internal permanent technical database identity."""
+        return self.id
 
     @property
     def pan(self) -> str | None:
@@ -77,6 +89,29 @@ class Employee(Base):
             return None
         return f"{self.reporting_manager.first_name or ''} {self.reporting_manager.last_name or ''}".strip()
 
+    @property
+    def user_role(self) -> str:
+        if self.user and self.user.role:
+            return self.user.role.name
+        return "Employee"
+
+    @property
+    def is_manager(self) -> bool:
+        if self.user and self.user.role:
+            return self.user.role.name.lower() == "manager"
+        return False
+
+    @property
+    def direct_reports_count(self) -> int:
+        if hasattr(self, "_direct_reports_count"):
+            return self._direct_reports_count
+        return 0
+
+    @direct_reports_count.setter
+    def direct_reports_count(self, value: int):
+        self._direct_reports_count = value
+
+
 class EmployeeShift(Base):
     __tablename__ = "employee_shifts"
     
@@ -88,3 +123,31 @@ class EmployeeShift(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+
+class EmployeeCodeSequence(Base):
+    """Sequence counter for generating zero-padded company employee codes (e.g. AIVAN024)."""
+    __tablename__ = "employee_code_sequences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prefix = Column(String(20), unique=True, nullable=False, default="AIVAN", index=True)
+    next_number = Column(Integer, nullable=False, default=1)
+    padding = Column(Integer, nullable=False, default=3)
+    active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+
+class EmployeeCodeHistory(Base):
+    """Immutable audit log of all employee code allocations and authorized changes."""
+    __tablename__ = "employee_code_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
+    old_employee_code = Column(String(50), nullable=True)
+    new_employee_code = Column(String(50), nullable=False)
+    reason = Column(Text, nullable=False)
+    changed_by = Column(String(150), nullable=False)  # User email or SYSTEM
+    changed_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    employee = relationship("Employee", back_populates="code_history")

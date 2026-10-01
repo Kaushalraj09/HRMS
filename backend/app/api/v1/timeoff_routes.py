@@ -18,7 +18,7 @@ from app.schemas.timeoff import (
     TimeOffBatchRequestCreate,
     TimeOffBatchResponse,
 )
-from app.services import timeoff_service, attendance_service, notification_service
+from app.services import timeoff_service, attendance_service, notification_service, manager_service
 from app.core.websocket_manager import manager
 from sqlalchemy import func
 
@@ -33,8 +33,8 @@ def get_remaining_hours(
     """
     Get the dynamically calculated remaining working hours for today.
     """
-    # Assuming role check is either admin/hr or the employee themselves
-    if current_user.role.name not in ["Admin", "HR"]:
+    # Role check: either admin/hr or the employee themselves
+    if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
         employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
         if not employee or employee.id != employee_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -294,8 +294,7 @@ def get_my_timeoffs(
     results = query.order_by(TimeOffRequest.date.desc()).offset(offset).limit(pageSize).all()
     
     for r in results:
-        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
-        r.employee_code = r.employee.employee_code
+        manager_service.enrich_timeoff_with_manager_info(db, r)
         
     return {
         "items": results,
@@ -392,8 +391,7 @@ def get_pending_requests(
     results = query.order_by(TimeOffRequest.created_at.desc()).offset(offset).limit(pageSize).all()
     
     for r in results:
-        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
-        r.employee_code = r.employee.employee_code
+        manager_service.enrich_timeoff_with_manager_info(db, r)
         
     return {
         "items": results,
@@ -465,8 +463,7 @@ def get_processed_requests(
     results = query.order_by(TimeOffRequest.updated_at.desc()).offset(offset).limit(pageSize).all()
     
     for r in results:
-        r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
-        r.employee_code = r.employee.employee_code
+        manager_service.enrich_timeoff_with_manager_info(db, r)
         
     return {
         "items": results,
@@ -552,6 +549,36 @@ def get_timeoff_bootstrap(
         },
         "holidays": hols
     }
+
+
+leave_router = APIRouter(prefix="/leave", tags=["leave"])
+
+
+@leave_router.get("/balances/summary")
+@router.get("/balances/summary")
+def get_leave_balances_summary(
+    employee_id: int = None,
+    year: int = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get leave balance summary including Paid Leave & Unpaid Leave breakdown.
+    If employee_id is omitted, defaults to the authenticated employee.
+    """
+    if employee_id is None:
+        employee = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        if not employee:
+            raise HTTPException(status_code=400, detail="Only employees can view leave balances.")
+        emp_id = employee.id
+    else:
+        if not current_user.role or current_user.role.name.lower() not in ["admin", "hr"]:
+            emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+            if not emp or emp.id != employee_id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        emp_id = employee_id
+
+    return timeoff_service.get_employee_leave_balances(db, emp_id, year)
 
 
 @router.get("/balances/my")

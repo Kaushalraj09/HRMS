@@ -105,13 +105,14 @@
               <th>Date</th>
               <th>Time Slot</th>
               <th>Duration</th>
+              <th>Manager Review</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let req of filteredPendingRequests">
               <td class="font-medium text-dark">
-                {{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}
+                {{ req.employee_code || req.employeeCode || req.employee_id }}
               </td>
               <td class="font-medium text-dark">{{ req.employee_name || '—' }}</td>
               <td>
@@ -133,6 +134,22 @@
                 <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
               </td>
               <td>{{ formatDuration(req) }}</td>
+              <td>
+                <div *ngIf="req.manager_name">
+                  <div style="font-size: 11px; font-weight: 600; color: #475569;">{{ req.manager_name }}</div>
+                  <span class="status-badge" [ngClass]="{
+                    'present': req.manager_decision === 'Approved',
+                    'absent': req.manager_decision === 'Rejected',
+                    'halfday-badge': req.manager_decision === 'Pending' || !req.manager_decision
+                  }" style="font-size: 10px; padding: 2px 6px;">
+                    {{ req.manager_decision || 'Pending' }}
+                  </span>
+                  <div *ngIf="req.manager_comment" style="font-size: 10px; color: #64748b; font-style: italic; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="req.manager_comment">
+                    "{{ req.manager_comment }}"
+                  </div>
+                </div>
+                <span *ngIf="!req.manager_name" style="font-size: 11px; color: #94a3b8;">Direct HR</span>
+              </td>
               <td>
                 <div class="action-buttons-cell">
                   <button 
@@ -180,6 +197,7 @@
               <th>Date</th>
               <th>Time Slot</th>
               <th>Duration</th>
+              <th>Manager Decision</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -187,7 +205,7 @@
           <tbody>
             <tr *ngFor="let req of filteredProcessedRequests">
               <td class="font-medium text-dark">
-                {{ req.employee_code || ('EMP-' + ('0000' + req.employee_id).slice(-4)) }}
+                {{ req.employee_code || req.employeeCode || req.employee_id }}
               </td>
               <td class="font-medium text-dark">{{ req.employee_name || '—' }}</td>
               <td>
@@ -209,6 +227,22 @@
                 <span *ngIf="req.leave_type === 'Full-Day' || req.leave_type === 'Full Day'">Full Day</span>
               </td>
               <td>{{ formatDuration(req) }}</td>
+              <td>
+                <div *ngIf="req.manager_name">
+                  <span class="status-badge" [ngClass]="{
+                    'present': req.manager_decision === 'Approved',
+                    'absent': req.manager_decision === 'Rejected',
+                    'halfday-badge': req.manager_decision === 'Pending' || !req.manager_decision
+                  }" style="font-size: 10px; padding: 2px 6px;">
+                    {{ req.manager_decision || 'Pending' }}
+                  </span>
+                  <div style="font-size: 10px; color: #64748b;">{{ req.manager_name }}</div>
+                  <div *ngIf="req.manager_comment" style="font-size: 10px; color: #64748b; font-style: italic; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="req.manager_comment">
+                    "{{ req.manager_comment }}"
+                  </div>
+                </div>
+                <span *ngIf="!req.manager_name" style="font-size: 11px; color: #94a3b8;">Direct HR</span>
+              </td>
               <td>
                 <span class="status-badge" [ngClass]="{
                   'present': req.status === 'Approved',
@@ -331,7 +365,7 @@
         </div>
         <div class="emp-banner-details">
           <h4 class="emp-banner-name">{{ selectedRequest.employee_name || 'Employee' }}</h4>
-          <span class="emp-banner-code">{{ 'EMP-' + ('0000' + selectedRequest.employee_id).slice(-4) }}</span>
+          <span class="emp-banner-code">{{ selectedRequest.employee_code || selectedRequest.employeeCode || selectedRequest.employee_id }}</span>
         </div>
       </div>
 
@@ -399,6 +433,31 @@
         </div>
         <div *ngIf="!selectedRequest.attachment_name" class="no-attachment-text">
           No attachments uploaded.
+        </div>
+      </div>
+
+      <!-- Manager Review Card in Details Modal -->
+      <div class="detail-block" *ngIf="selectedRequest.manager_name">
+        <span class="detail-lbl">Reporting Manager Decision</span>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div>
+              <strong style="color: #0f172a; font-size: 13px;">{{ selectedRequest.manager_name }}</strong>
+              <span *ngIf="selectedRequest.manager_reviewed_at" style="font-size: 11px; color: #64748b; margin-left: 6px;">
+                • {{ selectedRequest.manager_reviewed_at | date:'dd MMM yyyy, hh:mm a' }}
+              </span>
+            </div>
+            <span class="status-badge" [ngClass]="{
+              'present': selectedRequest.manager_decision === 'Approved',
+              'absent': selectedRequest.manager_decision === 'Rejected',
+              'halfday-badge': selectedRequest.manager_decision === 'Pending' || !selectedRequest.manager_decision
+            }" style="font-size: 11px;">
+              {{ selectedRequest.manager_decision || 'Pending Review' }}
+            </span>
+          </div>
+          <div *ngIf="selectedRequest.manager_comment" style="font-size: 12px; color: #475569; font-style: italic; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #f1f5f9;">
+            "{{ selectedRequest.manager_comment }}"
+          </div>
         </div>
       </div>
 

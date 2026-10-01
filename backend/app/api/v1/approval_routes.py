@@ -9,7 +9,7 @@ from app.services import approval_service
 router = APIRouter(prefix="/approvals", tags=["Approval Center"])
 
 def check_approval_access(user: User):
-    if not user.role or user.role.name.lower() not in ["admin", "hr", "employee"]:
+    if not user.role or user.role.name.lower() not in ["admin", "hr", "manager", "employee"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied."

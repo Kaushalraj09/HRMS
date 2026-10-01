@@ -15,39 +15,82 @@
       </button>
     </div>
 
-    <!-- Balance Metrics Cards -->
-    <div class="balance-cards">
-      <div class="metric-card metric-approved">
-        <div class="metric-card-top">
-          <div class="metric-icon-box icon-blue">
-            <i class="fas fa-calendar-check"></i>
-          </div>
-          <div class="metric-label">Approved Time (Today)</div>
+    <!-- Annual Leave Balances Section -->
+    <div class="yearly-balance-section">
+      <div class="yearly-section-header">
+        <div class="yearly-header-title">
+          <i class="fas fa-calendar-alt"></i>
+          <h3>Annual Leave Balances ({{ leaveYear }})</h3>
         </div>
-        <div class="metric-value value-blue">{{ formatHours(approvedHours) }}</div>
-        <div class="metric-subtext">Approved leaves logged for current date</div>
+        <span class="policy-chip">Policy Entitlements</span>
       </div>
 
-      <div class="metric-card metric-remaining">
-        <div class="metric-card-top">
-          <div class="metric-icon-box icon-green">
-            <i class="fas fa-business-time"></i>
-          </div>
-          <div class="metric-label">Remaining Working Time</div>
+      <!-- LOP Policy Info Banner -->
+      <div class="lop-payroll-notice">
+        <div class="notice-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="notice-body">
+          <strong>Payroll Notice:</strong> Unpaid Leave (UL) is subject to Loss of Pay (LOP) deduction in monthly payroll. Approved Paid Leaves (PL, CL, SL) do not incur salary deductions.
         </div>
-        <div class="metric-value value-green">{{ formatHours(remainingHours) }}</div>
-        <div class="metric-subtext">Required working duration remaining</div>
       </div>
 
-      <div class="metric-card metric-pending">
-        <div class="metric-card-top">
-          <div class="metric-icon-box icon-amber">
-            <i class="fas fa-hourglass-half"></i>
+      <div class="yearly-balance-grid">
+        <!-- Paid Leave (PL) -->
+        <div class="yearly-balance-card card-paid">
+          <div class="card-head">
+            <div class="leave-title-badge paid">
+              <i class="fas fa-check-circle"></i>
+              <span>Paid Leave (PL)</span>
+            </div>
+            <span class="tag-status tag-paid">Paid</span>
           </div>
-          <div class="metric-label">Pending Requested Time</div>
+          <div class="card-main-stat">
+            <span class="stat-number text-emerald">{{ paidLeave.remaining }}</span>
+            <span class="stat-unit">Days Available</span>
+          </div>
+          <div class="card-sub-breakdown">
+            <div class="sub-col">
+              <span class="label">Allocated</span>
+              <span class="val">{{ paidLeave.allocated }}d</span>
+            </div>
+            <div class="sub-col">
+              <span class="label">Used</span>
+              <span class="val text-rose">{{ paidLeave.used }}d</span>
+            </div>
+            <div class="sub-col">
+              <span class="label">Pending</span>
+              <span class="val text-amber">{{ paidLeave.pending }}d</span>
+            </div>
+          </div>
         </div>
-        <div class="metric-value value-amber">{{ formatHours(requestedHours) }}</div>
-        <div class="metric-subtext">Awaiting manager/HR approval</div>
+
+        <!-- Unpaid Leave (UL) -->
+        <div class="yearly-balance-card card-unpaid">
+          <div class="card-head">
+            <div class="leave-title-badge unpaid">
+              <i class="fas fa-calendar-minus"></i>
+              <span>Unpaid Leave (UL)</span>
+            </div>
+            <span class="tag-status tag-unpaid">Loss of Pay</span>
+          </div>
+          <div class="card-main-stat">
+            <span class="stat-number text-amber">{{ unpaidLeave.remaining }}</span>
+            <span class="stat-unit">Days Remaining (Max 12d/yr)</span>
+          </div>
+          <div class="card-sub-breakdown">
+            <div class="sub-col">
+              <span class="label">Allocated</span>
+              <span class="val">{{ unpaidLeave.allocated }}d</span>
+            </div>
+            <div class="sub-col">
+              <span class="label">Used (LOP)</span>
+              <span class="val text-rose">{{ unpaidLeave.used }}d</span>
+            </div>
+            <div class="sub-col">
+              <span class="label">Pending</span>
+              <span class="val text-amber">{{ unpaidLeave.pending }}d</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

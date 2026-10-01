@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
 import { buildApiUrl } from '../config/api.config';
-import { Employee, EmployeeCredentials, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
+import { Employee, EmployeeCodeHistory, EmployeeCredentials, EmployeeDetailView, EmployeePayload, PaginatedResult } from '../models/employee.model';
 
 interface BackendEmployee {
   id: number;
@@ -11,6 +11,7 @@ interface BackendEmployee {
   reporting_manager_id?: number | null;
   reporting_manager_name?: string | null;
   employee_code: string;
+  legacy_employee_code?: string | null;
   first_name: string;
   last_name: string;
   gender?: string | null;
@@ -39,6 +40,9 @@ interface BackendEmployee {
   pan_number?: string | null;
   uan_number?: string | null;
   pf_number?: string | null;
+  user_role?: string | null;
+  is_manager?: boolean | null;
+  direct_reports_count?: number | null;
 }
 
 interface BackendEmployeeStats {
@@ -83,6 +87,9 @@ interface BackendEmployeePayload {
   pan_number?: string;
   uan_number?: string;
   pf_number?: string;
+  role?: string;
+  employee_code?: string;
+  legacy_employee_code?: string;
 }
 
 interface BackendEmployeeCredentials {
@@ -234,12 +241,79 @@ export class EmployeeService {
     );
   }
 
+  assignManagerRole(employeeId: string): Observable<Employee> {
+    return this.http.post<BackendEmployee>(`${this.apiUrl}/${this.normalizeEmployeeId(employeeId)}/assign-manager`, {}).pipe(
+      map(row => this.mapEmployee(row))
+    );
+  }
+
+  revokeManagerRole(employeeId: string): Observable<Employee> {
+    return this.http.post<BackendEmployee>(`${this.apiUrl}/${this.normalizeEmployeeId(employeeId)}/revoke-manager`, {}).pipe(
+      map(row => this.mapEmployee(row))
+    );
+  }
+
+  getAllManagers(): Observable<Employee[]> {
+    return this.http.get<BackendEmployee[]>(`${this.apiUrl}/managers/all`).pipe(
+      map(rows => rows.map(r => this.mapEmployee(r)))
+    );
+  }
+
+  assignTeam(managerEmployeeId: string, employeeIds: number[]): Observable<Employee[]> {
+    return this.http.post<BackendEmployee[]>(`${this.apiUrl}/${this.normalizeEmployeeId(managerEmployeeId)}/assign-team`, {
+      employee_ids: employeeIds
+    }).pipe(
+      map(rows => rows.map(r => this.mapEmployee(r)))
+    );
+  }
+
+  getManagerTeam(managerEmployeeId: string): Observable<Employee[]> {
+    return this.http.get<BackendEmployee[]>(`${this.apiUrl}/${this.normalizeEmployeeId(managerEmployeeId)}/team`).pipe(
+      map(rows => rows.map(r => this.mapEmployee(r)))
+    );
+  }
+
+  changeEmployeeCode(employeeId: string, newCode: string, reason: string): Observable<{ success: boolean; message: string; employee: Employee }> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    return this.http.post<BackendEmployee>(`${this.apiUrl}/${normalizedId}/change-code`, {
+      new_employee_code: newCode,
+      reason: reason
+    }).pipe(
+      map(row => {
+        const employee = this.mapEmployee(row);
+        return {
+          success: true,
+          message: `Employee code updated to ${employee.employeeCode} successfully.`,
+          employee
+        };
+      })
+    );
+  }
+
+  getEmployeeCodeHistory(employeeId: string): Observable<EmployeeCodeHistory[]> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    return this.http.get<EmployeeCodeHistory[]>(`${this.apiUrl}/${normalizedId}/code-history`);
+  }
+
+  getNextEmployeeCode(prefix: string = 'AIVAN'): Observable<{ prefix: string; nextNumber: number; nextCode: string }> {
+    return this.http.get<{ prefix: string; nextNumber: number; nextCode: string }>(`${this.apiUrl}/next-code`, {
+      params: { prefix }
+    });
+  }
+
   private normalizeEmployeeId(employeeId: string): string {
     return String(employeeId ?? '').trim();
   }
 
   private toBackendPayload(payload: EmployeePayload): BackendEmployeePayload {
     return {
+      role: payload.accountAccess?.role || undefined,
       first_name: payload.personalInfo.firstName,
       last_name: payload.personalInfo.lastName,
       gender: payload.personalInfo.gender || undefined,
@@ -267,7 +341,9 @@ export class EmployeeService {
       micr_code: payload.statutoryInfo?.micrCode || undefined,
       pan_number: payload.statutoryInfo?.panNumber || undefined,
       uan_number: payload.statutoryInfo?.uanNumber || undefined,
-      pf_number: payload.statutoryInfo?.pfNumber || undefined
+      pf_number: payload.statutoryInfo?.pfNumber || undefined,
+      employee_code: payload.employmentInfo.employeeCode?.trim() || undefined,
+      legacy_employee_code: payload.employmentInfo.legacyEmployeeCode?.trim() || undefined
     };
   }
 
@@ -281,6 +357,7 @@ export class EmployeeService {
       reportingManagerId: row.reporting_manager_id != null ? String(row.reporting_manager_id) : null,
       reportingManagerName: row.reporting_manager_name || null,
       employeeCode: row.employee_code,
+      legacyEmployeeCode: row.legacy_employee_code || null,
       name: fullName || 'Employee',
       firstName: firstName,
       lastName: lastName,
@@ -310,7 +387,10 @@ export class EmployeeService {
       micrCode: row.micr_code || '',
       panNumber: row.pan_number || '',
       uanNumber: row.uan_number || '',
-      pfNumber: row.pf_number || ''
+      pfNumber: row.pf_number || '',
+      userRole: row.user_role || 'Employee',
+      isManager: row.is_manager ?? (row.user_role?.toLowerCase() === 'manager'),
+      directReportsCount: row.direct_reports_count ?? 0
     };
   }
 }

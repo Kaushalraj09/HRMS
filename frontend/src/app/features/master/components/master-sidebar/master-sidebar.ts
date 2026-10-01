@@ -46,6 +46,7 @@ export class MasterSidebar implements OnInit {
       groupName: 'Access Management',
       items: [
         { label: 'Employees', icon: 'far fa-user', route: '/master-dashboard/employees' },
+        { label: 'Managers', icon: 'fas fa-user-tie', route: '/master-dashboard/managers' },
         { label: 'HR Users', icon: 'fas fa-user-shield', route: '/master-dashboard/hr-users' },
         { label: 'Master Data Config', icon: 'fas fa-cogs', route: '/master-dashboard/master-data' }
       ]
@@ -90,6 +91,7 @@ export class MasterSidebar implements OnInit {
       groupName: 'Cross Role Views',
       items: [
         { label: 'HR Dashboard', icon: 'fas fa-chart-line', route: '/hr-dashboard' },
+        { label: 'Manager Dashboard', icon: 'fas fa-tasks', route: '/manager-dashboard' },
         { label: 'Employee Dashboard', icon: 'fas fa-user-circle', route: '/emp-dashboard' }
       ]
     },

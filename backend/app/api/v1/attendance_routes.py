@@ -432,7 +432,7 @@ def get_my_history(
 @router.get("/all", response_model=AttendanceListResponse)
 def get_all_attendance_records(
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=50000),
     from_date: str | None = Query(None, alias="fromDate"),
     to_date: str | None = Query(None, alias="toDate"),
     search: str = "",

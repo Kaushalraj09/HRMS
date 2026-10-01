@@ -14,8 +14,9 @@
       </div>
 
       <div class="header-actions" *ngIf="(attendanceData$ | async) as result">
-        <button type="button" class="btn btn-export" (click)="exportPdf(result.data)" title="Export to PDF">
-          <i class="fas fa-file-pdf"></i> Export PDF
+        <button type="button" class="btn btn-export" [disabled]="isExporting" (click)="exportPdf(result.data, result.total)" title="Export to PDF">
+          <i class="fas" [ngClass]="isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+          <span>{{ isExporting ? 'Exporting...' : 'Export PDF' }}</span>
         </button>
       </div>
     </div>

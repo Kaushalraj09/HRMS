@@ -1,0 +1,20 @@
+<div 
+  class="kpi-card" 
+  [ngClass]="'theme-' + colorTheme" 
+  [class.has-route]="!!route"
+  [routerLink]="route ? route : null">
+  
+  <div class="kpi-icon-box">
+    <i [class]="icon"></i>
+  </div>
+
+  <div class="kpi-content">
+    <div class="kpi-title">{{ title }}</div>
+    <div class="kpi-value">{{ value }}</div>
+    <div class="kpi-subtitle">{{ subtitle }}</div>
+  </div>
+
+  <div class="kpi-arrow" *ngIf="clickable">
+    <i class="fas fa-chevron-right"></i>
+  </div>
+</div>

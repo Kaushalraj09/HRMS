@@ -1,11 +1,12 @@
-<div class="hr-dashboard-layout">
+<div class="hr-dashboard-layout" [class.embedded-mode]="isEmbedded">
   <!-- Sidebar -->
-  <app-hr-sidebar></app-hr-sidebar>
+  <app-hr-sidebar *ngIf="!isEmbedded"></app-hr-sidebar>
 
   <!-- Right Wrapper -->
-  <div class="dashboard-right-wrapper">
+  <div class="dashboard-right-wrapper" [class.no-sidebar]="isEmbedded">
     <!-- Navbar -->
     <app-navbar 
+      *ngIf="!isEmbedded"
       [userName]="userName" 
       [searchValue]="searchTerm"
       [isSidebarOpen]="(isHrSidebarOpen$ | async) ?? false"
@@ -14,9 +15,9 @@
     </app-navbar>
 
     <!-- Main Content -->
-    <div class="main-content" [class.expanded]="!(isHrSidebarOpen$ | async)">
-      <div class="page-content">
-        <router-outlet></router-outlet>
+    <div class="main-content" [class.embedded]="isEmbedded" [class.expanded]="!(isHrSidebarOpen$ | async)">
+      <div class="page-content" [class.embedded-page]="isEmbedded">
+        <router-outlet *ngIf="!isEmbedded"></router-outlet>
         
         <ng-container *ngIf="isDashboardHome">
           
@@ -625,7 +626,7 @@
             <div class="hr-card card-recent-attendance">
               <div class="card-head-row-between">
                 <h3 class="card-title">Recent Attendance</h3>
-                <a routerLink="/hr-dashboard/attendance" class="view-all-link">View All Attendance →</a>
+                <a [routerLink]="isEmbedded ? '/emp-dashboard/hr-attendance' : '/hr-dashboard/attendance'" class="view-all-link">View All Attendance →</a>
               </div>
 
               <div class="table-responsive-clean">
@@ -689,7 +690,7 @@
             <div class="hr-card card-compliance">
               <div class="card-head-row-between">
                 <h3 class="card-title">Employee Document Compliance</h3>
-                <a routerLink="/hr-dashboard/employees" class="view-all-link">View Details →</a>
+                <a [routerLink]="isEmbedded ? '/emp-dashboard/hr-employees' : '/hr-dashboard/employees'" class="view-all-link">View Details →</a>
               </div>
 
               <div class="compliance-body-layout">
@@ -771,7 +772,7 @@
             <div class="hr-card card-latest-news">
               <div class="card-head-row-between">
                 <h3 class="card-title">Latest News</h3>
-                <a routerLink="/hr-dashboard" class="view-all-link">View All News →</a>
+                <a [routerLink]="isEmbedded ? '/emp-dashboard/hr-overview' : '/hr-dashboard'" class="view-all-link">View All News →</a>
               </div>
 
               <div class="hr-news-list">
@@ -796,8 +797,8 @@
         </ng-container>
 
       </div>
-      <!-- Inject Footer here so it sticks to the bottom of main-content -->
-      <app-footer></app-footer>
+      <!-- Inject Footer here so it sticks to the bottom of main-content (suppressed in embedded mode to prevent duplicate footer) -->
+      <app-footer *ngIf="!isEmbedded"></app-footer>
     </div>
   </div>
 </div>
