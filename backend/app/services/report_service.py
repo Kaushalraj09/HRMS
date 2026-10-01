@@ -11,7 +11,16 @@ from app.models.approval_log import ApprovalLog
 from app.models.user import User, Role
 from app.models.login_activity import LoginActivity
 from app.services.time_calculator import calculate_late_minutes
-from app.utils.employee_code import normalize_employee_code
+import re
+
+
+def normalize_employee_code(employee_code: str | None) -> str | None:
+    if not employee_code:
+        return employee_code
+    match = re.search(r"(\d+)$", employee_code)
+    if not match:
+        return employee_code
+    return match.group(1).zfill(4)
 
 def generate_report_csv(headers: list[str], rows: list[list[str]], filename: str) -> StreamingResponse:
     output = io.StringIO()

@@ -96,6 +96,7 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
                 first_name="Test",
                 last_name="Employee",
                 official_email="test_emp_e2e@hrms.com",
+                mobile="9000000001",
                 status="Active"
             )
             db.add(emp)
@@ -187,6 +188,7 @@ def test_issue_5_timeoff_in_attendance_response():
                 first_name="Test",
                 last_name="Attendance",
                 official_email="test_emp_att@hrms.com",
+                mobile="9000000002",
                 status="Active"
             )
             db.add(emp)
