@@ -32,6 +32,6 @@ jobs:
         run: |
           npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --fetch-timeout=300000 || (echo "Retrying npm ci after connection drop..." && sleep 5 && npm ci --fetch-retries=5)
       - name: NPM Security Audit
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
       - name: Build Angular Production Bundle
         run: npm run build

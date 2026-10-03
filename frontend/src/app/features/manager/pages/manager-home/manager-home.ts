@@ -35,7 +35,7 @@ export interface AttendanceRow {
   status: 'Present' | 'Working' | 'On Leave' | 'Late' | 'Absent' | 'Not Marked';
   avatarInitials: string;
   avatarBg: string;
-  avatarColor: string;
+  avatarColor?: string;
   avatarUrl?: string;
 }
 
