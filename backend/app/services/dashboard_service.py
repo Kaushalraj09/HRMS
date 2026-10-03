@@ -99,7 +99,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status == "Active",
             User.status == "Active"
         )
@@ -136,7 +136,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status == "Active",
             User.status == "Active"
         )
@@ -197,7 +197,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
             .join(User, Employee.user_id == User.id)
             .join(Role, User.role_id == Role.id)
             .filter(
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 Employee.created_at <= end_of_day,
                 Employee.status == "Active",
                 User.status == "Active"
@@ -240,7 +240,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.created_at >= month_start,
             Employee.status == "Active",
             User.status == "Active"
@@ -269,7 +269,7 @@ def get_admin_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status == "Active",
             User.status == "Active"
         )
@@ -626,7 +626,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status == "Active",
             User.status == "Active"
         )
@@ -695,7 +695,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.gender == "Male",
             Employee.status == "Active",
             User.status == "Active"
@@ -708,7 +708,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.gender == "Female",
             Employee.status == "Active",
             User.status == "Active"
@@ -729,7 +729,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status == "Active",
             User.status != "Deleted"
         )
@@ -744,7 +744,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(Role, User.role_id == Role.id)
         .filter(
             Attendance.date <= today,
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status != "Deleted",
             User.status != "Deleted"
         )
@@ -762,7 +762,7 @@ def get_hr_dashboard_data(db: Session, date_range: str = "30d"):
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status != "Deleted",
             User.status != "Deleted"
         )

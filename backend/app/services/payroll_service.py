@@ -436,7 +436,7 @@ class PayrollService:
             .join(User, Employee.user_id == User.id)
             .join(Role, User.role_id == Role.id)
             .filter(
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 func.lower(Employee.status) == "active",
                 func.lower(User.status) == "active",
             )
@@ -722,7 +722,7 @@ class PayrollService:
             .join(User, Employee.user_id == User.id)
             .join(Role, User.role_id == Role.id)
             .filter(
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 func.lower(Employee.status) == "active",
                 func.lower(User.status) == "active",
             )
@@ -2580,7 +2580,7 @@ class PayrollService:
             .join(User, Employee.user_id == User.id)
             .join(Role, User.role_id == Role.id)
             .filter(
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 func.lower(Employee.status) == "active",
                 func.lower(User.status) == "active",
             )
@@ -2593,7 +2593,7 @@ class PayrollService:
             .join(Role, User.role_id == Role.id)
             .filter(
                 EmployeeSalaryAssignment.is_active == True,
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 func.lower(Employee.status) == "active",
                 func.lower(User.status) == "active",
             )
@@ -2637,7 +2637,7 @@ class PayrollService:
             .join(User, Employee.user_id == User.id)
             .join(Role, User.role_id == Role.id)
             .filter(
-                func.lower(Role.name).in_(["employee", "hr"]),
+                func.lower(Role.name).in_(["employee", "hr", "manager"]),
                 func.lower(Employee.status) == "active",
                 func.lower(User.status) == "active",
                 EmployeeSalaryAssignment.is_active == True,

@@ -1377,7 +1377,7 @@ def get_employee_analytics(db: Session) -> list[dict]:
         .join(User, Employee.user_id == User.id)
         .join(Role, User.role_id == Role.id)
         .filter(
-            func.lower(Role.name).in_(["employee", "hr"]),
+            func.lower(Role.name).in_(["employee", "hr", "manager"]),
             Employee.status != "Deleted",
             User.status != "Deleted"
         )
