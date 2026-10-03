@@ -38,6 +38,8 @@ export class ManagerAttendanceComponent implements OnInit {
   totalRecords = 0;
   totalPages = 1;
 
+  activePreset: string = 'all';
+
   constructor(
     private readonly managerService: ManagerService,
     private readonly toastService: ToastService,
@@ -45,10 +47,41 @@ export class ManagerAttendanceComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Default to current date
-    const today = new Date().toISOString().split('T')[0];
-    this.fromDate = today;
-    this.toDate = today;
+    this.setQuickPreset('all');
+  }
+
+  private formatDateStr(d: Date): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  setQuickPreset(preset: string): void {
+    this.activePreset = preset;
+    const now = new Date();
+    if (preset === 'today') {
+      const todayStr = this.formatDateStr(now);
+      this.fromDate = todayStr;
+      this.toDate = todayStr;
+    } else if (preset === 'yesterday') {
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yStr = this.formatDateStr(yesterday);
+      this.fromDate = yStr;
+      this.toDate = yStr;
+    } else if (preset === 'week') {
+      const pastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      this.fromDate = this.formatDateStr(pastWeek);
+      this.toDate = this.formatDateStr(now);
+    } else if (preset === 'month') {
+      const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      this.fromDate = this.formatDateStr(past30);
+      this.toDate = this.formatDateStr(now);
+    } else if (preset === 'all') {
+      this.fromDate = '';
+      this.toDate = '';
+    }
+    this.currentPage = 1;
     this.loadAttendance();
   }
 
@@ -80,18 +113,15 @@ export class ManagerAttendanceComponent implements OnInit {
   }
 
   applyFilters(): void {
+    this.activePreset = 'custom';
     this.currentPage = 1;
     this.loadAttendance();
   }
 
   resetFilters(): void {
-    const today = new Date().toISOString().split('T')[0];
-    this.fromDate = today;
-    this.toDate = today;
     this.statusFilter = '';
     this.searchQuery = '';
-    this.currentPage = 1;
-    this.loadAttendance();
+    this.setQuickPreset('all');
   }
 
   goToPage(page: number): void {

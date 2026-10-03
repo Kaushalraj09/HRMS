@@ -46,22 +46,15 @@
         <tbody>
           <tr *ngFor="let member of teamMembers">
             <td>
-              <div class="emp-identity-cell">
-                <div class="emp-avatar">
-                  {{ (member.firstName || 'E').charAt(0).toUpperCase() }}
-                </div>
-                <div class="emp-names">
-                  <span class="full-name">{{ member.firstName }} {{ member.lastName }}</span>
-                  <span class="emp-id-tag">{{ member.employeeCode }}</span>
-                </div>
+              <div class="emp-info">
+                <span class="emp-name">{{ member.name || ((member.firstName || '') + ' ' + (member.lastName || '')).trim() || '—' }}</span>
+                <span class="emp-code">{{ member.employeeCode || '—' }}</span>
               </div>
             </td>
             <td>{{ member.department || '—' }}</td>
             <td>{{ member.designation || '—' }}</td>
             <td>
-              <a [href]="'mailto:' + (member.officialEmail || member.email)" class="email-link">
-                {{ member.officialEmail || member.email }}
-              </a>
+              <span class="email-text">{{ member.officialEmail || member.email || '—' }}</span>
             </td>
             <td>{{ member.mobile || member.phone || '—' }}</td>
             <td>
@@ -124,11 +117,11 @@
     <div class="modal-header">
       <div class="header-info">
         <div class="modal-emp-avatar">
-          {{ (selectedEmployee?.firstName || 'E').charAt(0).toUpperCase() }}
+          {{ (selectedEmployee?.firstName || selectedEmployee?.name || 'E').charAt(0).toUpperCase() }}
         </div>
         <div>
-          <h2 class="modal-title">{{ selectedEmployee?.firstName }} {{ selectedEmployee?.lastName }}</h2>
-          <span class="modal-sub">{{ selectedEmployee?.employeeCode }} · {{ selectedEmployee?.designation || 'Team Member' }}</span>
+          <h2 class="modal-title">{{ selectedEmployee?.name || ((selectedEmployee?.firstName || '') + ' ' + (selectedEmployee?.lastName || '')).trim() }}</h2>
+          <span class="modal-sub">{{ selectedEmployee?.employeeCode || '—' }} · {{ selectedEmployee?.designation || 'Team Member' }}</span>
         </div>
       </div>
       <button class="btn-close" (click)="closeDetailModal()">

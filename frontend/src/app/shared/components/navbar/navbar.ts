@@ -583,6 +583,8 @@ export class Navbar implements OnInit, OnDestroy, OnChanges {
       'PUNCH_OUT': 'Punch Out',
       'ATTENDANCE': 'Attendance',
       'ATTENDANCE_AUTO_CHECKOUT': 'Auto Checkout',
+      'PUNCH_IN_REMINDER': 'Punch Reminder',
+      'PUNCH_REMINDER': 'Punch Reminder',
       'LEAVE': 'Leave',
       'LEAVE_REQUEST': 'Leave Request',
       'LEAVE_APPROVED': 'Leave Approved',

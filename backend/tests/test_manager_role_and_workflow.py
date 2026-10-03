@@ -240,3 +240,35 @@ def test_manager_attendance_trend_periods(client, db_session):
         assert len(data["labels"]) > 0
         assert len(data["present"]) == len(data["labels"])
 
+
+def test_manager_send_attendance_reminder(client, db_session):
+    admin = db_session.query(User).filter(User.email == "admin@test.com").first()
+    mgr_a_emp = db_session.query(Employee).filter(Employee.employee_code == "MGR001").first()
+    emp1 = db_session.query(Employee).filter(Employee.employee_code == "EMP001").first()
+    
+    # Assign emp1 to mgr_a
+    app.dependency_overrides[get_current_user] = lambda: admin
+    client.post(f"/api/v1/employees/{mgr_a_emp.id}/assign-team", json={"employee_ids": [emp1.id]})
+
+    # Manager Alice sends attendance reminder
+    mgr_a_user = db_session.query(User).filter(User.email == "mgr_a@test.com").first()
+    app.dependency_overrides[get_current_user] = lambda: mgr_a_user
+    res = client.post("/api/v1/manager/send-attendance-reminder")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["count"] == 1
+    assert "Emp One" in data["recipients"]
+
+    # Verify notification created for emp1 (user emp1_user)
+    from app.models.notification import Notification
+    emp1_user = db_session.query(User).filter(User.email == "emp1@test.com").first()
+    notif = db_session.query(Notification).filter(
+        Notification.user_id == emp1_user.id,
+        Notification.category == "PUNCH_IN_REMINDER"
+    ).first()
+    assert notif is not None
+    assert "Punch In Reminder" in notif.title
+    assert "Alice Mgr" in notif.message
+
+

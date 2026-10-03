@@ -232,3 +232,29 @@ def reject_team_leave(
         comment=payload.comment.strip()
     )
     return result["request"]
+
+
+@router.post("/send-attendance-reminder")
+async def send_team_attendance_reminder(
+    db: Session = Depends(get_db),
+    mgr_tuple: tuple[User, Employee] = Depends(get_current_manager)
+):
+    current_user, manager_emp = mgr_tuple
+    is_admin = (current_user.role.name if current_user.role else "").lower() == "admin"
+    return await manager_service.send_team_attendance_reminders(
+        db, manager_user=current_user, manager_employee=manager_emp, is_admin=is_admin
+    )
+
+
+@router.get("/team-performance")
+def get_team_performance(
+    db: Session = Depends(get_db),
+    mgr_tuple: tuple[User, Employee] = Depends(get_current_manager)
+):
+    current_user, manager_emp = mgr_tuple
+    is_admin = (current_user.role.name if current_user.role else "").lower() == "admin"
+    return manager_service.get_manager_team_performance(
+        db, manager_employee=manager_emp, is_admin=is_admin
+    )
+
+

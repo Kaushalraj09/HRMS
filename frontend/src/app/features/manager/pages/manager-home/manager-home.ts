@@ -27,12 +27,15 @@ export interface AttendanceRow {
   id: number;
   name: string;
   designation: string;
+  department?: string;
+  employeeCode?: string;
   inTime: string;
   outTime: string;
   workingHrs: string;
-  status: 'Present' | 'On Leave' | 'Late' | 'Absent';
+  status: 'Present' | 'Working' | 'On Leave' | 'Late' | 'Absent' | 'Not Marked';
   avatarInitials: string;
   avatarBg: string;
+  avatarColor: string;
   avatarUrl?: string;
 }
 
@@ -249,7 +252,14 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
 
             // Map real team overview to attendance table if available
             if (stats.teamOverview && stats.teamOverview.length > 0) {
-              const palette = ['#EFF6FF', '#EEF2FF', '#FFFBEB', '#FFF7ED', '#FEF2F2'];
+              const avatarThemes = [
+                { bg: '#EFF6FF', text: '#2563EB' },
+                { bg: '#F5F3FF', text: '#7C3AED' },
+                { bg: '#ECFDF5', text: '#059669' },
+                { bg: '#FFF7ED', text: '#EA580C' },
+                { bg: '#FEF2F2', text: '#DC2626' },
+                { bg: '#F0FDFA', text: '#0D9488' }
+              ];
               this.attendanceList = stats.teamOverview.map((member, idx) => {
                 const initials = (member.name || 'EM')
                   .split(' ')
@@ -258,28 +268,41 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
                   .toUpperCase()
                   .slice(0, 2) || 'EM';
 
-                let displayStatus: 'Present' | 'On Leave' | 'Late' | 'Absent' = 'Present';
+                let displayStatus: 'Present' | 'Working' | 'On Leave' | 'Late' | 'Absent' | 'Not Marked' = 'Present';
                 const rawStatus = (member.status || '').toLowerCase();
                 if (rawStatus.includes('leave')) {
                   displayStatus = 'On Leave';
                 } else if (rawStatus.includes('late')) {
                   displayStatus = 'Late';
+                } else if (rawStatus.includes('not marked') || rawStatus.includes('not_marked')) {
+                  displayStatus = 'Not Marked';
                 } else if (rawStatus.includes('absent')) {
-                  displayStatus = 'Absent';
-                } else {
+                  displayStatus = member.punchIn ? 'Absent' : 'Not Marked';
+                } else if (rawStatus.includes('working')) {
+                  displayStatus = 'Working';
+                } else if (member.punchIn && !member.punchOut) {
+                  displayStatus = 'Working';
+                } else if (member.punchIn && member.punchOut) {
                   displayStatus = 'Present';
+                } else {
+                  displayStatus = 'Not Marked';
                 }
+
+                const theme = avatarThemes[idx % avatarThemes.length];
 
                 return {
                   id: member.employeeId,
                   name: member.name,
                   designation: member.designation || member.department || 'Employee',
-                  inTime: member.punchIn || '-',
-                  outTime: member.punchOut || '-',
+                  department: member.department,
+                  employeeCode: member.employeeCode,
+                  inTime: member.punchIn || '—',
+                  outTime: member.punchOut || '—',
                   workingHrs: this.computeWorkingHrs(member.punchIn, member.punchOut),
                   status: displayStatus,
                   avatarInitials: initials,
-                  avatarBg: palette[idx % palette.length]
+                  avatarBg: theme.bg,
+                  avatarColor: theme.text
                 };
               });
             } else {
@@ -345,32 +368,39 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
       })
     );
 
-    // 3. Fetch real team members for Team Performance
+    // 3. Fetch real team performance calculations from backend
     this.sub.add(
-      this.managerService.getTeam(1, 10).subscribe({
-        next: (res) => {
+      this.managerService.getTeamPerformance().subscribe({
+        next: (items) => {
           this.isLoadingPerformance = false;
-          const emps = res?.data || (res as any)?.items || [];
-          if (emps && emps.length > 0) {
-            const palette = ['#EFF6FF', '#EEF2FF', '#FFFBEB', '#FFF7ED', '#FEF2F2'];
-            const grades: Array<'A+' | 'A' | 'B' | 'C' | 'D'> = ['A+', 'A', 'B', 'A', 'B'];
-            this.performanceList = emps.map((emp: any, idx: number) => {
-              const fullName = `${emp.first_name || emp.firstName || ''} ${emp.last_name || emp.lastName || ''}`.trim() || emp.name || 'Team Member';
+          if (items && items.length > 0) {
+            const avatarThemes = [
+              { bg: '#EFF6FF', text: '#2563EB' },
+              { bg: '#F5F3FF', text: '#7C3AED' },
+              { bg: '#ECFDF5', text: '#059669' },
+              { bg: '#FFF7ED', text: '#EA580C' },
+              { bg: '#FEF2F2', text: '#DC2626' },
+              { bg: '#F0FDFA', text: '#0D9488' }
+            ];
+            this.performanceList = items.map((p: any, idx: number) => {
+              const fullName = p.name || 'Team Member';
               const initials = fullName
                 .split(' ')
                 .map((n: string) => n[0])
                 .join('')
                 .toUpperCase()
                 .slice(0, 2) || 'TM';
+              const theme = avatarThemes[idx % avatarThemes.length];
               return {
-                id: emp.id,
+                id: p.id,
                 name: fullName,
-                attendance: `${92 + (idx % 6)}%`,
-                tasks: `${86 + (idx % 10)}%`,
-                training: `${82 + (idx % 12)}%`,
-                overall: grades[idx % grades.length],
+                attendance: p.attendance,
+                tasks: p.tasks,
+                training: p.training,
+                overall: p.overall || 'A',
                 avatarInitials: initials,
-                avatarBg: palette[idx % palette.length]
+                avatarBg: theme.bg,
+                avatarUrl: p.avatarUrl
               };
             });
           } else {
@@ -388,7 +418,7 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
   }
 
   private computeWorkingHrs(punchIn?: string | null, punchOut?: string | null): string {
-    if (!punchIn || punchIn === '-') return '-';
+    if (!punchIn || punchIn === '-' || punchIn === '—') return '—';
     try {
       const parts = punchIn.trim().split(' ');
       const [hStr, mStr] = parts[0].split(':');
@@ -402,7 +432,7 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
       let endH = now.getHours();
       let endM = now.getMinutes();
 
-      if (punchOut && punchOut !== '-') {
+      if (punchOut && punchOut !== '-' && punchOut !== '—') {
         const outParts = punchOut.trim().split(' ');
         const [ohStr, omStr] = outParts[0].split(':');
         let oh = parseInt(ohStr, 10);
@@ -420,7 +450,7 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
       const mins = totalMinutes % 60;
       return `${hours}h ${mins}m`;
     } catch {
-      return '-';
+      return '—';
     }
   }
 
@@ -440,7 +470,20 @@ export class ManagerHomeComponent implements OnInit, OnDestroy {
         this.router.navigate([this.timeOffRoute]);
         break;
       case 'send_reminder':
-        this.toastService.showSuccess('Attendance reminder notification sent to team members.');
+        this.managerService.sendAttendanceReminder().subscribe({
+          next: (res) => {
+            if (res && res.count > 0) {
+              this.toastService.showSuccess(res.message);
+            } else {
+              this.toastService.showInfo(res?.message || 'All team members have already marked attendance or are on leave.');
+            }
+          },
+          error: (err) => {
+            console.error('Failed to send attendance reminder:', err);
+            const msg = err?.error?.detail || 'Failed to send attendance reminder to team members.';
+            this.toastService.showError(msg);
+          }
+        });
         break;
       case 'view_reports':
         const trendEl = document.querySelector('.col-trend');

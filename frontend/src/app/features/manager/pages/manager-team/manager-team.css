@@ -151,6 +151,30 @@
   text-align: right;
 }
 
+.emp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.emp-name {
+  font-weight: 650;
+  color: #0f172a;
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.emp-code {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.email-text {
+  color: #334155;
+  font-size: 13.5px;
+}
+
 .emp-identity-cell {
   display: flex;
   align-items: center;

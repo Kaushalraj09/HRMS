@@ -184,6 +184,15 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
                   pfNumber: detail.employee.pfNumber || ''
                 }
               });
+
+              const isManager = detail.employee.isManager || (detail.employee.userRole || '').toLowerCase() === 'manager';
+              const mgrCtrl = this.form.get('employmentInfo.reportingManagerId');
+              if (isManager) {
+                mgrCtrl?.clearValidators();
+              } else {
+                mgrCtrl?.setValidators(Validators.required);
+              }
+              mgrCtrl?.updateValueAndValidity({ emitEvent: false });
             } catch (patchErr) {
               console.error('EmployeeEditModal: Error patching form:', patchErr);
               this.errorMessage = 'Error loading form data.';
@@ -237,17 +246,22 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
     });
   }
 
+  get isReportingManagerRequired(): boolean {
+    const isManager = this.employeeDetail?.employee?.isManager || (this.employeeDetail?.employee?.userRole || '').toLowerCase() === 'manager';
+    return !isManager;
+  }
+
   private loadManagerOptions(currentEmployeeId: string): void {
-    this.managerSubscription = this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
+    this.managerSubscription = this.employeeService.getAllManagers()
       .subscribe({
-        next: (result) => {
+        next: (managers) => {
           this.managerOptions = [
             { label: 'No reporting manager', value: null },
-            ...result.data
-              .filter(employee => employee.id !== currentEmployeeId)
-              .map(employee => ({
-                label: `${employee.employeeCode} - ${employee.name}`,
-                value: employee.id
+            ...(managers || [])
+              .filter(m => String(m.id) !== String(currentEmployeeId))
+              .map(m => ({
+                label: `${m.employeeCode} - ${m.name}`,
+                value: m.id
               }))
           ];
           this.cdr.markForCheck();

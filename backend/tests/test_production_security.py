@@ -42,3 +42,53 @@ def test_credentials_response_never_contains_a_password():
     )
 
     assert "password" not in payload.model_dump()
+
+
+def test_production_config_rejects_placeholder_jwt_secret(monkeypatch):
+    from app.core.config import Settings
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://hrms:pass@localhost:5432/hrms")
+    monkeypatch.setenv("JWT_SECRET_KEY", "CHANGE_ME_IN_PRODUCTION_JWT_SECRET_MIN_32_CHARACTERS_LONG")
+    monkeypatch.setenv("FRONTEND_URL", "https://hrms.aivan360.com")
+    monkeypatch.setenv("BACKEND_CORS_ORIGINS", "https://hrms.aivan360.com")
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_USER", "alerts@aivan360.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "valid_smtp_pass_123")
+    monkeypatch.setenv("SMTP_FROM", "no-reply@aivan360.com")
+
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
+        Settings()
+
+
+def test_production_config_rejects_placeholder_smtp(monkeypatch):
+    from app.core.config import Settings
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://hrms:pass@localhost:5432/hrms")
+    monkeypatch.setenv("JWT_SECRET_KEY", "super_secret_production_key_random_string_exceeding_32_chars")
+    monkeypatch.setenv("FRONTEND_URL", "https://hrms.aivan360.com")
+    monkeypatch.setenv("BACKEND_CORS_ORIGINS", "https://hrms.aivan360.com")
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_USER", "alerts@aivan360.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "CHANGE_ME_SMTP_PASSWORD")
+    monkeypatch.setenv("SMTP_FROM", "no-reply@aivan360.com")
+
+    with pytest.raises(ValueError, match="SMTP configuration"):
+        Settings()
+
+
+def test_production_config_succeeds_with_secure_settings(monkeypatch):
+    from app.core.config import Settings
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://hrms:pass@localhost:5432/hrms")
+    monkeypatch.setenv("JWT_SECRET_KEY", "super_secret_production_key_random_string_exceeding_32_chars")
+    monkeypatch.setenv("FRONTEND_URL", "https://hrms.aivan360.com")
+    monkeypatch.setenv("BACKEND_CORS_ORIGINS", "https://hrms.aivan360.com")
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_USER", "alerts@aivan360.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "real_production_smtp_password_987")
+    monkeypatch.setenv("SMTP_FROM", "no-reply@aivan360.com")
+
+    settings = Settings()
+    assert settings.APP_ENV == "production"
+    assert settings.FRONTEND_URL == "https://hrms.aivan360.com"
+

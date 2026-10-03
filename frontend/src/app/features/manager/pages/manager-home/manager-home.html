@@ -139,50 +139,70 @@
     <div class="content-col col-attendance">
       <div class="dash-card attendance-card">
         <div class="card-header-bar">
-          <h2 class="card-title">Today's Attendance</h2>
-          <a [routerLink]="attendanceRoute" class="view-all-link">View All</a>
+          <div class="card-title-group">
+            <h2 class="card-title">Today's Attendance</h2>
+            <span class="count-pill" *ngIf="attendanceList.length">{{ attendanceList.length }} Members</span>
+          </div>
+          <a [routerLink]="attendanceRoute" class="view-all-link">
+            <span>View All</span>
+            <i class="fas fa-arrow-right icon-arrow"></i>
+          </a>
         </div>
 
         <div class="table-container">
-          <table class="compact-table">
+          <table class="compact-table attendance-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Designation</th>
-                <th>In Time</th>
-                <th>Out Time</th>
-                <th>Working Hrs</th>
-                <th>Status</th>
+                <th class="th-employee">EMPLOYEE</th>
+                <th class="th-time">IN TIME</th>
+                <th class="th-time">OUT TIME</th>
+                <th class="th-hours">WORKING HRS</th>
+                <th class="th-status">STATUS</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let emp of attendanceList">
-                <td>
-                  <div class="emp-cell">
+                <td class="td-employee">
+                  <div class="emp-profile-cell">
                     <img *ngIf="emp.avatarUrl" [src]="emp.avatarUrl" alt="" class="emp-avatar-img" />
-                    <div *ngIf="!emp.avatarUrl" class="emp-avatar" [style.background-color]="emp.avatarBg">
+                    <div *ngIf="!emp.avatarUrl" class="emp-avatar" [style.background-color]="emp.avatarBg" [style.color]="emp.avatarColor">
                       {{ emp.avatarInitials }}
                     </div>
-                    <span class="emp-name">{{ emp.name }}</span>
+                    <div class="emp-meta-stack">
+                      <span class="emp-name-text" [title]="emp.name">{{ emp.name }}</span>
+                      <span class="emp-role-subtext" [title]="emp.designation">{{ emp.designation }}</span>
+                    </div>
                   </div>
                 </td>
-                <td><span class="designation-text">{{ emp.designation }}</span></td>
-                <td><span class="time-val">{{ emp.inTime }}</span></td>
-                <td><span class="time-val">{{ emp.outTime }}</span></td>
-                <td><span class="time-val font-semibold">{{ emp.workingHrs }}</span></td>
-                <td>
+                <td class="td-time">
+                  <span [class.time-val]="emp.inTime !== '—'" [class.time-dash]="emp.inTime === '—'">
+                    {{ emp.inTime }}
+                  </span>
+                </td>
+                <td class="td-time">
+                  <span [class.time-val]="emp.outTime !== '—'" [class.time-dash]="emp.outTime === '—'">
+                    {{ emp.outTime }}
+                  </span>
+                </td>
+                <td class="td-hours">
+                  <span [class.hours-badge]="emp.workingHrs !== '—'" [class.time-dash]="emp.workingHrs === '—'">
+                    {{ emp.workingHrs }}
+                  </span>
+                </td>
+                <td class="td-status">
                   <span class="status-pill pill-{{ emp.status.toLowerCase().replace(' ', '-') }}">
+                    <span class="status-dot"></span>
                     {{ emp.status }}
                   </span>
                 </td>
               </tr>
               <tr *ngIf="isLoadingStats">
-                <td colspan="6" class="table-status-cell">
+                <td colspan="5" class="table-status-cell">
                   <i class="fas fa-spinner fa-spin"></i> Loading today's attendance...
                 </td>
               </tr>
               <tr *ngIf="!isLoadingStats && attendanceList.length === 0">
-                <td colspan="6" class="table-status-cell">
+                <td colspan="5" class="table-status-cell">
                   No attendance records found for today
                 </td>
               </tr>

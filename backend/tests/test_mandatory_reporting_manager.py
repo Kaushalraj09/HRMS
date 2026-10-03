@@ -112,3 +112,111 @@ def test_create_employee_with_valid_manager_succeeds(client, db_session):
     data = response.json()
     assert data["reporting_manager_id"] == manager.id
     assert data["official_email"] == "alice.smith@hrms.com"
+
+
+def test_fresh_db_create_first_manager_without_reporting_manager_succeeds(client):
+    payload = {
+        "first_name": "Carol",
+        "last_name": "Director",
+        "official_email": "carol.director@hrms.com",
+        "mobile": "9887766554",
+        "work_location": "Main Office",
+        "department": "Executive",
+        "designation": "Engineering Director",
+        "employee_type": "Full-Time",
+        "role": "manager"
+    }
+    response = client.post("/api/v1/employees", json=payload)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["reporting_manager_id"] is None
+    assert data["official_email"] == "carol.director@hrms.com"
+
+
+def test_create_hr_without_reporting_manager_succeeds(client):
+    payload = {
+        "first_name": "Helen",
+        "last_name": "Resource",
+        "official_email": "helen.hr@hrms.com",
+        "mobile": "9871122334",
+        "work_location": "Main Office",
+        "department": "Human Resources",
+        "designation": "HR Generalist",
+        "employee_type": "Full-Time",
+        "role": "hr"
+    }
+    response = client.post("/api/v1/employees", json=payload)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["reporting_manager_id"] is None
+
+
+def test_update_employee_with_invalid_manager_fails(client, db_session):
+    manager = db_session.query(Employee).filter(Employee.employee_code == "AIVAN001").first()
+    # Create employee
+    payload = {
+        "first_name": "Dave",
+        "last_name": "Test",
+        "official_email": "dave.test@hrms.com",
+        "mobile": "9112233445",
+        "work_location": "Main Office",
+        "department": "Engineering",
+        "designation": "Dev",
+        "employee_type": "Full-Time",
+        "reporting_manager_id": manager.id
+    }
+    create_res = client.post("/api/v1/employees", json=payload)
+    assert create_res.status_code == 200
+    emp_id = create_res.json()["id"]
+
+    # Try updating with invalid manager
+    upd_res = client.put(f"/api/v1/employees/{emp_id}", json={"reporting_manager_id": 99999})
+    assert upd_res.status_code == 400
+    assert "Selected reporting manager does not exist" in upd_res.json()["detail"]
+
+
+def test_update_employee_with_self_manager_fails(client, db_session):
+    manager = db_session.query(Employee).filter(Employee.employee_code == "AIVAN001").first()
+    payload = {
+        "first_name": "Eve",
+        "last_name": "Self",
+        "official_email": "eve.self@hrms.com",
+        "mobile": "9112233446",
+        "work_location": "Main Office",
+        "department": "Engineering",
+        "designation": "Dev",
+        "employee_type": "Full-Time",
+        "reporting_manager_id": manager.id
+    }
+    create_res = client.post("/api/v1/employees", json=payload)
+    assert create_res.status_code == 200
+    emp_id = create_res.json()["id"]
+
+    # Try setting self as manager
+    upd_res = client.put(f"/api/v1/employees/{emp_id}", json={"reporting_manager_id": emp_id})
+    assert upd_res.status_code == 400
+    assert "cannot be their own reporting manager" in upd_res.json()["detail"]
+
+
+def test_update_employee_remove_manager_fails(client, db_session):
+    manager = db_session.query(Employee).filter(Employee.employee_code == "AIVAN001").first()
+    payload = {
+        "first_name": "Frank",
+        "last_name": "Norm",
+        "official_email": "frank.norm@hrms.com",
+        "mobile": "9112233447",
+        "work_location": "Main Office",
+        "department": "Engineering",
+        "designation": "Dev",
+        "employee_type": "Full-Time",
+        "reporting_manager_id": manager.id
+    }
+    create_res = client.post("/api/v1/employees", json=payload)
+    assert create_res.status_code == 200
+    emp_id = create_res.json()["id"]
+
+    # Try removing manager on employee
+    upd_res = client.put(f"/api/v1/employees/{emp_id}", json={"reporting_manager_id": None})
+    assert upd_res.status_code == 400
+    assert "mandatory for employees" in upd_res.json()["detail"]
+

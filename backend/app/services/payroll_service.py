@@ -1154,21 +1154,22 @@ class PayrollService:
             .filter(PayrollRecord.payroll_run_id == run_id)
         )
 
-        if department:
-            query = query.join(PayrollRecord.employee).filter(Employee.department == department)
+        if department or search:
+            query = query.join(PayrollRecord.employee)
+            if department:
+                query = query.filter(Employee.department == department)
+            if search:
+                s = f"%{search}%"
+                query = query.filter(
+                    or_(
+                        Employee.first_name.ilike(s),
+                        Employee.last_name.ilike(s),
+                        Employee.employee_code.ilike(s),
+                    )
+                )
 
         if status_filter:
             query = query.filter(PayrollRecord.status == status_filter.upper())
-
-        if search:
-            s = f"%{search}%"
-            query = query.join(PayrollRecord.employee).filter(
-                or_(
-                    Employee.first_name.ilike(s),
-                    Employee.last_name.ilike(s),
-                    Employee.employee_code.ilike(s),
-                )
-            )
 
         total = query.count()
         records = query.order_by(PayrollRecord.id.asc()).offset(skip).limit(limit).all()

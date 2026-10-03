@@ -81,7 +81,7 @@ export class EmployeeAddModalComponent implements OnInit {
         shiftType: [''],
         shiftId: [null],
         doj: [''],
-        reportingManagerId: [null, Validators.required],
+        reportingManagerId: [null],
         employeeCode: [''],
         legacyEmployeeCode: ['']
       }),
@@ -103,6 +103,26 @@ export class EmployeeAddModalComponent implements OnInit {
         pfNumber: ['']
       })
     });
+
+    // Dynamically require reporting manager for ordinary employee role
+    const roleCtrl = this.form.get('accountAccess.role');
+    const mgrCtrl = this.form.get('employmentDetails.reportingManagerId');
+    const updateMgrValidation = (roleVal: string) => {
+      const isTopLevel = roleVal === 'manager' || roleVal === 'hr';
+      if (isTopLevel) {
+        mgrCtrl?.clearValidators();
+      } else {
+        mgrCtrl?.setValidators(Validators.required);
+      }
+      mgrCtrl?.updateValueAndValidity({ emitEvent: false });
+    };
+
+    if (roleCtrl && mgrCtrl) {
+      updateMgrValidation(roleCtrl.value);
+      roleCtrl.valueChanges.subscribe(val => {
+        updateMgrValidation(val);
+      });
+    }
 
     // Auto-sync Login Email and Official / Company Email
     const loginEmailCtrl = this.form.get('accountAccess.loginEmail');
@@ -131,15 +151,20 @@ export class EmployeeAddModalComponent implements OnInit {
     }
   }
 
+  get isReportingManagerRequired(): boolean {
+    const role = this.form.get('accountAccess.role')?.value;
+    return role !== 'manager' && role !== 'hr';
+  }
+
   ngOnInit(): void {
     if (this.defaultRole) {
       this.form.get('accountAccess.role')?.setValue(this.defaultRole);
     }
-    // Load reporting managers
-    this.employeeService.getEmployees(1, 100, '', '', '', 'Active')
+    // Load reporting managers (only active managers)
+    this.employeeService.getAllManagers()
       .subscribe({
-        next: (result) => {
-          this.managerOptions = (result.data || []).map(employee => ({
+        next: (managers) => {
+          this.managerOptions = (managers || []).map(employee => ({
             label: `${employee.employeeCode} - ${employee.name}`,
             value: employee.id
           }));

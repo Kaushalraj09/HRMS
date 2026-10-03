@@ -860,12 +860,36 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
     status_val = get_attendance_status_with_timeoff(db, record.employee_id, record.punch_in, record.punch_out, record.date, shift=shift_obj)
     
     emp_name = None
-    if record.employee:
-        emp_name = f"{record.employee.first_name} {record.employee.last_name}".strip()
-    elif db:
-        emp = db.query(Employee).filter(Employee.id == record.employee_id).first()
-        if emp:
-            emp_name = f"{emp.first_name} {emp.last_name}".strip()
+    emp_code = None
+    emp_dept = None
+    emp_desig = None
+    emp_obj = record.employee
+    if not emp_obj and db:
+        emp_obj = db.query(Employee).filter(Employee.id == record.employee_id).first()
+    if emp_obj:
+        emp_name = f"{emp_obj.first_name} {emp_obj.last_name}".strip()
+        emp_code = emp_obj.employee_code or f"EMP-{str(emp_obj.id).zfill(4)}"
+        emp_dept = emp_obj.department
+        emp_desig = emp_obj.designation
+
+    tot_mins = record.total_working_minutes or record.grand_total_minutes or 0
+    if not tot_mins and record.punch_in and record.punch_out:
+        from datetime import datetime as dt_calc
+        d_in = dt_calc.combine(record.date, record.punch_in)
+        d_out = dt_calc.combine(record.date, record.punch_out)
+        diff_sec = (d_out - d_in).total_seconds()
+        if diff_sec > 0:
+            tot_mins = int(diff_sec // 60)
+
+    total_hours_str = None
+    if tot_mins > 0:
+        total_hours_str = f"{tot_mins // 60}h {tot_mins % 60}m"
+    elif record.punch_in and not record.punch_out:
+        total_hours_str = "Working"
+    elif status_val.lower() in ["absent", "leave", "on leave"]:
+        total_hours_str = "—"
+    else:
+        total_hours_str = "0h 0m"
 
     shift_dict = None
     if shift_obj:
@@ -893,6 +917,11 @@ def to_attendance_response(record: Attendance, db: Session = None) -> Attendance
         employee_id=record.employee_id,
         shift_id=shift_obj.id if shift_obj else None,
         employee=emp_name or f"Employee #{record.employee_id}",
+        employee_name=emp_name or f"Employee #{record.employee_id}",
+        employee_code=emp_code or f"EMP-{str(record.employee_id).zfill(4)}",
+        department=emp_dept,
+        designation=emp_desig,
+        total_working_hours=total_hours_str,
         shift=shift_dict,
         date=record.date,
         scheduled_start=record.scheduled_start,

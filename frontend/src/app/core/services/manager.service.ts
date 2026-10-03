@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { buildApiUrl } from '../config/api.config';
 import { Employee, PaginatedResult } from '../models/employee.model';
 import { TimeOffRequest } from '../models/timeoff.model';
@@ -41,6 +41,56 @@ export class ManagerService {
 
   constructor(private readonly http: HttpClient) {}
 
+  private mapEmployee(row: any): Employee {
+    const firstName = (row.first_name || row.firstName || '').trim();
+    const lastName = (row.last_name || row.lastName || '').trim();
+    const fullName = row.name || `${firstName} ${lastName}`.trim();
+    return {
+      id: String(row.id),
+      userId: String(row.user_id || row.userId || ''),
+      reportingManagerId: row.reporting_manager_id != null ? String(row.reporting_manager_id) : (row.reportingManagerId || null),
+      reportingManagerName: row.reporting_manager_name || row.reportingManagerName || null,
+      employeeCode: row.employee_code || row.employeeCode || '',
+      legacyEmployeeCode: row.legacy_employee_code || row.legacyEmployeeCode || null,
+      name: fullName || 'Employee',
+      firstName: firstName,
+      lastName: lastName,
+      department: row.department || '',
+      designation: row.designation || '',
+      employeeType: row.employee_type || row.employeeType || '',
+      status: row.status || 'Active',
+      login: (row.status === 'Active') ? 'Enabled' : 'Disabled',
+      officialEmail: row.official_email || row.officialEmail || '',
+      personalEmail: row.personal_email || row.personalEmail || '',
+      email: row.official_email || row.officialEmail || row.personal_email || row.personalEmail || '',
+      mobile: row.mobile || row.phone || '',
+      phone: row.mobile || row.phone || '',
+      alternateMobile: row.alternate_mobile || row.alternateMobile || '',
+      emergencyContactName: row.emergency_contact_name || row.emergencyContactName || '',
+      emergencyContactNumber: row.emergency_contact_number || row.emergencyContactNumber || '',
+      gender: row.gender || '',
+      dob: row.dob || '',
+      maritalStatus: row.marital_status || row.maritalStatus || '',
+      bloodGroup: row.blood_group || row.bloodGroup || '',
+      workLocation: row.work_location || row.workLocation || '',
+      shiftType: row.shift_type || row.shiftType || '',
+      shiftId: row.shift_id ?? row.shiftId ?? null,
+      shift: row.shift ?? null,
+      doj: row.doj || row.joiningDate || '',
+      joiningDate: row.doj || row.joiningDate || '',
+      bankName: row.bank_name || row.bankName || '',
+      bankAccountNo: row.bank_account_no || row.bankAccountNo || '',
+      ifscCode: row.ifsc_code || row.ifscCode || '',
+      micrCode: row.micr_code || row.micrCode || '',
+      panNumber: row.pan_number || row.panNumber || '',
+      uanNumber: row.uan_number || row.uanNumber || '',
+      pfNumber: row.pf_number || row.pfNumber || '',
+      isManager: row.is_manager ?? row.isManager ?? false,
+      userRole: row.user_role || row.userRole || 'Employee',
+      directReportsCount: row.direct_reports_count ?? row.directReportsCount ?? 0
+    };
+  }
+
   getDashboardStats(): Observable<ManagerDashboardStats> {
     return this.http.get<ManagerDashboardStats>(`${this.apiUrl}/dashboard-stats`);
   }
@@ -56,11 +106,54 @@ export class ManagerService {
     if (search && search.trim()) {
       params.search = search.trim();
     }
-    return this.http.get<PaginatedResult<Employee>>(`${this.apiUrl}/team`, { params });
+    return this.http.get<any>(`${this.apiUrl}/team`, { params }).pipe(
+      map(res => {
+        const rawList = res?.data || res?.items || (Array.isArray(res) ? res : []);
+        return {
+          data: rawList.map((row: any) => this.mapEmployee(row)),
+          total: res?.total ?? rawList.length,
+          page: res?.page ?? page,
+          limit: res?.limit ?? limit
+        };
+      })
+    );
   }
 
   getTeamMember(employeeId: string | number): Observable<Employee> {
-    return this.http.get<Employee>(`${this.apiUrl}/team/${employeeId}`);
+    return this.http.get<any>(`${this.apiUrl}/team/${employeeId}`).pipe(
+      map(row => this.mapEmployee(row))
+    );
+  }
+
+  private mapAttendance(row: any): any {
+    if (!row) return row;
+    const employeeName = row.employeeName || row.employee_name || row.employee || (row.employeeId ? `Employee #${row.employeeId}` : 'Employee');
+    const employeeCode = row.employeeCode || row.employee_code || row.emp_code || (row.employeeId ? `EMP-${String(row.employeeId).padStart(4, '0')}` : '—');
+    const totalWorkingMinutes = row.totalWorkingMinutes ?? row.total_working_minutes ?? row.grandTotalMinutes ?? row.grand_total_minutes ?? 0;
+    
+    let totalWorkingHours = row.totalWorkingHours || row.total_working_hours;
+    if (!totalWorkingHours) {
+      if (totalWorkingMinutes > 0) {
+        totalWorkingHours = `${Math.floor(totalWorkingMinutes / 60)}h ${totalWorkingMinutes % 60}m`;
+      } else if (row.punchIn && !row.punchOut) {
+        totalWorkingHours = 'Working';
+      } else if (['absent', 'leave', 'on leave'].includes((row.status || '').toLowerCase())) {
+        totalWorkingHours = '—';
+      } else {
+        totalWorkingHours = '0h 0m';
+      }
+    }
+
+    return {
+      ...row,
+      employeeName,
+      employeeCode,
+      totalWorkingHours,
+      punchInTime: row.punchInTime || row.punch_in || row.punchIn,
+      punchOutTime: row.punchOutTime || row.punch_out || row.punchOut,
+      lateMinutes: row.lateMinutes ?? row.late_minutes ?? 0,
+      status: row.status || 'Present'
+    };
   }
 
   getTeamAttendance(params: {
@@ -82,7 +175,15 @@ export class ManagerService {
     if (params.status) queryParams.status = params.status;
     if (params.search) queryParams.search = params.search;
 
-    return this.http.get<any>(`${this.apiUrl}/attendance`, { params: queryParams });
+    return this.http.get<any>(`${this.apiUrl}/attendance`, { params: queryParams }).pipe(
+      map(res => {
+        if (!res || !res.items) return res;
+        return {
+          ...res,
+          items: res.items.map((item: any) => this.mapAttendance(item))
+        };
+      })
+    );
   }
 
   getTeamLeaveRequests(page: number = 1, pageSize: number = 10, status: string = ''): Observable<{
@@ -112,4 +213,17 @@ export class ManagerService {
       comment
     });
   }
+
+  sendAttendanceReminder(): Observable<{ success: boolean; count: number; message: string; recipients?: string[] }> {
+    return this.http.post<{ success: boolean; count: number; message: string; recipients?: string[] }>(
+      `${this.apiUrl}/send-attendance-reminder`,
+      {}
+    );
+  }
+
+  getTeamPerformance(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/team-performance`);
+  }
 }
+
+

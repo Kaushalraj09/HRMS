@@ -103,8 +103,9 @@
                 <app-custom-datepicker inputId="doj" formControlName="doj" placeholder="Select Date of Joining"></app-custom-datepicker>
               </div>
               <div class="form-group">
-                <label for="reportingManagerId">Reporting Manager</label>
-                <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" placeholder="Select Manager"></app-custom-select>
+                <label for="reportingManagerId">Reporting Manager <span class="required" *ngIf="isReportingManagerRequired">*</span></label>
+                <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" [placeholder]="isReportingManagerRequired ? 'Select Manager' : 'Select Manager (Optional)'"></app-custom-select>
+                <span class="error-text" *ngIf="isReportingManagerRequired && isInvalid('employmentInfo', 'reportingManagerId')">Reporting manager is required</span>
               </div>
               <div class="form-group">
                 <label>Employee Code</label>

@@ -158,6 +158,8 @@ def test_issue_1_leave_balance_deduction_on_approval(client):
             db.query(ApprovalLog).filter(ApprovalLog.timeoff_request_id == req.id).delete()
             db.delete(req)
         if emp:
+            from app.models.notification import Notification
+            db.query(Notification).filter(Notification.employee_id == emp.id).delete()
             db.query(EmployeeLeaveBalance).filter(EmployeeLeaveBalance.employee_id == emp.id).delete()
             db.delete(emp)
         if user:

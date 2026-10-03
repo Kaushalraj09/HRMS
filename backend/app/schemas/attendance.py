@@ -85,6 +85,11 @@ class AttendanceResponse(BaseModel):
     employee_id: int = Field(alias="employeeId")
     shift_id: Optional[int] = Field(default=None, alias="shiftId")
     employee: Optional[str] = Field(default=None)
+    employee_name: Optional[str] = Field(default=None, alias="employeeName")
+    employee_code: Optional[str] = Field(default=None, alias="employeeCode")
+    department: Optional[str] = Field(default=None)
+    designation: Optional[str] = Field(default=None)
+    total_working_hours: Optional[str] = Field(default=None, alias="totalWorkingHours")
     shift: Optional[dict] = Field(default=None)
     date: date
     scheduled_start: Optional[time] = Field(default=None, alias="scheduledStart")

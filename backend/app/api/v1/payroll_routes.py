@@ -188,14 +188,16 @@ def preview_salary_calculation(
 @router.get("/employee-salaries")
 def get_all_employee_salaries(
     search: Optional[str] = None,
-    department_id: Optional[int] = None,
+    department: Optional[str] = Query(None, description="Department name filter"),
+    department_id: Optional[str] = Query(None, description="Legacy department filter fallback"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_hr_or_admin(current_user)
-    return PayrollService.get_all_employee_salaries(db, search, department_id, skip, limit)
+    dept_filter = department or department_id
+    return PayrollService.get_all_employee_salaries(db, search, dept_filter, skip, limit)
 
 
 @router.get("/employee-salaries/{employee_id}")
@@ -372,7 +374,8 @@ def delete_payroll_run(
 def get_payroll_records(
     run_id: int,
     search: Optional[str] = None,
-    department_id: Optional[int] = None,
+    department: Optional[str] = Query(None, description="Department name filter"),
+    department_id: Optional[str] = Query(None, description="Legacy department filter fallback"),
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -380,7 +383,8 @@ def get_payroll_records(
     current_user: User = Depends(get_current_user),
 ):
     require_hr_or_admin(current_user)
-    return PayrollService.get_payroll_records(db, run_id, search, department_id, status, skip, limit)
+    dept_filter = department or department_id
+    return PayrollService.get_payroll_records(db, run_id, search, dept_filter, status, skip, limit)
 
 
 @router.post("/records/{record_id}/adjust")

@@ -37,17 +37,21 @@ def add_employee(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Work location is required."
         )
-    if not request.reporting_manager_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assigning a reporting manager is mandatory."
-        )
-    manager = db.query(Employee).filter(Employee.id == request.reporting_manager_id, Employee.status != "Deleted").first()
-    if not manager:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Selected reporting manager does not exist or has been deleted."
-        )
+    target_role = (request.role or "employee").lower().strip()
+    is_top_level_role = target_role in ["manager", "hr", "admin"]
+    if not is_top_level_role:
+        if not request.reporting_manager_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assigning a reporting manager is mandatory."
+            )
+    if request.reporting_manager_id:
+        manager = db.query(Employee).filter(Employee.id == request.reporting_manager_id, Employee.status != "Deleted").first()
+        if not manager:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selected reporting manager does not exist or has been deleted."
+            )
     try:
         return employee_service.create_employee(db, request)
     except InvitationDeliveryError as exc:
@@ -232,9 +236,41 @@ def update_employee(
             detail="Work location cannot be empty."
         )
 
-    employee = employee_service.update_employee(db, employee_id, request)
-    if not employee:
+    existing_employee = employee_service.get_employee_by_id(db, employee_id)
+    if not existing_employee:
         raise HTTPException(status_code=404, detail="Employee not found")
+
+    update_data = request.model_dump(exclude_unset=True)
+    if "reporting_manager_id" in update_data:
+        new_mgr_id = update_data["reporting_manager_id"]
+        if new_mgr_id is not None:
+            if new_mgr_id == employee_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An employee cannot be their own reporting manager."
+                )
+            manager = db.query(Employee).filter(
+                Employee.id == new_mgr_id,
+                Employee.status != "Deleted"
+            ).first()
+            if not manager:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Selected reporting manager does not exist or has been deleted."
+                )
+        else:
+            role_to_check = update_data.get("role")
+            if not role_to_check:
+                target_user = db.query(User).filter(User.id == existing_employee.user_id).first()
+                if target_user and target_user.role:
+                    role_to_check = target_user.role.name
+            if (role_to_check or "employee").lower().strip() == "employee":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Assigning a reporting manager is mandatory for employees."
+                )
+
+    employee = employee_service.update_employee(db, employee_id, request)
     return employee
 
 

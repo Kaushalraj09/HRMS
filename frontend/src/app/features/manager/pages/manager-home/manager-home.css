@@ -303,8 +303,14 @@
   margin-bottom: 12px;
 }
 
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .card-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #0F172A;
   margin: 0;
@@ -312,18 +318,40 @@
   line-height: 1.2;
 }
 
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  background: #F1F5F9;
+  color: #475569;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
 .view-all-link {
-  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
   font-weight: 600;
   color: #2563EB;
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .view-all-link:hover {
   color: #1D4ED8;
-  text-decoration: underline;
+  gap: 7px;
+  text-decoration: none;
+}
+
+.icon-arrow {
+  font-size: 10px;
+  transition: transform 0.15s ease;
 }
 
 /* COMPACT ENTERPRISE TABLE */
@@ -372,44 +400,33 @@
   transition: background-color 0.15s ease;
 }
 
-.attendance-card .compact-table th:nth-child(1),
-.attendance-card .compact-table td:nth-child(1) {
-  width: 25%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Attendance Table Column Proportions (5 columns, perfectly balanced) */
+.attendance-table th.th-employee,
+.attendance-table td.td-employee {
+  width: 40%;
+  text-align: left;
+  padding: 8px 8px 8px 0 !important;
 }
 
-.attendance-card .compact-table th:nth-child(2),
-.attendance-card .compact-table td:nth-child(2) {
-  width: 21%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.attendance-card .compact-table th:nth-child(3),
-.attendance-card .compact-table td:nth-child(3) {
-  width: 12%;
+.attendance-table th.th-time,
+.attendance-table td.td-time {
+  width: 14%;
   text-align: center;
+  padding: 8px 4px !important;
 }
 
-.attendance-card .compact-table th:nth-child(4),
-.attendance-card .compact-table td:nth-child(4) {
-  width: 13%;
+.attendance-table th.th-hours,
+.attendance-table td.td-hours {
+  width: 17%;
   text-align: center;
+  padding: 8px 4px !important;
 }
 
-.attendance-card .compact-table th:nth-child(5),
-.attendance-card .compact-table td:nth-child(5) {
-  width: 16%;
-  text-align: center;
-}
-
-.attendance-card .compact-table th:nth-child(6),
-.attendance-card .compact-table td:nth-child(6) {
-  width: 13%;
+.attendance-table th.th-status,
+.attendance-table td.td-status {
+  width: 15%;
   text-align: right;
+  padding: 8px 0 8px 4px !important;
 }
 
 /* Team Performance Column Proportions */
@@ -460,6 +477,64 @@
   white-space: nowrap;
 }
 
+/* Modern Employee Profile Cell (Used in Today's Attendance) */
+.emp-profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.emp-profile-cell .emp-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.emp-profile-cell .emp-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  flex-shrink: 0;
+}
+
+.emp-meta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.emp-name-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emp-role-subtext {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .emp-avatar-img {
   width: 24px;
   height: 24px;
@@ -495,10 +570,25 @@
 }
 
 .time-val {
-  color: #334155;
+  color: #1E293B;
   font-variant-numeric: tabular-nums;
   font-size: 11.5px;
+  font-weight: 600;
+}
+
+.time-dash {
+  color: #94A3B8;
+  font-size: 13px;
   font-weight: 500;
+  user-select: none;
+}
+
+.hours-badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
 }
 
 .font-semibold {
@@ -506,35 +596,86 @@
   color: #0F172A !important;
 }
 
-/* STATUS PILLS (NO DOT INDICATOR) */
+/* STATUS PILLS (MODERN SAAS BADGES WITH STATUS DOT) */
 .status-pill {
-  display: inline-block;
-  padding: 2.5px 8px;
-  border-radius: 6px;
-  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  text-align: center;
+  line-height: 1.2;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .pill-present {
-  background-color: #E6F9F0;
-  color: #10B981;
+  background-color: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.pill-present .status-dot {
+  background-color: #10B981;
+}
+
+.pill-working {
+  background-color: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+.pill-working .status-dot {
+  background-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .pill-on-leave {
-  background-color: #FEF3E6;
-  color: #F59E0B;
+  background-color: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.pill-on-leave .status-dot {
+  background-color: #F59E0B;
 }
 
 .pill-late {
-  background-color: #FFF3EB;
-  color: #F97316;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFEDD5;
+}
+
+.pill-late .status-dot {
+  background-color: #F97316;
 }
 
 .pill-absent {
-  background-color: #FDECEB;
-  color: #EF4444;
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.pill-absent .status-dot {
+  background-color: #EF4444;
+}
+
+.pill-not-marked {
+  background-color: #F8FAFC;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.pill-not-marked .status-dot {
+  background-color: #94A3B8;
 }
 
 /* 4B. LEAVE REQUESTS LIST */

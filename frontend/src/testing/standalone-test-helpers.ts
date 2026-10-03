@@ -144,6 +144,14 @@ export function provideStandaloneComponentTestProviders(): any[] {
       useValue: {
         timeoffUpdate$: of(null),
         getMyTimeOffRequests: () => of({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 }),
+        getMyLeaveBalances: () => of({
+          yearlyBalances: [
+            { code: 'CL', name: 'Casual Leave', available_days: 8, total_allocated_days: 12, used_days: 4 },
+            { code: 'SL', name: 'Sick Leave', available_days: 10, total_allocated_days: 12, used_days: 2 },
+            { code: 'EL', name: 'Earned Leave', available_days: 15, total_allocated_days: 15, used_days: 0 }
+          ]
+        }),
+        getYearlyLeaveBalances: () => of([]),
         requestTimeOff: () => of({}),
         cancelTimeOffRequest: () => of({}),
         applyTimeOffInline: () => of({}),
