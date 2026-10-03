@@ -1473,14 +1473,102 @@ class PayrollService:
 
         total = query.count()
         slips = query.order_by(Payslip.payroll_month.desc(), Payslip.employee_id.asc()).offset(skip).limit(limit).all()
-        return {"total": total, "items": slips}
+
+        items = []
+        for s in slips:
+            rec = s.record
+            emp = s.employee
+            emp_name = s.employee_name_at_generation or (f"{emp.first_name} {emp.last_name}" if emp else "")
+            emp_code = s.employee_code_at_generation or (emp.employee_code if emp else "")
+            items.append({
+                "id": s.id,
+                "payroll_record_id": s.payroll_record_id,
+                "employee_id": s.employee_id,
+                "payslip_number": s.payslip_number,
+                "payroll_month": s.payroll_month,
+                "file_path": s.file_path,
+                "is_published": s.is_published,
+                "generated_at": s.generated_at.isoformat() if s.generated_at else None,
+                "employee_name": emp_name,
+                "employee_name_at_generation": s.employee_name_at_generation,
+                "employee_code": emp_code,
+                "employee_code_at_generation": s.employee_code_at_generation,
+                "department": (emp.department if emp and emp.department else None) or "—",
+                "designation": emp.designation if emp else None,
+                "doj": str(emp.doj) if emp and emp.doj else None,
+                "total_payroll_days": rec.total_payroll_days if rec else 30.0,
+                "payable_days": rec.payable_days if rec else 30.0,
+                "paid_days": rec.payable_days if rec else 30.0,
+                "unpaid_leave_days": rec.unpaid_leave_days if rec else 0.0,
+                "gross_earnings": rec.gross_earnings if rec else 0.0,
+                "total_deductions": rec.total_deductions if rec else 0.0,
+                "net_salary": rec.net_salary if rec else 0.0,
+                "net_pay": rec.net_salary if rec else 0.0,
+                "payroll_year": s.payroll_year,
+            })
+        return {"total": total, "items": items}
 
     @staticmethod
-    def get_payslip_detail(db: Session, payslip_id: int) -> Payslip:
+    def get_payslip_detail(db: Session, payslip_id: int) -> Dict[str, Any]:
         slip = db.query(Payslip).filter(Payslip.id == payslip_id).first()
         if not slip:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payslip not found")
-        return slip
+        rec = slip.record
+        emp = slip.employee
+        emp_name = slip.employee_name_at_generation or (f"{emp.first_name} {emp.last_name}" if emp else "")
+        emp_code = slip.employee_code_at_generation or (emp.employee_code if emp else "")
+
+        earnings = []
+        deductions = []
+        contributions = []
+        if rec and rec.items:
+            for item in rec.items:
+                c_data = {
+                    "code": item.component_code,
+                    "name": item.component_name,
+                    "amount": item.amount,
+                    "detail": item.calculation_detail,
+                }
+                c_type = (item.component_type or "").upper()
+                if c_type == "EARNING":
+                    earnings.append(c_data)
+                elif c_type == "DEDUCTION":
+                    deductions.append(c_data)
+                elif "EMPLOYER" in c_type:
+                    contributions.append(c_data)
+
+        return {
+            "id": slip.id,
+            "payroll_record_id": slip.payroll_record_id,
+            "employee_id": slip.employee_id,
+            "payslip_number": slip.payslip_number,
+            "payroll_month": slip.payroll_month,
+            "file_path": slip.file_path,
+            "is_published": slip.is_published,
+            "generated_at": slip.generated_at.isoformat() if slip.generated_at else None,
+            "employee_name": emp_name,
+            "employee_name_at_generation": slip.employee_name_at_generation,
+            "employee_code": emp_code,
+            "employee_code_at_generation": slip.employee_code_at_generation,
+            "department": (emp.department if emp and emp.department else None) or "—",
+            "designation": emp.designation if emp else None,
+            "doj": str(emp.doj) if emp and emp.doj else None,
+            "total_payroll_days": rec.total_payroll_days if rec else 30.0,
+            "payable_days": rec.payable_days if rec else 30.0,
+            "paid_days": rec.payable_days if rec else 30.0,
+            "unpaid_leave_days": rec.unpaid_leave_days if rec else 0.0,
+            "gross_earnings": rec.gross_earnings if rec else 0.0,
+            "total_deductions": rec.total_deductions if rec else 0.0,
+            "net_salary": rec.net_salary if rec else 0.0,
+            "net_pay": rec.net_salary if rec else 0.0,
+            "payroll_year": slip.payroll_year,
+            "bank_name": rec.bank_name if rec else (emp.bank_name if emp else None),
+            "account_number": rec.account_number if rec else (emp.bank_account_no if emp else None),
+            "ifsc_code": rec.ifsc_code if rec else (emp.ifsc_code if emp else None),
+            "earnings": earnings,
+            "deductions": deductions,
+            "employer_contributions": contributions,
+        }
 
     @staticmethod
     def _get_logo_path():

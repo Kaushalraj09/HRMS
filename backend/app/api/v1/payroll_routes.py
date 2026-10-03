@@ -525,7 +525,8 @@ def get_payslip(
     user_role = current_user.role.name.lower() if current_user.role else ""
     if user_role not in [UserRole.ADMIN, UserRole.HR]:
         emp_id = get_current_employee_id(current_user)
-        if slip.employee_id != emp_id:
+        slip_emp_id = slip.get("employee_id") if isinstance(slip, dict) else slip.employee_id
+        if slip_emp_id != emp_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this payslip.")
     return slip
 
@@ -540,7 +541,8 @@ def download_payslip_pdf(
     user_role = current_user.role.name.lower() if current_user.role else ""
     if user_role not in [UserRole.ADMIN, UserRole.HR]:
         emp_id = get_current_employee_id(current_user)
-        if slip.employee_id != emp_id:
+        slip_emp_id = slip.get("employee_id") if isinstance(slip, dict) else slip.employee_id
+        if slip_emp_id != emp_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this payslip.")
     return PayrollService.generate_payslip_pdf(db, payslip_id)
 

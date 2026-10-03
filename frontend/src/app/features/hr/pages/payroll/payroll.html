@@ -637,8 +637,8 @@
             <tr *ngFor="let p of allPayslips">
               <td><strong>{{ p.payslip_number }}</strong></td>
               <td>
-                <strong>{{ p.employee_name }}</strong>
-                <div class="text-muted small">{{ p.employee_code }}</div>
+                <strong>{{ p.employee_name || p.employee_name_at_generation || '—' }}</strong>
+                <div class="text-muted small">{{ p.employee_code || p.employee_code_at_generation }}</div>
               </td>
               <td>{{ p.department || '—' }}</td>
               <td>{{ formatPayrollMonth(p.payroll_month) }}</td>
