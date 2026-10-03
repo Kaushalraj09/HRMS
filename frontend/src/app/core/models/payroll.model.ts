@@ -408,6 +408,10 @@ export interface Payslip {
   
   is_published: boolean;
   generated_at?: string;
+  employee_name_at_generation?: string;
+  employee_code_at_generation?: string;
+  department_at_generation?: string;
+  designation_at_generation?: string;
 }
 
 export interface PayrollDashboardSummary {
