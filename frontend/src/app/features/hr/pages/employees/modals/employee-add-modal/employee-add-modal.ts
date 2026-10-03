@@ -106,7 +106,7 @@ export class EmployeeAddModalComponent implements OnInit {
 
     // Dynamically require reporting manager for ordinary employee role
     const roleCtrl = this.form.get('accountAccess.role');
-    const mgrCtrl = this.form.get('employmentDetails.reportingManagerId');
+    const mgrCtrl = this.form.get('employmentInfo.reportingManagerId');
     const updateMgrValidation = (roleVal: string) => {
       const isTopLevel = roleVal === 'manager' || roleVal === 'hr';
       if (isTopLevel) {

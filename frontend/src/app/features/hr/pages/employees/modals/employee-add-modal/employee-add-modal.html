@@ -100,7 +100,7 @@
             <div class="form-group">
               <label for="reportingManagerId">Reporting Manager <span class="required" *ngIf="isReportingManagerRequired">*</span></label>
               <app-custom-select name="reportingManagerId" inputId="reportingManagerId" formControlName="reportingManagerId" [options]="managerOptions" [placeholder]="isReportingManagerRequired ? 'Select Manager' : 'Select Manager (Optional)'"></app-custom-select>
-              <span class="error-text" *ngIf="isReportingManagerRequired && isInvalid('employmentDetails', 'reportingManagerId')">Reporting manager is required</span>
+              <span class="error-text" *ngIf="isReportingManagerRequired && isInvalid('employmentInfo', 'reportingManagerId')">Reporting manager is required</span>
             </div>
             <div class="form-group">
               <label for="employeeCode">Employee Code</label>

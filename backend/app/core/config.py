@@ -1,7 +1,25 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+requested_env = os.getenv("APP_ENV", "").strip().lower()
+env_filename = ".env.production" if requested_env == "production" else ".env"
+
+candidate_paths = [
+    env_filename,
+    os.path.join("..", env_filename),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), env_filename),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), env_filename),
+]
+
+loaded = False
+for p in candidate_paths:
+    if os.path.exists(p):
+        load_dotenv(p, override=True)
+        loaded = True
+        break
+
+if not loaded:
+    load_dotenv()
 
 
 def _get_bool(name: str, default: bool) -> bool:
