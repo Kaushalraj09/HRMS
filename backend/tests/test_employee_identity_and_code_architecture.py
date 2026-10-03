@@ -316,3 +316,139 @@ def test_get_next_employee_code_preview(client, db_session):
     assert "nextCode" in data
     assert data["nextCode"].startswith("AIVAN")
 
+
+# =========================================================================
+# 5. Migration Service & API Tests
+# =========================================================================
+def test_migrate_single_employee_to_aivan_code(client, db_session):
+    from app.services.employee_code_service import migrate_employee_to_aivan_code
+
+    emp_role = db_session.query(Role).filter(Role.name == "Employee").first()
+
+    # Seed legacy employee
+    legacy_user = User(email="legacy@hrms.com", password_hash="hash", display_name="Legacy User", role_id=emp_role.id)
+    db_session.add(legacy_user)
+    db_session.commit()
+
+    legacy_emp = Employee(
+        user_id=legacy_user.id,
+        first_name="Ramesh",
+        last_name="Kumar",
+        employee_code="DEV-18",
+        legacy_employee_code="DEV-18",
+        official_email="legacy@hrms.com",
+        mobile="9876543219",
+        department="Engineering",
+        work_location="Belagavi Office",
+    )
+    db_session.add(legacy_emp)
+    db_session.commit()
+
+    # Migrate with auto allocation
+    updated_emp = migrate_employee_to_aivan_code(
+        db_session,
+        employee_id=legacy_emp.id,
+        reason="System wide migration to standard AIVAN format",
+        changed_by="HR Admin",
+    )
+    assert updated_emp.employee_code.startswith("AIVAN")
+    assert updated_emp.legacy_employee_code == "DEV-18"
+    assert updated_emp.employee_code_source == "LEGACY_MIGRATED"
+    assert updated_emp.employee_code_status == "ACTIVE"
+
+    db_session.refresh(legacy_emp)
+    assert legacy_emp.employee_code.startswith("AIVAN")
+    assert legacy_emp.legacy_employee_code == "DEV-18"
+    assert legacy_emp.employee_code_source == "LEGACY_MIGRATED"
+    assert legacy_emp.employee_code_status == "ACTIVE"
+
+    # Verify history created
+    histories = get_code_history_for_employee(db_session, legacy_emp.id)
+    assert len(histories) >= 1
+    assert histories[0].old_employee_code == "DEV-18"
+    assert histories[0].new_employee_code == legacy_emp.employee_code
+
+
+def test_migrate_employee_api_endpoint(client, db_session):
+    hr_user = db_session.query(User).filter(User.email == "hr@hrms.com").first()
+    emp_role = db_session.query(Role).filter(Role.name == "Employee").first()
+    app.dependency_overrides[get_current_user] = lambda: hr_user
+
+    # Seed another legacy employee
+    emp_user = User(email="testlegacy@hrms.com", password_hash="hash", display_name="Test Legacy", role_id=emp_role.id)
+    db_session.add(emp_user)
+    db_session.commit()
+
+    legacy_emp = Employee(
+        user_id=emp_user.id,
+        first_name="Anita",
+        last_name="Desai",
+        employee_code="EMP-102",
+        official_email="testlegacy@hrms.com",
+        mobile="9876543218",
+        department="Sales",
+        work_location="Headquarters",
+    )
+    db_session.add(legacy_emp)
+    db_session.commit()
+
+    # Call endpoint with custom code
+    res = client.post(
+        f"/api/v1/employees/{legacy_emp.id}/migrate-to-aivan-code",
+        json={
+            "new_employee_code": "AIVAN099",
+            "reason": "Standardizing legacy employee format",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["employee_code"] == "AIVAN099"
+    assert data["legacy_employee_code"] == "EMP-102"
+    assert data["employee_code_source"] == "LEGACY_MIGRATED"
+    assert data["employee_code_status"] == "ACTIVE"
+
+    db_session.refresh(legacy_emp)
+    assert legacy_emp.employee_code == "AIVAN099"
+    assert legacy_emp.legacy_employee_code == "EMP-102"
+    assert legacy_emp.employee_code_source == "LEGACY_MIGRATED"
+
+
+def test_bulk_migrate_aivan_codes(client, db_session):
+    from app.services.employee_code_service import run_bulk_aivan_code_migration
+
+    emp_role = db_session.query(Role).filter(Role.name == "Employee").first()
+
+    # Seed legacy employees with legacy formats
+    for i, code in enumerate(["HR-45", "OLD-999"], start=1):
+        u = User(email=f"legacy{i}@hrms.com", password_hash="hash", display_name=f"Bulk User {i}", role_id=emp_role.id)
+        db_session.add(u)
+        db_session.commit()
+        emp = Employee(
+            user_id=u.id,
+            first_name=f"Legacy{i}",
+            last_name="Staff",
+            employee_code=code,
+            official_email=f"legacy{i}@hrms.com",
+            mobile=f"987654320{i}",
+            department="Operations",
+            work_location="Main Office",
+        )
+        db_session.add(emp)
+    db_session.commit()
+
+    summary = run_bulk_aivan_code_migration(db_session, changed_by="Bulk Test")
+    assert summary["migrated"] >= 2
+    assert "details" in summary
+
+    # Verify both were migrated to AIVAN codes with legacy codes preserved
+    emp1 = db_session.query(Employee).filter(Employee.legacy_employee_code == "HR-45").first()
+    assert emp1 is not None
+    assert emp1.employee_code.startswith("AIVAN")
+    assert emp1.employee_code_source == "LEGACY_MIGRATED"
+
+    emp2 = db_session.query(Employee).filter(Employee.legacy_employee_code == "OLD-999").first()
+    assert emp2 is not None
+    assert emp2.employee_code.startswith("AIVAN")
+    assert emp2.employee_code_source == "LEGACY_MIGRATED"
+
+

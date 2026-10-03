@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +10,7 @@ from app.core.enums import UserRole
 from app.schemas.employee import (
     AssignTeamRequest,
     ChangeEmployeeCodeRequest,
+    MigrateToAivanCodeRequest,
     EmployeeCodeHistoryResponse,
     EmployeeCreate,
     EmployeeCredentialsResponse,
@@ -448,4 +450,47 @@ def get_employee_code_history(
             raise HTTPException(status_code=403, detail="Not authorized to view this employee's code history")
 
     return employee_code_service.get_code_history_for_employee(db, employee_id)
+
+
+@router.post("/{employee_id}/migrate-to-aivan-code", response_model=EmployeeResponse)
+def migrate_to_aivan_code(
+    employee_id: int,
+    payload: MigrateToAivanCodeRequest = Body(default_factory=MigrateToAivanCodeRequest),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Migrate an existing employee's code to the standardized AIVAN series."""
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to migrate employee codes",
+        )
+    try:
+        changed_by = current_user.email or current_user.display_name or "HR"
+        target_code = payload.new_employee_code if payload and payload.new_employee_code else None
+        reason = (payload.reason if payload and payload.reason else "Standardized to official AIVAN series").strip()
+        return employee_code_service.migrate_employee_to_aivan_code(
+            db=db,
+            employee_id=employee_id,
+            target_code=target_code,
+            reason=reason,
+            changed_by=changed_by,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/bulk-migrate-to-aivan-codes")
+def bulk_migrate_to_aivan_codes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Bulk migrate all existing legacy employee codes to official AIVAN series."""
+    if not current_user.role or current_user.role.name.lower() not in [UserRole.ADMIN, UserRole.HR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and HR personnel are authorized to perform bulk code migrations",
+        )
+    changed_by = current_user.email or current_user.display_name or "SYSTEM"
+    return employee_code_service.run_bulk_aivan_code_migration(db=db, changed_by=changed_by)
 

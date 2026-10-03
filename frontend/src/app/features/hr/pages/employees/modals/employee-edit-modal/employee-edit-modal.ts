@@ -1,9 +1,9 @@
 import { Component, EventEmitter, Input, OnInit, OnDestroy, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { EmployeeService } from '../../../../../../core/services/employee.service';
 import { MasterDataService } from '../../../../../../core/services/master-data.service';
-import { EmployeeDetailView, EmployeePayload } from '../../../../../../core/models/employee.model';
+import { EmployeeDetailView, EmployeePayload, EmployeeCodeHistory } from '../../../../../../core/models/employee.model';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { CustomSelectComponent } from '../../../../../../shared/components/custom-select/custom-select';
@@ -20,7 +20,7 @@ function pastDateValidator(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-employee-edit-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CustomSelectComponent, CustomDatepickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, CustomSelectComponent, CustomDatepickerComponent],
   templateUrl: './employee-edit-modal.html',
   styleUrls: ['./employee-edit-modal.css']
 })
@@ -34,6 +34,19 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   isSaving = false;
   errorMessage = '';
   saveError = '';
+
+  // Employee Code Management State
+  showCodeChangeModal = false;
+  showCodeHistoryModal = false;
+  codeChangeMode: 'auto' | 'custom' = 'auto';
+  nextSuggestedCode = '';
+  customEmployeeCode = '';
+  codeChangeReason = '';
+  isUpdatingCode = false;
+  codeUpdateError = '';
+  codeUpdateSuccess = '';
+  codeHistoryList: EmployeeCodeHistory[] = [];
+  isLoadingHistory = false;
 
   // Dropdown mappings
   genderOptions = [{ label: 'Male', value: 'Male' }, { label: 'Female', value: 'Female' }, { label: 'Other', value: 'Other' }];
@@ -336,4 +349,97 @@ export class EmployeeEditModalComponent implements OnInit, OnDestroy {
   close(): void {
     this.closed.emit(false);
   }
+
+  // Code Change Management Actions
+  openCodeChangeModal(): void {
+    this.showCodeChangeModal = true;
+    this.codeUpdateError = '';
+    this.codeUpdateSuccess = '';
+    this.codeChangeMode = 'auto';
+    this.codeChangeReason = 'Standardized to official AIVAN series';
+    this.customEmployeeCode = '';
+    this.loadNextCodePreview();
+  }
+
+  closeCodeChangeModal(): void {
+    this.showCodeChangeModal = false;
+    this.codeUpdateError = '';
+  }
+
+  loadNextCodePreview(): void {
+    this.employeeService.getNextEmployeeCode('AIVAN').subscribe({
+      next: (res) => {
+        if (res && res.nextCode) {
+          this.nextSuggestedCode = res.nextCode;
+          this.customEmployeeCode = res.nextCode;
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err) => console.warn('Failed to load next code preview:', err)
+    });
+  }
+
+  submitCodeChange(): void {
+    if (!this.employeeDetail?.employee?.id) return;
+    const targetCode = this.codeChangeMode === 'auto' ? this.nextSuggestedCode : this.customEmployeeCode;
+    if (!targetCode || !targetCode.trim()) {
+      this.codeUpdateError = 'Target employee code cannot be empty.';
+      return;
+    }
+    if (!this.codeChangeReason || !this.codeChangeReason.trim()) {
+      this.codeUpdateError = 'Reason is mandatory for modifying an employee code.';
+      return;
+    }
+
+    this.isUpdatingCode = true;
+    this.codeUpdateError = '';
+    this.employeeService.migrateEmployeeToAivanCode(
+      this.employeeDetail.employee.id,
+      targetCode.trim(),
+      this.codeChangeReason.trim()
+    ).subscribe({
+      next: (res) => {
+        this.isUpdatingCode = false;
+        this.codeUpdateSuccess = res.message;
+        if (this.employeeDetail?.employee) {
+          this.employeeDetail.employee.employeeCode = res.employee.employeeCode;
+          this.employeeDetail.employee.legacyEmployeeCode = res.employee.legacyEmployeeCode;
+          this.employeeDetail.employee.employeeCodeSource = res.employee.employeeCodeSource;
+          this.form.get('employmentInfo.legacyEmployeeCode')?.setValue(res.employee.legacyEmployeeCode);
+        }
+        this.cdr.markForCheck();
+        setTimeout(() => {
+          this.closeCodeChangeModal();
+        }, 1500);
+      },
+      error: (err) => {
+        this.isUpdatingCode = false;
+        this.codeUpdateError = err?.error?.detail || err?.message || 'Failed to update employee code.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  openCodeHistory(): void {
+    if (!this.employeeDetail?.employee?.id) return;
+    this.showCodeHistoryModal = true;
+    this.isLoadingHistory = true;
+    this.employeeService.getEmployeeCodeHistory(this.employeeDetail.employee.id).subscribe({
+      next: (hist) => {
+        this.codeHistoryList = hist || [];
+        this.isLoadingHistory = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Failed to load code history:', err);
+        this.isLoadingHistory = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  closeCodeHistory(): void {
+    this.showCodeHistoryModal = false;
+  }
 }
+

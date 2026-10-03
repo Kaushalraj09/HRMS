@@ -38,6 +38,8 @@ class EmployeeBase(BaseModel):
     pf_number: Optional[str] = None
     legacy_employee_code: Optional[str] = None
     employee_code: Optional[str] = None
+    employee_code_source: Optional[str] = "AIVAN_GENERATED"
+    employee_code_status: Optional[str] = "ACTIVE"
 
 class EmployeeCreate(EmployeeBase):
     reporting_manager_id: Optional[int] = None
@@ -110,6 +112,11 @@ class AssignTeamRequest(BaseModel):
 class ChangeEmployeeCodeRequest(BaseModel):
     new_employee_code: str
     reason: str
+
+
+class MigrateToAivanCodeRequest(BaseModel):
+    new_employee_code: Optional[str] = None  # None = automatically allocate next sequential code
+    reason: Optional[str] = "Migration to official AIVAN series"
 
 
 class EmployeeCodeHistoryResponse(BaseModel):

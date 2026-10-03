@@ -108,9 +108,27 @@
                 <span class="error-text" *ngIf="isReportingManagerRequired && isInvalid('employmentInfo', 'reportingManagerId')">Reporting manager is required</span>
               </div>
               <div class="form-group">
-                <label>Employee Code</label>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="mb-0">Employee Code</label>
+                  <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn-code-action" (click)="openCodeChangeModal()" title="Migrate or update to AIVAN pattern">
+                      <i class="fas fa-id-badge"></i> Update / Migrate
+                    </button>
+                    <button type="button" class="btn-code-history" (click)="openCodeHistory()" title="View code audit history">
+                      <i class="fas fa-history"></i> History
+                    </button>
+                  </div>
+                </div>
                 <div class="form-input readonly-note d-flex align-items-center justify-content-between" style="background: #f8fafc; font-weight: 600; padding: 0.55rem 0.75rem;">
-                  <span class="font-mono text-dark">{{ employeeDetail.employee.employeeCode }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="font-mono text-dark">{{ employeeDetail.employee.employeeCode }}</span>
+                    <span *ngIf="employeeDetail.employee.employeeCode.toUpperCase().startsWith('AIVAN')" style="background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">
+                      <i class="fas fa-check-circle"></i> AIVAN Pattern
+                    </span>
+                    <span *ngIf="!employeeDetail.employee.employeeCode.toUpperCase().startsWith('AIVAN')" style="background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">
+                      <i class="fas fa-exclamation-circle"></i> Legacy Format
+                    </span>
+                  </div>
                   <span style="background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">Primary Code</span>
                 </div>
               </div>
@@ -209,3 +227,135 @@
     </div>
   </div>
 </div>
+
+<!-- Submodal: Update / Migrate Employee Code -->
+<div class="custom-modal-backdrop" *ngIf="showCodeChangeModal">
+  <div class="custom-code-modal-card">
+    <div class="code-modal-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="code-icon-ring">
+          <i class="fas fa-id-card-clip"></i>
+        </div>
+        <div>
+          <h4 class="mb-0 font-weight-bold">Update Official Employee Code</h4>
+          <span class="text-muted small">Standardize to official AIVAN series with historical preservation</span>
+        </div>
+      </div>
+      <button type="button" class="btn-close-submodal" (click)="closeCodeChangeModal()">&times;</button>
+    </div>
+
+    <div class="code-modal-body">
+      <div class="current-code-banner mb-3">
+        <span class="text-muted small">Current Assigned Code:</span>
+        <span class="font-mono font-weight-bold ms-2">{{ employeeDetail?.employee?.employeeCode }}</span>
+      </div>
+
+      <div class="code-mode-selector mb-3">
+        <label class="mode-option" [class.active]="codeChangeMode === 'auto'">
+          <input type="radio" name="codeMode" value="auto" [(ngModel)]="codeChangeMode">
+          <div class="mode-text">
+            <strong>Auto-Assign Next Sequential Code</strong>
+            <span class="d-block small text-muted">Allocates <code>{{ nextSuggestedCode || 'AIVAN...' }}</code> atomically via database sequence</span>
+          </div>
+        </label>
+
+        <label class="mode-option" [class.active]="codeChangeMode === 'custom'">
+          <input type="radio" name="codeMode" value="custom" [(ngModel)]="codeChangeMode">
+          <div class="mode-text">
+            <strong>Custom AIVAN Code</strong>
+            <span class="d-block small text-muted">Manually enter a validated AIVAN-prefixed code</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-group mb-3" *ngIf="codeChangeMode === 'custom'">
+        <label class="small font-weight-bold">Custom Employee Code <span class="text-danger">*</span></label>
+        <input 
+          type="text" 
+          class="form-input font-mono" 
+          placeholder="e.g. AIVAN050" 
+          [(ngModel)]="customEmployeeCode"
+          style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="small font-weight-bold">Mandatory Justification / Reason <span class="text-danger">*</span></label>
+        <textarea 
+          class="form-input" 
+          rows="2" 
+          placeholder="Reason for code modification or migration..." 
+          [(ngModel)]="codeChangeReason"></textarea>
+      </div>
+
+      <div class="alert alert-danger py-2 small" *ngIf="codeUpdateError">
+        <i class="fas fa-exclamation-triangle me-1"></i> {{ codeUpdateError }}
+      </div>
+
+      <div class="alert alert-success py-2 small" *ngIf="codeUpdateSuccess">
+        <i class="fas fa-check-circle me-1"></i> {{ codeUpdateSuccess }}
+      </div>
+
+      <div class="alert alert-info py-2 small mb-0">
+        <i class="fas fa-info-circle me-1"></i> The prior code will be permanently saved into <strong>Legacy Employee Code</strong> and all attendance, leave, and payroll relationships remain 100% connected.
+      </div>
+    </div>
+
+    <div class="code-modal-footer">
+      <button type="button" class="btn btn-outline btn-sm" (click)="closeCodeChangeModal()" [disabled]="isUpdatingCode">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="submitCodeChange()" [disabled]="isUpdatingCode">
+        <i class="fas fa-spinner fa-spin me-1" *ngIf="isUpdatingCode"></i>
+        {{ isUpdatingCode ? 'Updating...' : 'Confirm & Update Code' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Submodal: Code Change Audit History -->
+<div class="custom-modal-backdrop" *ngIf="showCodeHistoryModal">
+  <div class="custom-code-modal-card" style="max-width: 650px;">
+    <div class="code-modal-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="code-icon-ring history-ring">
+          <i class="fas fa-history"></i>
+        </div>
+        <div>
+          <h4 class="mb-0 font-weight-bold">Employee Code Audit History</h4>
+          <span class="text-muted small">Immutable record of all code changes for {{ employeeDetail?.employee?.name }}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-close-submodal" (click)="closeCodeHistory()">&times;</button>
+    </div>
+
+    <div class="code-modal-body" style="max-height: 380px; overflow-y: auto;">
+      <div *ngIf="isLoadingHistory" class="text-center py-4">
+        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+        <div class="small text-muted mt-2">Loading audit logs...</div>
+      </div>
+
+      <div *ngIf="!isLoadingHistory && codeHistoryList.length === 0" class="text-center py-4 text-muted small">
+        <i class="fas fa-shield-alt fa-2x mb-2 text-muted"></i>
+        <div>No prior code changes recorded for this employee.</div>
+      </div>
+
+      <div *ngIf="!isLoadingHistory && codeHistoryList.length > 0">
+        <div class="history-item-card mb-2" *ngFor="let item of codeHistoryList">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="badge bg-secondary font-mono me-1">{{ item.old_employee_code || '(Initial)' }}</span>
+              <i class="fas fa-arrow-right text-muted small me-1"></i>
+              <span class="badge bg-primary font-mono">{{ item.new_employee_code }}</span>
+            </div>
+            <span class="text-muted small">{{ item.changed_at | date:'medium' }}</span>
+          </div>
+          <div class="small text-dark mt-1"><strong>Reason:</strong> {{ item.reason }}</div>
+          <div class="small text-muted"><strong>Changed by:</strong> {{ item.changed_by }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-modal-footer">
+      <button type="button" class="btn btn-outline btn-sm" (click)="closeCodeHistory()">Close</button>
+    </div>
+  </div>
+</div>
+

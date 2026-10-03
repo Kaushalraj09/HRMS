@@ -11,6 +11,8 @@ class Employee(Base):
     reporting_manager_id = Column(Integer, ForeignKey("employees.id"), nullable=True, index=True)
     employee_code = Column(String(50), unique=True, index=True, nullable=False)
     legacy_employee_code = Column(String(50), nullable=True, index=True)
+    employee_code_source = Column(String(30), nullable=True, default="AIVAN_GENERATED", index=True)
+    employee_code_status = Column(String(20), nullable=True, default="ACTIVE", index=True)
     
     # Basic Info
     first_name = Column(String(100), nullable=False)

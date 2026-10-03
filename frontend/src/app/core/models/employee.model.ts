@@ -44,6 +44,8 @@ export interface Employee {
   uanNumber?: string;
   pfNumber?: string;
   legacyEmployeeCode?: string | null;
+  employeeCodeSource?: string;
+  employeeCodeStatus?: string;
   directReportsCount?: number;
 }
 

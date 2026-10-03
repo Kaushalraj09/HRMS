@@ -293,6 +293,26 @@ export class EmployeeService {
     );
   }
 
+  migrateEmployeeToAivanCode(employeeId: string, customCode?: string, reason?: string): Observable<{ success: boolean; message: string; employee: Employee }> {
+    const normalizedId = this.normalizeEmployeeId(employeeId);
+    if (!normalizedId) {
+      return throwError(() => new Error('Employee ID is required.'));
+    }
+    return this.http.post<BackendEmployee>(`${this.apiUrl}/${normalizedId}/migrate-to-aivan-code`, {
+      new_employee_code: customCode ? customCode.trim() : null,
+      reason: reason ? reason.trim() : 'Standardized to official AIVAN series'
+    }).pipe(
+      map(row => {
+        const employee = this.mapEmployee(row);
+        return {
+          success: true,
+          message: `Employee code updated to ${employee.employeeCode} successfully.`,
+          employee
+        };
+      })
+    );
+  }
+
   getEmployeeCodeHistory(employeeId: string): Observable<EmployeeCodeHistory[]> {
     const normalizedId = this.normalizeEmployeeId(employeeId);
     if (!normalizedId) {
@@ -358,6 +378,8 @@ export class EmployeeService {
       reportingManagerName: row.reporting_manager_name || null,
       employeeCode: row.employee_code,
       legacyEmployeeCode: row.legacy_employee_code || null,
+      employeeCodeSource: (row as any).employee_code_source || 'AIVAN_GENERATED',
+      employeeCodeStatus: (row as any).employee_code_status || 'ACTIVE',
       name: fullName || 'Employee',
       firstName: firstName,
       lastName: lastName,
