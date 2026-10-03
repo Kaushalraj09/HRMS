@@ -251,27 +251,32 @@ class PayrollCalculationService:
                 elif code in ["ESI_EMP", "EMPLOYEE_ESI", "ESI"]:
                     amt = esi_emp_amt if esi_eligible else 0.0
                 elif code in ["PT", "PROFESSIONAL_TAX"]:
-                    # Fully dynamic PT driven entirely by Salary Structure configuration
-                    calc_type = sc_link.calculation_type.upper()
-                    val = float(custom_overrides.get(code, sc_link.percentage_or_value) or 0.0)
-                    c_basis = (sc_link.calculation_basis or "GROSS").upper()
-                    
-                    # Determine base amount dynamically based on structure definition
-                    base_amt = gross_monthly if "GROSS" in c_basis else (basic_monthly if "BASIC" in c_basis else monthly_input)
-                    
-                    # Optional check against StatutoryConfiguration threshold (e.g. min gross threshold)
                     pt_rule = statutory_rules.get("PT")
-                    min_threshold = (pt_rule.min_wage_threshold or 0.0) if (pt_rule and pt_rule.is_enabled) else 0.0
-                    if base_amt < min_threshold or base_amt <= 0.0:
+                    # If PT is not enabled in Statutory Configuration, PT is not applicable in this company
+                    if not pt_rule or not pt_rule.is_enabled:
                         amt = 0.0
-                    elif calc_type == "PERCENTAGE":
-                        amt = round(base_amt * (val / 100.0), 2)
                     else:
-                        amt = val
+                        calc_type = sc_link.calculation_type.upper()
+                        val = float(custom_overrides.get(code, sc_link.percentage_or_value) or 0.0)
+                        c_basis = (sc_link.calculation_basis or "GROSS").upper()
+                        
+                        # Determine base amount dynamically based on structure definition
+                        base_amt = gross_monthly if "GROSS" in c_basis else (basic_monthly if "BASIC" in c_basis else monthly_input)
+                        
+                        min_threshold = (pt_rule.min_wage_threshold or 0.0)
+                        if base_amt < min_threshold or base_amt <= 0.0:
+                            amt = 0.0
+                        elif calc_type == "PERCENTAGE":
+                            amt = round(base_amt * (val / 100.0), 2)
+                        else:
+                            amt = val
                 else:
                     amt = calculated_monthly.get(code, 0.0)
 
                 amt = round(amt, 2)
+                # If PT is disabled / not applicable for the company or zero, exclude from deductions list
+                if code in ["PT", "PROFESSIONAL_TAX"] and (not pt_rule or not pt_rule.is_enabled or amt <= 0.0):
+                    continue
                 total_deductions_monthly += amt
                 deductions_list.append(
                     CalculatedComponentItem(
@@ -652,29 +657,30 @@ class PayrollCalculationService:
                 employer_esi = round(actual_gross * (esi_rule.employer_rate_pct / 100.0), 2)
 
         # Professional Tax: Dynamically evaluated from Salary Structure against actual earned salary
-        pt_item = next((d for d in base_preview.deductions if d.code in ["PT", "PROFESSIONAL_TAX"]), None)
+        pt_rule = statutory_rules.get("PT")
         pt = 0.0
-        pt_detail = "As per Salary Structure"
-        if pt_item and actual_gross > 0:
-            calc_type = (pt_item.calculation_type or "FIXED").upper()
-            val = float(pt_item.percentage_or_value or 0.0)
-            sc_match = next((sc for sc in structure.components if sc.component and sc.component.code.upper() in ["PT", "PROFESSIONAL_TAX"]), None)
-            c_basis = (sc_match.calculation_basis or "GROSS").upper() if sc_match else "GROSS"
-            eval_base = actual_basic if "BASIC" in c_basis else actual_gross
+        pt_detail = "Not Applicable (Company Exempt)"
+        if pt_rule and pt_rule.is_enabled and actual_gross > 0:
+            pt_item = next((d for d in base_preview.deductions if d.code in ["PT", "PROFESSIONAL_TAX"]), None)
+            if pt_item:
+                calc_type = (pt_item.calculation_type or "FIXED").upper()
+                val = float(pt_item.percentage_or_value or 0.0)
+                sc_match = next((sc for sc in structure.components if sc.component and sc.component.code.upper() in ["PT", "PROFESSIONAL_TAX"]), None)
+                c_basis = (sc_match.calculation_basis or "GROSS").upper() if sc_match else "GROSS"
+                eval_base = actual_basic if "BASIC" in c_basis else actual_gross
 
-            pt_rule = statutory_rules.get("PT")
-            min_threshold = (pt_rule.min_wage_threshold or 0.0) if (pt_rule and pt_rule.is_enabled) else 0.0
+                min_threshold = (pt_rule.min_wage_threshold or 0.0)
 
-            if eval_base >= min_threshold and eval_base > 0:
-                if calc_type == "PERCENTAGE":
-                    pt = round(eval_base * (val / 100.0), 2)
-                    pt_detail = f"{val}% on {c_basis.capitalize()} (₹{eval_base:,.2f})"
+                if eval_base >= min_threshold and eval_base > 0:
+                    if calc_type == "PERCENTAGE":
+                        pt = round(eval_base * (val / 100.0), 2)
+                        pt_detail = f"{val}% on {c_basis.capitalize()} (₹{eval_base:,.2f})"
+                    else:
+                        pt = round(val, 2)
+                        pt_detail = f"₹{pt:,.2f} as defined in Salary Structure"
                 else:
-                    pt = round(val, 2)
-                    pt_detail = f"₹{pt:,.2f} as defined in Salary Structure"
-            else:
-                pt = 0.0
-                pt_detail = f"Exempt (Base ₹{eval_base:,.2f} < Min Threshold ₹{min_threshold:,.2f})"
+                    pt = 0.0
+                    pt_detail = f"Exempt (Base ₹{eval_base:,.2f} < Min Threshold ₹{min_threshold:,.2f})"
 
         total_deductions = round(emp_pf + emp_esi + pt + other_deductions, 2)
         net_salary = max(0.0, round(actual_gross - total_deductions, 2))

@@ -241,10 +241,10 @@ def seed_payroll_master_data(db: Session):
             "name": "Professional Tax",
             "employee_rate_pct": 0.0,
             "employer_rate_pct": 0.0,
-            "min_wage_threshold": 15000.0,
+            "min_wage_threshold": 0.0,
             "calculation_basis": "GROSS",
-            "is_enabled": True,
-            "description": "State standard professional tax deduction of ₹200 for gross > ₹15,000",
+            "is_enabled": False,
+            "description": "Professional Tax is not applicable for this organization",
         },
         {
             "code": "TDS",
@@ -260,6 +260,10 @@ def seed_payroll_master_data(db: Session):
         existing_sc = db.query(StatutoryConfiguration).filter(StatutoryConfiguration.code == sc["code"]).first()
         if not existing_sc:
             db.add(StatutoryConfiguration(**sc))
+        else:
+            if sc["code"] == "PT":
+                existing_sc.is_enabled = False
+                existing_sc.description = sc["description"]
 
     # 2. Standard Salary Components
     components_data = [
@@ -273,7 +277,7 @@ def seed_payroll_master_data(db: Session):
         {"code": "INCENTIVE", "name": "Incentive", "component_type": "EARNING", "calculation_type": "FIXED", "calculation_basis": None, "default_value": 0.0, "is_taxable": True, "sequence_order": 8, "description": "Monthly variable sales or project incentive"},
         {"code": "PF_EMP", "name": "Employee PF", "component_type": "DEDUCTION", "calculation_type": "PERCENTAGE", "calculation_basis": "BASIC", "default_value": 12.0, "is_taxable": False, "is_statutory": True, "sequence_order": 9, "description": "12% of basic employee PF contribution"},
         {"code": "ESI_EMP", "name": "Employee ESI", "component_type": "DEDUCTION", "calculation_type": "PERCENTAGE", "calculation_basis": "GROSS", "default_value": 0.75, "is_taxable": False, "is_statutory": True, "sequence_order": 10, "description": "0.75% of gross employee health insurance"},
-        {"code": "PT", "name": "Professional Tax", "component_type": "DEDUCTION", "calculation_type": "FIXED", "calculation_basis": None, "default_value": 200.0, "is_taxable": False, "is_statutory": True, "sequence_order": 11, "description": "State statutory professional tax"},
+        {"code": "PT", "name": "Professional Tax", "component_type": "DEDUCTION", "calculation_type": "FIXED", "calculation_basis": None, "default_value": 0.0, "is_taxable": False, "is_statutory": False, "is_active": False, "sequence_order": 11, "description": "State statutory professional tax (Not Applicable)"},
         {"code": "TDS", "name": "TDS (Tax)", "component_type": "DEDUCTION", "calculation_type": "FIXED", "calculation_basis": None, "default_value": 0.0, "is_taxable": False, "is_statutory": True, "sequence_order": 12, "description": "Income tax deducted at source"},
         {"code": "LOP", "name": "Loss of Pay (LOP)", "component_type": "DEDUCTION", "calculation_type": "ATTENDANCE", "calculation_basis": "GROSS", "default_value": 0.0, "is_taxable": False, "sequence_order": 13, "description": "Deduction for unapproved leaves and unpaid absences"},
         {"code": "PF_EMPLOYER", "name": "Employer PF", "component_type": "STATUTORY_EMPLOYER", "calculation_type": "PERCENTAGE", "calculation_basis": "BASIC", "default_value": 12.0, "is_taxable": False, "is_statutory": True, "sequence_order": 14, "description": "12% employer matching EPF contribution"},
@@ -286,9 +290,13 @@ def seed_payroll_master_data(db: Session):
             existing_c = SalaryComponent(**c)
             db.add(existing_c)
             db.flush()
+        else:
+            if c["code"] == "PT":
+                existing_c.is_active = False
+                existing_c.default_value = 0.0
         comp_map[c["code"]] = existing_c
 
-    # 3. Default Salary Structures
+    # 3. Default Salary Structures (without Professional Tax)
     structures_data = [
         {
             "code": "STD_EMP",
@@ -301,9 +309,8 @@ def seed_payroll_master_data(db: Session):
                 {"code": "SPECIAL_ALLOWANCE", "calc_type": "BALANCE", "basis": "CTC", "val": 0.0, "seq": 3},
                 {"code": "PF_EMP", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 4},
                 {"code": "ESI_EMP", "calc_type": "PERCENTAGE", "basis": "GROSS", "val": 0.75, "seq": 5},
-                {"code": "PT", "calc_type": "FIXED", "basis": None, "val": 200.0, "seq": 6},
-                {"code": "PF_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 7},
-                {"code": "ESI_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "GROSS", "val": 3.25, "seq": 8},
+                {"code": "PF_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 6},
+                {"code": "ESI_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "GROSS", "val": 3.25, "seq": 7},
             ]
         },
         {
@@ -317,8 +324,7 @@ def seed_payroll_master_data(db: Session):
                 {"code": "CONVEYANCE", "calc_type": "FIXED", "basis": None, "val": 2000.0, "seq": 3},
                 {"code": "SPECIAL_ALLOWANCE", "calc_type": "BALANCE", "basis": "CTC", "val": 0.0, "seq": 4},
                 {"code": "PF_EMP", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 5},
-                {"code": "PT", "calc_type": "FIXED", "basis": None, "val": 200.0, "seq": 6},
-                {"code": "PF_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 7},
+                {"code": "PF_EMPLOYER", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 12.0, "seq": 6},
             ]
         },
         {
@@ -330,7 +336,6 @@ def seed_payroll_master_data(db: Session):
                 {"code": "BASIC", "calc_type": "PERCENTAGE", "basis": "GROSS", "val": 50.0, "seq": 1},
                 {"code": "HRA", "calc_type": "PERCENTAGE", "basis": "BASIC", "val": 40.0, "seq": 2},
                 {"code": "SPECIAL_ALLOWANCE", "calc_type": "BALANCE", "basis": "GROSS", "val": 0.0, "seq": 3},
-                {"code": "PT", "calc_type": "FIXED", "basis": None, "val": 200.0, "seq": 4},
             ]
         }
     ]

@@ -335,12 +335,12 @@ def test_salary_breakdown_ctc_216007_statutory(db_session):
     # 8. Total CTC validation: Gross + Employer PF + Employer ESI == Monthly CTC
     assert round(preview.gross_monthly + employer_pf + employer_esi, 2) == preview.monthly_ctc
     assert preview.validation_warning is None
-    # 9. Net Take-Home = Gross - Employee PF - Employee ESI - PT
+    # 9. Net Take-Home = Gross - Employee PF - Employee ESI (No PT since not applicable)
     assert employee_pf == 1080.03
     assert employee_esi == 122.91
     pt = components.get("PT", 0.0)
-    assert pt == 200.0
-    assert preview.net_monthly == round(preview.gross_monthly - employee_pf - employee_esi - pt, 2)
+    assert pt == 0.0
+    assert preview.net_monthly == round(preview.gross_monthly - employee_pf - employee_esi, 2)
 
 
 def test_salary_breakdown_ctc_216007_with_550_esi_override(db_session):
