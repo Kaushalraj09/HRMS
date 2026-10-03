@@ -1347,3 +1347,33 @@
     </div>
   </div>
 </div>
+
+<!-- ==================================================== -->
+<!-- IN-APP CONFIRMATION POPUP MODAL                     -->
+<!-- ==================================================== -->
+<div class="custom-modal-backdrop" *ngIf="confirmModal.isOpen" (click)="closeConfirm()"></div>
+<div class="custom-modal-wrapper" *ngIf="confirmModal.isOpen">
+  <div class="custom-confirm-card" (click)="$event.stopPropagation()">
+    <div class="confirm-icon-ring" [ngClass]="confirmModal.confirmBtnClass">
+      <i [ngClass]="confirmModal.iconClass"></i>
+    </div>
+    <div class="confirm-body-wrap">
+      <h3 class="confirm-modal-title">{{ confirmModal.title }}</h3>
+      <p class="confirm-modal-text">{{ confirmModal.message }}</p>
+    </div>
+    <div class="confirm-actions-row">
+      <button type="button" class="btn-confirm-cancel" (click)="closeConfirm()">
+        {{ confirmModal.cancelBtnText }}
+      </button>
+      <button
+        type="button"
+        class="btn-confirm-submit"
+        [ngClass]="confirmModal.confirmBtnClass"
+        (click)="executeConfirm()"
+      >
+        {{ confirmModal.confirmBtnText }}
+      </button>
+    </div>
+  </div>
+</div>
+

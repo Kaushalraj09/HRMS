@@ -181,6 +181,51 @@ export class PayrollComponent implements OnInit, OnDestroy {
   runToDelete: PayrollRunSummary | null = null;
   isDeletingRun = false;
 
+  // In-App Confirmation Popup Modal State
+  confirmModal = {
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmBtnText: 'Confirm',
+    cancelBtnText: 'Cancel',
+    confirmBtnClass: 'btn-primary',
+    iconClass: 'fas fa-exclamation-triangle',
+    onConfirm: () => {}
+  };
+
+  openConfirm(options: {
+    title: string;
+    message: string;
+    confirmBtnText?: string;
+    cancelBtnText?: string;
+    confirmBtnClass?: string;
+    iconClass?: string;
+    onConfirm: () => void;
+  }): void {
+    this.confirmModal = {
+      isOpen: true,
+      title: options.title,
+      message: options.message,
+      confirmBtnText: options.confirmBtnText || 'Confirm',
+      cancelBtnText: options.cancelBtnText || 'Cancel',
+      confirmBtnClass: options.confirmBtnClass || 'btn-primary',
+      iconClass: options.iconClass || 'fas fa-exclamation-triangle',
+      onConfirm: options.onConfirm
+    };
+    this.cdr.detectChanges();
+  }
+
+  closeConfirm(): void {
+    this.confirmModal.isOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  executeConfirm(): void {
+    const action = this.confirmModal.onConfirm;
+    this.closeConfirm();
+    if (action) action();
+  }
+
   // Manual Adjustment Modal
   isAdjustmentModalOpen = false;
   isSavingAdjustment = false;
@@ -990,17 +1035,25 @@ export class PayrollComponent implements OnInit, OnDestroy {
 
   approveRunFromList(run: PayrollRunSummary, event: Event): void {
     event.stopPropagation();
-    if (!confirm(`Are you sure you want to approve Payroll Run #${run.run_number}?`)) return;
-    this.isLoading = true;
-    this.payrollService.approveOrRejectRun(run.id, true).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.toast.showSuccess(`Payroll Run #${run.run_number} approved!`, 'Approved');
-        this.loadRuns();
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.toast.showError(err?.error?.detail || 'Approval failed', 'Error');
+    this.openConfirm({
+      title: 'Approve Payroll Run',
+      message: `Are you sure you want to approve Payroll Run #${run.run_number}?`,
+      confirmBtnText: 'Approve',
+      confirmBtnClass: 'btn-success',
+      iconClass: 'fas fa-check-circle',
+      onConfirm: () => {
+        this.isLoading = true;
+        this.payrollService.approveOrRejectRun(run.id, true).subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.toast.showSuccess(`Payroll Run #${run.run_number} approved!`, 'Approved');
+            this.loadRuns();
+          },
+          error: (err) => {
+            this.isLoading = false;
+            this.toast.showError(err?.error?.detail || 'Approval failed', 'Error');
+          }
+        });
       }
     });
   }
@@ -1042,20 +1095,26 @@ export class PayrollComponent implements OnInit, OnDestroy {
 
   lockSelectedRun(): void {
     if (!this.selectedRun) return;
-    if (!confirm('Locking this payroll run will generate immutable frozen payslips and publish them to employees. Proceed?')) {
-      return;
-    }
-
-    this.isLoading = true;
-    this.payrollService.lockRun(this.selectedRun.id).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.toast.showSuccess('Payroll Run locked! Payslips are published.', 'Locked & Published');
-        this.reloadCurrentRun();
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.toast.showError(err?.error?.detail || 'Failed to lock run', 'Error');
+    const runId = this.selectedRun.id;
+    this.openConfirm({
+      title: 'Lock & Publish Payroll Run',
+      message: 'Locking this payroll run will generate immutable frozen payslips and publish them to employees. Proceed?',
+      confirmBtnText: 'Lock & Publish',
+      confirmBtnClass: 'btn-purple',
+      iconClass: 'fas fa-lock',
+      onConfirm: () => {
+        this.isLoading = true;
+        this.payrollService.lockRun(runId).subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.toast.showSuccess('Payroll Run locked! Payslips are published.', 'Locked & Published');
+            this.reloadCurrentRun();
+          },
+          error: (err) => {
+            this.isLoading = false;
+            this.toast.showError(err?.error?.detail || 'Failed to lock run', 'Error');
+          }
+        });
       }
     });
   }
@@ -1327,14 +1386,21 @@ export class PayrollComponent implements OnInit, OnDestroy {
 
   actionRevision(revisionId: number, approved: boolean): void {
     const actionName = approved ? 'Approve' : 'Reject';
-    if (!confirm(`Are you sure you want to ${actionName} this revision?`)) return;
-
-    this.payrollService.actionRevision(revisionId, approved).subscribe({
-      next: () => {
-        this.toast.showSuccess(`Revision ${actionName}d successfully`, 'Success');
-        this.loadRevisions();
-      },
-      error: (err) => this.toast.showError(err?.error?.detail || 'Action failed', 'Error')
+    this.openConfirm({
+      title: `${actionName} Salary Revision`,
+      message: `Are you sure you want to ${actionName.toLowerCase()} this salary revision?`,
+      confirmBtnText: actionName,
+      confirmBtnClass: approved ? 'btn-success' : 'btn-danger',
+      iconClass: approved ? 'fas fa-check-circle' : 'fas fa-times-circle',
+      onConfirm: () => {
+        this.payrollService.actionRevision(revisionId, approved).subscribe({
+          next: () => {
+            this.toast.showSuccess(`Revision ${actionName}d successfully`, 'Success');
+            this.loadRevisions();
+          },
+          error: (err) => this.toast.showError(err?.error?.detail || 'Action failed', 'Error')
+        });
+      }
     });
   }
 
